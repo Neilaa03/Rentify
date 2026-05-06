@@ -4,7 +4,7 @@ node_modules/
 # Env files
 .env
 .env.*
-!.env.example
+!.env.example   
 !**/.env.example
 
 # Build output
@@ -31,3 +31,6 @@ Thumbs.db
 tmp/
 temp/
 .cache/
+
+# gitkeep
+.gitkeep
