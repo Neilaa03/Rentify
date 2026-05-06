@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const LandingScreen = ({ navigation }) => {
     return (
         <View style={styles.container}>
-            <ImageBackground 
+            <ImageBackground
                 source={require('../assets/background.png')}
                 style={styles.background}
                 resizeMode="cover"
@@ -18,15 +18,24 @@ const LandingScreen = ({ navigation }) => {
                     </View>
 
                     <View style={styles.footer}>
-                        <TouchableOpacity style={styles.primaryButton}>
+                        <TouchableOpacity 
+                            style={styles.primaryButton}
+                            onPress={() => navigation.navigate('Register')}
+                        >
                             <Text style={styles.buttonText}>Get Started</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.primaryButton}>
+                        <TouchableOpacity 
+                            style={styles.primaryButton} 
+                            onPress={() => navigation.navigate('Login')}
+                        >
                             <Text style={styles.buttonText}>I already have an account</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.secondaryButton}>
+                        <TouchableOpacity 
+                            style={styles.secondaryButton}
+                            onPress={() => navigation.navigate('Home')}
+                        >
                             <Text style={styles.buttonText}>Skip for now</Text>
                         </TouchableOpacity>
                     </View>

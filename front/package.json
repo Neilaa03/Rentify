@@ -8,10 +8,14 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-navigation/native": "^7.2.2",
+    "@react-navigation/stack": "^7.8.11",
     "expo": "^54.0.0",
+    "expo-linear-gradient": "~15.0.8",
     "react": "19.1.0",
     "react-native": "0.81.5",
-    "react-native-safe-area-context": "^5.7.0"
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
