@@ -13,4 +13,12 @@ const registerSchema = z.object({
     role: UserRole.default('client'),
 }).refine((data) => data.password === data.confirmPassword);
 
-export { registerSchema };
+const loginSchema = z.object({
+    email: z.string().email(),
+    password: z.string(),
+});
+
+export { 
+    registerSchema,
+    loginSchema
+};

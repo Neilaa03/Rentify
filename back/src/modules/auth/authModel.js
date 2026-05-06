@@ -27,4 +27,20 @@ const createUser = async (userData) => {
     return data;
 };
 
-export { createUser };
+const getUserByEmail = async (email) => {
+    // 1. Fetch user including the password_hash for comparison
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, email, password_hash, role, is_active, is_verified')
+        .eq('email', email)
+        .single();
+
+    // 2. Return null if not found, otherwise return the user
+    if (error) return null;
+    return data;
+};
+
+export {
+    createUser,
+    getUserByEmail
+};

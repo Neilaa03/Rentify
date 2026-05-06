@@ -1,37 +1,40 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+// 1. Verify the Token
+export const authenticateToken = (req, res, next) => {
+    // Look for the token in the "Authorization" header
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-  if (!token) {
-    return res.status(401).json({ error: 'Token missing' });
-  }
+    if (!token) {
+        return res.status(401).json({ error: 'Token missing' });
+    }
 
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload;
+    try {
+        // Check if the token is valid and not expired[cite: 1]
+        const payload = jwt.verify(token, JWT_SECRET);
+        
+        // Attach the user data (id and role) to the request object[cite: 1]
+        req.user = payload;
+        return next();
+    } catch (err) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+};
+
+// 2. Check User Permissions
+export const requireRoles = (...allowedRoles) => (req, res, next) => {
+    // Ensure authenticateToken was called first[cite: 1]
+    if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Check if the user's role matches the required roles[cite: 1]
+    if (!allowedRoles.includes(req.user.role)) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+
     return next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-};
-
-const requireRoles = (...allowedRoles) => (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  if (!allowedRoles.includes(req.user.role)) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-
-  return next();
-};
-
-module.exports = {
-  authenticateToken,
-  requireRoles,
 };

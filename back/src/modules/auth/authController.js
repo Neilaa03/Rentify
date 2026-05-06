@@ -1,6 +1,7 @@
-import { registerSchema } from './authSchema.js';
-import { createUser } from './authModel.js';
+import { registerSchema, loginSchema } from './authSchema.js';
+import { createUser, getUserByEmail } from './authModel.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const register = async (req, res) => {
     try {
@@ -29,4 +30,39 @@ const register = async (req, res) => {
     }
 };
 
-export { register };
+const login = async (req, res) => {
+    try {
+        // 1. Validate input
+        const { email, password } = loginSchema.parse(req.body);
+
+        // 2. Find user & Verify password
+        const user = await getUserByEmail(email);
+        
+        // Check if user exists and password matches the hash[cite: 2, 5]
+        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        // 3. Generate JWT
+        const token = jwt.sign(
+            { id: user.id, role: user.role },
+            process.env.JWT_SECRET || 'your-fallback-secret',
+            { expiresIn: '24h' }
+        );
+
+        // Return user (without password_hash) and the token
+        const { password_hash, ...userWithoutPassword } = user;
+        res.json({
+            user: userWithoutPassword,
+            token
+        });
+
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+export {
+    register,
+    login
+};
