@@ -28,3 +28,7 @@ export const carImageFiltersSchema = z.object({
   carId: z.uuid('carId must be a valid UUID').optional(),
   isPrimary: z.coerce.boolean().optional(),
 });
+
+export const uploadCarImageBodySchema = z.object({
+  isPrimary: z.coerce.boolean().optional(),
+});
