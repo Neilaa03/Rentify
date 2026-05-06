@@ -56,7 +56,6 @@ const RegisterScreen = ({ navigation }) => {
             if (response.ok) {
                 // SUCCESS
                 console.log("Registration successful!", data);
-                //alert("Account created successfully!");
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'Login' }],

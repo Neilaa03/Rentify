@@ -108,14 +108,14 @@ const HomeScreen = ({ navigation }) => {
                         </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.footerTab}
                         onPress={() => setActiveTab('Saved')}
                     >
-                        <Ionicons 
-                            name="heart" 
-                            size={24} 
-                            color={activeTab === 'Saved' ? COLORS.primary : '#666'} 
+                        <Ionicons
+                            name="heart"
+                            size={24}
+                            color={activeTab === 'Saved' ? COLORS.primary : '#666'}
                         />
                         <Text style={[styles.tabLabel, { color: activeTab === 'Saved' ? COLORS.primary : '#666' }]}>
                             Saved
