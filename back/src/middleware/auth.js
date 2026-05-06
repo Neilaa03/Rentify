@@ -13,10 +13,10 @@ export const authenticateToken = (req, res, next) => {
     }
 
     try {
-        // Check if the token is valid and not expired[cite: 1]
+        // Check if the token is valid and not expired
         const payload = jwt.verify(token, JWT_SECRET);
         
-        // Attach the user data (id and role) to the request object[cite: 1]
+        // Attach the user data (id and role) to the request object
         req.user = payload;
         return next();
     } catch (err) {
@@ -26,12 +26,12 @@ export const authenticateToken = (req, res, next) => {
 
 // 2. Check User Permissions
 export const requireRoles = (...allowedRoles) => (req, res, next) => {
-    // Ensure authenticateToken was called first[cite: 1]
+    // Ensure authenticateToken was called first
     if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Check if the user's role matches the required roles[cite: 1]
+    // Check if the user's role matches the required roles
     if (!allowedRoles.includes(req.user.role)) {
         return res.status(403).json({ error: 'Access denied' });
     }

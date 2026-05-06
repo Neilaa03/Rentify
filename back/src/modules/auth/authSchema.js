@@ -18,7 +18,7 @@ const loginSchema = z.object({
     password: z.string(),
 });
 
-export { 
+export {
     registerSchema,
     loginSchema
 };
