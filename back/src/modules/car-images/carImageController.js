@@ -10,6 +10,7 @@ import {
   createCarImageSchema,
   updateCarImageSchema,
   idParamSchema,
+  carIdParamSchema,
   carImageFiltersSchema,
 } from './carImageSchemas.js';
 
@@ -41,6 +42,19 @@ export const getCarImage = async (req, res) => {
       return res.status(400).json({ errors: zodErrors(err) });
     }
     res.status(404).json({ error: err.message });
+  }
+};
+
+export const getCarImagesByCarId = async (req, res) => {
+  try {
+    const { carId } = carIdParamSchema.parse(req.params);
+    const items = await getCarImages({ carId });
+    res.json(items);
+  } catch (err) {
+    if (err.issues) {
+      return res.status(400).json({ errors: zodErrors(err) });
+    }
+    res.status(400).json({ error: err.message });
   }
 };
 

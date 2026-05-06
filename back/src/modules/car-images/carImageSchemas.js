@@ -20,6 +20,10 @@ export const idParamSchema = z.object({
   id: z.uuid('id must be a valid UUID'),
 });
 
+export const carIdParamSchema = z.object({
+  carId: z.uuid('carId must be a valid UUID'),
+});
+
 export const carImageFiltersSchema = z.object({
   carId: z.uuid('carId must be a valid UUID').optional(),
   isPrimary: z.coerce.boolean().optional(),

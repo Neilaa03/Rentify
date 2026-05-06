@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAllCarImages,
   getCarImage,
+  getCarImagesByCarId,
   createCarImageHandler,
   updateCarImageHandler,
   deleteCarImageHandler,
@@ -10,6 +11,7 @@ import {
 const router = Router();
 
 router.get('/', getAllCarImages);
+router.get('/car/:carId', getCarImagesByCarId);
 router.get('/:id', getCarImage);
 router.post('/', createCarImageHandler);
 router.put('/:id', updateCarImageHandler);
