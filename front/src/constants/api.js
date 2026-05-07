@@ -1,9 +1,8 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000';
-
+const API_BASE_URL = 'http://10.117.176.112:3000';
 
 export const API_ENDPOINTS = {
     AUTH: {
-        LOGIN: `${API_BASE_URL}/auth/login`,
+        LOGIN: `${API_BASE_URL}/api/auth/login`,
         REGISTER: `${API_BASE_URL}/auth/register`,
     },
     CARS: {
