@@ -1,33 +1,55 @@
 # Dependencies
 node_modules/
+package-lock.json
+yarn.lock
 
-# Env files
+# Environment variables (secret files)
 .env
-.env.*
-!.env.example
-!**/.env.example
+.env.local
+.env.*.local
 
-# Build output
-dist/
-build/
-coverage/
-*.tsbuildinfo
+# Expo
+.expo/
+.expo-shared/
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# OS / Editor
-.DS_Store
-Thumbs.db
+# IDE & Editor
 .vscode/
 .idea/
+*.swp
+*.swo
+*.code-workspace
 
-# Runtime/temp
-tmp/
-temp/
-.cache/
+# AI Assistant & Copilot
+.agent.md
+.agents.md
+.instructions.md
+.prompt.md
+.codex/
+.copilot/
+AGENTS.md
+copilot-instructions.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Build files
+dist/
+build/
+web-build/
+
+# Certificates & Keys
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Git
+.git/
+.gitkeep
