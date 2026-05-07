@@ -4,6 +4,8 @@ node_modules/
 # Env files
 .env
 .env.*
+back/.env
+front/.env
 !.env.example   
 !**/.env.example
 
