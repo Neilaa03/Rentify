@@ -34,12 +34,19 @@ const login = async (req, res) => {
     try {
         // 1. Validate input
         const { email, password } = loginSchema.parse(req.body);
+        console.log('Login attempt for email:', email);
 
         // 2. Find user & Verify password
         const user = await getUserByEmail(email);
         
-        // Check if user exists and password matches the hash[cite: 2, 5]
-        if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+        if (!user) {
+            console.log('User not found:', email);
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        const passwordMatch = await bcrypt.compare(password, user.password_hash);
+        if (!passwordMatch) {
+            console.log('Password mismatch for user:', email);
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
@@ -58,6 +65,7 @@ const login = async (req, res) => {
         });
 
     } catch (err) {
+        console.error('Login error:', err);
         res.status(400).json({ error: err.message });
     }
 };

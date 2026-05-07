@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
+import { API_ENDPOINTS } from '../constants/api';
 
 const RegisterScreen = ({ navigation }) => {
     const [firstName, setFirstName] = useState('');
@@ -33,9 +34,13 @@ const RegisterScreen = ({ navigation }) => {
             return;
         }
 
+        console.log("Email:", email);
+        console.log("API Endpoint:", API_ENDPOINTS.AUTH.REGISTER);
+
         try {
             // 2. Send POST request to backend
-            const response = await fetch('http://192.168.10.76:3000/auth/register', {
+            console.log("Sending fetch request...");
+            const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -51,17 +56,23 @@ const RegisterScreen = ({ navigation }) => {
                 }),
             });
 
+            console.log("Response status:", response.status);
+            console.log("Response ok:", response.ok);
+
             const data = await response.json();
+            console.log("Response data:", data);
 
             if (response.ok) {
                 // SUCCESS
                 console.log("Registration successful!", data);
+                alert("Registration successful! Redirecting to login...");
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'Login' }],
                 });
             } else {
                 // BACKEND ERROR
+                console.log("Registration failed:", data.error);
                 alert(data.error || "Registration failed");
             }
         } catch (error) {

@@ -3,23 +3,28 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants/colors';
+import { API_ENDPOINTS } from '../constants/api';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
     const handleLogin = async () => {
-
         console.log("Login button pressed");
+        
         // 1. Basic validation
         if (!email || !password) {
             alert("Please enter both email and password");
             return;
         }
 
+        console.log("Email:", email);
+        console.log("API Endpoint:", API_ENDPOINTS.AUTH.LOGIN);
+
         try {
             // 2. Send POST request to backend
-            const response = await fetch('http://192.168.10.76:3000/auth/login', {
+            console.log("Sending fetch request...");
+            const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -30,17 +35,23 @@ const LoginScreen = ({ navigation }) => {
                 }),
             });
 
+            console.log("Response status:", response.status);
+            console.log("Response ok:", response.ok);
+
             const data = await response.json();
+            console.log("Response data:", data);
 
             if (response.ok) {
                 // SUCCESS: data contains your user info and JWT token
                 console.log("Login successful!", data);
+                alert("Login successful!");
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'Home' }],
                 });
             } else {
                 // BACKEND ERROR:
+                console.log("Login failed:", data.error);
                 alert(data.error || "Login failed");
             }
         } catch (error) {

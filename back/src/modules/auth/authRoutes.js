@@ -4,7 +4,7 @@ import { authenticateToken, requireRoles } from '../../middleware/auth.js';
 
 const router = express.Router();
 
-// POST http://localhost:3000/auth/register
+// POST http://localhost:3000/api/auth/register
 router.post('/register', register);
 router.post('/login', login);
 
