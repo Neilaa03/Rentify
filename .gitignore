@@ -34,3 +34,6 @@ temp/
 
 # gitkeep
 .gitkeep
+
+# .expo files
+front/.expo/
