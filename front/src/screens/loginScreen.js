@@ -97,6 +97,7 @@ const LoginScreen = ({ navigation }) => {
                 resizeMode="cover"
             >
                 <SafeAreaView style={styles.overlay}>
+                <View style={styles.content}>
                 <View style={styles.header}>
                     <Text style={styles.title}>Welcome Back</Text>
                     <Text style={styles.subtitle}>Log in to continue your journey with Rentify</Text>
@@ -170,6 +171,7 @@ const LoginScreen = ({ navigation }) => {
                         <Text style={styles.linkText}>Sign Up</Text>
                     </TouchableOpacity>
                 </View>
+                </View>
                 </SafeAreaView>
             </ImageBackground>
         </View>
@@ -180,6 +182,7 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { flex: 1 },
     overlay: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
+    content: { marginTop: -64 },
     header: { marginBottom: 40 },
     title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
     subtitle: { fontSize: 16, color: '#aaa', marginTop: 8 },

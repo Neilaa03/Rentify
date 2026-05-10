@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -150,7 +150,17 @@ const RegisterScreen = ({ navigation }) => {
                 resizeMode="cover"
             >
                 <SafeAreaView style={styles.overlay}>
-                    <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+                    <KeyboardAvoidingView
+                        style={styles.keyboardAvoid}
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+                    >
+                    <ScrollView
+                        showsVerticalScrollIndicator={false}
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                    >
                         <TouchableOpacity 
                             style={styles.backButton}
                             onPress={() => navigation.goBack()}
@@ -327,6 +337,7 @@ const RegisterScreen = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
                     </ScrollView>
+                    </KeyboardAvoidingView>
                 </SafeAreaView>
             </ImageBackground>
         </View>
@@ -341,9 +352,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         backgroundColor: 'rgba(0,0,0,0.3)',
     },
+    keyboardAvoid: { flex: 1 },
     scrollView: {
         flex: 1,
         paddingVertical: 20,
+    },
+    scrollContent: {
+        paddingBottom: 28,
     },
     backButton: {
         width: 50,
