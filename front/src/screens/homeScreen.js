@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, Text, ImageBackground, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 import ListingCard from '../components/cards/ListingCard';
-import { listings } from '../data/listings';
+import { getListings } from '../services/listings';
 
 const HomeScreen = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('Accueil');
     const [searchValue, setSearchValue] = useState('');
     const [activeFilter, setActiveFilter] = useState('Tous');
     const [activeSort, setActiveSort] = useState('Populaire');
+    const [listings, setListings] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState('');
 
     const filterOptions = [
         'Tous',
@@ -23,7 +26,24 @@ const HomeScreen = ({ navigation }) => {
     const [showFilterOptions, setShowFilterOptions] = useState(false);
     const [showSortOptions, setShowSortOptions] = useState(false);
 
-    const filteredListings = listings
+    const loadListings = async () => {
+        try {
+            setIsLoading(true);
+            setError('');
+            const data = await getListings();
+            setListings(data);
+        } catch (err) {
+            setError(err.message || 'Impossible de charger les annonces');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadListings();
+    }, []);
+
+    const filteredListings = useMemo(() => listings
         .filter((listing) => {
             const normalizedSearch = searchValue.trim().toLowerCase();
             const matchSearch =
@@ -44,7 +64,7 @@ const HomeScreen = ({ navigation }) => {
             if (activeSort === 'Prix ↓') return b.pricePerDay - a.pricePerDay;
             if (activeSort === 'Note') return b.rating - a.rating;
             return b.rating - a.rating;
-        });
+        }), [listings, searchValue, activeFilter, activeSort]);
 
     return (
         <View style={styles.container}>
@@ -159,14 +179,28 @@ const HomeScreen = ({ navigation }) => {
                             </View>
                         </View>
 
-                        {filteredListings.map((listing) => (
+                        {isLoading && (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyTitle}>Chargement des vehicules...</Text>
+                            </View>
+                        )}
+                        {!isLoading && error ? (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyTitle}>Erreur</Text>
+                                <Text style={styles.emptySubtitle}>{error}</Text>
+                                <TouchableOpacity style={styles.retryButton} onPress={loadListings}>
+                                    <Text style={styles.retryButtonText}>Reessayer</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : null}
+                        {!isLoading && !error && filteredListings.map((listing) => (
                             <ListingCard
                                 key={listing.id}
                                 listing={listing}
                                 onPress={() => navigation.navigate('ListingDetails', { listing })}
                             />
                         ))}
-                        {filteredListings.length === 0 && (
+                        {!isLoading && !error && filteredListings.length === 0 && (
                             <View style={styles.emptyState}>
                                 <Text style={styles.emptyTitle}>Aucun véhicule trouvé</Text>
                                 <Text style={styles.emptySubtitle}>Essaie une autre recherche ou un autre filtre.</Text>
@@ -363,6 +397,21 @@ const styles = StyleSheet.create({
     emptySubtitle: {
         color: '#949cc7',
         fontSize: 12,
+    },
+    retryButton: {
+        marginTop: 12,
+        alignSelf: 'flex-start',
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: 'rgba(108, 77, 255, 0.35)',
+        borderWidth: 1,
+        borderColor: 'rgba(143, 108, 255, 0.65)',
+    },
+    retryButtonText: {
+        color: '#f4f6ff',
+        fontSize: 12,
+        fontWeight: '700',
     },
     footer: {
         marginHorizontal: 10,

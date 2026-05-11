@@ -16,6 +16,8 @@ const zodErrors = (error) => error.issues.map((item) => item.message);
 
 export const getAllListings = async (req, res) => {
   try {
+    console.log('📨 GET /api/listings request:', { query: req.query });
+    
     const parsedFilters = listingFiltersSchema.parse({
       country: req.query.country,
       city: req.query.city,
@@ -35,12 +37,14 @@ export const getAllListings = async (req, res) => {
     });
 
     const result = await getListings(parsedFilters);
+    console.log('✅ Listings retrieved:', { count: result.data?.length || 0 });
     res.json(result);
   } catch (err) {
+    console.error('❌ getAllListings Error:', err.message, err);
     if (err.issues) {
       return res.status(400).json({ errors: zodErrors(err) });
     }
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Failed to fetch listings' });
   }
 };
 
