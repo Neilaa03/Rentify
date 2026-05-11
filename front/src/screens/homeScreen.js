@@ -6,7 +6,7 @@ import { COLORS } from '../constants/colors';
 import ListingCard from '../components/cards/ListingCard';
 import { getListings } from '../services/listings';
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation, route }) => {
     const [activeTab, setActiveTab] = useState('Accueil');
     const [searchValue, setSearchValue] = useState('');
     const [activeFilter, setActiveFilter] = useState('Tous');
@@ -255,7 +255,10 @@ const HomeScreen = ({ navigation }) => {
 
                     <TouchableOpacity 
                         style={styles.footerTab}
-                        onPress={() => setActiveTab('Profil')}
+                        onPress={() => {
+                            setActiveTab('Profil');
+                            navigation.navigate('Profile', { token: route?.params?.token, user: route?.params?.user });
+                        }}
                     >
                         <Ionicons 
                             name="person-outline" 

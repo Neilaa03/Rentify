@@ -65,7 +65,7 @@ const LoginScreen = ({ navigation }) => {
                 // alert("Login successful!");
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'Home' }],
+                    routes: [{ name: 'Home', params: { token: data?.token, user: data?.user } }],
                 });
             } else {
                 // BACKEND ERROR:
