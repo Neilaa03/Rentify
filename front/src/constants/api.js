@@ -1,4 +1,8 @@
-const API_BASE_URL = 'http://10.117.176.112:3000';
+const API_BASE_URL =
+    process?.env?.EXPO_PUBLIC_API_BASE_URL 
+
+//    ||
+//   'http://IP_@:3000';
 
 export const API_ENDPOINTS = {
     AUTH: {
