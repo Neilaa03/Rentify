@@ -5,8 +5,9 @@ yarn.lock
 
 # Environment variables (secret files)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example   
+!**/.env.example
 
 # Expo
 .expo/
