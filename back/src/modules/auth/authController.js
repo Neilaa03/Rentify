@@ -1,9 +1,9 @@
-import { registerSchema, loginSchema } from './authSchema.js';
+import { registerSchema, loginSchema } from './authSchemas.js';
 import { createUser, getUserByEmail } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-const register = async (req, res) => {
+export const register = async (req, res) => {
     try {
         const validatedData = registerSchema.parse(req.body);
 
@@ -30,7 +30,7 @@ const register = async (req, res) => {
     }
 };
 
-const login = async (req, res) => {
+export const login = async (req, res) => {
     try {
         // 1. Validate input
         const { email, password } = loginSchema.parse(req.body);
@@ -68,9 +68,4 @@ const login = async (req, res) => {
         console.error('Login error:', err);
         res.status(400).json({ error: err.message });
     }
-};
-
-export {
-    register,
-    login
 };

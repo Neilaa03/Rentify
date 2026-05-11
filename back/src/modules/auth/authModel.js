@@ -1,6 +1,6 @@
 import { supabase } from '../../config/supabase.js';
 
-const createUser = async (userData) => {
+export const createUser = async (userData) => {
     const { email, password, firstName, lastName, phone, role, isVerified } = userData;
 
     // 1. Insert user into 'users'
@@ -27,7 +27,7 @@ const createUser = async (userData) => {
     return data;
 };
 
-const getUserByEmail = async (email) => {
+export const getUserByEmail = async (email) => {
     // 1. Fetch user including the password_hash for comparison
     const { data, error } = await supabase
         .from('users')
@@ -38,9 +38,4 @@ const getUserByEmail = async (email) => {
     // 2. Return null if not found, otherwise return the user
     if (error) return null;
     return data;
-};
-
-export {
-    createUser,
-    getUserByEmail
 };
