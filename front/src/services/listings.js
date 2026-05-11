@@ -1,5 +1,16 @@
 import { fetchJson } from './api';
 
+const pickListingImage = (item) => {
+  const images = item?.car?.images || [];
+  const primaryImage = images.find((image) => image?.isPrimary && image?.imageUrl);
+  if (primaryImage?.imageUrl) return primaryImage.imageUrl;
+
+  const firstImage = images.find((image) => image?.imageUrl);
+  if (firstImage?.imageUrl) return firstImage.imageUrl;
+
+  return `https://picsum.photos/seed/listing-${item.id}/900/600`;
+};
+
 const toUiListing = (item) => ({
   id: item.id,
   brand: item.car?.brand || 'N/A',
@@ -7,7 +18,7 @@ const toUiListing = (item) => ({
   year: item.car?.year || '-',
   category: item.title || 'Vehicule',
   city: item.city || '',
-  image: `https://picsum.photos/seed/listing-${item.id}/900/600`,
+  image: pickListingImage(item),
   pricePerDay: item.pricePerDay ?? 0,
   available: Boolean(item.isActive),
   fuel: item.car?.fuelType || 'N/A',

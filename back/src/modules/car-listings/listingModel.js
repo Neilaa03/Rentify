@@ -18,6 +18,12 @@ const toCarDto = (carRow) => {
     seats: carRow.seats,
     registrationNumber: carRow.registration_number,
     description: carRow.description,
+    images: (carRow.car_images || []).map((image) => ({
+      id: image.id,
+      imageUrl: image.image_url,
+      isPrimary: image.is_primary,
+      uploadedAt: image.uploaded_at,
+    })),
     createdAt: carRow.created_at,
     updatedAt: carRow.updated_at,
   };
@@ -61,7 +67,7 @@ const toListingTablePayload = (payload) => {
 };
 
 const baseSelect =
-  'id, car_id, title, description, country, city, price_per_day, price_per_week, price_per_month, available_from, available_to, is_active, created_at, cars!inner(*)';
+  'id, car_id, title, description, country, city, price_per_day, price_per_week, price_per_month, available_from, available_to, is_active, created_at, cars!inner(*, car_images(*))';
 
 export const getListings = async (filters = {}) => {
   const {
