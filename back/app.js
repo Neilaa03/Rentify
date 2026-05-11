@@ -8,20 +8,19 @@ import authRoutes from './src/modules/auth/authRoutes.js';
 
 const app = express();
 
-const corsOptions = {
+// CORS Configuration
+app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
-};
+}));
 
-app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/api/cars', carRoutes);
 app.use('/api/car-images', carImageRoutes);
 app.use('/api/car-documents', carDocumentRoutes);
 app.use('/api/listings', listingRoutes);
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
