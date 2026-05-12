@@ -2,6 +2,7 @@ import * as model from './reservationModel.js';
 import {
     createReservationSchema,
     updateStatusSchema,
+    updateDetailsSchema,
     idParamSchema
 } from './reservationSchemas.js';
 
@@ -54,6 +55,7 @@ export const getUserReservations = async (req, res) => {
 export const updateReservationDetailsHandler = async (req, res) => {
     try {
         const { id } = idParamSchema.parse(req.params);
+        const payload = updateDetailsSchema.parse(req.body);
         const reservation = await model.getReservationById(id);
 
         // Security: Ownership check
@@ -68,7 +70,7 @@ export const updateReservationDetailsHandler = async (req, res) => {
             });
         }
 
-        const result = await model.updateReservationDetails(id, req.body);
+        const result = await model.updateReservationDetails(id, payload);
         res.json(result);
     } catch (err) {
         res.status(400).json({ error: err.message });

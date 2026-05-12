@@ -103,9 +103,56 @@ export const createReservation = async (payload, renterId) => {
         throw new Error('Selected dates are not available');
     }
 
+    // Fetch listing to get pricing
+    const { data: listingData, error: listingError } = await supabase
+        .from(LISTINGS_TABLE)
+        .select('price_per_day, price_per_week, price_per_month')
+        .eq('id', payload.listingId)
+        .single();
+
+    if (listingError || !listingData) {
+        throw new Error('Listing not found or has no pricing');
+    }
+
+    // Validate price_per_day exists (required)
+    if (!listingData.price_per_day) {
+        throw new Error('Listing does not have daily price set');
+    }
+
+    // Calculate total price based on days, weeks, and months
+    const startDate = new Date(payload.startDate);
+    const endDate = new Date(payload.endDate);
+    const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+
+    let totalPrice = 0;
+    let remainingDays = totalDays;
+
+    // Apply monthly pricing first (if available)
+    if (remainingDays >= 30 && listingData.price_per_month) {
+        const fullMonths = Math.floor(remainingDays / 30);
+        totalPrice += fullMonths * listingData.price_per_month;
+        remainingDays -= fullMonths * 30;
+    }
+
+    // Apply weekly pricing (if available)
+    if (remainingDays >= 7 && listingData.price_per_week) {
+        const fullWeeks = Math.floor(remainingDays / 7);
+        totalPrice += fullWeeks * listingData.price_per_week;
+        remainingDays -= fullWeeks * 7;
+    }
+
+    // Apply daily pricing for remaining days
+    totalPrice += remainingDays * listingData.price_per_day;
+
+    // Validate totalPrice is a valid number
+    if (isNaN(totalPrice) || !isFinite(totalPrice)) {
+        throw new Error('Failed to calculate reservation price');
+    }
+
     const insertPayload = toReservationTablePayload({
         ...payload,
         renterId,
+        totalPrice,
         status: 'reserved', // Initial status
     });
 
@@ -132,7 +179,75 @@ export const updateReservationStatus = async (id, newStatus) => {
 };
 
 export const updateReservationDetails = async (id, updates) => {
-    const updatePayload = toReservationTablePayload(updates);
+    // Fetch existing reservation
+    const { data: existingReservation, error: fetchError } = await supabase
+        .from(RESERVATIONS_TABLE)
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (fetchError || !existingReservation) {
+        throw new Error('Reservation not found');
+    }
+
+    // Use existing dates if not provided in updates
+    const startDate = updates.startDate ? new Date(updates.startDate) : new Date(existingReservation.start_date);
+    const endDate = updates.endDate ? new Date(updates.endDate) : new Date(existingReservation.end_date);
+
+    // Check for date conflicts (exclude current reservation)
+    if (updates.startDate || updates.endDate) {
+        const { data: conflicts, error: conflictError } = await supabase
+            .from(RESERVATIONS_TABLE)
+            .select('id')
+            .eq('listing_id', existingReservation.listing_id)
+            .neq('id', id) // Exclude this reservation
+            .in('status', ['reserved', 'confirmed', 'pickup_pending'])
+            .or(`and(start_date.lte.${endDate.toISOString().split('T')[0]},end_date.gte.${startDate.toISOString().split('T')[0]})`);
+
+        if (!conflictError && conflicts && conflicts.length > 0) {
+            throw new Error('Selected dates are not available');
+        }
+    }
+
+    // Fetch listing to recalculate price
+    const { data: listingData, error: listingError } = await supabase
+        .from(LISTINGS_TABLE)
+        .select('price_per_day, price_per_week, price_per_month')
+        .eq('id', existingReservation.listing_id)
+        .single();
+
+    if (listingError || !listingData || !listingData.price_per_day) {
+        throw new Error('Listing pricing not found');
+    }
+
+    // Recalculate total price based on new dates
+    const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+    let totalPrice = 0;
+    let remainingDays = totalDays;
+
+    // Apply monthly pricing first
+    if (remainingDays >= 30 && listingData.price_per_month) {
+        const fullMonths = Math.floor(remainingDays / 30);
+        totalPrice += fullMonths * listingData.price_per_month;
+        remainingDays -= fullMonths * 30;
+    }
+
+    // Apply weekly pricing
+    if (remainingDays >= 7 && listingData.price_per_week) {
+        const fullWeeks = Math.floor(remainingDays / 7);
+        totalPrice += fullWeeks * listingData.price_per_week;
+        remainingDays -= fullWeeks * 7;
+    }
+
+    // Apply daily pricing for remaining days
+    totalPrice += remainingDays * listingData.price_per_day;
+
+    // Prepare update payload
+    const updatePayload = {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        total_price: totalPrice,
+    };
 
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)

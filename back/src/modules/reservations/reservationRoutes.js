@@ -37,6 +37,8 @@ router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);
 
 // Cancel reservation
 router.delete('/:id/cancel', verifyClient, cancelReservationHandler);
+
+
 // =========================================================
 // OWNER / MANAGER ROUTES
 // =========================================================
@@ -47,11 +49,13 @@ router.get('/listing/:listingId', verifyOwner, getListingReservations);
 // Update reservation status (for owner/manager workflow)
 router.patch('/:id/status', verifyOwner, updateReservationStatusHandler);
 
+
 // =========================================================
 // ADMIN ROUTES
 // =========================================================
 
 // Get all reservations in the system
 router.get('/', verifyAdmin, getAllReservations);
+
 
 export default router;

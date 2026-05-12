@@ -13,7 +13,6 @@ export const createReservationSchema = z.object({
     listingId: z.string().uuid('listingId must be a valid UUID'),
     startDate: z.string().date('startDate must be a valid date (YYYY-MM-DD)'),
     endDate: z.string().date('endDate must be a valid date (YYYY-MM-DD)'),
-    totalPrice: z.coerce.number().min(0, 'totalPrice must be >= 0'),
 }).refine((data) => new Date(data.startDate) < new Date(data.endDate), {
     message: 'End date must be after start date',
     path: ['endDate'],
@@ -22,6 +21,19 @@ export const createReservationSchema = z.object({
 export const updateStatusSchema = z.object({
     status: ReservationStatus,
     reason: z.string().optional(),
+});
+
+export const updateDetailsSchema = z.object({
+    startDate: z.string().date('startDate must be a valid date (YYYY-MM-DD)').optional(),
+    endDate: z.string().date('endDate must be a valid date (YYYY-MM-DD)').optional(),
+}).refine((data) => {
+    if (data.startDate && data.endDate) {
+        return new Date(data.startDate) < new Date(data.endDate);
+    }
+    return true;
+}, {
+    message: 'End date must be after start date',
+    path: ['endDate'],
 });
 
 export const reservationFiltersSchema = z.object({
