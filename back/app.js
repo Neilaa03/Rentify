@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import carRoutes from './src/modules/cars/carRoutes.js';
 import carImageRoutes from './src/modules/car-images/carImageRoutes.js';
-import carDocumentRoutes from './src/modules/car-documents/carDocumentRoutes.js';
 import listingRoutes from './src/modules/car-listings/listingRoutes.js';
 import authRoutes from './src/modules/auth/authRoutes.js';
 import documentRoutes from './src/modules/documents/documentRoutes.js';
