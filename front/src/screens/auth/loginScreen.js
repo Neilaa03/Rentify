@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as SecureStore from 'expo-secure-store';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../constants/colors';
-import { API_ENDPOINTS } from '../constants/api';
+import { COLORS } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../constants/api';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -62,7 +63,11 @@ const LoginScreen = ({ navigation }) => {
             if (response.ok) {
                 // SUCCESS: data contains your user info and JWT token
                 console.log("Login successful!", data);
-                // alert("Login successful!");
+                // Save token to SecureStore
+                if (data.token) {
+                    await SecureStore.setItemAsync('userToken', data.token);
+                    console.log('Token saved to SecureStore');
+                }
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'Home' }],
@@ -92,7 +97,7 @@ const LoginScreen = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <ImageBackground
-                source={require('../assets/background.png')}
+                source={require('../../assets/background.png')}
                 style={styles.background}
                 resizeMode="cover"
             >

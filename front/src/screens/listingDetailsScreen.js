@@ -2,6 +2,8 @@ import React from 'react';
 import { ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../constants/colors';
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
 
@@ -114,10 +116,22 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           <Text style={styles.bottomPrice}>{formatPrice(listing.pricePerDay)}</Text>
           <Text style={styles.bottomUnit}>par jour</Text>
         </View>
-        <TouchableOpacity style={[styles.ctaButton, !listing.available && styles.ctaButtonDisabled]} disabled={!listing.available}>
-          <Ionicons name="calendar-outline" size={18} color="#fff" />
-          <Text style={styles.ctaText}>{listing.available ? 'Reserver maintenant' : 'Indisponible'}</Text>
-        </TouchableOpacity>
+        {listing.available ? (
+          <TouchableOpacity onPress={() => navigation.navigate('ReservationDatePicker', { listing })}>
+            <LinearGradient
+              colors={[COLORS.secondary, COLORS.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaButton}
+            >
+              <Text style={styles.ctaText}>Reserver</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.ctaButton, styles.ctaButtonDisabled]}>
+            <Text style={styles.ctaText}>Indisponible</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -355,7 +369,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(148, 156, 233, 0.2)',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -371,23 +385,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   ctaButton: {
-    minWidth: 196,
-    height: 48,
-    borderRadius: 14,
-    flexDirection: 'row',
+    minWidth: 160,
+    height: 55,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#5A78FF',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
   },
   ctaButtonDisabled: {
     backgroundColor: '#444a71',
   },
   ctaText: {
-    marginLeft: 8,
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18 / 2,
+    fontWeight: 'bold',
+    fontSize: 18,
   },
   fallbackContainer: {
     flex: 1,
