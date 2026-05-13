@@ -5,6 +5,7 @@ import {
   updateListing,
   deleteListing,
 } from './listingModel.js';
+import { getCarById } from '../cars/carModel.js';
 import {
   createListingSchema,
   updateListingSchema,
@@ -65,6 +66,10 @@ export const getListing = async (req, res) => {
 export const createListingHandler = async (req, res) => {
   try {
     const payload = createListingSchema.parse(req.body);
+    const car = await getCarById(payload.carId);
+    if (req.user.role !== 'admin' && car.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only create listings for your own cars' });
+    }
     const item = await createListing(payload);
     res.status(201).json(item);
   } catch (err) {
@@ -79,7 +84,20 @@ export const createListingHandler = async (req, res) => {
 export const updateListingHandler = async (req, res) => {
   try {
     const { id } = idParamSchema.parse(req.params);
+    const existingListing = await getListingById(id);
+    if (req.user.role !== 'admin' && existingListing.car?.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only update your own listings' });
+    }
+
     const payload = updateListingSchema.parse(req.body);
+    if (payload.carId && req.user.role !== 'admin') {
+      const targetCar = await getCarById(payload.carId);
+      if (targetCar.ownerId !== req.user.id) {
+        return res.status(403).json({
+          error: 'You can only move listing to one of your own cars',
+        });
+      }
+    }
     const item = await updateListing(id, payload);
     res.json(item);
   } catch (err) {
@@ -94,6 +112,10 @@ export const updateListingHandler = async (req, res) => {
 export const deleteListingHandler = async (req, res) => {
   try {
     const { id } = idParamSchema.parse(req.params);
+    const existingListing = await getListingById(id);
+    if (req.user.role !== 'admin' && existingListing.car?.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only delete your own listings' });
+    }
     await deleteListing(id);
     res.sendStatus(204);
   } catch (err) {

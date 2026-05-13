@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import upload from '../../middleware/upload.js';
+import { authenticateToken } from '../../middleware/auth.js';
 
 import {
   getAllCarImages,
@@ -8,20 +9,19 @@ import {
   createCarImageHandler,
   updateCarImageHandler,
   deleteCarImageHandler,
-  uploadCarImageHandler,
   uploadAndCreateCarImageHandler,
 } from './carImageController.js';
+import { verifyOwner } from '../../middleware/roles/verifyOwner.js';
 
 const router = Router();
 
 router.get('/', getAllCarImages);
 router.get('/car/:carId', getCarImagesByCarId);
 router.get('/:id', getCarImage);
-router.post('/upload', upload.single('image'), uploadCarImageHandler);
-router.post('/car/:carId/upload', upload.single('image'), uploadAndCreateCarImageHandler);
-router.post('/', createCarImageHandler);
-router.put('/:id', updateCarImageHandler);
-router.patch('/:id', updateCarImageHandler);
-router.delete('/:id', deleteCarImageHandler);
+router.post('/car/:carId/upload', authenticateToken, verifyOwner, upload.single('image'), uploadAndCreateCarImageHandler);
+router.post('/', authenticateToken, verifyOwner, createCarImageHandler);
+router.put('/:id', authenticateToken, verifyOwner, updateCarImageHandler);
+router.patch('/:id', authenticateToken, verifyOwner, updateCarImageHandler);
+router.delete('/:id', authenticateToken, verifyOwner, deleteCarImageHandler);
 
 export default router;

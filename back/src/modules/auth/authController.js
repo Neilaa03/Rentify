@@ -2,12 +2,13 @@ import { registerSchema, loginSchema } from './authSchema.js';
 import { createUser, getUserByEmail, getUserById } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '../../middleware/auth.js';
 
 const register = async (req, res) => {
     try {
         const validatedData = registerSchema.parse(req.body);
 
-        const isVerified = validatedData.role === 'client';
+        const isVerified = ( validatedData.role === 'client' || validatedData.role === 'owner' );
         const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
         const newUser = await createUser({
@@ -45,7 +46,7 @@ const login = async (req, res) => {
 
         const token = jwt.sign(
             { id: user.id, role: user.role },
-            process.env.JWT_SECRET || 'your-fallback-secret',
+            JWT_SECRET,
             { expiresIn: '24h' }
         );
 
