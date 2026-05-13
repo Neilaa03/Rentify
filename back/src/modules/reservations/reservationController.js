@@ -51,6 +51,18 @@ export const getUserReservations = async (req, res) => {
     }
 };
 
+// PUBLIC: Get listing availability (blocked dates) for calendar
+// Combines listing available_from/available_to with non-cancelled reservations
+export const getListingAvailabilityHandler = async (req, res) => {
+    try {
+        const { listingId } = req.params;
+        const availability = await model.getListingAvailability(listingId);
+        res.json(availability);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
 // Allow client to modify trip dates (Only if status is 'reserved')
 export const updateReservationDetailsHandler = async (req, res) => {
     try {

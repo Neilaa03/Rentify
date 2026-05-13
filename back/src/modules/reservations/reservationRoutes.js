@@ -12,11 +12,19 @@ import {
     getListingReservations,
     updateReservationStatusHandler,
     getAllReservations,
+    getListingAvailabilityHandler,
 } from './reservationController.js';
 
 const router = Router();
 
-// All routes require authentication
+// =========================================================
+// PUBLIC ROUTES (no authentication required)
+// =========================================================
+
+// PUBLIC: Get listing availability for calendar (blocked dates)
+router.get('/calendar/availability/:listingId', getListingAvailabilityHandler);
+
+// All other routes require authentication
 router.use(authenticateToken);
 
 // =========================================================
@@ -32,9 +40,6 @@ router.get('/me', getUserReservations);
 // Get specific reservation (with ownership validation in controller)
 router.get('/:id', getReservationHandler);
 
-// Update reservation details (only if status is 'reserved')
-router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);
-
 // Cancel reservation
 router.delete('/:id/cancel', verifyClient, cancelReservationHandler);
 
@@ -44,7 +49,11 @@ router.delete('/:id/cancel', verifyClient, cancelReservationHandler);
 // =========================================================
 
 // Get all reservations for a specific listing
+// MUST come before /:id to match specific route first
 router.get('/listing/:listingId', verifyOwner, getListingReservations);
+
+// Update reservation details (only if status is 'reserved')
+router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);
 
 // Update reservation status (for owner/manager workflow)
 router.patch('/:id/status', verifyOwner, updateReservationStatusHandler);

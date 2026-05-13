@@ -70,7 +70,7 @@ const LoginScreen = ({ navigation }) => {
                 }
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'Home' }],
+                    routes: [{ name: 'ClientApp' }],
                 });
             } else {
                 // BACKEND ERROR:

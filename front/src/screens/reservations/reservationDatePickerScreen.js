@@ -3,18 +3,29 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import CustomCalendar from '../../components/customCalendar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
+import {
+  parseLocalDate,
+  formatLocalYmd,
+  calculateReservationPrice,
+  fetchListingAvailability,
+  getListingAvailabilityWindow,
+  isDateWithinAvailability,
+  isDateReserved,
+} from '../../utils/reservationUtils';
 
 const ReservationDatePickerScreen = ({ navigation, route }) => {
   const { listing: initialListing } = route.params;
@@ -26,40 +37,15 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [estimatedPrice, setEstimatedPrice] = useState(0);
 
-  const parseLocalDate = (value) => {
-    if (!value) return null;
-    if (value instanceof Date) return value;
-
-    if (typeof value === 'string') {
-      const datePart = value.split('T')[0];
-      const parts = datePart.split('-').map(Number);
-      if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
-        const [year, month, day] = parts;
-        return new Date(year, month - 1, day);
-      }
-    }
-
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  };
-
-  const formatLocalYmd = (date) => {
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   // Fetch full listing details and reserved dates
   useEffect(() => {
     fetchListingDetails();
   }, []);
 
-  // Update marked dates when reserved dates change
+  // Keep highlighted range in sync with user selection
   useEffect(() => {
-    updateMarkedDates(null, null);
-  }, [reservedDates, listing]);
+    updateMarkedDates(startDate, endDate);
+  }, [startDate, endDate]);
 
   const fetchListingDetails = async () => {
     try {
@@ -105,41 +91,12 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       console.error('Error fetching listing details:', error);
     }
     
-    // Then fetch reserved dates
-    await fetchReservedDates();
-  };
-
-  const fetchReservedDates = async () => {
+    // Fetch calendar availability (blocked dates + listing dates)
     try {
-      const token = await SecureStore.getItemAsync('userToken');
-      const response = await fetch(
-        API_ENDPOINTS.RESERVATIONS.GET_LISTING(initialListing.id),
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
-      
-      if (Array.isArray(data)) {
-        const reserved = [];
-        data.forEach(reservation => {
-          // Only mark confirmed and reserved dates as blocked
-          if (['reserved', 'confirmed', 'pickup_pending'].includes(reservation.status)) {
-            const start = parseLocalDate(reservation.start_date);
-            const end = parseLocalDate(reservation.end_date);
-            if (!start || !end) return;
-            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-              const dateStr = formatLocalYmd(d);
-              if (dateStr) reserved.push(dateStr);
-            }
-          }
-        });
-        setReservedDates(reserved);
-      }
+      const availability = await fetchListingAvailability(initialListing.id);
+      setReservedDates(availability.blockedDates);
     } catch (error) {
-      console.error('Error fetching reserved dates:', error);
+      console.error('Error fetching calendar availability:', error);
     } finally {
       setLoading(false);
     }
@@ -147,114 +104,64 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
 
   const handleDayPress = (day) => {
     const dateStr = day.dateString;
+    const pressedDate = parseLocalDate(dateStr);
+    if (!pressedDate) return;
     
     // Can't select past dates
-    if (new Date(dateStr) < new Date(new Date().setHours(0, 0, 0, 0))) {
+    const todayLocal = new Date();
+    todayLocal.setHours(0, 0, 0, 0);
+    if (pressedDate < todayLocal) {
       Alert.alert('Date invalide', 'Vous ne pouvez pas sélectionner une date passée');
       return;
     }
 
     // Can't select reserved dates
-    if (reservedDates.includes(dateStr)) {
+    if (isDateReserved(dateStr, reservedDates)) {
       Alert.alert('Date indisponible', 'Cette date est déjà réservée');
+      return;
+    }
+
+    // Check if date is within listing's availability window
+    if (!isDateWithinAvailability(dateStr, listing)) {
+      Alert.alert('Date indisponible', 'Cette date est en dehors de la période de disponibilité');
       return;
     }
 
     if (!startDate) {
       setStartDate(dateStr);
-      updateMarkedDates(dateStr, null);
     } else if (!endDate) {
-      if (new Date(dateStr) < new Date(startDate)) {
+      const startLocal = parseLocalDate(startDate);
+      if (startLocal && pressedDate < startLocal) {
         Alert.alert('Erreur', 'La date de fin doit être après la date de début');
         return;
       }
       setEndDate(dateStr);
-      updateMarkedDates(startDate, dateStr);
       calculatePrice(startDate, dateStr);
     } else {
       // Reset selection
       setStartDate(dateStr);
       setEndDate(null);
       setEstimatedPrice(0);
-      updateMarkedDates(dateStr, null);
     }
   };
 
   const updateMarkedDates = (start, end) => {
     const marked = {};
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Support both API DTO (camelCase) and legacy/snake_case shapes.
-    const availableFromRaw = listing?.availableFrom ?? listing?.available_from ?? null;
-    const availableToRaw = listing?.availableTo ?? listing?.available_to ?? null;
-    const availableFrom = parseLocalDate(availableFromRaw);
-    const availableTo = parseLocalDate(availableToRaw);
-    
-    if (availableFrom) availableFrom.setHours(0, 0, 0, 0);
-    if (availableTo) availableTo.setHours(23, 59, 59, 999);
-    
-    console.log('availableFrom:', availableFrom);
-    console.log('availableTo:', availableTo);
-    
-    // Mark all dates in the calendar range
-    for (let d = new Date(2020, 0, 1); d <= new Date(2030, 11, 31); d.setDate(d.getDate() + 1)) {
-      const dateStr = formatLocalYmd(d);
-      if (!dateStr) continue;
-      const currentDate = new Date(d);
-      currentDate.setHours(0, 0, 0, 0);
-      
-      if (currentDate < today) {
-        // Past dates - disabled
-        marked[dateStr] = {
-          disabled: true,
-          selectedColor: '#444a71',
-          textColor: '#8e95bf',
-        };
-      } else if ((availableFrom && currentDate < availableFrom) || (availableTo && currentDate > availableTo)) {
-        // Outside availability range - disabled
-        marked[dateStr] = {
-          disabled: true,
-          selectedColor: '#444a71',
-          textColor: '#8e95bf',
-        };
-      } else if (reservedDates.includes(dateStr)) {
-        // Reserved dates - disabled
-        marked[dateStr] = {
-          disabled: true,
-          selectedColor: '#444a71',
-          textColor: '#8e95bf',
-        };
-      } else {
-        // Available dates - light green
-        marked[dateStr] = {
-          selected: false,
-          selectedColor: 'rgba(35, 212, 159, 0.3)',
-          textColor: '#e8ecff',
-        };
-      }
-    }
 
     if (start) {
       marked[start] = {
-        ...marked[start],
         selected: true,
-        selectedColor: '#a566ff',
         startingDay: true,
-        textColor: '#fff',
+        endingDay: !end,
       };
     }
 
     if (end) {
       marked[end] = {
-        ...marked[end],
         selected: true,
-        selectedColor: '#a566ff',
         endingDay: true,
-        textColor: '#fff',
       };
 
-      // Mark dates in between
       const current = parseLocalDate(start);
       const endLocal = parseLocalDate(end);
       if (!current || !endLocal) {
@@ -268,10 +175,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         if (!dateStr) continue;
         if (dateStr !== end) {
           marked[dateStr] = {
-            ...marked[dateStr],
-            selected: true,
-            selectedColor: '#a566ff',
-            textColor: '#fff',
+            inRange: true,
           };
         }
       }
@@ -281,37 +185,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   };
 
   const calculatePrice = (start, end) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const totalDays = Math.ceil(
-      (endDate - startDate) / (1000 * 60 * 60 * 24)
-    );
-
-    let price = 0;
-    let remainingDays = totalDays;
-
-    // Handle both camelCase and snake_case field names
-    const pricePerDay = parseFloat(listing.price_per_day || listing.pricePerDay || 0);
-    const pricePerWeek = parseFloat(listing.price_per_week || listing.pricePerWeek || 0);
-    const pricePerMonth = parseFloat(listing.price_per_month || listing.pricePerMonth || 0);
-
-    // Apply monthly pricing
-    if (remainingDays >= 30 && pricePerMonth) {
-      const months = Math.floor(remainingDays / 30);
-      price += months * pricePerMonth;
-      remainingDays -= months * 30;
-    }
-
-    // Apply weekly pricing
-    if (remainingDays >= 7 && pricePerWeek) {
-      const weeks = Math.floor(remainingDays / 7);
-      price += weeks * pricePerWeek;
-      remainingDays -= weeks * 7;
-    }
-
-    // Apply daily pricing
-    price += remainingDays * pricePerDay;
-
+    const price = calculateReservationPrice(listing, start, end);
     setEstimatedPrice(price);
   };
 
@@ -364,43 +238,61 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     setStartDate(null);
     setEndDate(null);
     setEstimatedPrice(0);
-    setMarkedDates({});
   };
 
   if (loading && reservedDates.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </SafeAreaView>
+      <LinearGradient colors={[COLORS.bg, COLORS.bg2]} style={styles.container}>
+        <SafeAreaView style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
+  const { from: availableFromStr, to: availableToStr } = getListingAvailabilityWindow(listing);
+  const todayStr = formatLocalYmd(new Date());
+  const minDateStr = availableFromStr && availableFromStr > todayStr ? availableFromStr : todayStr;
+  const maxDateStr = availableToStr || null;
+
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={[COLORS.bg, COLORS.bg2]} style={styles.container}>
       <SafeAreaView style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Sélectionner les dates</Text>
         <View style={{ width: 50 }} />
       </SafeAreaView>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Car Info Preview */}
         <View style={styles.carPreview}>
           <View style={styles.carImage}>
             {listing.image ? (
-              <View style={styles.imagePlaceholder} />
+              <Image source={{ uri: listing.image }} style={styles.carImageMedia} resizeMode="cover" />
             ) : (
-              <Ionicons name="car-outline" size={40} color="#8f6cff" />
+              <View style={styles.carImageFallback}>
+                <Ionicons name="car-outline" size={34} color={COLORS.primary} />
+              </View>
             )}
           </View>
           <View style={styles.carInfo}>
             <Text style={styles.carBrand}>{listing.brand}</Text>
             <Text style={styles.carModel}>{listing.model}</Text>
+            {!!listing.city && (
+              <View style={styles.carMetaRow}>
+                <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
+                <Text style={styles.carMetaText}>{listing.city}</Text>
+              </View>
+            )}
             <Text style={styles.carPrice}>
               {(parseFloat(listing.price_per_day || listing.pricePerDay || 0)).toLocaleString('fr-FR')} DA/jour
             </Text>
@@ -412,12 +304,12 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           <Text style={styles.sectionTitle}>Sélectionnez vos dates</Text>
           
           <View style={styles.legendContainer}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: '#a566ff' }]} />
-              <Text style={styles.legendText}>Dates sélectionnées</Text>
+            <View style={styles.legendChip}>
+              <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
+              <Text style={styles.legendText}>Sélection</Text>
             </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: '#444a71' }]} />
+            <View style={styles.legendChip}>
+              <View style={[styles.legendDot, { backgroundColor: 'rgba(142, 149, 191, 0.6)' }]} />
               <Text style={styles.legendText}>Indisponible</Text>
             </View>
           </View>
@@ -425,6 +317,11 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           <CustomCalendar
             markedDates={markedDates}
             onDayPress={handleDayPress}
+            minDate={minDateStr}
+            maxDate={maxDateStr}
+            disabledDates={reservedDates}
+            locale="fr-FR"
+            startFromMonday
           />
         </View>
 
@@ -438,15 +335,15 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
                 <Text style={styles.dateLabel}>Départ</Text>
                 <Text style={styles.dateValue}>
                   {startDate
-                    ? new Date(startDate).toLocaleDateString('fr-FR')
+                    ? (parseLocalDate(startDate)?.toLocaleDateString('fr-FR') || '-')
                     : '-'}
                 </Text>
               </View>
-              <Ionicons name="arrow-forward" size={20} color="#8f6cff" />
+              <Ionicons name="arrow-forward" size={18} color={COLORS.textMuted} />
               <View style={styles.dateItem}>
                 <Text style={styles.dateLabel}>Retour</Text>
                 <Text style={styles.dateValue}>
-                  {endDate ? new Date(endDate).toLocaleDateString('fr-FR') : '-'}
+                  {endDate ? (parseLocalDate(endDate)?.toLocaleDateString('fr-FR') || '-') : '-'}
                 </Text>
               </View>
             </View>
@@ -483,8 +380,8 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           <LinearGradient
             colors={
               startDate && endDate
-                ? [COLORS.secondary, COLORS.primary]
-                : ['#444a71', '#444a71']
+                ? ['#4C6FFF', COLORS.primary]
+                : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)']
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -498,139 +395,168 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           </LinearGradient>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f1228',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 10,
-    paddingVertical: 20,
-    backgroundColor: '#151837',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(21, 24, 55, 0.65)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 156, 233, 0.2)',
+    borderBottomColor: COLORS.border,
   },
   backButton: {
-    width: 50,
-    height: 50,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 27,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   headerTitle: {
-    color: '#f6f8ff',
+    color: COLORS.text,
     fontSize: 18,
     fontWeight: '700',
   },
-  content: {
+  scroll: {
     flex: 1,
+  },
+  contentContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingTop: 18,
+    paddingBottom: 140,
   },
   carPreview: {
     flexDirection: 'row',
-    backgroundColor: '#151837',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 32,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 22,
     borderWidth: 1,
-    borderColor: 'rgba(148, 156, 233, 0.2)',
+    borderColor: COLORS.border,
   },
   carImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    backgroundColor: '#0f1228',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 76,
+    height: 76,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.18)',
     marginRight: 12,
   },
-  imagePlaceholder: {
+  carImageMedia: {
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(143, 108, 255, 0.1)',
-    borderRadius: 8,
+  },
+  carImageFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   carInfo: {
     flex: 1,
     justifyContent: 'center',
   },
   carBrand: {
-    color: '#8e95bf',
+    color: COLORS.textMuted,
     fontSize: 12,
   },
   carModel: {
-    color: '#f6f8ff',
-    fontSize: 16,
-    fontWeight: '700',
-    marginVertical: 4,
+    color: COLORS.text,
+    fontSize: 17,
+    fontWeight: '800',
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  carMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    gap: 6,
+  },
+  carMetaText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
   },
   carPrice: {
-    color: '#a566ff',
+    color: COLORS.primary,
     fontSize: 13,
     fontWeight: '600',
   },
   calendarSection: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   summarySection: {
-    marginBottom: 80,
+    marginBottom: 18,
   },
   sectionTitle: {
-    color: '#f6f8ff',
+    color: COLORS.text,
     fontSize: 18,
     fontWeight: '700',
-    marginTop: 10,
-    marginBottom: 16,
   },
   legendContainer: {
     flexDirection: 'row',
-    marginBottom: 16,
-    gap: 16,
+    marginTop: 18,
+    marginBottom: 18,
+    gap: 10,
     justifyContent: 'center',
-    alignItems: 'center',
   },
-  legendItem: {
+  legendChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 4,
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     marginRight: 8,
   },
   legendText: {
-    color: '#8e95bf',
+    color: COLORS.textMuted,
     fontSize: 12,
+    fontWeight: '600',
   },
   dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#0f1228',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 12,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   dateItem: {
     flex: 1,
     alignItems: 'center',
   },
   dateLabel: {
-    color: '#8e95bf',
+    color: COLORS.textMuted,
     fontSize: 12,
     marginBottom: 4,
   },
   dateValue: {
-    color: '#f6f8ff',
+    color: COLORS.text,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -638,20 +564,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(143, 108, 255, 0.1)',
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(143, 108, 255, 0.3)',
+    borderColor: 'rgba(138, 43, 226, 0.28)',
   },
   priceLabel: {
-    color: '#8e95bf',
+    color: COLORS.textMuted,
     fontSize: 14,
   },
   priceValue: {
-    color: '#a566ff',
+    color: COLORS.primary,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -660,7 +585,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   clearButtonText: {
-    color: '#8f6cff',
+    color: COLORS.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -672,38 +597,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#151837',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(148, 156, 233, 0.2)',
+    borderTopColor: COLORS.border,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 14,
+    paddingBottom: 18,
     gap: 12,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -10 },
+    elevation: Platform.OS === 'android' ? 10 : 0,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 156, 233, 0.3)',
+    paddingVertical: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(142, 149, 191, 0.4)',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
   cancelButtonText: {
     color: '#8e95bf',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   reserveButtonWrapper: {
     flex: 1,
   },
   reserveButton: {
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   reserveButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });
 

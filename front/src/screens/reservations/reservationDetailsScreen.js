@@ -3,13 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   Alert,
   ImageBackground,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -365,7 +366,6 @@ const styles = StyleSheet.create({
   },
   dateBox: {
     flex: 1,
-    backgroundColor: '#151837',
     borderRadius: 10,
     padding: 12,
     borderWidth: 1,
@@ -403,7 +403,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   infoCard: {
-    backgroundColor: '#151837',
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
@@ -462,7 +461,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   priceBreakdown: {
-    backgroundColor: '#151837',
     borderRadius: 10,
     padding: 16,
     borderWidth: 1,
@@ -549,15 +547,15 @@ const styles = StyleSheet.create({
   },
   paymentButton: {
     paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 16,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   paymentButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });
 

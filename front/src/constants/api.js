@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
         UPDATE_DETAILS: (id) => `${API_BASE_URL}/api/reservations/${id}/details`,
         CANCEL: (id) => `${API_BASE_URL}/api/reservations/${id}/cancel`,
         GET_LISTING: (listingId) => `${API_BASE_URL}/api/reservations/listing/${listingId}`,
+        GET_CALENDAR_AVAILABILITY: (listingId) => `${API_BASE_URL}/api/reservations/calendar/availability/${listingId}`,
         UPDATE_STATUS: (id) => `${API_BASE_URL}/api/reservations/${id}/status`,
         GET_ALL: `${API_BASE_URL}/api/reservations`,
     },

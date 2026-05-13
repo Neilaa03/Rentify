@@ -122,7 +122,7 @@ export const createReservation = async (payload, renterId) => {
     // Calculate total price based on days, weeks, and months
     const startDate = new Date(payload.startDate);
     const endDate = new Date(payload.endDate);
-    const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+    const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1; // +1 to include both start and end dates
 
     let totalPrice = 0;
     let remainingDays = totalDays;
@@ -280,4 +280,57 @@ export const getListingReservations = async (listingId) => {
 
     if (error) throw error;
     return (data || []).map(toReservationDto);
+};
+
+// =========================================================
+// AVAILABILITY CALENDAR DATA (PUBLIC)
+// =========================================================
+
+/**
+ * Get listing availability for calendar
+ * Combines: listing available dates + non-cancelled reservations
+ */
+export const getListingAvailability = async (listingId) => {
+    // Fetch listing availability window
+    const { data: listing, error: listingError } = await supabase
+        .from(LISTINGS_TABLE)
+        .select('available_from, available_to')
+        .eq('id', listingId)
+        .single();
+
+    if (listingError || !listing) {
+        throw new Error('Listing not found');
+    }
+
+    // Fetch all non-cancelled reservations for this listing
+    const { data: reservations, error: resError } = await supabase
+        .from(RESERVATIONS_TABLE)
+        .select('start_date, end_date, status')
+        .eq('listing_id', listingId)
+        .in('status', ['reserved', 'confirmed', 'pickup_pending']);
+
+    if (resError) throw resError;
+
+    // Build blocked dates array
+    const blockedDates = [];
+    (reservations || []).forEach(reservation => {
+        const startDate = new Date(reservation.start_date);
+        const endDate = new Date(reservation.end_date);
+        
+        // Mark all dates in reservation range as blocked
+        const current = new Date(startDate);
+        while (current <= endDate) {
+            const dateStr = current.toISOString().split('T')[0];
+            if (!blockedDates.includes(dateStr)) {
+                blockedDates.push(dateStr);
+            }
+            current.setDate(current.getDate() + 1);
+        }
+    });
+
+    return {
+        availableFrom: listing.available_from,
+        availableTo: listing.available_to,
+        blockedDates: blockedDates.sort(),
+    };
 };

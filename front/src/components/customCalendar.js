@@ -1,27 +1,52 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../constants/colors';
 
 const CustomCalendar = ({
   onDayPress,
   markedDates = {},
-  minDate = null,
+  minDate = null, // 'YYYY-MM-DD'
+  maxDate = null, // 'YYYY-MM-DD'
+  disabledDates = [], // string[] or Set<string>
+  locale = 'fr-FR',
+  startFromMonday = true,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  const disabledDatesSet = useMemo(() => {
+    if (!disabledDates) return new Set();
+    if (disabledDates instanceof Set) return disabledDates;
+    return new Set(disabledDates);
+  }, [disabledDates]);
 
   const getDaysInMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
   const getFirstDayOfMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const day = new Date(date.getFullYear(), date.getMonth(), 1).getDay(); // 0=Sun
+    return startFromMonday ? (day + 6) % 7 : day;
   };
 
-  const formatDate = (year, month, day) => {
-    const d = new Date(year, month, day);
-    const month2 = String(d.getMonth() + 1).padStart(2, '0');
-    const day2 = String(d.getDate()).padStart(2, '0');
+  const capitalize = (value) => {
+    if (!value) return value;
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  const formatDate = (year, monthIndex, day) => {
+    const month2 = String(monthIndex + 1).padStart(2, '0');
+    const day2 = String(day).padStart(2, '0');
     return `${year}-${month2}-${day2}`;
+  };
+
+  const isDisabled = (dateStr) => {
+    if (!dateStr) return true;
+    if (minDate && dateStr < minDate) return true;
+    if (maxDate && dateStr > maxDate) return true;
+    if (disabledDatesSet.has(dateStr)) return true;
+    if (markedDates?.[dateStr]?.disabled) return true;
+    return false;
   };
 
   const renderCalendarDays = () => {
@@ -65,26 +90,29 @@ const CustomCalendar = ({
       day
     );
 
+    if (isDisabled(dateStr)) return;
     onDayPress({ dateString: dateStr });
   };
 
   const days = renderCalendarDays();
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthName = currentDate.toLocaleString('en-US', { month: 'long' });
-  const year = currentDate.getFullYear();
+  const dayLabels = startFromMonday
+    ? ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+    : ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+  const monthYearLabel = capitalize(
+    currentDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+  );
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handlePreviousMonth} style={styles.navButton}>
-          <Ionicons name="chevron-back" size={24} color="#a566ff" />
+          <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
         </TouchableOpacity>
-        <Text style={styles.monthYear}>
-          {monthName} {year}
-        </Text>
+        <Text style={styles.monthYear}>{monthYearLabel}</Text>
         <TouchableOpacity onPress={handleNextMonth} style={styles.navButton}>
-          <Ionicons name="chevron-forward" size={24} color="#a566ff" />
+          <Ionicons name="chevron-forward" size={22} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
 
@@ -103,35 +131,45 @@ const CustomCalendar = ({
           const dateStr = day
             ? formatDate(currentDate.getFullYear(), currentDate.getMonth(), day)
             : null;
-          const isMarked = dateStr && markedDates[dateStr];
-          const isDisabled = dateStr && markedDates[dateStr]?.disabled;
-          const isSelected = dateStr && markedDates[dateStr]?.selected;
-          const bgColor = isMarked && markedDates[dateStr].selectedColor;
+          const marking = dateStr ? markedDates?.[dateStr] : null;
+          const disabled = dateStr ? isDisabled(dateStr) : true;
+          const isSelected = Boolean(marking?.selected);
+          const inRange = Boolean(marking?.inRange);
+          const isStart = Boolean(marking?.startingDay);
+          const isEnd = Boolean(marking?.endingDay);
+          const showDot = Boolean(marking?.showDot);
 
           return (
             <TouchableOpacity
               key={index}
-              disabled={!day || isDisabled}
+              disabled={!day || disabled}
               onPress={() => handleDayPress(day)}
               style={[
                 styles.dayCell,
-                day && !isDisabled && styles.dayButton,
+                day && !disabled && styles.dayButton,
+                inRange && styles.dayInRange,
                 isSelected && styles.daySelected,
-                isDisabled && styles.dayDisabled,
-                bgColor && { backgroundColor: bgColor },
+                (isStart || isEnd) && styles.daySelected,
+                disabled && styles.dayDisabled,
+                isStart && styles.daySelectedStart,
+                isEnd && styles.daySelectedEnd,
               ]}
             >
               {day && (
-                <Text
-                  style={[
-                    styles.dayText,
-                    isDisabled && styles.dayDisabledText,
-                    isSelected && styles.daySelectedText,
-                    isMarked && markedDates[dateStr].textColor && { color: markedDates[dateStr].textColor },
-                  ]}
-                >
-                  {day}
-                </Text>
+                <View style={styles.dayInner}>
+                  <Text
+                    style={[
+                      styles.dayText,
+                      disabled && styles.dayDisabledText,
+                      (isSelected || inRange) && styles.daySelectedText,
+                    ]}
+                  >
+                    {day}
+                  </Text>
+                  {showDot && !disabled && !isSelected && !inRange && (
+                    <View style={styles.dayDot} />
+                  )}
+                </View>
               )}
             </TouchableOpacity>
           );
@@ -143,68 +181,101 @@ const CustomCalendar = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#151837',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: COLORS.surfaceStrong,
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(148, 156, 233, 0.2)',
+    borderColor: COLORS.border,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 16,
+    alignItems: 'center',
+    marginBottom: 14,
   },
   navButton: {
-    padding: 8,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   monthYear: {
-    color: '#f6f8ff',
+    color: COLORS.text,
     fontSize: 16,
     fontWeight: '700',
   },
   weekLabels: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 10,
+    paddingHorizontal: 4,
   },
   dayLabel: {
     flex: 1,
     textAlign: 'center',
-    color: '#8e95bf',
+    color: COLORS.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
   daysGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    paddingHorizontal: 2,
   },
   dayCell: {
     width: '14.28%',
     aspectRatio: 1,
+    padding: 4,
+  },
+  dayButton: {
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dayButton: {
-    cursor: 'pointer',
-  },
   dayText: {
-    color: '#e8ecff',
+    color: COLORS.text,
     fontSize: 14,
     fontWeight: '500',
   },
   dayDisabled: {
-    backgroundColor: '#0f1228',
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
   dayDisabledText: {
-    color: '#8e95bf',
+    color: 'rgba(142, 149, 191, 0.55)',
   },
   daySelected: {
-    backgroundColor: '#a566ff',
-    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
   },
   daySelectedText: {
     color: '#fff',
     fontWeight: '700',
+  },
+  dayInRange: {
+    backgroundColor: 'rgba(138, 43, 226, 0.22)',
+    borderRadius: 14,
+  },
+  daySelectedStart: {
+    backgroundColor: COLORS.primary,
+  },
+  daySelectedEnd: {
+    backgroundColor: COLORS.primary,
+  },
+  dayInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    marginTop: 4,
   },
 });
 

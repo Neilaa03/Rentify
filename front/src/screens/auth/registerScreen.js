@@ -114,7 +114,7 @@ const RegisterScreen = ({ navigation }) => {
                 // alert("Registration successful! Redirecting to login...");
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'Login' }],
+                    routes: [{ name: 'ClientApp' }],
                 });
             } else {
                 // BACKEND ERROR
