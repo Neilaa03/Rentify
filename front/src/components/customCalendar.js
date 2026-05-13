@@ -106,6 +106,7 @@ const CustomCalendar = ({
           const isMarked = dateStr && markedDates[dateStr];
           const isDisabled = dateStr && markedDates[dateStr]?.disabled;
           const isSelected = dateStr && markedDates[dateStr]?.selected;
+          const bgColor = isMarked && markedDates[dateStr].selectedColor;
 
           return (
             <TouchableOpacity
@@ -117,7 +118,7 @@ const CustomCalendar = ({
                 day && !isDisabled && styles.dayButton,
                 isSelected && styles.daySelected,
                 isDisabled && styles.dayDisabled,
-                isMarked && { backgroundColor: markedDates[dateStr].selectedColor },
+                bgColor && { backgroundColor: bgColor },
               ]}
             >
               {day && (
@@ -126,6 +127,7 @@ const CustomCalendar = ({
                     styles.dayText,
                     isDisabled && styles.dayDisabledText,
                     isSelected && styles.daySelectedText,
+                    isMarked && markedDates[dateStr].textColor && { color: markedDates[dateStr].textColor },
                   ]}
                 >
                   {day}
@@ -150,7 +152,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginBottom: 16,
   },
   navButton: {

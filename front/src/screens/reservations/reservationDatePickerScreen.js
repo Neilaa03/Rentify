@@ -17,7 +17,8 @@ import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 
 const ReservationDatePickerScreen = ({ navigation, route }) => {
-  const { listing } = route.params;
+  const { listing: initialListing } = route.params;
+  const [listing, setListing] = useState(initialListing);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [markedDates, setMarkedDates] = useState({});
@@ -25,16 +26,94 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [estimatedPrice, setEstimatedPrice] = useState(0);
 
-  // Fetch reserved dates for this listing
+  const parseLocalDate = (value) => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+
+    if (typeof value === 'string') {
+      const datePart = value.split('T')[0];
+      const parts = datePart.split('-').map(Number);
+      if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
+        const [year, month, day] = parts;
+        return new Date(year, month - 1, day);
+      }
+    }
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const formatLocalYmd = (date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Fetch full listing details and reserved dates
   useEffect(() => {
-    fetchReservedDates();
+    fetchListingDetails();
   }, []);
+
+  // Update marked dates when reserved dates change
+  useEffect(() => {
+    updateMarkedDates(null, null);
+  }, [reservedDates, listing]);
+
+  const fetchListingDetails = async () => {
+    try {
+      console.log('Initial listing:', initialListing);
+      console.log('Fetching from:', API_ENDPOINTS.LISTINGS.GET(initialListing.id));
+      
+      const token = await SecureStore.getItemAsync('userToken');
+      const response = await fetch(
+        API_ENDPOINTS.LISTINGS.GET(initialListing.id),
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+      
+      console.log('Listing fetch response status:', response.status);
+      const data = await response.json();
+      console.log('API returned data:', data);
+      
+      if (data) {
+        setListing((current) => ({
+          ...current,
+          ...data,
+          // Keep the UI-friendly flattened shape while still storing the raw payload.
+          brand: data?.car?.brand ?? current?.brand,
+          model: data?.car?.model ?? current?.model,
+          year: data?.car?.year ?? current?.year,
+          fuel: data?.car?.fuelType ?? current?.fuel,
+          transmission: data?.car?.transmission ?? current?.transmission,
+          seats: data?.car?.seats ?? current?.seats,
+          mileageKm: data?.car?.mileage ?? current?.mileageKm,
+          image:
+            data?.car?.images?.find((img) => img?.isPrimary && img?.imageUrl)?.imageUrl ||
+            data?.car?.images?.find((img) => img?.imageUrl)?.imageUrl ||
+            current?.image,
+          availableFrom: data?.availableFrom ?? data?.available_from ?? current?.availableFrom ?? current?.available_from,
+          availableTo: data?.availableTo ?? data?.available_to ?? current?.availableTo ?? current?.available_to,
+        }));
+        console.log('Listing state updated');
+      }
+    } catch (error) {
+      console.error('Error fetching listing details:', error);
+    }
+    
+    // Then fetch reserved dates
+    await fetchReservedDates();
+  };
 
   const fetchReservedDates = async () => {
     try {
       const token = await SecureStore.getItemAsync('userToken');
       const response = await fetch(
-        API_ENDPOINTS.RESERVATIONS.GET_LISTING(listing.id),
+        API_ENDPOINTS.RESERVATIONS.GET_LISTING(initialListing.id),
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -48,10 +127,12 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         data.forEach(reservation => {
           // Only mark confirmed and reserved dates as blocked
           if (['reserved', 'confirmed', 'pickup_pending'].includes(reservation.status)) {
-            const start = new Date(reservation.start_date);
-            const end = new Date(reservation.end_date);
+            const start = parseLocalDate(reservation.start_date);
+            const end = parseLocalDate(reservation.end_date);
+            if (!start || !end) return;
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-              reserved.push(new Date(d).toISOString().split('T')[0]);
+              const dateStr = formatLocalYmd(d);
+              if (dateStr) reserved.push(dateStr);
             }
           }
         });
@@ -101,15 +182,58 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
 
   const updateMarkedDates = (start, end) => {
     const marked = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    // Mark reserved dates as blocked
-    reservedDates.forEach(date => {
-      marked[date] = {
-        disabled: true,
-        color: '#444a71',
-        textColor: '#8e95bf',
-      };
-    });
+    // Support both API DTO (camelCase) and legacy/snake_case shapes.
+    const availableFromRaw = listing?.availableFrom ?? listing?.available_from ?? null;
+    const availableToRaw = listing?.availableTo ?? listing?.available_to ?? null;
+    const availableFrom = parseLocalDate(availableFromRaw);
+    const availableTo = parseLocalDate(availableToRaw);
+    
+    if (availableFrom) availableFrom.setHours(0, 0, 0, 0);
+    if (availableTo) availableTo.setHours(23, 59, 59, 999);
+    
+    console.log('availableFrom:', availableFrom);
+    console.log('availableTo:', availableTo);
+    
+    // Mark all dates in the calendar range
+    for (let d = new Date(2020, 0, 1); d <= new Date(2030, 11, 31); d.setDate(d.getDate() + 1)) {
+      const dateStr = formatLocalYmd(d);
+      if (!dateStr) continue;
+      const currentDate = new Date(d);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      if (currentDate < today) {
+        // Past dates - disabled
+        marked[dateStr] = {
+          disabled: true,
+          selectedColor: '#444a71',
+          textColor: '#8e95bf',
+        };
+      } else if ((availableFrom && currentDate < availableFrom) || (availableTo && currentDate > availableTo)) {
+        // Outside availability range - disabled
+        marked[dateStr] = {
+          disabled: true,
+          selectedColor: '#444a71',
+          textColor: '#8e95bf',
+        };
+      } else if (reservedDates.includes(dateStr)) {
+        // Reserved dates - disabled
+        marked[dateStr] = {
+          disabled: true,
+          selectedColor: '#444a71',
+          textColor: '#8e95bf',
+        };
+      } else {
+        // Available dates - light green
+        marked[dateStr] = {
+          selected: false,
+          selectedColor: 'rgba(35, 212, 159, 0.3)',
+          textColor: '#e8ecff',
+        };
+      }
+    }
 
     if (start) {
       marked[start] = {
@@ -117,6 +241,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         selected: true,
         selectedColor: '#a566ff',
         startingDay: true,
+        textColor: '#fff',
       };
     }
 
@@ -126,18 +251,27 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         selected: true,
         selectedColor: '#a566ff',
         endingDay: true,
+        textColor: '#fff',
       };
 
       // Mark dates in between
-      const current = new Date(start);
-      while (current < new Date(end)) {
+      const current = parseLocalDate(start);
+      const endLocal = parseLocalDate(end);
+      if (!current || !endLocal) {
+        setMarkedDates(marked);
+        return;
+      }
+
+      while (current < endLocal) {
         current.setDate(current.getDate() + 1);
-        const dateStr = current.toISOString().split('T')[0];
+        const dateStr = formatLocalYmd(current);
+        if (!dateStr) continue;
         if (dateStr !== end) {
           marked[dateStr] = {
             ...marked[dateStr],
             selected: true,
             selectedColor: '#a566ff',
+            textColor: '#fff',
           };
         }
       }
@@ -156,22 +290,27 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     let price = 0;
     let remainingDays = totalDays;
 
+    // Handle both camelCase and snake_case field names
+    const pricePerDay = parseFloat(listing.price_per_day || listing.pricePerDay || 0);
+    const pricePerWeek = parseFloat(listing.price_per_week || listing.pricePerWeek || 0);
+    const pricePerMonth = parseFloat(listing.price_per_month || listing.pricePerMonth || 0);
+
     // Apply monthly pricing
-    if (remainingDays >= 30 && listing.pricePerMonth) {
+    if (remainingDays >= 30 && pricePerMonth) {
       const months = Math.floor(remainingDays / 30);
-      price += months * listing.pricePerMonth;
+      price += months * pricePerMonth;
       remainingDays -= months * 30;
     }
 
     // Apply weekly pricing
-    if (remainingDays >= 7 && listing.pricePerWeek) {
+    if (remainingDays >= 7 && pricePerWeek) {
       const weeks = Math.floor(remainingDays / 7);
-      price += weeks * listing.pricePerWeek;
+      price += weeks * pricePerWeek;
       remainingDays -= weeks * 7;
     }
 
     // Apply daily pricing
-    price += remainingDays * listing.pricePerDay;
+    price += remainingDays * pricePerDay;
 
     setEstimatedPrice(price);
   };
@@ -263,7 +402,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
             <Text style={styles.carBrand}>{listing.brand}</Text>
             <Text style={styles.carModel}>{listing.model}</Text>
             <Text style={styles.carPrice}>
-              {listing.pricePerDay.toLocaleString('fr-FR')} DA/jour
+              {(parseFloat(listing.price_per_day || listing.pricePerDay || 0)).toLocaleString('fr-FR')} DA/jour
             </Text>
           </View>
         </View>
@@ -371,9 +510,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    alignItems: 'flex-end',
+    paddingHorizontal: 10,
+    paddingVertical: 20,
     backgroundColor: '#151837',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(148, 156, 233, 0.2)',
@@ -383,6 +522,7 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingTop: 27,
   },
   headerTitle: {
     color: '#f6f8ff',
@@ -392,14 +532,14 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 24,
   },
   carPreview: {
     flexDirection: 'row',
     backgroundColor: '#151837',
     borderRadius: 12,
     padding: 12,
-    marginBottom: 20,
+    marginBottom: 32,
     borderWidth: 1,
     borderColor: 'rgba(148, 156, 233, 0.2)',
   },
@@ -441,18 +581,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   summarySection: {
-    marginBottom: 100,
+    marginBottom: 80,
   },
   sectionTitle: {
     color: '#f6f8ff',
     fontSize: 18,
     fontWeight: '700',
+    marginTop: 10,
     marginBottom: 16,
   },
   legendContainer: {
     flexDirection: 'row',
     marginBottom: 16,
     gap: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   legendItem: {
     flexDirection: 'row',
@@ -531,7 +674,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(148, 156, 233, 0.2)',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     gap: 12,
   },
   cancelButton: {
