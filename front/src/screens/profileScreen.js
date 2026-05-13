@@ -33,6 +33,7 @@ const ProfileScreen = ({ navigation, route }) => {
   const [error, setError] = useState('');
 
   const token = route?.params?.token;
+  const isOwner = route?.params?.user?.role === 'owner';
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -140,22 +141,54 @@ const ProfileScreen = ({ navigation, route }) => {
           </ScrollView>
 
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.footerTab} onPress={() => navigation.navigate('Home', route?.params || {})}>
-              <Ionicons name="home-outline" size={23} color="#8a90b8" />
-              <Text style={styles.tabLabel}>Accueil</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.footerTab}>
-              <Ionicons name="search-outline" size={23} color="#8a90b8" />
-              <Text style={styles.tabLabel}>Recherche</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.footerTab}>
-              <Ionicons name="calendar-outline" size={23} color="#8a90b8" />
-              <Text style={styles.tabLabel}>Reservations</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.footerTab}>
-              <Ionicons name="person-outline" size={23} color="#8f6cff" />
-              <Text style={[styles.tabLabel, { color: '#8f6cff' }]}>Profil</Text>
-            </TouchableOpacity>
+            {isOwner ? (
+              <>
+                <TouchableOpacity
+                  style={styles.footerTab}
+                  onPress={() => navigation.navigate('OwnerDashboard', route?.params || {})}
+                >
+                  <Ionicons name="grid-outline" size={23} color="#8a90b8" />
+                  <Text style={styles.tabLabel}>Tableau de bord</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.footerTab}
+                  onPress={() => navigation.navigate('OwnerListings', route?.params || {})}
+                >
+                  <Ionicons name="car-sport-outline" size={23} color="#8a90b8" />
+                  <Text style={styles.tabLabel}>Mes annonces</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.footerTab}
+                  onPress={() => navigation.navigate('OwnerListingForm', { ...(route?.params || {}), mode: 'create' })}
+                >
+                  <Ionicons name="add-circle-outline" size={23} color="#8a90b8" />
+                  <Text style={styles.tabLabel}>Ajouter</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footerTab}>
+                  <Ionicons name="person-outline" size={23} color="#8f6cff" />
+                  <Text style={[styles.tabLabel, { color: '#8f6cff' }]}>Profil</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.footerTab} onPress={() => navigation.navigate('Home', route?.params || {})}>
+                  <Ionicons name="home-outline" size={23} color="#8a90b8" />
+                  <Text style={styles.tabLabel}>Accueil</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footerTab}>
+                  <Ionicons name="search-outline" size={23} color="#8a90b8" />
+                  <Text style={styles.tabLabel}>Recherche</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footerTab}>
+                  <Ionicons name="calendar-outline" size={23} color="#8a90b8" />
+                  <Text style={styles.tabLabel}>Reservations</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.footerTab}>
+                  <Ionicons name="person-outline" size={23} color="#8f6cff" />
+                  <Text style={[styles.tabLabel, { color: '#8f6cff' }]}>Profil</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </SafeAreaView>
       </ImageBackground>
