@@ -83,17 +83,26 @@ const OwnerListingsScreen = ({ navigation, route }) => {
   };
 
   const handleDelete = (listing) => {
-    Alert.alert('Supprimer', `Supprimer l'annonce "${listing.title}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteOwnerListing({ token, listingId: listing.id });
-          loadListings();
+    Alert.alert(
+      'Supprimer',
+      `Êtes-vous sûr de vouloir supprimer l'annonce "${listing.title}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteOwnerListing({ token, listingId: listing.id });
+              loadListings();
+            } catch (err) {
+              console.error(err);
+              Alert.alert('Erreur', 'Impossible de supprimer l\'annonce. Réessayez plus tard.');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleTogglePublish = async (listing) => {

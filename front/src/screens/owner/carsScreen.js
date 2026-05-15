@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { fetchJson } from '../../services/api';
+import { deleteOwnerCar } from '../../services/owner';
 import CarCard from '../../components/cards/CarCard';
 
 const OwnerCarsScreen = ({ navigation, route }) => {
@@ -67,10 +68,22 @@ const OwnerCarsScreen = ({ navigation, route }) => {
   const handleDeleteCar = (car) => {
     Alert.alert(
       'Supprimer le véhicule',
-      "Voulez-vous vraiment supprimer ce véhicule ?",
+      `Êtes-vous sûr de vouloir supprimer le véhicule "${car.brand} ${car.model}" ?`,
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: () => console.log('Delete car', car.id) },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteOwnerCar({ token, carId: car.id });
+              loadCars();
+            } catch (err) {
+              console.error(err);
+              Alert.alert('Erreur', 'Impossible de supprimer le véhicule. Réessayez plus tard.');
+            }
+          },
+        },
       ]
     );
   };

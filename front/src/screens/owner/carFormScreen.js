@@ -111,6 +111,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
   const [cars, setCars] = useState([]);
   const [isRangeCalendarOpen, setIsRangeCalendarOpen] = useState(false);
   const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
+  const [stagedDocuments, setStagedDocuments] = useState({});
 
   const [form, setForm] = useState({
     brand: prefill?.brand || '',
@@ -218,20 +219,60 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     });
   };
 
-  const pickDocument = async (type) => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: '*/*',
-      copyToCacheDirectory: true,
-    });
+    const pickDocument = async (type) => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/pdf', 'image/*'],
+                copyToCacheDirectory: true,
+                multiple: false,
+            });
 
-    if (result.type !== 'success') return;
+            if (result.canceled) return;
+
+            const file = result.assets?.[0];
+
+            if (!file) return;
+
+            console.log('Picked document:', file);
+
+            setStagedDocuments((prev) => ({
+                ...prev,
+                [type]: {
+                    uri: file.uri,
+                    name: file.name,
+                    mimeType: file.mimeType,
+                },
+            }));
+        } catch (error) {
+            console.error('Document picker error:', error);
+            Alert.alert('Erreur', 'Impossible de sélectionner le document.');
+        }
+    };
+
+  const confirmDocumentUpload = async (type) => {
+    const staged = stagedDocuments[type];
+    if (!staged) return;
 
     setDocumentField(type, {
       ...form.documents[type],
-      uri: result.uri,
-      name: result.name,
-      mimeType: result.mimeType,
+      uri: staged.uri,
+      name: staged.name,
+      mimeType: staged.mimeType,
       status: 'pending',
+    });
+
+    setStagedDocuments((prev) => {
+      const updated = { ...prev };
+      delete updated[type];
+      return updated;
+    });
+  };
+
+  const cancelDocumentUpload = (type) => {
+    setStagedDocuments((prev) => {
+      const updated = { ...prev };
+      delete updated[type];
+      return updated;
     });
   };
 
@@ -356,7 +397,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const existingImageUrls = new Set(prefill?.images?.map((image) => image.imageUrl) || []);
 
     const uploadDocuments = Object.entries(form.documents)
-      .filter(([, document]) => document?.uri?.trim())
+      //.filter(([, document]) => document?.uri?.trim())
+      .filter(([, document]) => Boolean(document?.uri))
       .filter(( [documentType, document] ) => document.uri !== existingDocumentUrls[documentType])
       .map(([documentType, document]) => {
         const isRemoteUrl = typeof document.uri === 'string' && document.uri.startsWith('http');
@@ -371,6 +413,17 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
             },
           });
         }
+
+        //   setForm(prev => ({
+        //       ...prev,
+        //       documents: {
+        //           ...prev.documents,
+        //           [documentType]: {
+        //               ...prev.documents[documentType],
+        //               uri: uploadedDoc.documentUrl,
+        //           },
+        //       },
+        //   }));
 
         return uploadCarDocument({
           token,
@@ -416,6 +469,10 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
   };
 
   const submitCreateCar = async () => {
+    if (!createOwnerCar) {
+      throw new Error('createOwnerCar function is not available. Please restart the app.');
+    }
+
     const newCar = await createOwnerCar({
       token,
       payload: {
@@ -439,6 +496,10 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
   };
 
   const submitUpdateCar = async () => {
+    if (!updateOwnerCar) {
+      throw new Error('updateOwnerCar function is not available. Please restart the app.');
+    }
+
     const updatedCar = await updateOwnerCar({
       token,
       carId: car.id,
@@ -517,6 +578,13 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
   const submit = async () => {
     if (!canSubmit) return Alert.alert('Champs requis', 'Veuillez remplir les champs obligatoires.');
 
+    if (Object.keys(stagedDocuments).length > 0) {
+      return Alert.alert(
+        'Documents en attente',
+        'Veuillez confirmer ou annuler les documents en attente avant de continuer.'
+      );
+    }
+
     setIsSubmitting(true);
     try {
       if (isCreateCar) await submitCreateCar();
@@ -533,6 +601,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         ],
       });
     } catch (error) {
+      console.error('Submit error:', error);
       Alert.alert('Erreur', error.message || 'Sauvegarde impossible');
     } finally {
       setIsSubmitting(false);
@@ -721,6 +790,43 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
                   },
                 ].map((doc) => {
                   const document = form.documents[doc.key] || {};
+                  const staged = stagedDocuments[doc.key];
+
+                  if (staged) {
+                    return (
+                      <View key={doc.key} style={styles.documentCard}>
+                        <Ionicons
+                          name="document-text-outline"
+                          size={24}
+                          color="#ffb347"
+                        />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.docTitle}>{doc.label}</Text>
+                          <Text style={styles.docName} numberOfLines={1}>
+                            {staged.name}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#ffb347', marginTop: 4 }}>
+                            Nouveau fichier (non enregistré)
+                          </Text>
+                        </View>
+                        <View style={styles.documentActions}>
+                          <TouchableOpacity
+                            style={[styles.documentActionBtn, { backgroundColor: 'rgba(46, 204, 113, 0.2)' }]}
+                            onPress={() => confirmDocumentUpload(doc.key)}
+                          >
+                            <Ionicons name="checkmark-outline" size={18} color="#2ecc71" />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.documentActionBtn, { backgroundColor: 'rgba(255, 107, 107, 0.2)' }]}
+                            onPress={() => cancelDocumentUpload(doc.key)}
+                          >
+                            <Ionicons name="close-outline" size={18} color="#ff6b6b" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    );
+                  }
+
                   return (
                     <TouchableOpacity
                       key={doc.key}
@@ -865,5 +971,11 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     </SafeAreaView>
   );
 };
+
+// Debug: Log if updateOwnerCar is available on mount
+if (!globalThis.__updateOwnerCarLogged) {
+  globalThis.__updateOwnerCarLogged = true;
+  console.log('[carFormScreen] updateOwnerCar available:', typeof updateOwnerCar);
+}
 
 export default OwnerCarFormScreen;
