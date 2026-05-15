@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/colors';
-import { getOwnerDashboardData } from '../services/owner';
+import { COLORS } from '../../constants/colors';
+import { getOwnerDashboardData } from '../../services/owner';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -117,11 +117,11 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             <View style={styles.quickRow}>
               <TouchableOpacity
                 style={[styles.quickCard, styles.primaryQuickCard]}
-                onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create' })}
+                onPress={() => navigation.navigate('OwnerCars', { token, user })}
               >
-                <Ionicons name="add-circle-outline" size={24} color="#fff" />
-                <Text style={styles.quickTitle}>Ajouter un véhicule</Text>
-                <Text style={styles.quickSubtitle}>Nouvelle annonce en brouillon</Text>
+                <Ionicons name="car-outline" size={24} color="#fff" />
+                <Text style={styles.quickTitle}>Mes véhicules</Text>
+                <Text style={styles.quickSubtitle}>Gérer mes voitures</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -168,17 +168,14 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             <Text style={styles.tabLabelActive}>Tableau de bord</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('OwnerListings', { token, user })}>
-            <Ionicons name="car-sport-outline" size={20} color="#8a90b8" />
-            <Text style={styles.tabLabel}>Mes annonces</Text>
+          <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('OwnerCars', { token, user })}>
+            <Ionicons name="car-outline" size={20} color="#8a90b8" />
+            <Text style={styles.tabLabel}>Véhicules</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create' })}
-          >
-            <Ionicons name="add-circle-outline" size={22} color="#8a90b8" />
-            <Text style={styles.tabLabel}>Ajouter</Text>
+          <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('OwnerListings', { token, user })}>
+            <Ionicons name="car-sport-outline" size={20} color="#8a90b8" />
+            <Text style={styles.tabLabel}>Annonces</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

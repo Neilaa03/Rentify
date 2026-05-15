@@ -3,6 +3,7 @@ import { authenticateToken } from '../../middleware/auth.js';
 import { verifyOwner } from '../../middleware/roles/verifyOwner.js';
 import {
   getAllCars,
+  getMyCars,
   getCar,
   createCarHandler,
   updateCarHandler,
@@ -12,6 +13,7 @@ import {
 const router = Router();
 
 router.get('/', getAllCars);
+router.get('/my', authenticateToken, verifyOwner, getMyCars);
 router.get('/:id', getCar);
 router.post('/', authenticateToken, verifyOwner, createCarHandler);
 router.put('/:id', authenticateToken, verifyOwner, updateCarHandler);
