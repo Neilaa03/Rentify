@@ -222,25 +222,33 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const pickDocument = async (type) => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
-                type: ['application/pdf', 'image/*'],
+                type: [
+                  'application/pdf',
+                  'application/msword',
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  'application/vnd.ms-excel',
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  'text/plain',
+                ],
                 copyToCacheDirectory: true,
-                multiple: false,
             });
 
-            if (result.canceled) return;
+            if (result.type !== 'success') return;
 
-            const file = result.assets?.[0];
+            const { uri, name, mimeType } = result;
 
-            if (!file) return;
+            if (!uri || !name) return;
 
-            console.log('Picked document:', file);
+            if (mimeType?.startsWith('image/')) {
+              return Alert.alert('Format non autorisé', 'Les images ne sont pas autorisées pour les documents. Choisissez un document PDF ou DOC.');
+            }
 
             setStagedDocuments((prev) => ({
                 ...prev,
                 [type]: {
-                    uri: file.uri,
-                    name: file.name,
-                    mimeType: file.mimeType,
+                    uri,
+                    name,
+                    mimeType,
                 },
             }));
         } catch (error) {
@@ -658,6 +666,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
           {(isCarForm || isCreateCarAndListing) ? (
             <>
               <Text style={styles.sectionTitle}>Photos du véhicule</Text>
+              <Text style={styles.helpText}>Touchez une image pour la définir comme image principale.</Text>
 
               <View style={styles.imagesGrid}>
                 {form.images.map((image, index) => (
@@ -679,19 +688,29 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
                   >
                     <Image source={{ uri: image.uri }} style={styles.previewImage} />
 
-                    {image.isPrimary && (
+                    {image.isPrimary ? (
                       <View style={styles.primaryBadge}>
                         <Text style={styles.primaryText}>Principale</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.secondaryBadge}>
+                        <Text style={styles.secondaryText}>Définir principale</Text>
                       </View>
                     )}
 
                     <TouchableOpacity
                       style={styles.deleteImageBtn}
                       onPress={() => {
-                        setForm((prev) => ({
-                          ...prev,
-                          images: prev.images.filter((_, idx) => idx !== index),
-                        }));
+                        setForm((prev) => {
+                          const updatedImages = prev.images.filter((_, idx) => idx !== index);
+                          if (!updatedImages.some((img) => img.isPrimary) && updatedImages.length > 0) {
+                            updatedImages[0].isPrimary = true;
+                          }
+                          return {
+                            ...prev,
+                            images: updatedImages,
+                          };
+                        });
                       }}
                     >
                       <Ionicons name="trash" size={16} color="#fff" />
