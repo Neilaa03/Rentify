@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { Image } from 'react-native';
+
 import {
   Alert,
+  Linking,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,10 +18,16 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { fetchJson } from '../../services/api';
 import {
   createCarDocument,
+  createCarImage,
   createOwnerCar,
   createOwnerListing,
+  updateOwnerCar,
   updateOwnerListing,
+  uploadCarDocument,
+  uploadCarImage,
+  deleteDocument,
 } from '../../services/owner';
+import styles from '../../styles/carFormScreen.styles';
 
 const fuelOptions = ['Essence', 'Diesel', 'Hybride', 'Electrique'];
 const transmissionOptions = ['Automatique', 'Manuelle'];
@@ -71,7 +81,7 @@ const buildRangeMarks = (startDate, endDate) => {
   return marks;
 };
 
-const OwnerListingFormScreen = ({ navigation, route }) => {
+const OwnerCarFormScreen = ({ navigation, route }) => {
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || 'create';
@@ -85,6 +95,17 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
   const isCreateListingOnly = mode === 'create_listing';
 
   const prefill = isCarForm ? car : listing || car;
+
+  const getPrefillDocument = (type, label) => {
+    const doc = prefill?.documents?.find((item) => item.documentType === type);
+    return {
+      id: doc?.id,
+      uri: doc?.documentUrl || '',
+      name: label,
+      status: doc?.status || (doc?.documentUrl ? 'pending' : 'missing'),
+      documentUrl: doc?.documentUrl || '',
+    };
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cars, setCars] = useState([]);
@@ -109,12 +130,119 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
     description: prefill?.description || '',
     availableFrom: listing?.availableFrom || '',
     availableTo: listing?.availableTo || '',
-    carteGriseUrl: '',
-    insuranceUrl: '',
-    technicalControlUrl: '',
+    documents: {
+      carte_grise: getPrefillDocument('carte_grise', 'Carte grise'),
+      insurance: getPrefillDocument('insurance', 'Assurance'),
+      technical_control: getPrefillDocument('technical_control', 'Controle technique'),
+    },
+    images:
+      prefill?.images?.map((img, index) => ({
+        id: img.id,
+        uri: img.image_url || img.imageUrl,
+        isPrimary: img.is_primary || index === 0,
+        isUploaded: true,
+      })) || [],
+    imageUrls: [],
   });
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
+
+  const setDocumentField = (documentType, value) =>
+    setForm((prev) => ({
+      ...prev,
+      documents: {
+        ...prev.documents,
+        [documentType]: value,
+      },
+    }));
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'approved':
+        return 'Validé';
+      case 'rejected':
+        return 'Rejeté';
+      case 'pending':
+        return 'En attente';
+      default:
+        return 'Manquant';
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'approved':
+        return '#2ecc71';
+      case 'rejected':
+        return '#ff6b6b';
+      case 'pending':
+        return '#f1c40f';
+      default:
+        return '#95a5a6';
+    }
+  };
+
+  const handleDocumentPress = async (type) => {
+    const document = form.documents[type];
+    if (document?.uri) {
+      try {
+        await Linking.openURL(document.uri);
+        return;
+      } catch (error) {
+        console.warn('Unable to open document', error);
+        Alert.alert('Erreur', 'Impossible d’ouvrir le document.');
+        return;
+      }
+    }
+
+    await pickDocument(type);
+  };
+
+  const handleDocumentDelete = async (type) => {
+    const document = form.documents[type];
+    if (document?.id) {
+      try {
+        await deleteDocument({ token, documentId: document.id });
+      } catch (error) {
+        Alert.alert('Erreur', error.message || 'Suppression impossible');
+        return;
+      }
+    }
+
+    setDocumentField(type, {
+      id: undefined,
+      uri: '',
+      name: document?.name || type,
+      status: 'missing',
+      documentUrl: '',
+    });
+  };
+
+  const pickDocument = async (type) => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: '*/*',
+      copyToCacheDirectory: true,
+    });
+
+    if (result.type !== 'success') return;
+
+    setDocumentField(type, {
+      ...form.documents[type],
+      uri: result.uri,
+      name: result.name,
+      mimeType: result.mimeType,
+      status: 'pending',
+    });
+  };
+
+  const addImageField = () =>
+    setForm((prev) => ({ ...prev, imageUrls: [...prev.imageUrls, ''] }));
+
+  const removeImageField = (index) =>
+    setForm((prev) => ({
+      ...prev,
+      imageUrls: prev.imageUrls.filter((_, idx) => idx !== index),
+    }));
 
   useEffect(() => {
     if (!isCreateListingOnly) return;
@@ -151,6 +279,10 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
     if (isCreateListingOnly) return Boolean(common && form.carId);
     if (!isCreateCarAndListing) return common;
 
+    const hasAllDocuments = ['carte_grise', 'insurance', 'technical_control'].every(
+      (key) => form.documents[key]?.uri?.trim()
+    );
+
     return Boolean(
       common &&
         form.brand.trim() &&
@@ -159,9 +291,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
         form.fuelType &&
         form.transmission &&
         form.seats &&
-        form.carteGriseUrl.trim() &&
-        form.insuranceUrl.trim() &&
-        form.technicalControlUrl.trim()
+        hasAllDocuments
     );
   }, [form, isCreateCarAndListing, isCreateListingOnly, isCarForm]);
 
@@ -182,8 +312,111 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
     });
   };
 
+    const pickImages = async () => {
+        if (form.images.length >= 3) {
+            return Alert.alert(
+                'Limite atteinte',
+                'Maximum 3 photos'
+            );
+        }
+
+        const result =
+            await ImagePicker.launchImageLibraryAsync({
+                mediaTypes:
+                    ImagePicker.MediaTypeOptions.Images,
+                quality: 0.7,
+                allowsMultipleSelection: true,
+                selectionLimit: 3 - form.images.length,
+            });
+
+        if (!result.canceled) {
+            const newImages = result.assets.map(
+                (asset, index) => ({
+                    uri: asset.uri,
+                    isPrimary:
+                        form.images.length === 0 && index === 0,
+                    isUploaded: false,
+                })
+            );
+
+            setForm(prev => ({
+                ...prev,
+                images: [...prev.images, ...newImages],
+            }));
+        }
+    };
+
+  const createCarExtras = async (carId) => {
+    const existingDocumentUrls = {
+      carte_grise: prefill?.documents?.find((doc) => doc.documentType === 'carte_grise')?.documentUrl,
+      insurance: prefill?.documents?.find((doc) => doc.documentType === 'insurance')?.documentUrl,
+      technical_control: prefill?.documents?.find((doc) => doc.documentType === 'technical_control')?.documentUrl,
+    };
+
+    const existingImageUrls = new Set(prefill?.images?.map((image) => image.imageUrl) || []);
+
+    const uploadDocuments = Object.entries(form.documents)
+      .filter(([, document]) => document?.uri?.trim())
+      .filter(( [documentType, document] ) => document.uri !== existingDocumentUrls[documentType])
+      .map(([documentType, document]) => {
+        const isRemoteUrl = typeof document.uri === 'string' && document.uri.startsWith('http');
+
+        if (isRemoteUrl) {
+          return createCarDocument({
+            token,
+            payload: {
+              carId,
+              documentType,
+              documentUrl: document.uri.trim(),
+            },
+          });
+        }
+
+        return uploadCarDocument({
+          token,
+          carId,
+          documentType,
+          file: {
+            uri: document.uri,
+            name: document.name || `${documentType}.pdf`,
+            type: document.mimeType || 'application/octet-stream',
+          },
+        });
+      });
+
+    const uploadImages = form.images
+      .filter((image) => image?.uri && !existingImageUrls.has(image.uri))
+      .map((image, index) => {
+        const isRemoteUrl = typeof image.uri === 'string' && image.uri.startsWith('http');
+
+        if (image.isUploaded && isRemoteUrl) {
+          return createCarImage({
+            token,
+            payload: {
+              carId,
+              imageUrl: image.uri,
+              isPrimary: image.isPrimary,
+            },
+          });
+        }
+
+        return uploadCarImage({
+          token,
+          carId,
+          file: {
+            uri: image.uri,
+            name: image.name || `car-image-${carId}-${index}.jpg`,
+            type: image.mimeType || 'image/jpeg',
+          },
+          isPrimary: image.isPrimary,
+        });
+      });
+
+    await Promise.all([...uploadDocuments, ...uploadImages]);
+  };
+
   const submitCreateCar = async () => {
-    await createOwnerCar({
+    const newCar = await createOwnerCar({
       token,
       payload: {
         brand: form.brand.trim(),
@@ -198,10 +431,15 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
         description: form.description.trim(),
       },
     });
+
+    const carId = newCar?.id;
+    if (!carId) throw new Error('Création du véhicule échouée');
+
+    await createCarExtras(carId);
   };
 
   const submitUpdateCar = async () => {
-    await updateOwnerCar({
+    const updatedCar = await updateOwnerCar({
       token,
       carId: car.id,
       payload: {
@@ -217,6 +455,9 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
         description: form.description.trim(),
       },
     });
+
+    const carId = updatedCar?.id || car.id;
+    await createCarExtras(carId);
   };
 
   const submitCreate = async () => {
@@ -238,11 +479,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
     const carId = newCar?.id;
     if (!carId) throw new Error('Creation du vehicule echouee');
 
-    await Promise.all([
-      createCarDocument({ token, payload: { carId, documentType: 'carte_grise', documentUrl: form.carteGriseUrl.trim() } }),
-      createCarDocument({ token, payload: { carId, documentType: 'insurance', documentUrl: form.insuranceUrl.trim() } }),
-      createCarDocument({ token, payload: { carId, documentType: 'technical_control', documentUrl: form.technicalControlUrl.trim() } }),
-    ]);
+    await createCarExtras(carId);
 
     await createOwnerListing({
       token,
@@ -351,6 +588,55 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
 
           {(isCarForm || isCreateCarAndListing) ? (
             <>
+              <Text style={styles.sectionTitle}>Photos du véhicule</Text>
+
+              <View style={styles.imagesGrid}>
+                {form.images.map((image, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.imageCard,
+                      image.isPrimary && styles.primaryImageCard,
+                    ]}
+                    onPress={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        images: prev.images.map((img, idx) => ({
+                          ...img,
+                          isPrimary: idx === index,
+                        })),
+                      }));
+                    }}
+                  >
+                    <Image source={{ uri: image.uri }} style={styles.previewImage} />
+
+                    {image.isPrimary && (
+                      <View style={styles.primaryBadge}>
+                        <Text style={styles.primaryText}>Principale</Text>
+                      </View>
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.deleteImageBtn}
+                      onPress={() => {
+                        setForm((prev) => ({
+                          ...prev,
+                          images: prev.images.filter((_, idx) => idx !== index),
+                        }));
+                      }}
+                    >
+                      <Ionicons name="trash" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+
+                {form.images.length < 3 && (
+                  <TouchableOpacity style={styles.addImageCard} onPress={pickImages}>
+                    <Ionicons name="add" size={32} color="#8f7dff" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <Text style={styles.sectionTitle}>{isCarForm ? (isEditCar ? 'Modifier le véhicule' : 'Ajouter un véhicule') : 'Informations générales'}</Text>
 
               <View style={styles.twoCols}>
@@ -417,6 +703,82 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
 
               <Text style={styles.label}>Description</Text>
               <TextInput style={[styles.input, styles.textArea]} multiline value={form.description} onChangeText={(v) => setField('description', v)} />
+
+              <Text style={styles.sectionTitle}>Documents du véhicule</Text>
+              <View style={styles.documentsContainer}>
+                {[
+                  {
+                    key: 'carte_grise',
+                    label: 'Carte grise',
+                  },
+                  {
+                    key: 'insurance',
+                    label: 'Assurance',
+                  },
+                  {
+                    key: 'technical_control',
+                    label: 'Contrôle technique',
+                  },
+                ].map((doc) => {
+                  const document = form.documents[doc.key] || {};
+                  return (
+                    <TouchableOpacity
+                      key={doc.key}
+                      style={styles.documentCard}
+                      onPress={() => handleDocumentPress(doc.key)}
+                    >
+                      <Ionicons
+                        name="document-text-outline"
+                        size={24}
+                        color="#8f7dff"
+                      />
+
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.docTitle}>{doc.label}</Text>
+                        <Text style={styles.docName} numberOfLines={1}>
+                          {document.uri ? document.name : 'Ajouter un document'}
+                        </Text>
+                        <View
+                          style={[
+                            styles.docStatusBadge,
+                            { backgroundColor: getStatusColor(document.status) },
+                          ]}
+                        >
+                          <Text style={styles.docStatusText}>
+                            {getStatusText(document.status)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.documentActions}>
+                        {document.uri ? (
+                          <>
+                            <TouchableOpacity
+                              style={styles.documentActionBtn}
+                              onPress={() => pickDocument(doc.key)}
+                            >
+                              <Ionicons name="create-outline" size={18} color="#8f7dff" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.documentActionBtn}
+                              onPress={() => handleDocumentDelete(doc.key)}
+                            >
+                              <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.documentActionBtn}
+                            onPress={() => pickDocument(doc.key)}
+                          >
+                            <Ionicons name="cloud-upload-outline" size={18} color="#8f7dff" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </>
           ) : null}
 
@@ -504,57 +866,4 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0a0c24' },
-  container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#0a0c24' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  iconBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },
-  headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  content: { paddingBottom: 24 },
-  sectionTitle: { color: '#fff', marginTop: 12, marginBottom: 8, fontSize: 18, fontWeight: '800' },
-  label: { color: '#d8dcf7', marginTop: 8, marginBottom: 6, fontWeight: '600' },
-  twoCols: { flexDirection: 'row', gap: 10 },
-  col: { flex: 1 },
-  input: { borderRadius: 12, borderWidth: 1, borderColor: 'rgba(146,151,214,0.25)', backgroundColor: 'rgba(21,23,58,0.9)', color: '#fff', paddingHorizontal: 12, paddingVertical: 12 },
-  textArea: { minHeight: 92, textAlignVertical: 'top' },
-  hint: { color: '#bfc5ed', marginTop: 8, marginBottom: 4, lineHeight: 20 },
-  optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2, marginBottom: 2 },
-  optionPill: { borderRadius: 999, borderWidth: 1, borderColor: 'rgba(146,151,214,0.3)', paddingHorizontal: 12, paddingVertical: 8 },
-  optionPillActive: { backgroundColor: 'rgba(143,125,255,0.22)', borderColor: '#8f7dff' },
-  optionText: { color: '#aeb4dc', fontWeight: '500' },
-  optionTextActive: { color: '#fff', fontWeight: '700' },
-  dateInput: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.25)',
-    backgroundColor: 'rgba(21,23,58,0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  dateValue: { color: '#fff' },
-  datePlaceholder: { color: '#8389b6' },
-  datePickerWrap: {
-    marginTop: 10,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.35)',
-    backgroundColor: '#1b245b',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  legendRow: { flexDirection: 'row', gap: 10, marginBottom: 8, paddingHorizontal: 8 },
-  legendItem: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: 999, borderWidth: 1,
-    borderColor: 'rgba(186,192,241,0.35)', backgroundColor: '#2a3269', paddingHorizontal: 12, paddingVertical: 7,
-  },
-  legendDot: { width: 10, height: 10, borderRadius: 999, marginRight: 8 },
-  legendText: { color: '#e7ebff', fontWeight: '700', fontSize: 12 },
-  submitBtn: { marginTop: 16, borderRadius: 12, backgroundColor: '#8f7dff', alignItems: 'center', paddingVertical: 13 },
-  submitBtnDisabled: { opacity: 0.5 },
-  submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-});
-
-export default OwnerListingFormScreen;
+export default OwnerCarFormScreen;
