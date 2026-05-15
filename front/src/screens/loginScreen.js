@@ -63,9 +63,10 @@ const LoginScreen = ({ navigation }) => {
                 // SUCCESS: data contains your user info and JWT token
                 console.log("Login successful!", data);
                 // alert("Login successful!");
+                const targetRoute = data?.user?.role === 'owner' ? 'OwnerDashboard' : 'Home';
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'Home' }],
+                    routes: [{ name: targetRoute, params: { token: data?.token, user: data?.user } }],
                 });
             } else {
                 // BACKEND ERROR:

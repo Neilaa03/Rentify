@@ -6,6 +6,10 @@ import LoginScreen from './src/screens/loginScreen';
 import RegisterScreen from './src/screens/registerScreen';
 import HomeScreen from './src/screens/homeScreen';
 import ListingDetailsScreen from './src/screens/listingDetailsScreen';
+import ProfileScreen from './src/screens/profileScreen';
+import OwnerDashboardScreen from './src/screens/ownerDashboardScreen';
+import OwnerListingsScreen from './src/screens/ownerListingsScreen';
+import OwnerListingFormScreen from './src/screens/ownerListingFormScreen';
 
 const Stack = createStackNavigator();
 
@@ -17,7 +21,11 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />
+        <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
+        <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
+        <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

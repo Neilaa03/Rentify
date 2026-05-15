@@ -45,7 +45,10 @@ export const getCar = async (req, res) => {
 
 export const createCarHandler = async (req, res) => {
   try {
-    const payload = createCarSchema.parse(req.body);
+    const payload = createCarSchema.parse({
+      ...req.body,
+      ownerId: req.user.id,
+    });
     const item = await createCar(payload);
     res.status(201).json(item);
   } catch (err) {
@@ -59,7 +62,13 @@ export const createCarHandler = async (req, res) => {
 export const updateCarHandler = async (req, res) => {
   try {
     const { id } = idParamSchema.parse(req.params);
+    const existingCar = await getCarById(id);
+    if (req.user.role !== 'admin' && existingCar.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only update your own cars' });
+    }
+
     const payload = updateCarSchema.parse(req.body);
+    delete payload.ownerId;
     const item = await updateCar(id, payload);
     res.json(item);
   } catch (err) {
@@ -73,6 +82,10 @@ export const updateCarHandler = async (req, res) => {
 export const deleteCarHandler = async (req, res) => {
   try {
     const { id } = idParamSchema.parse(req.params);
+    const existingCar = await getCarById(id);
+    if (req.user.role !== 'admin' && existingCar.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only delete your own cars' });
+    }
     await deleteCar(id);
     res.sendStatus(204);
   } catch (err) {

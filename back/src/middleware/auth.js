@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // 1. Verify the Token
 export const authenticateToken = (req, res, next) => {

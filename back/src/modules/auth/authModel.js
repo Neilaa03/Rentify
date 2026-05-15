@@ -3,7 +3,6 @@ import { supabase } from '../../config/supabase.js';
 const createUser = async (userData) => {
     const { email, password, firstName, lastName, phone, role, isVerified } = userData;
 
-    // 1. Insert user into 'users'
     const { data, error } = await supabase
         .from('users')
         .insert([
@@ -18,29 +17,37 @@ const createUser = async (userData) => {
             is_active: true
         }
         ])
-        // 2. Select specific fields to return
-        .select('id, email, first_name, last_name, role, is_verified')
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active')
         .single();
 
-    // 3. Throw error to be caught by the controller
     if (error) throw error;
     return data;
 };
 
 const getUserByEmail = async (email) => {
-    // 1. Fetch user including the password_hash for comparison
     const { data, error } = await supabase
         .from('users')
-        .select('id, email, password_hash, role, is_active, is_verified')
+        .select('id, email, password_hash, first_name, last_name, phone, role, is_active, is_verified')
         .eq('email', email)
         .single();
 
-    // 2. Return null if not found, otherwise return the user
     if (error) return null;
+    return data;
+};
+
+const getUserById = async (id) => {
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name, phone, role, is_active, is_verified')
+        .eq('id', id)
+        .single();
+
+    if (error || !data) return null;
     return data;
 };
 
 export {
     createUser,
-    getUserByEmail
+    getUserByEmail,
+    getUserById
 };
