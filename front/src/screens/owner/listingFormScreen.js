@@ -13,14 +13,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { fetchJson } from '../../services/api';
 import {
-  createCarDocument,
-  createOwnerCar,
   createOwnerListing,
   updateOwnerListing,
 } from '../../services/owner';
-
-const fuelOptions = ['Essence', 'Diesel', 'Hybride', 'Electrique'];
-const transmissionOptions = ['Automatique', 'Manuelle'];
 
 LocaleConfig.locales.fr = {
   monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
@@ -75,10 +70,12 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || 'create';
-  const listing = route?.params?.listing || route?.params?.car;
+  const listing = route?.params?.listing;
 
-  const isCreateCarAndListing = mode === 'create';
-  const isCreateListingOnly = mode === 'create_listing';
+  const isCreateListingOnly = mode === 'create_listing' || mode === 'create';
+  const isEdit = mode === 'edit';
+
+  const prefill = listing || {};
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cars, setCars] = useState([]);
@@ -86,14 +83,6 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
   const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
 
   const [form, setForm] = useState({
-    brand: listing?.brand || '',
-    model: listing?.model || '',
-    year: listing?.year ? String(listing.year) : '',
-    color: '',
-    fuelType: 'Diesel',
-    transmission: 'Automatique',
-    seats: '',
-    mileage: '',
     carId: listing?.carId || '',
     title: listing?.title || '',
     pricePerDay: listing?.pricePerDay ? String(listing.pricePerDay) : '',
@@ -102,9 +91,6 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
     description: listing?.description || '',
     availableFrom: listing?.availableFrom || '',
     availableTo: listing?.availableTo || '',
-    carteGriseUrl: '',
-    insuranceUrl: '',
-    technicalControlUrl: '',
   });
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -131,62 +117,14 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
     );
 
     if (isCreateListingOnly) return Boolean(common && form.carId);
-    if (!isCreateCarAndListing) return common;
-
-    return Boolean(
-      common &&
-        form.brand.trim() &&
-        form.model.trim() &&
-        form.year &&
-        form.fuelType &&
-        form.transmission &&
-        form.seats &&
-        form.carteGriseUrl.trim() &&
-        form.insuranceUrl.trim() &&
-        form.technicalControlUrl.trim()
-    );
-  }, [form, isCreateCarAndListing, isCreateListingOnly]);
+    return common;
+  }, [form, isCreateListingOnly]);
 
   const submitEdit = async () => {
     await updateOwnerListing({
       token,
       listingId: listing.id,
       payload: {
-        title: form.title.trim(),
-        description: form.description.trim(),
-        country: form.country.trim(),
-        city: form.city.trim(),
-        pricePerDay: Number(form.pricePerDay),
-        availableFrom: form.availableFrom,
-        availableTo: form.availableTo,
-        isActive: false,
-      },
-    });
-  };
-
-  const submitCreate = async () => {
-    const newCar = await createOwnerCar({
-      token,
-      payload: {
-        brand: form.brand.trim(), model: form.model.trim(), year: Number(form.year), color: form.color.trim(),
-        fuelType: form.fuelType, transmission: form.transmission, mileage: form.mileage ? Number(form.mileage) : 0,
-        seats: Number(form.seats), description: form.description.trim(),
-      },
-    });
-
-    const carId = newCar?.id;
-    if (!carId) throw new Error('Creation du vehicule echouee');
-
-    await Promise.all([
-      createCarDocument({ token, payload: { carId, documentType: 'carte_grise', documentUrl: form.carteGriseUrl.trim() } }),
-      createCarDocument({ token, payload: { carId, documentType: 'insurance', documentUrl: form.insuranceUrl.trim() } }),
-      createCarDocument({ token, payload: { carId, documentType: 'technical_control', documentUrl: form.technicalControlUrl.trim() } }),
-    ]);
-
-    await createOwnerListing({
-      token,
-      payload: {
-        carId,
         title: form.title.trim(),
         description: form.description.trim(),
         country: form.country.trim(),
@@ -221,8 +159,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
 
     setIsSubmitting(true);
     try {
-      if (isCreateCarAndListing) await submitCreate();
-      else if (isCreateListingOnly) await submitCreateListingOnly();
+      if (isCreateListingOnly) await submitCreateListingOnly();
       else await submitEdit();
 
       navigation.reset({
@@ -268,7 +205,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><Ionicons name="chevron-back" size={22} color="#fff" /></TouchableOpacity>
-          <Text style={styles.headerTitle}>{isCreateCarAndListing ? 'Publier un vehicule' : isCreateListingOnly ? 'Nouvelle annonce' : 'Modifier annonce'}</Text>
+          <Text style={styles.headerTitle}>{isCreateListingOnly ? 'Nouvelle annonce' : 'Modifier annonce'}</Text>
           <View style={styles.iconBtn} />
         </View>
 

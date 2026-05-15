@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { fetchJson } from '../../services/api';
+import CarCard from '../../components/cards/CarCard';
 
 const OwnerCarsScreen = ({ navigation, route }) => {
   const token = route?.params?.token;
@@ -59,68 +59,39 @@ const OwnerCarsScreen = ({ navigation, route }) => {
     navigation.navigate('OwnerCarForm', {
       token,
       user,
-      mode: 'edit',
+      mode: 'edit_car',
       car,
     });
+  };
+
+  const handleDeleteCar = (car) => {
+    Alert.alert(
+      'Supprimer le véhicule',
+      "Voulez-vous vraiment supprimer ce véhicule ?",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Supprimer', style: 'destructive', onPress: () => console.log('Delete car', car.id) },
+      ]
+    );
   };
 
   const handleAddCar = () => {
     navigation.navigate('OwnerCarForm', {
       token,
       user,
-      mode: 'create',
+      mode: 'create_car',
     });
   };
 
-  const renderCarCard = ({ item }) => {
-    const primaryImage = (item.images || []).find(img => img.isPrimary);
-    
-    return (
-    <TouchableOpacity
-      style={styles.carCard}
+  const renderCarCard = ({ item }) => (
+    <CarCard
+      car={item}
       onPress={() => handleEditCar(item)}
-      activeOpacity={0.7}
-    >
-      {primaryImage && (
-        <Image
-          source={{ uri: primaryImage.imageUrl }}
-          style={styles.carImage}
-        />
-      )}
-      
-      <View style={styles.carOverlay}>
-        <View style={styles.carHeader}>
-          <View style={styles.carInfo}>
-            <Text style={styles.carTitle}>
-              {item.brand} {item.model}
-            </Text>
-            <Text style={styles.carYear}>{item.year}</Text>
-          </View>
-          <Ionicons
-            name="chevron-forward"
-            size={24}
-            color={COLORS.primary}
-          />
-        </View>
+      onEdit={() => handleEditCar(item)}
+      onDelete={() => handleDeleteCar(item)}
+    />
+  );
 
-        <View style={styles.carDetails}>
-          <View style={styles.detailItem}>
-            <Ionicons name="color-palette" size={14} color={COLORS.gray} />
-            <Text style={styles.detailText}>{item.color || 'N/A'}</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Ionicons name="flash" size={14} color={COLORS.gray} />
-            <Text style={styles.detailText}>{item.fuelType || 'N/A'}</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Ionicons name="speedometer" size={14} color={COLORS.gray} />
-            <Text style={styles.detailText}>{item.mileage || 0} km</Text>
-          </View>
-        </View>
-      </View>
-    </TouchableOpacity>
-    );
-  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -154,7 +125,7 @@ const OwnerCarsScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mes Véhicules</Text>
+        <Text style={styles.headerTitle}>Mes voitures</Text>
         <TouchableOpacity
           style={styles.addIconButton}
           onPress={handleAddCar}
@@ -231,53 +202,131 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: COLORS.borderColor,
-    minHeight: 160,
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 180,
   },
   carImage: {
     width: '100%',
-    height: 160,
+    height: '100%',
+  },
+  onlineBadge: {
     position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: '#10b981',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
   },
-  carOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(10, 12, 36, 0.85)',
-    padding: 16,
-    justifyContent: 'space-between',
+  onlineText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
-  carHeader: {
+  contentContainer: {
+    padding: 14,
+    gap: 12,
+  },
+  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
   },
-  carInfo: {
+  titleSection: {
     flex: 1,
   },
-  carTitle: {
+  carName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.text,
   },
-  carYear: {
-    fontSize: 14,
+  carSubtitle: {
+    fontSize: 13,
     color: COLORS.gray,
     marginTop: 4,
   },
-  carDetails: {
+  price: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.borderColor,
+    gap: 16,
   },
-  detailItem: {
+  statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  detailText: {
-    fontSize: 12,
+  statText: {
+    fontSize: 13,
     color: COLORS.gray,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  disponibleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  toggleSwitch: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#4f8cff',
+    padding: 2,
+    justifyContent: 'center',
+  },
+  toggleActive: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#10b981',
+    alignSelf: 'flex-end',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  editText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ff5a5a',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  deleteText: {
+    color: '#ff5a5a',
+    fontSize: 14,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
