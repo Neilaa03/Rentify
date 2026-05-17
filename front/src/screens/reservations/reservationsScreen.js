@@ -23,6 +23,7 @@ const ReservationsScreen = ({ navigation }) => {
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('upcoming');
 
   // Fetch reservations when screen is focused
   useFocusEffect(
@@ -57,6 +58,19 @@ const ReservationsScreen = ({ navigation }) => {
       setRefreshing(false);
     }
   };
+
+  const isReservationPast = (endDate) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+    return end < today;
+  };
+
+  const filteredReservations = reservations.filter((reservation) => {
+    const isPast = isReservationPast(reservation.endDate || reservation.end_date);
+    return activeTab === 'upcoming' ? !isPast : isPast;
+  });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -134,20 +148,42 @@ const ReservationsScreen = ({ navigation }) => {
             <View style={{ width: 44 }} />
           </View>
 
+          {/* Tab Filters */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'upcoming' && styles.tabButtonActive]}
+              onPress={() => setActiveTab('upcoming')}
+            >
+              <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>
+                Upcoming
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tabButton, activeTab === 'past' && styles.tabButtonActive]}
+              onPress={() => setActiveTab('past')}
+            >
+              <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>
+                Past
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Reservations List */}
           <ScrollView
             style={styles.content}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             showsVerticalScrollIndicator={false}
           >
-            {reservations.length === 0 ? (
+            {filteredReservations.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Ionicons name="calendar-outline" size={64} color={COLORS.muted} />
+                <View style={styles.emptyIconContainer}>
+                  <Ionicons name="calendar-outline" size={56} color="#7c3aed" />
+                </View>
                 <Text style={styles.emptyTitle}>Aucune réservation</Text>
                 <Text style={styles.emptyText}>Vous n'avez pas encore de réservation. Commencez à explorer nos véhicules disponibles!</Text>
               </View>
               ) : (
-              reservations.map((reservation) => (
+              filteredReservations.map((reservation) => (
                 <ReservationCard
                   key={reservation.id}
                   reservation={reservation}
@@ -191,6 +227,39 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
   },
+  tabContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  tabButton: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabButtonActive: {
+    backgroundColor: '#7c3aed',
+    borderColor: '#7c3aed',
+    shadowColor: '#7c3aed',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8b91ba',
+  },
+  tabTextActive: {
+    color: '#fff',
+  },
   content: {
     flex: 1,
   },
@@ -212,19 +281,29 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     paddingHorizontal: 24,
   },
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(124, 58, 237, 0.3)',
+  },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#fff',
-    marginTop: 16,
+    marginTop: 20,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.textMuted,
-    marginTop: 8,
+    color: '#9ca3af',
+    marginTop: 12,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
   },
   reservationCard: {
     flexDirection: 'row',
