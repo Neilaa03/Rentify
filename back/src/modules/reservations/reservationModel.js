@@ -20,11 +20,13 @@ const toReservationDto = (row) => ({
     listing: row.listings ? {
         id: row.listings.id,
         carId: row.listings.car_id,
+        city: row.listings.city,
         car: row.listings.cars ? {
             id: row.listings.cars.id,
             ownerId: row.listings.cars.owner_id,
             brand: row.listings.cars.brand,
             model: row.listings.cars.model,
+            carImages: row.listings.cars.car_images || [],
         } : null,
     } : null,
 });
@@ -83,7 +85,7 @@ export const getReservations = async (filters = {}) => {
 export const getReservationById = async (id) => {
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
-        .select('*, listings(id, car_id, cars(id, owner_id, brand, model))')
+        .select('*, listings(id, car_id, city, cars(id, owner_id, brand, model, car_images(id, image_url, is_primary)))')
         .eq('id', id)
         .single();
 
@@ -261,9 +263,10 @@ export const updateReservationDetails = async (id, updates) => {
 };
 
 export const getReservationsByRenter = async (renterId) => {
+    // Include listing and nested car data with images so frontend can display details without extra requests
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
-        .select('*')
+        .select('*, listings(id, car_id, city, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, car_images(id, image_url, is_primary)))')
         .eq('renter_id', renterId)
         .order('created_at', { ascending: false });
 

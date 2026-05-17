@@ -1,15 +1,16 @@
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
+const formatPrice = (value) => `${(value || 0).toLocaleString('fr-FR')} DA`;
 
 const formatDateRange = (from, to) => {
   try {
     const f = new Date(from);
     const t = new Date(to);
-    return `${f.toLocaleDateString('fr-FR')} — ${t.toLocaleDateString('fr-FR')}`;
+    const opts = { year: 'numeric', month: 'short', day: 'numeric' };
+    return `${f.toLocaleDateString('en-US', opts)} → ${t.toLocaleDateString('en-US', opts)}`;
   } catch (e) {
     return '';
   }
@@ -21,45 +22,96 @@ const ReservationCard = ({ reservation, targetRoute = 'ReservationDetailsFromLis
   const listing = reservation?.listing || {};
   const status = reservation?.status || '';
 
+  const start = reservation?.startDate || reservation?.from || reservation?.start_date || reservation?.fromDate;
+  const end = reservation?.endDate || reservation?.to || reservation?.end_date || reservation?.toDate;
+
+  const imageUri =
+    listing?.image ||
+    listing?.car?.carImages?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
+    listing?.car?.carImages?.find((i) => i?.image_url)?.image_url ||
+    listing?.car?.car_images?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
+    listing?.car?.car_images?.find((i) => i?.image_url)?.image_url ||
+    listing?.car?.images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
+    listing?.car?.images?.find((i) => i?.imageUrl)?.imageUrl ||
+    listing?.imageUrl ||
+    null;
+
   const handlePress = () => {
     if (onPress) return onPress(reservation);
     navigation.navigate(targetRoute, { reservation });
   };
 
+  // compute days (inclusive)
+  let days = reservation?.days;
+  try {
+    if (!days && start && end) {
+      const s = new Date(start);
+      const e = new Date(end);
+      const diff = Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+      days = Number.isFinite(diff) ? diff : undefined;
+    }
+  } catch (e) {}
+
+  const statusColors = {
+    confirmed: '#22c55e',
+    cancelled: '#EB5757',
+    reserved: '#6C4DFF',
+    pickup_pending: '#FFA500',
+    refunded: '#9CA3AF',
+    refund_pending: '#F59E0B',
+  };
+
+  const badgeColor = statusColors[status] || '#6C4DFF';
+
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.92} onPress={handlePress}>
-      <ImageBackground source={{ uri: listing.image }} style={styles.image} imageStyle={styles.imageRounded}>
-        <View style={styles.imageTopRow}>
-          <View style={[styles.statusBadge, status === 'cancelled' && styles.statusCancelled]}>
-            <Text style={styles.statusText}>{status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Réservé'}</Text>
+    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={handlePress}>
+      {/* Image */}
+      <View style={styles.imageWrapper}>
+        {imageUri ? (
+          <Image 
+            source={{ uri: imageUri }} 
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.image, styles.imagePlaceholder]}>
+            <Ionicons name="car-sport-outline" size={36} color="rgba(255,255,255,0.8)" />
           </View>
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
-            <Ionicons name="ellipsis-vertical" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.priceBadge}>
-          <Text style={styles.priceText}>{formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}</Text>
-        </View>
-      </ImageBackground>
+        )}
+      </View>
 
-      <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>{`${listing.brand || ''} ${listing.model || ''}`.trim()}</Text>
-          <View style={styles.ratingPill} />
+      {/* Content Area */}
+      <View style={styles.contentWrapper}>
+        {/* Top: Car Name */}
+        <View style={styles.titleSection}>
+          <Text style={styles.carName}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
+          {listing?.city && (
+            <View style={styles.cityContainer}>
+              <Ionicons name="location-outline" size={12} color="#8b91ba" />
+              <Text style={styles.cityText}>{listing.city}</Text>
+            </View>
+          )}
         </View>
 
-        <Text style={styles.subtitle}>{formatDateRange(reservation?.from, reservation?.to)}</Text>
-
-        <View style={styles.chipsRow}>
-          <View style={styles.chip}>
-            <Ionicons name="location-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{reservation?.city || listing?.city || ''}</Text>
-          </View>
-          <View style={styles.chip}>
-            <Ionicons name="calendar-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{reservation?.days ? `${reservation.days} jours` : ''}</Text>
-          </View>
+        {/* Middle: Dates */}
+        <View style={styles.dateSection}>
+          <Ionicons name="calendar-outline" size={14} color="#8b91ba" />
+          <Text style={styles.dateText} numberOfLines={1}>{formatDateRange(start, end)}</Text>
         </View>
+
+        {/* Bottom: Duration */}
+        <View style={styles.durationSection}>
+          <Ionicons name="time-outline" size={14} color="#8b91ba" />
+          <Text style={styles.durationText}>{days ? `${days} days` : '—'}</Text>
+        </View>
+      </View>
+
+      {/* Right Section: Status & Price */}
+      <View style={styles.rightSection}>
+        <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}>
+          <Text style={styles.statusText}>{status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}</Text>
+        </View>
+        <Text style={styles.price}>{formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -67,109 +119,105 @@ const ReservationCard = ({ reservation, targetRoute = 'ReservationDetailsFromLis
 
 const styles = StyleSheet.create({
   card: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#111329',
-    borderRadius: 22,
-    overflow: 'hidden',
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(143, 150, 255, 0.14)',
+    borderColor: 'rgba(143, 150, 255, 0.15)',
     marginBottom: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+  },
+  imageWrapper: {
+    position: 'relative',
+    marginRight: 14,
   },
   image: {
-    height: 140,
-    justifyContent: 'space-between',
-    padding: 10,
+    width: 120,
+    height: 95,
+    borderRadius: 12,
+    backgroundColor: '#1a1d2e',
   },
-  imageRounded: {
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-  },
-  imageTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  imagePlaceholder: {
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#6C4DFF',
   },
   statusBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 10,
-    backgroundColor: 'rgba(34,197,94,0.95)',
-  },
-  statusCancelled: {
-    backgroundColor: '#EB5757',
+    backgroundColor: '#22c55e',
+    marginBottom: 35,
+    alignSelf: 'flex-end',
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
-  iconButton: {
-    marginLeft: 'auto',
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(7, 9, 25, 0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  priceBadge: {
-    alignSelf: 'flex-end',
-    borderRadius: 11,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#6C4DFF',
-  },
-  priceText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  content: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  titleRow: {
-    flexDirection: 'row',
+  contentWrapper: {
+    flex: 1,
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+    paddingRight: 8,
   },
-  title: {
+  titleSection: {
+    marginBottom: 6,
+  },
+  carName: {
     color: '#F5F7FF',
-    fontSize: 29/2,
+    fontSize: 16,
     fontWeight: '700',
-    maxWidth: '76%',
+    maxWidth: '90%',
   },
-  ratingPill: {
-    width: 0,
+  cityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+    gap: 4,
   },
-  subtitle: {
+  cityText: {
+    color: '#8b91ba',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  dateSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    flexWrap: 'nowrap',
+  },
+  dateText: {
+    color: '#8b91ba',
+    fontSize: 12,
+    marginLeft: 6,
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  durationSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  durationText: {
     color: '#8b91ba',
     fontSize: 13,
-    marginBottom: 10,
+    marginLeft: 6,
+    fontWeight: '500',
   },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  rightSection: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    minWidth: 95,
+    marginLeft: 10,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(148, 156, 233, 0.12)',
-    maxWidth: '48%',
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  chipText: {
-    color: '#9aa0c8',
-    fontSize: 12,
-    marginLeft: 5,
+  price: {
+    color: '#0b63ff',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.3,
   },
 });
 
