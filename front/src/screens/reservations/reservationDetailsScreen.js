@@ -17,12 +17,71 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 
 const ReservationDetailsScreen = ({ navigation, route }) => {
-  const { reservation, listing } = route.params;
+  const reservation = route?.params?.reservation;
+  const listingFromParams = route?.params?.listing;
   const [loading, setLoading] = useState(false);
 
-  const startDate = new Date(reservation.startDate);
-  const endDate = new Date(reservation.endDate);
-  const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+  if (!reservation) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Récapitulatif</Text>
+          <View style={{ width: 50 }} />
+        </SafeAreaView>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ color: '#f6f8ff', fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+            Réservation introuvable
+          </Text>
+          <Text style={{ color: '#8e95bf', textAlign: 'center' }}>
+            Impossible d’afficher les détails de cette réservation.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const reservationListing = reservation?.listing || reservation?.listing?.car || null;
+  const listing = listingFromParams || reservationListing || {};
+
+  const startRaw =
+    reservation?.startDate ||
+    reservation?.from ||
+    reservation?.start_date ||
+    reservation?.fromDate;
+  const endRaw =
+    reservation?.endDate ||
+    reservation?.to ||
+    reservation?.end_date ||
+    reservation?.toDate;
+
+  const startDate = new Date(startRaw);
+  const endDate = new Date(endRaw);
+  const totalDays = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
+
+  const imageUri =
+    listing?.image ||
+    listing?.imageUrl ||
+    listing?.car?.carImages?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
+    listing?.car?.carImages?.find((i) => i?.image_url)?.image_url ||
+    listing?.car?.car_images?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
+    listing?.car?.car_images?.find((i) => i?.image_url)?.image_url ||
+    listing?.car?.images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
+    listing?.car?.images?.find((i) => i?.imageUrl)?.imageUrl ||
+    null;
+
+  const brand = listing?.brand || listing?.car?.brand || '';
+  const model = listing?.model || listing?.car?.model || '';
+  const year = listing?.year || listing?.car?.year || '—';
+  const seats = listing?.seats || listing?.car?.seats || '—';
+  const pricePerDay =
+    listing?.pricePerDay ||
+    listing?.price_per_day ||
+    listing?.price ||
+    listing?.car?.pricePerDay ||
+    0;
 
   const handlePayment = async () => {
     try {
@@ -72,9 +131,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Vehicle Card */}
         <View style={styles.vehicleCard}>
-          {listing.image ? (
+          {imageUri ? (
             <ImageBackground
-              source={{ uri: listing.image }}
+              source={{ uri: imageUri }}
               style={styles.vehicleImage}
               imageStyle={{ borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
             >
@@ -87,16 +146,16 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           )}
 
           <View style={styles.vehicleInfo}>
-            <Text style={styles.vehicleBrand}>{listing.brand}</Text>
-            <Text style={styles.vehicleModel}>{listing.model}</Text>
+            <Text style={styles.vehicleBrand}>{brand || '—'}</Text>
+            <Text style={styles.vehicleModel}>{model || '—'}</Text>
             <View style={styles.vehicleSpecs}>
               <View style={styles.specBadge}>
                 <Ionicons name="calendar-outline" size={14} color="#a566ff" />
-                <Text style={styles.specText}>{listing.year}</Text>
+                <Text style={styles.specText}>{year}</Text>
               </View>
               <View style={styles.specBadge}>
                 <Ionicons name="people-outline" size={14} color="#a566ff" />
-                <Text style={styles.specText}>{listing.seats} places</Text>
+                <Text style={styles.specText}>{seats} places</Text>
               </View>
             </View>
           </View>
@@ -187,11 +246,11 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           <View style={styles.priceBreakdown}>
             <View style={styles.priceRow}>
               <Text style={styles.priceRowLabel}>
-                {listing.pricePerDay.toLocaleString('fr-FR')} DA × {totalDays} jour
+                {Number(pricePerDay || 0).toLocaleString('fr-FR')} DA × {totalDays} jour
                 {totalDays > 1 ? 's' : ''}
               </Text>
               <Text style={styles.priceRowValue}>
-                {(listing.pricePerDay * totalDays).toLocaleString('fr-FR')} DA
+                {(Number(pricePerDay || 0) * totalDays).toLocaleString('fr-FR')} DA
               </Text>
             </View>
 

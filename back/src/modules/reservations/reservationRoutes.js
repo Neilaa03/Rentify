@@ -43,6 +43,9 @@ router.get('/:id', getReservationHandler);
 // Cancel reservation
 router.delete('/:id/cancel', verifyClient, cancelReservationHandler);
 
+// Allow client to update reservation dates (only if status is 'reserved')
+router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);
+
 
 // =========================================================
 // OWNER / MANAGER ROUTES
@@ -51,9 +54,6 @@ router.delete('/:id/cancel', verifyClient, cancelReservationHandler);
 // Get all reservations for a specific listing
 // MUST come before /:id to match specific route first
 router.get('/listing/:listingId', verifyOwner, getListingReservations);
-
-// Update reservation details (only if status is 'reserved')
-router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);
 
 // Update reservation status (for owner/manager workflow)
 router.patch('/:id/status', verifyOwner, updateReservationStatusHandler);

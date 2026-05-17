@@ -16,7 +16,7 @@ const formatDateRange = (from, to) => {
   }
 };
 
-const ReservationCard = ({ reservation, targetRoute = 'ReservationDetailsFromList', onPress }) => {
+const ReservationCard = ({ reservation, targetRoute = 'ReservationDetails', onPress }) => {
   const navigation = useNavigation();
 
   const listing = reservation?.listing || {};

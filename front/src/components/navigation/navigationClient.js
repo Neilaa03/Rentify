@@ -63,7 +63,7 @@ function ReservationsTabStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ReservationsList" component={ReservationsScreen} />
       <Stack.Screen 
-        name="ReservationDetailsFromList" 
+        name="ReservationDetails" 
         component={ReservationDetailsScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
