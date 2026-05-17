@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 
 import HomeScreen from '../../screens/homeScreen';
 import ListingDetailsScreen from '../../screens/listingDetailsScreen';
@@ -18,9 +19,21 @@ function HomeTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />
-      <Stack.Screen name="ReservationDatePicker" component={ReservationDatePickerScreen} />
-      <Stack.Screen name="ReservationDetails" component={ReservationDetailsScreen} />
+      <Stack.Screen 
+        name="ListingDetails" 
+        component={ListingDetailsScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen 
+        name="ReservationDatePicker" 
+        component={ReservationDatePickerScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen 
+        name="ReservationDetails" 
+        component={ReservationDetailsScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
     </Stack.Navigator>
   );
 }
@@ -30,8 +43,16 @@ function SearchTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Search" component={HomeScreen} />
-      <Stack.Screen name="ListingDetailsFromSearch" component={ListingDetailsScreen} />
-      <Stack.Screen name="ReservationDatePickerFromSearch" component={ReservationDatePickerScreen} />
+      <Stack.Screen 
+        name="ListingDetailsFromSearch" 
+        component={ListingDetailsScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen 
+        name="ReservationDatePickerFromSearch" 
+        component={ReservationDatePickerScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
     </Stack.Navigator>
   );
 }
@@ -41,7 +62,11 @@ function ReservationsTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ReservationsList" component={ReservationsScreen} />
-      <Stack.Screen name="ReservationDetailsFromList" component={ReservationDetailsScreen} />
+      <Stack.Screen 
+        name="ReservationDetailsFromList" 
+        component={ReservationDetailsScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
     </Stack.Navigator>
   );
 }
@@ -57,6 +82,20 @@ function ProfileTabStack() {
 
 // Client Navigation Component
 export function ClientNavigation() {
+  const defaultTabBarStyle = {
+    backgroundColor: '#0f1228',
+    borderTopWidth: 0,
+    marginHorizontal: 10,
+    marginBottom: 8,
+    borderRadius: 18,
+    height: 65,
+    paddingVertical: 12,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -76,19 +115,7 @@ export function ClientNavigation() {
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#8a90b8',
-        tabBarStyle: {
-          backgroundColor: '#0f1228',
-          borderTopWidth: 0,
-          marginHorizontal: 10,
-          marginBottom: 8,
-          borderRadius: 18,
-          height: 65,
-          paddingVertical: 12,
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-        },
+        tabBarStyle: defaultTabBarStyle,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -99,17 +126,29 @@ export function ClientNavigation() {
       <Tab.Screen 
         name="HomeTab" 
         component={HomeTabStack}
-        options={{ tabBarLabel: 'Accueil' }}
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route);
+          const hide = routeName && routeName !== 'Home';
+          return { tabBarLabel: 'Accueil', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+        }}
       />
       <Tab.Screen 
         name="SearchTab" 
         component={SearchTabStack}
-        options={{ tabBarLabel: 'Recherche' }}
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route);
+          const hide = routeName && routeName !== 'Search';
+          return { tabBarLabel: 'Recherche', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+        }}
       />
       <Tab.Screen 
         name="ReservationsTab" 
         component={ReservationsTabStack}
-        options={{ tabBarLabel: 'Réservations' }}
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route);
+          const hide = routeName && routeName !== 'ReservationsList';
+          return { tabBarLabel: 'Réservations', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+        }}
       />
       <Tab.Screen 
         name="ProfileTab" 

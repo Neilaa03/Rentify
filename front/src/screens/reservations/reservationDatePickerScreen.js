@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as SecureStore from 'expo-secure-store';
+import storage from '../../utils/storage';
 import CustomCalendar from '../../components/customCalendar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,7 +52,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       console.log('Initial listing:', initialListing);
       console.log('Fetching from:', API_ENDPOINTS.LISTINGS.GET(initialListing.id));
       
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await storage.getItemAsync('userToken');
       const response = await fetch(
         API_ENDPOINTS.LISTINGS.GET(initialListing.id),
         {

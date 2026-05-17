@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import storage from './storage';
 import { API_ENDPOINTS } from '../constants/api';
 
 /**
@@ -98,7 +98,7 @@ export const calculateReservationPrice = (listing, startDateStr, endDateStr) => 
  */
 export const fetchListingAvailability = async (listingId) => {
   try {
-    const token = await SecureStore.getItemAsync('userToken');
+    const token = await storage.getItemAsync('userToken');
     const endpointUrl = API_ENDPOINTS.RESERVATIONS.GET_CALENDAR_AVAILABILITY(listingId);
     
     console.log('Fetching calendar availability from:', endpointUrl);

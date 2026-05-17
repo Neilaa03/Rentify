@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
+import storage from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
+import ReservationCard from '../../components/cards/ReservationCard';
 
 const ReservationsScreen = ({ navigation }) => {
   const [reservations, setReservations] = useState([]);
@@ -33,7 +34,7 @@ const ReservationsScreen = ({ navigation }) => {
   const fetchReservations = async () => {
     try {
       setLoading(true);
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await storage.getItemAsync('userToken');
       
       const response = await fetch(API_ENDPOINTS.RESERVATIONS.GET_USER, {
         headers: {
@@ -145,70 +146,13 @@ const ReservationsScreen = ({ navigation }) => {
                 <Text style={styles.emptyTitle}>Aucune réservation</Text>
                 <Text style={styles.emptyText}>Vous n'avez pas encore de réservation. Commencez à explorer nos véhicules disponibles!</Text>
               </View>
-            ) : (
+              ) : (
               reservations.map((reservation) => (
-                <TouchableOpacity 
+                <ReservationCard
                   key={reservation.id}
-                  style={styles.reservationCard}
-                  onPress={() => handleReservationPress(reservation)}
-                  activeOpacity={0.7}
-                >
-                  {/* Car Image */}
-                  {reservation.listing?.car?.images?.[0]?.imageUrl ? (
-                    <Image
-                      source={{ uri: reservation.listing.car.images[0].imageUrl }}
-                      style={styles.carImage}
-                    />
-                  ) : (
-                    <View style={[styles.carImage, { backgroundColor: COLORS.cardBackground }]} />
-                  )}
-
-                  {/* Card Content */}
-                  <View style={styles.cardContent}>
-                    <View style={styles.topRow}>
-                      <View style={styles.vehicleInfo}>
-                        <Text style={styles.carName}>
-                          {reservation.listing?.car?.brand} {reservation.listing?.car?.model}
-                        </Text>
-                        <Text style={styles.carYear}>
-                          {reservation.listing?.car?.year}
-                        </Text>
-                      </View>
-                      <Text style={styles.price}>
-                        ${reservation.totalPrice?.toFixed(2) || '0.00'}
-                      </Text>
-                    </View>
-
-                    {/* Dates */}
-                    <View style={styles.datesRow}>
-                      <View style={styles.dateItem}>
-                        <Text style={styles.dateLabel}>{formatDate(reservation.startDate)}</Text>
-                      </View>
-                      <Ionicons name="arrow-forward" size={12} color={COLORS.muted} />
-                      <View style={styles.dateItem}>
-                        <Text style={styles.dateLabel}>{formatDate(reservation.endDate)}</Text>
-                      </View>
-                    </View>
-
-                    {/* Status Badge */}
-                    <View 
-                      style={[
-                        styles.statusBadge,
-                        { borderColor: getStatusColor(reservation.status) }
-                      ]}
-                    >
-                      <View 
-                        style={[
-                          styles.statusDot,
-                          { backgroundColor: getStatusColor(reservation.status) }
-                        ]}
-                      />
-                      <Text style={[styles.statusText, { color: getStatusColor(reservation.status) }]}>
-                        {getStatusLabel(reservation.status)}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                  reservation={reservation}
+                  onPress={handleReservationPress}
+                />
               ))
             )}
             <View style={{ height: 20 }} />

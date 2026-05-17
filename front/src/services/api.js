@@ -1,6 +1,19 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+//const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const API_BASE_URL = (() => {
+  if (process?.env?.EXPO_PUBLIC_API_BASE_URL) return process.env.EXPO_PUBLIC_API_BASE_URL;
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    return `http://${window.location.hostname}:3000`;
+  }
+  return 'http://localhost:3000';
+})();
 
-if (!API_BASE_URL) {
+if (!process?.env?.EXPO_PUBLIC_API_BASE_URL) {
+  console.warn('EXPO_PUBLIC_API_BASE_URL not set — using', API_BASE_URL);
+}
+
+console.log('Resolved API base:', API_BASE_URL);
+
+if (!process.env.EXPO_PUBLIC_API_BASE_URL) {
   console.warn('Missing EXPO_PUBLIC_API_BASE_URL in front/.env');
 }
 

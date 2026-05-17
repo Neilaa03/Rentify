@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as SecureStore from 'expo-secure-store';
+import storage from '../../utils/storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -65,8 +65,8 @@ const LoginScreen = ({ navigation }) => {
                 console.log("Login successful!", data);
                 // Save token to SecureStore
                 if (data.token) {
-                    await SecureStore.setItemAsync('userToken', data.token);
-                    console.log('Token saved to SecureStore');
+                    await storage.setItemAsync('userToken', data.token);
+                    console.log('Token saved to storage');
                 }
                 navigation.reset({
                     index: 0,

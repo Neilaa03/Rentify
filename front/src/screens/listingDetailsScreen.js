@@ -85,6 +85,29 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.description}>{listing.description}</Text>
 
+          <View style={styles.reservationCard}>
+            <View style={styles.reservationInfo}>
+              <Text style={styles.reservationLabel}>Prix par jour</Text>
+              <Text style={styles.reservationPrice}>{formatPrice(listing.pricePerDay)}</Text>
+            </View>
+            {listing.available ? (
+              <TouchableOpacity onPress={() => navigation.navigate('ReservationDatePicker', { listing })}>
+                <LinearGradient
+                  colors={[COLORS.secondary, COLORS.primary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.reservationButton}
+                >
+                  <Text style={styles.reservationButtonText}>Reserver</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ) : (
+              <View style={[styles.reservationButton, styles.reservationButtonDisabled]}>
+                <Text style={styles.reservationButtonText}>Indisponible</Text>
+              </View>
+            )}
+          </View>
+
           <View style={styles.ownerCard}>
             <View style={styles.ownerLeft}>
               <View style={styles.ownerAvatar}>
@@ -110,29 +133,6 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
       </ScrollView>
-
-      <View style={styles.bottomBar}>
-        <View>
-          <Text style={styles.bottomPrice}>{formatPrice(listing.pricePerDay)}</Text>
-          <Text style={styles.bottomUnit}>par jour</Text>
-        </View>
-        {listing.available ? (
-          <TouchableOpacity onPress={() => navigation.navigate('ReservationDatePicker', { listing })}>
-            <LinearGradient
-              colors={[COLORS.secondary, COLORS.primary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.ctaButton}
-            >
-              <Text style={styles.ctaText}>Reserver</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        ) : (
-          <View style={[styles.ctaButton, styles.ctaButtonDisabled]}>
-            <Text style={styles.ctaText}>Indisponible</Text>
-          </View>
-        )}
-      </View>
     </View>
   );
 };
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 118,
+    paddingBottom: 20,
   },
   heroImage: {
     height: 290,
@@ -360,45 +360,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 10,
   },
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#151738',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(148, 156, 233, 0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  reservationCard: {
+    marginTop: 18,
+    marginBottom: 18,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#151837',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.2)',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  bottomPrice: {
+  reservationInfo: {
+    alignItems: 'flex-start',
+  },
+  reservationLabel: {
+    color: '#9aa2cc',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  reservationPrice: {
     color: '#7a5cff',
-    fontSize: 34 / 2,
+    fontSize: 24,
     fontWeight: '800',
   },
-  bottomUnit: {
-    color: '#98a0c8',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  ctaButton: {
-    minWidth: 160,
-    height: 55,
+  reservationButton: {
+    minWidth: 140,
+    height: 50,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
-  ctaButtonDisabled: {
+  reservationButtonDisabled: {
     backgroundColor: '#444a71',
   },
-  ctaText: {
+  reservationButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 16,
   },
   fallbackContainer: {
     flex: 1,
