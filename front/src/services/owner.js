@@ -22,7 +22,7 @@ const stateLabelMap = {
   not_ready: 'Docs en attente',
 };
 
-const stateTooneMap = {
+const stateToneMap = {
   published: 'green',
   ready_to_publish: 'blue',
   not_ready: 'amber',

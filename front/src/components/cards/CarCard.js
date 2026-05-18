@@ -1,23 +1,96 @@
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 
+const FALLBACK_IMAGE = 'https://via.placeholder.com/540x280';
+
+const toImageUrl = (img) => {
+  if (!img) return null;
+  if (typeof img === 'string') return img;
+  return img.imageUrl || img.image_url || img.url || null;
+};
+
 const CarCard = ({ car, onPress, onEdit, onDelete }) => {
-  const primaryImage =
-    car.images?.find((img) => img.isPrimary || img.is_primary) || car.images?.[0];
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [carouselWidth, setCarouselWidth] = useState(0);
+  const scrollRef = useRef(null);
+
+  const imageUrls = useMemo(() => {
+    const rawImages = Array.isArray(car?.images) ? car.images : [];
+    const urls = rawImages.map(toImageUrl).filter(Boolean);
+    if (urls.length > 0) return urls;
+
+    const primary = rawImages.find((img) => img?.isPrimary || img?.is_primary);
+    const primaryUrl = toImageUrl(primary);
+    return [primaryUrl || FALLBACK_IMAGE];
+  }, [car?.images]);
+
+  const handleImageScroll = (event) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent;
+    if (!layoutMeasurement?.width) return;
+
+    const nextIndex = Math.round(contentOffset.x / layoutMeasurement.width);
+    if (nextIndex !== activeIndex) {
+      setActiveIndex(nextIndex);
+    }
+  };
+
+  useEffect(() => {
+    if (imageUrls.length <= 1 || !carouselWidth) return undefined;
+
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => {
+        const next = (prev + 1) % imageUrls.length;
+        scrollRef.current?.scrollTo({ x: next * carouselWidth, animated: true });
+        return next;
+      });
+    }, 2800);
+
+    return () => clearInterval(timer);
+  }, [imageUrls.length, carouselWidth]);
+
   const pricePerDay = car.pricePerDay ?? car.price_per_day;
-  const imageUrl = primaryImage?.imageUrl || primaryImage?.image_url;
   const subtitleParts = [car.year, car.color, car.fuelType].filter(Boolean);
 
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.card}>
       <View style={styles.imageWrapper}>
-        <Image
-          source={{ uri: imageUrl || 'https://via.placeholder.com/540x280' }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <View
+          style={styles.carouselContainer}
+          onLayout={(event) => setCarouselWidth(event.nativeEvent.layout.width)}
+        >
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleImageScroll}
+          scrollEventThrottle={16}
+        >
+          {imageUrls.map((uri, index) => (
+            <Image
+              key={`${uri}-${index}`}
+              source={{ uri }}
+              style={[styles.image, carouselWidth ? { width: carouselWidth } : null]}
+              resizeMode="cover"
+            />
+          ))}
+        </ScrollView>
+        </View>
+
+        {imageUrls.length > 1 ? (
+          <View style={styles.dotsRow}>
+            {imageUrls.map((_, index) => (
+              <View
+                key={`dot-${index}`}
+                style={[styles.dot, index === activeIndex && styles.dotActive]}
+              />
+            ))}
+          </View>
+        ) : null}
+
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>En ligne</Text>
         </View>
@@ -76,9 +149,33 @@ const styles = StyleSheet.create({
     height: 180,
     backgroundColor: COLORS.gray,
   },
-  image: {
+  carouselContainer: {
     width: '100%',
     height: '100%',
+  },
+  image: {
+    width: 0,
+    height: '100%',
+  },
+  dotsRow: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: 'rgba(255,255,255,0.45)',
+  },
+  dotActive: {
+    width: 18,
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   statusBadge: {
     position: 'absolute',
