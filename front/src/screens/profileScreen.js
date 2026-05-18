@@ -171,15 +171,39 @@ const ProfileScreen = ({ navigation, route }) => {
               </>
             ) : (
               <>
-                <TouchableOpacity style={styles.footerTab} onPress={() => navigation.navigate('Home', route?.params || {})}>
+                <TouchableOpacity
+                  style={styles.footerTab}
+                  onPress={() =>
+                    navigation.navigate('ClientApp', {
+                      screen: 'HomeTab',
+                      params: route?.params || {},
+                    })
+                  }
+                >
                   <Ionicons name="home-outline" size={23} color="#8a90b8" />
                   <Text style={styles.tabLabel}>Accueil</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footerTab}>
+                <TouchableOpacity
+                  style={styles.footerTab}
+                  onPress={() =>
+                    navigation.navigate('ClientApp', {
+                      screen: 'SearchTab',
+                      params: route?.params || {},
+                    })
+                  }
+                >
                   <Ionicons name="search-outline" size={23} color="#8a90b8" />
                   <Text style={styles.tabLabel}>Recherche</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footerTab}>
+                <TouchableOpacity
+                  style={styles.footerTab}
+                  onPress={() =>
+                    navigation.navigate('ClientApp', {
+                      screen: 'ReservationsTab',
+                      params: route?.params || {},
+                    })
+                  }
+                >
                   <Ionicons name="calendar-outline" size={23} color="#8a90b8" />
                   <Text style={styles.tabLabel}>Reservations</Text>
                 </TouchableOpacity>

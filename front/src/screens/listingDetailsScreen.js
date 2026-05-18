@@ -21,6 +21,10 @@ const SpecCard = ({ icon, value, label }) => (
 const ListingDetailsScreen = ({ navigation, route }) => {
   const listing = route?.params?.listing;
   const [activeIndex, setActiveIndex] = useState(0);
+  const reservationRouteName =
+    route?.name === 'ListingDetailsFromSearch'
+      ? 'ReservationDatePickerFromSearch'
+      : 'ReservationDatePicker';
 
   const imageUrls = useMemo(() => {
     const toImageUrl = (img) => {
@@ -144,7 +148,7 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               <Text style={styles.reservationPrice}>{formatPrice(listing.pricePerDay)}</Text>
             </View>
             {listing.available ? (
-              <TouchableOpacity onPress={() => navigation.navigate('ReservationDatePicker', { listing })}>
+              <TouchableOpacity onPress={() => navigation.navigate(reservationRouteName, { listing })}>
                 <LinearGradient
                   colors={[COLORS.secondary, COLORS.primary]}
                   start={{ x: 0, y: 0 }}

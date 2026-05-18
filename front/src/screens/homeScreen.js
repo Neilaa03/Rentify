@@ -7,7 +7,6 @@ import ListingCard from '../components/cards/ListingCard';
 import { getListings } from '../services/listings';
 
 const HomeScreen = ({ navigation, route }) => {
-    const [activeTab, setActiveTab] = useState('Accueil');
     const [searchValue, setSearchValue] = useState('');
     const [activeFilter, setActiveFilter] = useState('Tous');
     const [activeSort, setActiveSort] = useState('Populaire');
@@ -25,6 +24,8 @@ const HomeScreen = ({ navigation, route }) => {
     const sortOptions = ['Populaire', 'Prix ↑', 'Prix ↓', 'Note'];
     const [showFilterOptions, setShowFilterOptions] = useState(false);
     const [showSortOptions, setShowSortOptions] = useState(false);
+    const listingDetailsRouteName =
+        route?.name === 'Search' ? 'ListingDetailsFromSearch' : 'ListingDetails';
 
     const loadListings = async () => {
         try {
@@ -91,6 +92,7 @@ const HomeScreen = ({ navigation, route }) => {
 
                     <ScrollView 
                         style={styles.content}
+                        contentContainerStyle={styles.contentContainer}
                         showsVerticalScrollIndicator={false}
                     >
                         <View style={styles.searchBar}>
@@ -194,7 +196,7 @@ const HomeScreen = ({ navigation, route }) => {
                             <ListingCard
                                 key={listing.id}
                                 listing={listing}
-                                onPress={() => navigation.navigate('ListingDetails', { listing })}
+                                onPress={() => navigation.navigate(listingDetailsRouteName, { listing })}
                             />
                         ))}
                         {!isLoading && !error && filteredListings.length === 0 && (
@@ -206,67 +208,6 @@ const HomeScreen = ({ navigation, route }) => {
                         <View style={{ height: 8 }} />
                     </ScrollView>
                 </SafeAreaView>
-
-                <View style={styles.footer}>
-                    <TouchableOpacity 
-                        style={styles.footerTab}
-                        onPress={() => setActiveTab('Accueil')}
-                    >
-                        <Ionicons
-                            name="home-outline" 
-                            size={24} 
-                            color={activeTab === 'Accueil' ? COLORS.primary : '#8a90b8'} 
-                        />
-                        <Text style={[styles.tabLabel, { color: activeTab === 'Accueil' ? COLORS.primary : '#8a90b8' }]}>
-                            Accueil
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                        style={styles.footerTab}
-                        onPress={() => setActiveTab('Recherche')}
-                    >
-                        <Ionicons 
-                            name="search-outline" 
-                            size={24} 
-                            color={activeTab === 'Recherche' ? COLORS.primary : '#8a90b8'} 
-                        />
-                        <Text style={[styles.tabLabel, { color: activeTab === 'Recherche' ? COLORS.primary : '#8a90b8' }]}>
-                            Recherche
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.footerTab}
-                        onPress={() => setActiveTab('Réservations')}
-                    >
-                        <Ionicons
-                            name="calendar-outline"
-                            size={24}
-                            color={activeTab === 'Réservations' ? COLORS.primary : '#8a90b8'}
-                        />
-                        <Text style={[styles.tabLabel, { color: activeTab === 'Réservations' ? COLORS.primary : '#8a90b8' }]}>
-                            Réservations
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                        style={styles.footerTab}
-                        onPress={() => {
-                            setActiveTab('Profil');
-                            navigation.navigate('Profile', { token: route?.params?.token, user: route?.params?.user });
-                        }}
-                    >
-                        <Ionicons 
-                            name="person-outline" 
-                            size={24} 
-                            color={activeTab === 'Profil' ? COLORS.primary : '#8a90b8'} 
-                        />
-                        <Text style={[styles.tabLabel, { color: activeTab === 'Profil' ? COLORS.primary : '#8a90b8' }]}>
-                            Profil
-                        </Text>
-                    </TouchableOpacity>
-                </View>
             </ImageBackground>
         </View>
     );
@@ -279,7 +220,6 @@ const styles = StyleSheet.create({
         flex: 1, 
         paddingHorizontal: 16,
         backgroundColor: 'rgba(2,3,14,0.62)',
-        paddingBottom: 80,
     },
     header: {
         flexDirection: 'row',
@@ -306,7 +246,9 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        paddingBottom: 16,
+    },
+    contentContainer: {
+        paddingBottom: 90,
     },
     searchBar: {
         height: 50,

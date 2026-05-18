@@ -89,8 +89,9 @@ export function ClientNavigation() {
     marginHorizontal: 10,
     marginBottom: 8,
     borderRadius: 18,
-    height: 65,
-    paddingVertical: 12,
+    height: 74,
+    paddingTop: 8,
+    paddingBottom: 10,
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -102,6 +103,7 @@ export function ClientNavigation() {
       screenOptions={({ route }) => ({
         headerShown: false,
         sceneContainerStyle: { backgroundColor: APP_BACKGROUND },
+        tabBarShowLabel: true,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === 'HomeTab') {
@@ -118,10 +120,14 @@ export function ClientNavigation() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#8a90b8',
         tabBarStyle: defaultTabBarStyle,
+        tabBarItemStyle: {
+          paddingTop: 2,
+          paddingBottom: 2,
+        },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: '600',
-          marginTop: 4,
+          marginTop: 2,
         },
       })}
     >
