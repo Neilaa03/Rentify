@@ -2,9 +2,11 @@ import { supabase } from '../../config/supabase.js';
 
 const DOCUMENTS_TABLE = 'documents';
 
-const toCarDocumentDto = (row) => ({
+const toDocumentDto = (row) => ({
   id: row.id,
+  userId: row.user_id,
   carId: row.car_id,
+  companyId: row.company_id,
   documentType: row.document_type,
   documentUrl: row.document_url,
   status: row.status,
@@ -13,10 +15,12 @@ const toCarDocumentDto = (row) => ({
   createdAt: row.created_at,
 });
 
-const toDocumentsTablePayload = (payload) => {
+const toDocumentTablePayload = (payload) => {
   const mapped = {};
 
+  if (payload.userId !== undefined) mapped.user_id = payload.userId;
   if (payload.carId !== undefined) mapped.car_id = payload.carId;
+  if (payload.companyId !== undefined) mapped.company_id = payload.companyId;
   if (payload.documentType !== undefined) mapped.document_type = payload.documentType;
   if (payload.documentUrl !== undefined) mapped.document_url = payload.documentUrl;
   if (payload.status !== undefined) mapped.status = payload.status;
@@ -26,34 +30,35 @@ const toDocumentsTablePayload = (payload) => {
   return mapped;
 };
 
-export const getCarDocuments = async (filters = {}) => {
-  const { carId, documentType, status } = filters;
-  let query = supabase.from(DOCUMENTS_TABLE).select('*').not('car_id', 'is', null);
+export const getDocuments = async (filters = {}) => {
+  const { userId, carId, companyId, documentType, status } = filters;
+  let query = supabase.from(DOCUMENTS_TABLE).select('*');
 
+  if (userId) query = query.eq('user_id', userId);
   if (carId) query = query.eq('car_id', carId);
+  if (companyId) query = query.eq('company_id', companyId);
   if (documentType) query = query.eq('document_type', documentType);
   if (status) query = query.eq('status', status);
 
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data || []).map(toCarDocumentDto);
+  return (data || []).map(toDocumentDto);
 };
 
-export const getCarDocumentById = async (id) => {
+export const getDocumentById = async (id) => {
   const { data, error } = await supabase
     .from(DOCUMENTS_TABLE)
     .select('*')
     .eq('id', id)
-    .not('car_id', 'is', null)
     .single();
 
-  if (error || !data) throw new Error('Car document not found');
-  return toCarDocumentDto(data);
+  if (error || !data) throw new Error('Document not found');
+  return toDocumentDto(data);
 };
 
-export const createCarDocument = async (payload) => {
-  const insertPayload = toDocumentsTablePayload(payload);
+export const createDocument = async (payload) => {
+  const insertPayload = toDocumentTablePayload(payload);
   const { data, error } = await supabase
     .from(DOCUMENTS_TABLE)
     .insert([insertPayload])
@@ -61,29 +66,24 @@ export const createCarDocument = async (payload) => {
     .single();
 
   if (error) throw error;
-  return toCarDocumentDto(data);
+  return toDocumentDto(data);
 };
 
-export const updateCarDocument = async (id, updates) => {
-  const updatePayload = toDocumentsTablePayload(updates);
+export const updateDocument = async (id, updates) => {
+  const updatePayload = toDocumentTablePayload(updates);
   const { data, error } = await supabase
     .from(DOCUMENTS_TABLE)
     .update(updatePayload)
     .eq('id', id)
-    .not('car_id', 'is', null)
     .select()
     .single();
 
   if (error || !data) throw new Error('Update failed');
-  return toCarDocumentDto(data);
+  return toDocumentDto(data);
 };
 
-export const deleteCarDocument = async (id) => {
-  const { error } = await supabase
-    .from(DOCUMENTS_TABLE)
-    .delete()
-    .eq('id', id)
-    .not('car_id', 'is', null);
+export const deleteDocument = async (id) => {
+  const { error } = await supabase.from(DOCUMENTS_TABLE).delete().eq('id', id);
   if (error) throw error;
-  return { message: 'Car document deleted' };
+  return { message: 'Document deleted' };
 };

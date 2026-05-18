@@ -11,25 +11,35 @@ const pickListingImage = (item) => {
   return `https://picsum.photos/seed/listing-${item.id}/900/600`;
 };
 
-const toUiListing = (item) => ({
-  id: item.id,
-  brand: item.car?.brand || 'N/A',
-  model: item.car?.model || 'N/A',
-  year: item.car?.year || '-',
-  category: item.title || 'Vehicule',
-  city: item.city || '',
-  image: pickListingImage(item),
-  pricePerDay: item.pricePerDay ?? 0,
-  available: Boolean(item.isActive),
-  fuel: item.car?.fuelType || 'N/A',
-  transmission: item.car?.transmission || 'N/A',
-  seats: item.car?.seats || '-',
-  mileageKm: item.car?.mileage || 0,
-  rating: 4.8,
-  reviewsCount: 0,
-  description: item.description || '',
-  owner: null,
-});
+const toUiListing = (item) => {
+  const carImages = Array.isArray(item?.car?.images)
+    ? item.car.images
+        .map((image) => image?.imageUrl || image?.image_url || image?.url || null)
+        .filter(Boolean)
+    : [];
+
+  return {
+    id: item.id,
+    brand: item.car?.brand || 'N/A',
+    model: item.car?.model || 'N/A',
+    year: item.car?.year || '-',
+    category: item.title || 'Vehicule',
+    city: item.city || '',
+    image: pickListingImage(item),
+    images: carImages,
+    car: item.car || null,
+    pricePerDay: item.pricePerDay ?? 0,
+    available: Boolean(item.isActive),
+    fuel: item.car?.fuelType || 'N/A',
+    transmission: item.car?.transmission || 'N/A',
+    seats: item.car?.seats || '-',
+    mileageKm: item.car?.mileage || 0,
+    rating: 4.8,
+    reviewsCount: 0,
+    description: item.description || '',
+    owner: null,
+  };
+};
 
 export const getListings = async () => {
   try {

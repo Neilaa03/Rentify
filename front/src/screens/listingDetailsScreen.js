@@ -1,11 +1,12 @@
-import React from 'react';
-import { ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../constants/colors';
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const SpecCard = ({ icon, value, label }) => (
   <View style={styles.specCard}>
@@ -19,6 +20,28 @@ const SpecCard = ({ icon, value, label }) => (
 
 const ListingDetailsScreen = ({ navigation, route }) => {
   const listing = route?.params?.listing;
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const imageUrls = useMemo(() => {
+    const toImageUrl = (img) => {
+      if (!img) return null;
+      if (typeof img === 'string') return img;
+      return img.imageUrl || img.image_url || img.url || null;
+    };
+
+    const fromListingImages = Array.isArray(listing?.images)
+      ? listing.images.map(toImageUrl).filter(Boolean)
+      : [];
+
+    const fromCarImages = Array.isArray(listing?.car?.images)
+      ? listing.car.images.map(toImageUrl).filter(Boolean)
+      : [];
+
+    const primary = toImageUrl(listing?.image);
+    const urls = [...fromListingImages, ...fromCarImages, primary].filter(Boolean);
+    const unique = [...new Set(urls)];
+    return unique.length ? unique : ['https://picsum.photos/seed/listing-details/1200/800'];
+  }, [listing]);
 
   if (!listing) {
     return (
@@ -33,15 +56,28 @@ const ListingDetailsScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        bounces={false}
-        alwaysBounceVertical={false}
-        overScrollMode="never"
-      >
-        <ImageBackground source={{ uri: listing.image }} style={styles.heroImage}>
-          <SafeAreaView style={styles.heroTopRow}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.heroImage}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={(event) => {
+              const { contentOffset, layoutMeasurement } = event.nativeEvent;
+              if (!layoutMeasurement?.width) return;
+              const nextIndex = Math.round(contentOffset.x / layoutMeasurement.width);
+              if (nextIndex !== activeIndex) {
+                setActiveIndex(nextIndex);
+              }
+            }}
+            scrollEventThrottle={16}
+          >
+            {imageUrls.map((uri, index) => (
+              <Image key={`${uri}-${index}`} source={{ uri }} style={styles.heroSlideImage} resizeMode="cover" />
+            ))}
+          </ScrollView>
+
+          <SafeAreaView pointerEvents="box-none" style={styles.heroTopRow}>
             <TouchableOpacity style={styles.heroButton} onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={20} color="#fff" />
             </TouchableOpacity>
@@ -54,7 +90,18 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
           </SafeAreaView>
-        </ImageBackground>
+
+          {imageUrls.length > 1 ? (
+            <View style={styles.heroDotsRow}>
+              {imageUrls.map((_, index) => (
+                <View
+                  key={`hero-dot-${index}`}
+                  style={[styles.heroDot, index === activeIndex && styles.heroDotActive]}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
 
         <View style={styles.body}>
           <View style={styles.titlePriceRow}>
@@ -157,14 +204,43 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     height: 290,
-    justifyContent: 'space-between',
+    position: 'relative',
+  },
+  heroSlideImage: {
+    width: SCREEN_WIDTH,
+    height: 290,
   },
   heroTopRow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 14,
-    paddingTop: 8,
+    paddingTop: 6,
+    paddingBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  heroDotsRow: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  heroDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  heroDotActive: {
+    width: 18,
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   heroActionsRight: {
     flexDirection: 'row',

@@ -3,7 +3,6 @@ import { supabase } from '../../config/supabase.js';
 export const createUser = async (userData) => {
     const { email, password, firstName, lastName, phone, role, isVerified } = userData;
 
-    // 1. Insert user into 'users'
     const { data, error } = await supabase
         .from('users')
         .insert([
@@ -18,11 +17,9 @@ export const createUser = async (userData) => {
             is_active: true
         }
         ])
-        // 2. Select specific fields to return
-        .select('id, email, first_name, last_name, role, is_verified')
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active')
         .single();
 
-    // 3. Throw error to be caught by the controller
     if (error) throw error;
     return data;
 };
@@ -35,7 +32,6 @@ export const getUserByEmail = async (email) => {
         .eq('email', email)
         .single();
 
-    // 2. Return null if not found, otherwise return the user
     if (error) return null;
     return data;
 };

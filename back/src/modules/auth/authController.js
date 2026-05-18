@@ -9,23 +9,18 @@ export const register = async (req, res) => {
     try {
         const validatedData = registerSchema.parse(req.body);
 
-        // 1. Logic to distinct verification needs
-        // Clients are auto-verified; others stay 'false' for manual check
-        const isVerified = validatedData.role === 'client';
-
-        // 2. Hash the password
+        const isVerified = ( validatedData.role === 'client' || validatedData.role === 'owner' );
         const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-        
-        // 3. Save with the verification status
+
         const newUser = await createUser({
-        ...validatedData,
-        password: hashedPassword,
-        isVerified: isVerified
+            ...validatedData,
+            password: hashedPassword,
+            isVerified: isVerified
         });
 
         res.status(201).json({
-        message: isVerified ? "Registration complete" : "Registration pending verification",
-        user: newUser
+            message: isVerified ? 'Registration complete' : 'Registration pending verification',
+            user: newUser
         });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -34,25 +29,22 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
     try {
-        // 1. Validate input
         const { email, password } = loginSchema.parse(req.body);
         console.log('Login attempt for email:', email);
 
-        // 2. Find user & Verify password
         const user = await getUserByEmail(email);
-        
+
         if (!user) {
             console.log('User not found:', email);
-            return res.status(401).json({ error: "Invalid email or password" });
+            return res.status(401).json({ error: 'Invalid email or password' });
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password_hash);
         if (!passwordMatch) {
             console.log('Password mismatch for user:', email);
-            return res.status(401).json({ error: "Invalid email or password" });
+            return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        // 3. Generate JWT
         const token = jwt.sign(
             { id: user.id, role: user.role },
             JWT_SECRET,
@@ -70,6 +62,24 @@ export const login = async (req, res) => {
 
     } catch (err) {
         console.error('Login error:', err);
+        res.status(400).json({ error: err.message });
+    }
+};
+
+export const me = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const user = await getUserById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({ user });
+    } catch (err) {
         res.status(400).json({ error: err.message });
     }
 };
