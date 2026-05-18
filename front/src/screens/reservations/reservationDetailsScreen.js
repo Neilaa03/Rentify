@@ -1,0 +1,967 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  ImageBackground,
+  Platform,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import storage from '../../utils/storage';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../constants/api';
+import { calculateReservationPrice } from '../../utils/reservationUtils';
+
+const ReservationDetailsScreen = ({ navigation, route }) => {
+  const reservation = route?.params?.reservation;
+  const listingFromParams = route?.params?.listing;
+  const [loading, setLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [account, setAccount] = useState(null);
+  const [listingFromApi, setListingFromApi] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null); // 'cancel' | 'edit' | null
+
+  const goToReservations = () => {
+    const parent = navigation.getParent?.();
+    const navigate = parent?.navigate || navigation.navigate;
+    navigate('ReservationsTab', { screen: 'ReservationsList' });
+  };
+
+  const handleCancelReservation = async () => {
+    Alert.alert(
+      'Annuler la réservation',
+      'Êtes-vous sûr de vouloir annuler cette réservation ? Cette action est irréversible.',
+      [
+        {
+          text: 'Non',
+          onPress: () => {},
+          style: 'cancel',
+        },
+        {
+          text: 'Oui, annuler',
+          onPress: async () => {
+            try {
+              setActionLoading('cancel');
+              const token = await storage.getItemAsync('userToken');
+              if (!token) {
+                Alert.alert('Erreur', 'Veuillez vous reconnecter');
+                return;
+              }
+
+              const response = await fetch(API_ENDPOINTS.RESERVATIONS.CANCEL(reservation.id), {
+                method: 'DELETE',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erreur lors de l\'annulation');
+              }
+
+              Alert.alert('Succès', 'Réservation annulée avec succès', [
+                {
+                  text: 'OK',
+                  onPress: () => goToReservations(),
+                },
+              ]);
+            } catch (error) {
+              console.error('Cancel error:', error);
+              Alert.alert('Erreur', error.message || 'Une erreur est survenue');
+            } finally {
+              setActionLoading(null);
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
+  const handleEditDates = async () => {
+    try {
+      navigation.navigate('ReservationDatePickerFromReservations', {
+        reservation,
+        listing: listingFromApi || listingFromParams,
+        isEditing: true,
+      });
+    } catch (error) {
+      console.error('Edit dates error:', error);
+      Alert.alert('Erreur', 'Impossible d\'accéder à l\'éditeur de dates');
+    }
+  };
+
+  const isReservationActive = reservation?.status === 'reserved';
+
+  if (!reservation) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={styles.header}>
+          <TouchableOpacity onPress={goToReservations} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Récapitulatif</Text>
+          <View style={{ width: 50 }} />
+        </SafeAreaView>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ color: '#f6f8ff', fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+            Réservation introuvable
+          </Text>
+          <Text style={{ color: '#8e95bf', textAlign: 'center' }}>
+            Impossible d’afficher les détails de cette réservation.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const reservationListing = reservation?.listing || reservation?.listing?.car || null;
+  const listing = listingFromApi || listingFromParams || reservationListing || {};
+
+  const listingId =
+    reservation?.listingId ||
+    reservation?.listing_id ||
+    listingFromParams?.id ||
+    listingFromParams?.listingId ||
+    reservation?.listing?.id ||
+    null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const cachedProfile = await storage.getItemAsync('userProfile');
+        if (!cancelled && cachedProfile) setAccount(JSON.parse(cachedProfile));
+      } catch (e) {
+        // Ignore parse errors.
+      }
+
+      const token = await storage.getItemAsync('userToken');
+      if (!token) return;
+
+      try {
+        const [accountRes, listingRes] = await Promise.all([
+          fetch(API_ENDPOINTS.AUTH.ME, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          listingId ? fetch(API_ENDPOINTS.LISTINGS.GET(listingId)) : Promise.resolve(null),
+        ]);
+
+        if (!cancelled && accountRes?.ok) {
+          const accountJson = await accountRes.json();
+          setAccount(accountJson?.user || null);
+        }
+
+        if (!cancelled && listingRes?.ok) {
+          const listingJson = await listingRes.json();
+          setListingFromApi(listingJson || null);
+        }
+      } catch (e) {
+        // Ignore fetch errors; screen can still render from params.
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [listingId]);
+
+  const startRaw =
+    reservation?.startDate ||
+    reservation?.from ||
+    reservation?.start_date ||
+    reservation?.fromDate;
+  const endRaw =
+    reservation?.endDate ||
+    reservation?.to ||
+    reservation?.end_date ||
+    reservation?.toDate;
+
+  const startDate = new Date(startRaw);
+  const endDate = new Date(endRaw);
+  const totalDays = useMemo(() => {
+    if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return 1;
+    if (!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) return 1;
+    const startMidnight = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endMidnight = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const diffDays = Math.round((endMidnight - startMidnight) / (1000 * 60 * 60 * 24));
+    return Math.max(1, diffDays + 1);
+  }, [startRaw, endRaw]);
+
+  const imageUri =
+    listing?.image ||
+    listing?.imageUrl ||
+    listing?.car?.carImages?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
+    listing?.car?.carImages?.find((i) => i?.image_url)?.image_url ||
+    listing?.car?.car_images?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
+    listing?.car?.car_images?.find((i) => i?.image_url)?.image_url ||
+    listing?.car?.images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
+    listing?.car?.images?.find((i) => i?.imageUrl)?.imageUrl ||
+    null;
+
+  const brand = listing?.brand || listing?.car?.brand || '';
+  const model = listing?.model || listing?.car?.model || '';
+  const year = listing?.year || listing?.car?.year || '—';
+  const seats =
+    listing?.seats ||
+    listing?.car?.seats ||
+    reservation?.seats ||
+    reservation?.listing?.car?.seats ||
+    '—';
+  const city = listing?.city || listing?.car?.city || '';
+  const pricePerDay =
+    listing?.pricePerDay ||
+    listing?.price_per_day ||
+    listing?.price ||
+    listing?.car?.pricePerDay ||
+    0;
+
+  const handlePayment = async () => {
+    try {
+      if (!termsAccepted) {
+        Alert.alert('Conditions requises', 'Veuillez accepter les conditions générales pour continuer.');
+        return;
+      }
+      setLoading(true);
+      
+      // Get the user token
+      const token = await storage.getItemAsync('userToken');
+      if (!token) {
+        Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
+        return;
+      }
+
+      // TODO: Integrate with payment gateway (Stripe, PayPal, etc.)
+      // For now, call the confirm-payment API to update status
+      const confirmResponse = await fetch(API_ENDPOINTS.RESERVATIONS.CONFIRM_PAYMENT(reservation.id), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!confirmResponse.ok) {
+        let errorMessage = 'Failed to confirm payment';
+        try {
+          const errorData = await confirmResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use HTTP status
+          errorMessage = `Server error: ${confirmResponse.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      Alert.alert(
+        'Paiement confirmé',
+        'Votre réservation a été confirmée avec succès.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate back to home
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'HomeTab', params: { screen: 'Home' } }],
+              });
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert('Erreur', error.message || 'Une erreur est survenue lors du paiement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatPrice = (value) => value.toLocaleString('fr-FR');
+  const formatDate = (date) => new Date(date).toLocaleDateString('fr-FR');
+
+  const basePrice = useMemo(() => {
+    const computed = calculateReservationPrice(listing || {}, startRaw, endRaw);
+    return Number.isFinite(computed) ? computed : 0;
+  }, [listing, startRaw, endRaw]);
+  const serviceFee = useMemo(() => Math.round(basePrice * 0.1), [basePrice]);
+  const safeTotalPrice = useMemo(() => basePrice + serviceFee, [basePrice, serviceFee]);
+
+  return (
+    <View style={styles.container}>
+      <SafeAreaView style={styles.header}>
+        <TouchableOpacity
+          onPress={goToReservations}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Récapitulatif</Text>
+        <View style={{ width: 50 }} />
+      </SafeAreaView>
+
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
+
+        {/* Vehicle Card */}
+        <View style={styles.vehicleCard}>
+          {imageUri ? (
+            <ImageBackground
+              source={{ uri: imageUri }}
+              style={styles.vehicleImage}
+              imageStyle={{ borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
+            >
+              <View style={styles.imageOverlay} />
+            </ImageBackground>
+          ) : (
+            <View style={[styles.vehicleImage, styles.vehicleImagePlaceholder]}>
+              <Ionicons name="car-outline" size={50} color="#8f6cff" />
+            </View>
+          )}
+
+          <View style={styles.vehicleInfo}>
+            <Text style={styles.vehicleBrand}>{brand || '—'}</Text>
+            <Text style={styles.vehicleModel}>{model || '—'}</Text>
+            
+            <View style={styles.vehicleMetaRow}>
+              <View style={styles.metaItem}>
+                <Ionicons name="location-outline" size={16} color="#a566ff" />
+                <Text style={styles.metaText}>{city || '—'}</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Ionicons name="people-outline" size={16} color="#a566ff" />
+                <Text style={styles.metaText}>{seats} places</Text>
+              </View>
+            </View>
+
+          </View>
+        </View>
+
+        {/* Dates Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderWithButton}>
+            <Text style={styles.sectionTitle}>Période de location</Text>
+            {isReservationActive && (
+              <TouchableOpacity
+                onPress={handleEditDates}
+                disabled={actionLoading !== null}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#a566ff', '#8f6cff']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.editDateButton}
+                >
+                  <Ionicons name="pencil-outline" size={16} color="#fff" />
+                  <Text style={styles.editDateButtonText}>Modifier</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.datesContainer}>
+            <View style={styles.dateBox}>
+              <Text style={styles.dateBoxLabel}>Départ</Text>
+              <Text style={styles.dateBoxValue}>{formatDate(startDate)}</Text>
+              <Text style={styles.dateBoxTime}>08:00</Text>
+            </View>
+
+            <View style={styles.dateSeparator}>
+              <View style={styles.dateSeparatorLine} />
+              <Text style={styles.dateSeparatorDays}>{totalDays}j</Text>
+              <View style={styles.dateSeparatorLine} />
+            </View>
+
+            <View style={styles.dateBox}>
+              <Text style={styles.dateBoxLabel}>Retour</Text>
+              <Text style={styles.dateBoxValue}>{formatDate(endDate)}</Text>
+              <Text style={styles.dateBoxTime}>18:00</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Driver Info Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Informations du conducteur</Text>
+          
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Nom complet</Text>
+              <Text style={styles.infoValue}>
+                {account?.firstName || account?.first_name || account?.lastName || account?.last_name
+                  ? `${account?.firstName || account?.first_name || ''} ${account?.lastName || account?.last_name || ''}`.trim()
+                  : '—'}
+              </Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Téléphone</Text>
+              <Text style={styles.infoValue}>{account?.phone || '—'}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Conditions Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Conditions de location</Text>
+          
+          <View style={styles.conditionsList}>
+            <View style={styles.conditionItem}>
+              <Ionicons name="checkmark-circle" size={20} color="#23d49f" />
+              <View style={styles.conditionContent}>
+                <Text style={styles.conditionTitle}>Assurance incluse</Text>
+                <Text style={styles.conditionDesc}>Couverture complète</Text>
+              </View>
+            </View>
+
+            <View style={styles.conditionItem}>
+              <Ionicons name="checkmark-circle" size={20} color="#23d49f" />
+              <View style={styles.conditionContent}>
+                <Text style={styles.conditionTitle}>Kilométrage illimité</Text>
+                <Text style={styles.conditionDesc}>Aucune limite de km</Text>
+              </View>
+            </View>
+
+            <View style={styles.conditionItem}>
+              <Ionicons name="checkmark-circle" size={20} color="#23d49f" />
+              <View style={styles.conditionContent}>
+                <Text style={styles.conditionTitle}>Assistance 24/7</Text>
+                <Text style={styles.conditionDesc}>Support disponible</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Price Breakdown */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Détail du prix</Text>
+          
+          <View style={styles.priceBreakdown}>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceRowLabel}>
+                {totalDays} jour
+                {totalDays > 1 ? 's' : ''}
+              </Text>
+              <Text style={styles.priceRowValue}>
+                {Math.round(basePrice).toLocaleString('fr-FR')} DA
+              </Text>
+            </View>
+
+            <View style={styles.dividerSmall} />
+
+            <View style={styles.priceRow}>
+              <Text style={styles.priceRowLabel}>Frais de service</Text>
+              <Text style={styles.priceRowValue}>
+                {serviceFee.toLocaleString('fr-FR')} DA
+              </Text>
+            </View>
+
+            <View style={styles.dividerSmall} />
+
+            <View style={[styles.priceRow, styles.totalPriceRow]}>
+              <Text style={styles.totalPriceLabel}>Prix total</Text>
+              <Text style={styles.totalPriceValue}>
+                {formatPrice(safeTotalPrice)} DA
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Action Buttons - REMOVED, moved to payment bar and dates section */}
+
+      {/* Terms & Conditions */}
+      {isReservationActive && (
+        <View style={styles.termsSection}>
+          <TouchableOpacity
+            onPress={() => setTermsAccepted((v) => !v)}
+            activeOpacity={0.8}
+            style={styles.termsCheckbox}
+          >
+            <Ionicons
+              name={termsAccepted ? 'checkbox' : 'square-outline'}
+              size={20}
+              color={termsAccepted ? '#23d49f' : '#a566ff'}
+            />
+            <Text style={styles.termsText}>
+              J'accepte les{' '}
+              <Text style={styles.termsLink}>conditions générales</Text> et la
+              <Text style={styles.termsLink}> politique de confidentialité</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
+
+      {/* Payment Button */}
+      {isReservationActive && (
+        <View style={styles.paymentBar}>
+          <TouchableOpacity
+            onPress={handleCancelReservation}
+            disabled={actionLoading !== null}
+            activeOpacity={0.8}
+            style={styles.cancelButtonWrapper}
+          >
+            <LinearGradient
+              colors={['#ff6b6b', '#ee5a52']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.paymentCancelButton,
+                actionLoading === 'cancel' && styles.actionButtonLoading,
+              ]}
+            >
+              {actionLoading === 'cancel' ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={20} color="#fff" />
+                  <Text style={styles.actionButtonText}>Annuler</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handlePayment}
+            disabled={loading || !termsAccepted}
+            style={[
+              styles.paymentButtonWrapper,
+              (!termsAccepted || loading) ? styles.paymentButtonWrapperDisabled : null,
+            ]}
+          >
+            <LinearGradient
+              colors={!termsAccepted || loading ? ['#3a3f66', '#2b2f52'] : [COLORS.secondary, COLORS.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.paymentButton}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.paymentButtonText}>Passer au paiement</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0f1228',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#151837',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(148, 156, 233, 0.2)',
+  },
+  backButton: {
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#f6f8ff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#0f1228',
+  },
+  contentContainer: {
+    flexGrow: 1,
+    paddingBottom: 140,
+  },
+  vehicleCard: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#151837',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.2)',
+  },
+  vehicleImage: {
+    height: 200,
+    backgroundColor: '#0f1228',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vehicleImagePlaceholder: {
+    backgroundColor: 'rgba(143, 108, 255, 0.1)',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+  },
+  vehicleInfo: {
+    padding: 16,
+  },
+  vehicleBrand: {
+    color: '#8e95bf',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  vehicleModel: {
+    color: '#f6f8ff',
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  vehicleSpecs: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  specBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(143, 108, 255, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  specText: {
+    color: '#a566ff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  vehicleMetaRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  paymentButtonWrapperDisabled: {
+    opacity: 0.75,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    color: '#f6f8ff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  sectionHeaderWithButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  editDateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  editDateButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  datesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  dateBox: {
+    flex: 1,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.2)',
+    alignItems: 'center',
+  },
+  dateBoxLabel: {
+    color: '#8e95bf',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  dateBoxValue: {
+    color: '#f6f8ff',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  dateBoxTime: {
+    color: '#a566ff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  dateSeparator: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  dateSeparatorLine: {
+    width: 20,
+    height: 1,
+    backgroundColor: 'rgba(148, 156, 233, 0.2)',
+  },
+  dateSeparatorDays: {
+    color: '#a566ff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  infoCard: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.2)',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  infoLabel: {
+    color: '#8e95bf',
+    fontSize: 14,
+  },
+  infoValue: {
+    color: '#f6f8ff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(148, 156, 233, 0.1)',
+    marginHorizontal: 16,
+  },
+  dividerSmall: {
+    height: 1,
+    backgroundColor: 'rgba(148, 156, 233, 0.1)',
+    marginVertical: 8,
+  },
+  conditionsList: {
+    gap: 12,
+  },
+  conditionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: 'rgba(35, 212, 159, 0.1)',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(35, 212, 159, 0.2)',
+  },
+  conditionContent: {
+    flex: 1,
+  },
+  conditionTitle: {
+    color: '#f6f8ff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  conditionDesc: {
+    color: '#8e95bf',
+    fontSize: 12,
+  },
+  priceBreakdown: {
+    borderRadius: 10,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.2)',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceRowLabel: {
+    color: '#8e95bf',
+    fontSize: 14,
+  },
+  priceRowValue: {
+    color: '#f6f8ff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  totalPriceRow: {
+    marginTop: 8,
+    paddingTop: 8,
+  },
+  totalPriceLabel: {
+    color: '#f6f8ff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  totalPriceValue: {
+    color: '#a566ff',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  termsSection: {
+    backgroundColor: 'rgba(143, 108, 255, 0.05)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(143, 108, 255, 0.1)',
+  },
+  termsCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  termsText: {
+    flex: 1,
+    color: '#8e95bf',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  termsLink: {
+    color: '#a566ff',
+    fontWeight: '600',
+  },
+  actionButtonsSection: {
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  actionSectionTitle: {
+    color: '#f6f8ff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+    marginLeft: 8,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButtonWrapper: {
+    flex: 1,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  actionButtonLoading: {
+    opacity: 0.9,
+  },
+  paymentBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#151837',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(148, 156, 233, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  cancelButtonWrapper: {
+    flex: 0,
+  },
+  paymentCancelButton: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  paymentLabel: {
+    color: '#8e95bf',
+    fontSize: 12,
+  },
+  paymentAmount: {
+    color: '#a566ff',
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  paymentButtonWrapper: {
+    flex: 1,
+  },
+  paymentButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paymentButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+});
+
+export default ReservationDetailsScreen;

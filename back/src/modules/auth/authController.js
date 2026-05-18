@@ -1,10 +1,11 @@
-import { registerSchema, loginSchema } from './authSchema.js';
+import { registerSchema, loginSchema } from './authSchemas.js';
 import { createUser, getUserByEmail, getUserById } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from '../../middleware/auth.js';
 
-const register = async (req, res) => {
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+export const register = async (req, res) => {
     try {
         const validatedData = registerSchema.parse(req.body);
 
@@ -26,7 +27,7 @@ const register = async (req, res) => {
     }
 };
 
-const login = async (req, res) => {
+export const login = async (req, res) => {
     try {
         const { email, password } = loginSchema.parse(req.body);
         console.log('Login attempt for email:', email);
@@ -50,7 +51,10 @@ const login = async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        const { password_hash, ...userWithoutPassword } = user;
+        // Return user profile (without password_hash) and the token
+        // Fetch by id to ensure we have full profile fields even if email lookup is minimal.
+        const profile = (await getUserById(user.id)) || user;
+        const { password_hash, ...userWithoutPassword } = profile;
         res.json({
             user: userWithoutPassword,
             token
@@ -62,7 +66,7 @@ const login = async (req, res) => {
     }
 };
 
-const me = async (req, res) => {
+export const me = async (req, res) => {
     try {
         const userId = req.user?.id;
         if (!userId) {
@@ -78,10 +82,4 @@ const me = async (req, res) => {
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
-};
-
-export {
-    register,
-    login,
-    me
 };

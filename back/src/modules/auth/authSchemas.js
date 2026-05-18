@@ -3,7 +3,7 @@ import { z } from 'zod';
 // defining the allowed roles
 const UserRole = z.enum(['client', 'companyManager', 'owner', 'admin']);
 
-const registerSchema = z.object({
+export const registerSchema = z.object({
     email: z.string().email(),
     password: z.string().min(8),
     confirmPassword: z.string(),
@@ -13,12 +13,7 @@ const registerSchema = z.object({
     role: UserRole.default('client'),
 }).refine((data) => data.password === data.confirmPassword);
 
-const loginSchema = z.object({
+export const loginSchema = z.object({
     email: z.string().email(),
     password: z.string(),
 });
-
-export {
-    registerSchema,
-    loginSchema
-};

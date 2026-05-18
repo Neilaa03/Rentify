@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
+import OwnerBottomNavigation from '../../components/navigation/ownerBottomNavigation';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -161,31 +162,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             )}
           </ScrollView>
         )}
-
-        <View style={styles.tabBar}>
-          <TouchableOpacity style={styles.tabActive}>
-            <Ionicons name="grid-outline" size={20} color="#8f7dff" />
-            <Text style={styles.tabLabelActive}>Tableau de bord</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('OwnerCars', { token, user })}>
-            <Ionicons name="car-outline" size={20} color="#8a90b8" />
-            <Text style={styles.tabLabel}>Véhicules</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate('OwnerListings', { token, user })}>
-            <Ionicons name="car-sport-outline" size={20} color="#8a90b8" />
-            <Text style={styles.tabLabel}>Annonces</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => navigation.navigate('Profile', { token, user })}
-          >
-            <Ionicons name="person-outline" size={20} color="#8a90b8" />
-            <Text style={styles.tabLabel}>Profil</Text>
-          </TouchableOpacity>
-        </View>
+        <OwnerBottomNavigation navigation={navigation} route={route} active="dashboard" />
       </View>
     </SafeAreaView>
   );
@@ -216,7 +193,7 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: '#b8bddf', fontWeight: '600' },
   loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { paddingBottom: 28 },
+  content: { paddingBottom: 96 },
   errorText: { color: '#ff7f90', marginBottom: 10 },
   grid: {
     flexDirection: 'row',
@@ -285,18 +262,6 @@ const styles = StyleSheet.create({
   rightActivity: { alignItems: 'flex-end' },
   badge: { fontSize: 12, fontWeight: '700', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   activityPrice: { color: '#8f7dff', fontWeight: '800', marginTop: 7 },
-  tabBar: {
-    marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(146,151,214,0.25)',
-    paddingTop: 10,
-  },
-  tab: { alignItems: 'center' },
-  tabActive: { alignItems: 'center' },
-  tabLabel: { color: '#8a90b8', fontSize: 12, marginTop: 4 },
-  tabLabelActive: { color: '#8f7dff', fontSize: 12, marginTop: 4, fontWeight: '700' },
 });
 
 export default OwnerDashboardScreen;

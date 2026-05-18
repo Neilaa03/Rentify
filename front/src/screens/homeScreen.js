@@ -82,10 +82,7 @@ const HomeScreen = ({ navigation, route }) => {
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 style={styles.logoutButton}
-                                onPress={() => navigation.reset({
-                                    index: 0,
-                                    routes: [{ name: 'Landing' }],
-                                })}
+                                onPress={() => navigation.navigate('Landing')}
                             >
                                 <Ionicons name="log-out" size={24} color="#fff" />
                             </TouchableOpacity>
@@ -94,6 +91,7 @@ const HomeScreen = ({ navigation, route }) => {
 
                     <ScrollView 
                         style={styles.content}
+                        contentContainerStyle={styles.contentContainer}
                         showsVerticalScrollIndicator={false}
                     >
                         <View style={styles.searchBar}>
@@ -209,67 +207,6 @@ const HomeScreen = ({ navigation, route }) => {
                         <View style={{ height: 8 }} />
                     </ScrollView>
                 </SafeAreaView>
-
-                <View style={styles.footer}>
-                    <TouchableOpacity 
-                        style={styles.footerTab}
-                        onPress={() => setActiveTab('Accueil')}
-                    >
-                        <Ionicons
-                            name="home-outline" 
-                            size={24} 
-                            color={activeTab === 'Accueil' ? COLORS.primary : '#8a90b8'} 
-                        />
-                        <Text style={[styles.tabLabel, { color: activeTab === 'Accueil' ? COLORS.primary : '#8a90b8' }]}>
-                            Accueil
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                        style={styles.footerTab}
-                        onPress={() => setActiveTab('Recherche')}
-                    >
-                        <Ionicons 
-                            name="search-outline" 
-                            size={24} 
-                            color={activeTab === 'Recherche' ? COLORS.primary : '#8a90b8'} 
-                        />
-                        <Text style={[styles.tabLabel, { color: activeTab === 'Recherche' ? COLORS.primary : '#8a90b8' }]}>
-                            Recherche
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.footerTab}
-                        onPress={() => setActiveTab('Réservations')}
-                    >
-                        <Ionicons
-                            name="calendar-outline"
-                            size={24}
-                            color={activeTab === 'Réservations' ? COLORS.primary : '#8a90b8'}
-                        />
-                        <Text style={[styles.tabLabel, { color: activeTab === 'Réservations' ? COLORS.primary : '#8a90b8' }]}>
-                            Réservations
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                        style={styles.footerTab}
-                        onPress={() => {
-                            setActiveTab('Profil');
-                            navigation.navigate('Profile', { token: route?.params?.token, user: route?.params?.user });
-                        }}
-                    >
-                        <Ionicons 
-                            name="person-outline" 
-                            size={24} 
-                            color={activeTab === 'Profil' ? COLORS.primary : '#8a90b8'} 
-                        />
-                        <Text style={[styles.tabLabel, { color: activeTab === 'Profil' ? COLORS.primary : '#8a90b8' }]}>
-                            Profil
-                        </Text>
-                    </TouchableOpacity>
-                </View>
             </ImageBackground>
         </View>
     );
@@ -308,7 +245,9 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        paddingBottom: 16,
+    },
+    contentContainer: {
+        paddingBottom: 90,
     },
     searchBar: {
         height: 50,
@@ -415,28 +354,6 @@ const styles = StyleSheet.create({
         color: '#f4f6ff',
         fontSize: 12,
         fontWeight: '700',
-    },
-    footer: {
-        marginHorizontal: 10,
-        marginBottom: 8,
-        borderRadius: 18,
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-        backgroundColor: '#151738',
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.08)',
-    },
-    footerTab: {
-        alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-    },
-    tabLabel: {
-        fontSize: 11,
-        marginTop: 4,
-        fontWeight: '500',
     },
 });
 
