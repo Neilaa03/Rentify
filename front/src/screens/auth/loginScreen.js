@@ -63,39 +63,11 @@ const LoginScreen = ({ navigation }) => {
             if (response.ok) {
                 // SUCCESS: data contains your user info and JWT token
                 console.log("Login successful!", data);
-                // Save token to SecureStore
-                if (data.token) {
-                    await storage.setItemAsync('userToken', data.token);
-                    console.log('Token saved to storage');
-                }
-                // Always refresh profile from backend so we have full name + phone reliably
-                try {
-                    if (data.token) {
-                        const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
-                            headers: { Authorization: `Bearer ${data.token}` },
-                        });
-                        const meJson = meRes.ok ? await meRes.json() : null;
-                        const rawUser = meJson?.user || data.user || null;
-                        if (rawUser) {
-                            const normalized = {
-                                id: rawUser.id,
-                                email: rawUser.email,
-                                firstName: rawUser.firstName || rawUser.first_name || '',
-                                lastName: rawUser.lastName || rawUser.last_name || '',
-                                phone: rawUser.phone || '',
-                                role: rawUser.role,
-                                isVerified: rawUser.isVerified ?? rawUser.is_verified,
-                                isActive: rawUser.isActive ?? rawUser.is_active,
-                            };
-                            await storage.setItemAsync('userProfile', JSON.stringify(normalized));
-                        }
-                    }
-                } catch (e) {
-                    // Non-blocking
-                }
+                // alert("Login successful!");
+                const targetRoute = data?.user?.role === 'owner' ? 'OwnerDashboard' : 'Home';
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'ClientApp' }],
+                    routes: [{ name: targetRoute, params: { token: data?.token, user: data?.user } }],
                 });
             } else {
                 // BACKEND ERROR:
