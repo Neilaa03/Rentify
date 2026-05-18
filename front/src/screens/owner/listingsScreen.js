@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -15,7 +16,8 @@ import {
   deleteOwnerListing,
   getOwnerListings,
   toggleListingPublication,
-} from '../services/owner';
+} from '../../services/owner';
+import { fetchJson } from '../../services/api';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -31,6 +33,7 @@ const OwnerListingsScreen = ({ navigation, route }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [listings, setListings] = useState([]);
   const [error, setError] = useState('');
+  const [carImages, setCarImages] = useState({});
 
   const loadListings = useCallback(async () => {
     if (!token || !user?.id) return;
@@ -39,6 +42,29 @@ const OwnerListingsScreen = ({ navigation, route }) => {
       setError('');
       const data = await getOwnerListings({ token, ownerId: user.id });
       setListings(data);
+      
+      // Fetch primary images for each unique car
+      const images = {};
+      const uniqueCarIds = [...new Set(data.map(item => item.carId).filter(Boolean))];
+      
+      await Promise.all(
+        uniqueCarIds.map(async (carId) => {
+          try {
+            const carImagesData = await fetchJson(`/api/car-images?carId=${carId}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const primaryImage = (Array.isArray(carImagesData) ? carImagesData : []).find(
+              (img) => img.isPrimary
+            );
+            if (primaryImage) {
+              images[carId] = primaryImage.imageUrl;
+            }
+          } catch (_err) {
+            // Silently fail for image loading
+          }
+        })
+      );
+      setCarImages(images);
     } catch (err) {
       setError(err.message || 'Erreur chargement annonces');
     } finally {
@@ -57,17 +83,26 @@ const OwnerListingsScreen = ({ navigation, route }) => {
   };
 
   const handleDelete = (listing) => {
-    Alert.alert('Supprimer', `Supprimer l'annonce "${listing.title}" ?`, [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteOwnerListing({ token, listingId: listing.id });
-          loadListings();
+    Alert.alert(
+      'Supprimer',
+      `Êtes-vous sûr de vouloir supprimer l'annonce "${listing.title}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteOwnerListing({ token, listingId: listing.id });
+              loadListings();
+            } catch (err) {
+              console.error(err);
+              Alert.alert('Erreur', 'Impossible de supprimer l\'annonce. Réessayez plus tard.');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleTogglePublish = async (listing) => {
@@ -119,36 +154,45 @@ const OwnerListingsScreen = ({ navigation, route }) => {
               const badgeStyle = badgeByTone[item.stateTone] || badgeByTone.amber;
               return (
                 <View style={styles.card}>
-                  <View style={styles.cardTop}>
-                    <View>
-                      <Text style={styles.title}>{item.title}</Text>
-                      <Text style={styles.subtitle}>
-                        {item.brand} {item.model} - {item.city}
-                      </Text>
+                  {carImages[item.carId] && (
+                    <Image
+                      source={{ uri: carImages[item.carId] }}
+                      style={styles.cardImage}
+                    />
+                  )}
+                  
+                  <View style={styles.cardContent}>
+                    <View style={styles.cardTop}>
+                      <View>
+                        <Text style={styles.title}>{item.title}</Text>
+                        <Text style={styles.subtitle}>
+                          {item.brand} {item.model} - {item.city}
+                        </Text>
+                      </View>
+                      <Text style={[styles.badge, badgeStyle]}>{item.stateLabel}</Text>
                     </View>
-                    <Text style={[styles.badge, badgeStyle]}>{item.stateLabel}</Text>
-                  </View>
 
-                  <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString('fr-FR')} DA / jour</Text>
+                    <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString('fr-FR')} DA / jour</Text>
 
-                  <View style={styles.actions}>
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'edit', listing: item })}
-                    >
-                      <Text style={styles.actionText}>Modifier</Text>
-                    </TouchableOpacity>
+                    <View style={styles.actions}>
+                      <TouchableOpacity
+                        style={styles.actionBtn}
+                        onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'edit', listing: item })}
+                      >
+                        <Text style={styles.actionText}>Modifier</Text>
+                      </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
-                      <Text style={[styles.actionText, { color: '#ff8a9e' }]}>Supprimer</Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
+                        <Text style={[styles.actionText, { color: '#ff8a9e' }]}>Supprimer</Text>
+                      </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={[styles.publishBtn, !item.isActive && item.state !== 'ready_to_publish' && styles.publishBtnDisabled]}
-                      onPress={() => handleTogglePublish(item)}
-                    >
-                      <Text style={styles.publishText}>{item.isActive ? 'Dépublier' : 'Publier'}</Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.publishBtn, !item.isActive && item.state !== 'ready_to_publish' && styles.publishBtnDisabled]}
+                        onPress={() => handleTogglePublish(item)}
+                      >
+                        <Text style={styles.publishText}>{item.isActive ? 'Dépublier' : 'Publier'}</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               );
@@ -187,8 +231,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(146,151,214,0.2)',
     backgroundColor: 'rgba(21,23,58,0.9)',
-    padding: 12,
+    overflow: 'hidden',
     marginBottom: 10,
+  },
+  cardImage: {
+    width: '100%',
+    height: 140,
+  },
+  cardContent: {
+    padding: 12,
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   title: { color: '#fff', fontWeight: '700', fontSize: 16, maxWidth: 220 },

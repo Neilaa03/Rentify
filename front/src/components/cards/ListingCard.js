@@ -1,28 +1,119 @@
-import React from 'react';
-import { ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+const FALLBACK_IMAGE = 'https://picsum.photos/seed/listing-fallback/900/600';
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA/j`;
 
+const toImageUrl = (img) => {
+  if (!img) return null;
+  if (typeof img === 'string') return img;
+  return img.imageUrl || img.image_url || img.url || null;
+};
+
 const ListingCard = ({ listing, onPress }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [carouselWidth, setCarouselWidth] = useState(0);
+  const scrollRef = useRef(null);
+
+  const imageUrls = useMemo(() => {
+    const fromListingImages = Array.isArray(listing?.images)
+      ? listing.images.map(toImageUrl).filter(Boolean)
+      : [];
+
+    const fromCarImages = Array.isArray(listing?.car?.images)
+      ? listing.car.images.map(toImageUrl).filter(Boolean)
+      : [];
+
+    const primary = toImageUrl(listing?.image);
+
+    const urls = [...fromListingImages, ...fromCarImages, primary].filter(Boolean);
+    const unique = [...new Set(urls)];
+    return unique.length ? unique : [FALLBACK_IMAGE];
+  }, [listing]);
+
+  const handleImageScroll = (event) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent;
+    if (!layoutMeasurement?.width) return;
+
+    const nextIndex = Math.round(contentOffset.x / layoutMeasurement.width);
+    if (nextIndex !== activeIndex) {
+      setActiveIndex(nextIndex);
+    }
+  };
+
+  useEffect(() => {
+    if (imageUrls.length <= 1 || !carouselWidth) return undefined;
+
+    const timer = setInterval(() => {
+      setActiveIndex((prev) => {
+        const next = (prev + 1) % imageUrls.length;
+        scrollRef.current?.scrollTo({ x: next * carouselWidth, animated: true });
+        return next;
+      });
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [imageUrls.length, carouselWidth]);
+
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.92} onPress={onPress}>
-      <ImageBackground source={{ uri: listing.image }} style={styles.image} imageStyle={styles.imageRounded}>
-        <View style={styles.imageTopRow}>
-          {!listing.available && (
-            <View style={styles.unavailableBadge}>
-              <Text style={styles.unavailableText}>Indisponible</Text>
-            </View>
-          )}
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
-            <Ionicons name="heart-outline" size={20} color="#fff" />
-          </TouchableOpacity>
+      <View style={styles.imageContainer}>
+        <View
+          style={styles.carouselContainer}
+          onLayout={(event) => setCarouselWidth(event.nativeEvent.layout.width)}
+        >
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleImageScroll}
+          scrollEventThrottle={16}
+        >
+          {imageUrls.map((uri, index) => (
+            <Image
+              key={`${uri}-${index}`}
+              source={{ uri }}
+              style={[styles.image, carouselWidth ? { width: carouselWidth } : null]}
+              resizeMode="cover"
+            />
+          ))}
+        </ScrollView>
         </View>
 
-        <View style={styles.priceBadge}>
-          <Text style={styles.priceText}>{formatPrice(listing.pricePerDay)}</Text>
+        <View style={styles.overlay}>
+          <View style={styles.imageTopRow}>
+            {!listing.available && (
+              <View style={styles.unavailableBadge}>
+                <Text style={styles.unavailableText}>Indisponible</Text>
+              </View>
+            )}
+            <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
+              <Ionicons name="heart-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.bottomRow}>
+            {imageUrls.length > 1 ? (
+              <View style={styles.dotsRow}>
+                {imageUrls.map((_, index) => (
+                  <View
+                    key={`dot-${index}`}
+                    style={[styles.dot, index === activeIndex && styles.dotActive]}
+                  />
+                ))}
+              </View>
+            ) : <View />}
+
+            <View style={styles.priceBadge}>
+              <Text style={styles.priceText}>{formatPrice(listing.pricePerDay)}</Text>
+            </View>
+          </View>
         </View>
-      </ImageBackground>
+      </View>
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
@@ -67,19 +158,48 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(143, 150, 255, 0.14)',
     marginBottom: 16,
   },
-  image: {
+  imageContainer: {
     height: 190,
-    justifyContent: 'space-between',
-    padding: 12,
+    position: 'relative',
   },
-  imageRounded: {
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+  carouselContainer: {
+    width: '100%',
+    height: '100%',
+  },
+  image: {
+    width: 0,
+    height: 190,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: 'rgba(255,255,255,0.45)',
+  },
+  dotActive: {
+    width: 18,
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   imageTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
   },
   unavailableBadge: {
     paddingHorizontal: 10,
@@ -127,7 +247,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#F5F7FF',
-    fontSize: 29/2,
+    fontSize: 29 / 2,
     fontWeight: '700',
     maxWidth: '76%',
   },

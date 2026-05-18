@@ -133,20 +133,6 @@ export const createOwnerListing = async ({ token, payload }) =>
     body: JSON.stringify({ ...payload, isActive: false }),
   });
 
-export const createOwnerCar = async ({ token, payload }) =>
-  fetchJson('/api/cars', {
-    method: 'POST',
-    headers: authHeaders(token),
-    body: JSON.stringify(payload),
-  });
-
-export const createCarDocument = async ({ token, payload }) =>
-  fetchJson('/api/documents', {
-    method: 'POST',
-    headers: authHeaders(token),
-    body: JSON.stringify(payload),
-  });
-
 export const updateOwnerListing = async ({ token, listingId, payload }) =>
   fetchJson(`/api/listings/${listingId}`, {
     method: 'PATCH',
@@ -166,3 +152,93 @@ export const toggleListingPublication = async ({ token, listingId, shouldPublish
     headers: authHeaders(token),
     body: JSON.stringify({ isActive: shouldPublish }),
   });
+
+export const createOwnerCar = async ({ token, payload }) =>
+  fetchJson('/api/cars', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+
+export const updateOwnerCar = async ({ token, carId, payload }) =>
+  fetchJson(`/api/cars/${carId}`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+
+export const deleteOwnerCar = async ({ token, carId }) =>
+  fetchJson(`/api/cars/${carId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+
+export const createCarDocument = async ({ token, payload }) =>
+  fetchJson('/api/documents', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+
+export const deleteDocument = async ({ token, documentId }) =>
+  fetchJson(`/api/documents/${documentId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+
+export const createCarImage = async ({ token, payload }) =>
+  fetchJson('/api/car-images', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+
+export const uploadCarDocument = async ({
+  token,
+  carId,
+  documentType,
+  file,
+}) => {
+  const formData = new FormData();
+
+  formData.append('document', {
+    uri: file.uri,
+    name: file.name,
+    type: file.type,
+  });
+
+  formData.append('carId', String(carId));
+  formData.append('documentType', documentType);
+
+  console.log('Uploading document:', {
+    carId,
+    documentType,
+    file,
+  });
+
+  return fetchJson('/api/documents/upload', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+};
+
+export const uploadCarImage = async ({ token, carId, file, isPrimary }) => {
+  const formData = new FormData();
+  formData.append('image', {
+    uri: file.uri,
+    name: file.name,
+    type: file.type,
+  });
+  if (isPrimary !== undefined) {
+    formData.append('isPrimary', String(isPrimary));
+  }
+
+  return fetchJson(`/api/car-images/car/${carId}/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+};

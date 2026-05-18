@@ -7,9 +7,11 @@ import RegisterScreen from './src/screens/registerScreen';
 import HomeScreen from './src/screens/homeScreen';
 import ListingDetailsScreen from './src/screens/listingDetailsScreen';
 import ProfileScreen from './src/screens/profileScreen';
-import OwnerDashboardScreen from './src/screens/ownerDashboardScreen';
-import OwnerListingsScreen from './src/screens/ownerListingsScreen';
-import OwnerListingFormScreen from './src/screens/ownerListingFormScreen';
+import OwnerDashboardScreen from './src/screens/owner/dashboardScreen';
+import OwnerListingsScreen from './src/screens/owner/listingsScreen';
+import OwnerListingFormScreen from './src/screens/owner/listingFormScreen';
+import OwnerCarFormScreen from './src/screens/owner/carFormScreen';
+import OwnerCarsScreen from './src/screens/owner/carsScreen';
 
 const Stack = createStackNavigator();
 
@@ -24,6 +26,8 @@ export default function App() {
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />
         <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
+        <Stack.Screen name="OwnerCars" component={OwnerCarsScreen} />
+        <Stack.Screen name="OwnerCarForm" component={OwnerCarFormScreen} />
         <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
         <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
       </Stack.Navigator>
