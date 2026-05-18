@@ -9,6 +9,7 @@ import {
     getUserReservations,
     updateReservationDetailsHandler,
     cancelReservationHandler,
+    confirmPaymentHandler,
     getListingReservations,
     updateReservationStatusHandler,
     getAllReservations,
@@ -28,43 +29,39 @@ router.get('/calendar/availability/:listingId', getListingAvailabilityHandler);
 router.use(authenticateToken);
 
 // =========================================================
-// CLIENT (RENTER) ROUTES
+// SPECIFIC ROUTES (must come before generic /:id routes)
 // =========================================================
 
 // Create a new reservation
 router.post('/', verifyClient, createReservationHandler);
 
-// Get user's own reservations
+// Get user's own reservations (specific route, must come before /:id)
 router.get('/me', getUserReservations);
+
+// Get all reservations for a specific listing (specific route, must come before /:id)
+router.get('/listing/:listingId', verifyOwner, getListingReservations);
+
+// Delete/Cancel reservation (specific route, must come before /:id)
+router.delete('/:id/cancel', verifyClient, cancelReservationHandler);
+
+// Patch: Confirm payment (update status from 'reserved' to 'confirmed')
+router.patch('/:id/confirm-payment', verifyClient, confirmPaymentHandler);
+
+// Patch: Update reservation dates (only if status is 'reserved')
+router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);
+
+// Patch: Update reservation status (for owner/manager workflow)
+router.patch('/:id/status', verifyOwner, updateReservationStatusHandler);
+
+// =========================================================
+// GENERIC ROUTES (must come last)
+// =========================================================
+
+// Get all reservations in the system (admin only)
+router.get('/', verifyAdmin, getAllReservations);
 
 // Get specific reservation (with ownership validation in controller)
 router.get('/:id', getReservationHandler);
-
-// Cancel reservation
-router.delete('/:id/cancel', verifyClient, cancelReservationHandler);
-
-// Allow client to update reservation dates (only if status is 'reserved')
-router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);
-
-
-// =========================================================
-// OWNER / MANAGER ROUTES
-// =========================================================
-
-// Get all reservations for a specific listing
-// MUST come before /:id to match specific route first
-router.get('/listing/:listingId', verifyOwner, getListingReservations);
-
-// Update reservation status (for owner/manager workflow)
-router.patch('/:id/status', verifyOwner, updateReservationStatusHandler);
-
-
-// =========================================================
-// ADMIN ROUTES
-// =========================================================
-
-// Get all reservations in the system
-router.get('/', verifyAdmin, getAllReservations);
 
 
 export default router;

@@ -88,14 +88,10 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
   const handleEditDates = async () => {
     try {
-      // Navigate to date picker with current reservation data
-      navigation.navigate('ReservationsTab', {
-        screen: 'ReservationDatePicker',
-        params: {
-          reservation: reservation,
-          listing: listingFromApi || listingFromParams,
-          isEditing: true,
-        },
+      navigation.navigate('ReservationDatePickerFromReservations', {
+        reservation,
+        listing: listingFromApi || listingFromParams,
+        isEditing: true,
       });
     } catch (error) {
       console.error('Edit dates error:', error);
@@ -237,19 +233,47 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         return;
       }
       setLoading(true);
+      
+      // Get the user token
+      const token = await storage.getItemAsync('userToken');
+      if (!token) {
+        Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
+        return;
+      }
+
       // TODO: Integrate with payment gateway (Stripe, PayPal, etc.)
-      // For now, just show a success message
+      // For now, call the confirm-payment API to update status
+      const confirmResponse = await fetch(API_ENDPOINTS.RESERVATIONS.CONFIRM_PAYMENT(reservation.id), {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!confirmResponse.ok) {
+        let errorMessage = 'Failed to confirm payment';
+        try {
+          const errorData = await confirmResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use HTTP status
+          errorMessage = `Server error: ${confirmResponse.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+
       Alert.alert(
-        'Redirection paiement',
-        'Vous allez être redirigé vers la page de paiement sécurisée.',
+        'Paiement confirmé',
+        'Votre réservation a été confirmée avec succès.',
         [
           {
             text: 'OK',
             onPress: () => {
-              // After successful payment, update reservation status
+              // Navigate back to home
               navigation.reset({
                 index: 0,
-                routes: [{ name: 'Home' }],
+                routes: [{ name: 'HomeTab', params: { screen: 'Home' } }],
               });
             },
           },
@@ -257,7 +281,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       );
     } catch (error) {
       console.error('Payment error:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors du paiement');
+      Alert.alert('Erreur', error.message || 'Une erreur est survenue lors du paiement');
     } finally {
       setLoading(false);
     }
@@ -462,7 +486,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
         {/* Action Buttons - REMOVED, moved to payment bar and dates section */}
 
-        {/* Terms & Conditions */}
+      {/* Terms & Conditions */}
+      {isReservationActive && (
         <View style={styles.termsSection}>
           <TouchableOpacity
             onPress={() => setTermsAccepted((v) => !v)}
@@ -481,57 +506,63 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
             </Text>
           </TouchableOpacity>
         </View>
+      )}
 
 
         <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Payment Button */}
-      <View style={styles.paymentBar}>
-        <TouchableOpacity
-          onPress={handleCancelReservation}
-          disabled={actionLoading !== null}
-          activeOpacity={0.8}
-          style={styles.cancelButtonWrapper}
-        >
-          <LinearGradient
-            colors={['#ff6b6b', '#ee5a52']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+      {isReservationActive && (
+        <View style={styles.paymentBar}>
+          <TouchableOpacity
+            onPress={handleCancelReservation}
+            disabled={actionLoading !== null}
+            activeOpacity={0.8}
+            style={styles.cancelButtonWrapper}
+          >
+            <LinearGradient
+              colors={['#ff6b6b', '#ee5a52']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[
+                styles.paymentCancelButton,
+                actionLoading === 'cancel' && styles.actionButtonLoading,
+              ]}
+            >
+              {actionLoading === 'cancel' ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={20} color="#fff" />
+                  <Text style={styles.actionButtonText}>Annuler</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handlePayment}
+            disabled={loading || !termsAccepted}
             style={[
-              styles.paymentCancelButton,
-              actionLoading === 'cancel' && styles.actionButtonLoading,
+              styles.paymentButtonWrapper,
+              (!termsAccepted || loading) ? styles.paymentButtonWrapperDisabled : null,
             ]}
           >
-            {actionLoading === 'cancel' ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Ionicons name="trash-outline" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>Annuler</Text>
-              </>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handlePayment}
-          disabled={loading || !termsAccepted}
-          style={[styles.paymentButtonWrapper, (!termsAccepted || loading) ? styles.paymentButtonWrapperDisabled : null]}
-        >
-          <LinearGradient
-            colors={!termsAccepted || loading ? ['#3a3f66', '#2b2f52'] : [COLORS.secondary, COLORS.primary]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.paymentButton}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.paymentButtonText}>Passer au paiement</Text>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+            <LinearGradient
+              colors={!termsAccepted || loading ? ['#3a3f66', '#2b2f52'] : [COLORS.secondary, COLORS.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.paymentButton}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.paymentButtonText}>Passer au paiement</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };

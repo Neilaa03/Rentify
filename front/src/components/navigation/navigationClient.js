@@ -63,8 +63,13 @@ function ReservationsTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="ReservationsList" component={ReservationsScreen} />
+      <Stack.Screen
+        name="ReservationDatePickerFromReservations"
+        component={ReservationDatePickerScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
       <Stack.Screen 
-        name="ReservationDetails" 
+        name="ReservationDetailsFromReservations" 
         component={ReservationDetailsScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
@@ -160,5 +165,3 @@ export function ClientNavigation() {
     </Tab.Navigator>
   );
 }
-
-export default ClientNavigation;

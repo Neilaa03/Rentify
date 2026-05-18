@@ -28,7 +28,7 @@ import {
 } from '../../utils/reservationUtils';
 
 const ReservationDatePickerScreen = ({ navigation, route }) => {
-  const { listing: initialListing } = route.params;
+  const { listing: initialListing, reservation: reservationFromParams, isEditing } = route.params;
   const [listing, setListing] = useState(initialListing);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -41,6 +41,24 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   useEffect(() => {
     fetchListingDetails();
   }, []);
+
+  // When editing an existing reservation, preload the current dates as the initial draft selection.
+  useEffect(() => {
+    if (!isEditing || !reservationFromParams) return;
+    const existingStart =
+      reservationFromParams.startDate ||
+      reservationFromParams.start_date ||
+      reservationFromParams.start_date?.split?.('T')?.[0] ||
+      null;
+    const existingEnd =
+      reservationFromParams.endDate ||
+      reservationFromParams.end_date ||
+      reservationFromParams.end_date?.split?.('T')?.[0] ||
+      null;
+    if (existingStart) setStartDate(existingStart);
+    if (existingEnd) setEndDate(existingEnd);
+    if (existingStart && existingEnd) calculatePrice(existingStart, existingEnd);
+  }, [isEditing, reservationFromParams]);
 
   // Keep highlighted range in sync with user selection
   useEffect(() => {
@@ -94,7 +112,38 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     // Fetch calendar availability (blocked dates + listing dates)
     try {
       const availability = await fetchListingAvailability(initialListing.id);
-      setReservedDates(availability.blockedDates);
+      const blocked = availability.blockedDates || [];
+
+      if (isEditing && reservationFromParams) {
+        const existingStart =
+          reservationFromParams.startDate ||
+          reservationFromParams.start_date ||
+          reservationFromParams.start_date?.split?.('T')?.[0] ||
+          null;
+        const existingEnd =
+          reservationFromParams.endDate ||
+          reservationFromParams.end_date ||
+          reservationFromParams.end_date?.split?.('T')?.[0] ||
+          null;
+
+        if (existingStart && existingEnd) {
+          const excluded = new Set();
+          const current = parseLocalDate(existingStart);
+          const endLocal = parseLocalDate(existingEnd);
+          if (current && endLocal) {
+            while (current <= endLocal) {
+              const dateStr = formatLocalYmd(current);
+              if (dateStr) excluded.add(dateStr);
+              current.setDate(current.getDate() + 1);
+            }
+          }
+          setReservedDates(blocked.filter((d) => !excluded.has(d)));
+        } else {
+          setReservedDates(blocked);
+        }
+      } else {
+        setReservedDates(blocked);
+      }
     } catch (error) {
       console.error('Error fetching calendar availability:', error);
     } finally {
@@ -189,7 +238,20 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     setEstimatedPrice(price);
   };
 
-  const handleReserve = async () => {
+  const goToReservationDetails = (reservationData) => {
+    const parent = navigation.getParent?.();
+    const navigator = parent?.navigate ? parent : navigation;
+    if (navigator === parent) {
+      parent.navigate('ReservationsTab', {
+        screen: 'ReservationDetailsFromReservations',
+        params: { reservation: reservationData, listing },
+      });
+      return;
+    }
+    navigation.navigate('ReservationDetailsFromReservations', { reservation: reservationData, listing });
+  };
+
+  const handlePrimaryAction = async () => {
     if (!startDate || !endDate) {
       Alert.alert('Erreur', 'Veuillez sélectionner une plage de dates');
       return;
@@ -202,47 +264,66 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
         return;
       }
-      const response = await fetch(API_ENDPOINTS.RESERVATIONS.CREATE, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          listingId: listing.id,
-          startDate,
-          endDate,
-        }),
-      });
+      const isEditFlow = !!isEditing && !!reservationFromParams?.id;
+      const response = await fetch(
+        isEditFlow
+          ? API_ENDPOINTS.RESERVATIONS.UPDATE_DETAILS(reservationFromParams.id)
+          : API_ENDPOINTS.RESERVATIONS.CREATE,
+        {
+          method: isEditFlow ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(
+            isEditFlow
+              ? { startDate, endDate }
+              : {
+                  listingId: listing.id,
+                  startDate,
+                  endDate,
+                }
+          ),
+        }
+      );
 
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert(
-          'Réservation créée',
-          "Votre réservation est en attente de paiement. Merci d’effectuer le paiement sous 24 heures pour la confirmer, sinon elle sera automatiquement annulée.",
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate to reservation details with the created reservation
-                navigation.navigate('ReservationDetails', {
-                  reservation: data,
-                  listing,
-                });
-              },
-            },
-          ]
-        );
+        if (isEditFlow) {
+          goToReservationDetails(data);
+          return;
+        }
+
+        Alert.alert('Réservation créée', "Votre réservation est en attente de paiement. Merci d’effectuer le paiement sous 24 heures pour la confirmer, sinon elle sera automatiquement annulée.", [
+          {
+            text: 'OK',
+            onPress: () => goToReservationDetails(data),
+          },
+        ]);
       } else {
         Alert.alert('Erreur', data.error || 'Impossible de créer la réservation');
       }
     } catch (error) {
-      console.error('Error creating reservation:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de la création de la réservation');
+      console.error('Error saving reservation:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    if (isEditing) {
+      if (navigation.canGoBack?.()) {
+        navigation.goBack();
+        return;
+      }
+      if (reservationFromParams) {
+        goToReservationDetails(reservationFromParams);
+        return;
+      }
+    }
+    navigation.goBack();
   };
 
   const handleClear = () => {
@@ -378,13 +459,13 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       {/* Action Bar */}
       <View style={styles.actionBar}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={handleCancel}
           style={styles.cancelButton}
         >
           <Text style={styles.cancelButtonText}>Annuler</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={handleReserve}
+          onPress={handlePrimaryAction}
           disabled={!startDate || !endDate || loading}
           style={styles.reserveButtonWrapper}
         >
@@ -401,7 +482,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.reserveButtonText}>Réserver Maintenant</Text>
+              <Text style={styles.reserveButtonText}>{isEditing ? 'Confirmer' : 'Réserver'}</Text>
             )}
           </LinearGradient>
         </TouchableOpacity>

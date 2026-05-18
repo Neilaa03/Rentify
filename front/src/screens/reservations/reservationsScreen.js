@@ -114,7 +114,7 @@ const ReservationsScreen = ({ navigation }) => {
   const handleReservationPress = (reservation) => {
     // Navigate to reservation details within the Reservations tab stack.
     const listing = reservation?.listing || reservation?.listing?.car || null;
-    navigation.navigate('ReservationDetails', { reservation, listing });
+    navigation.navigate('ReservationDetailsFromReservations', { reservation, listing });
   };
 
   if (loading) {

@@ -107,6 +107,31 @@ export const cancelReservationHandler = async (req, res) => {
     }
 };
 
+// Allow client to confirm payment (update status from 'reserved' to 'confirmed')
+export const confirmPaymentHandler = async (req, res) => {
+    try {
+        const { id } = idParamSchema.parse(req.params);
+        const reservation = await model.getReservationById(id);
+
+        // Security: Only the renter can confirm their own payment
+        if (reservation.renterId !== req.user.id) {
+            return res.status(403).json({ error: "You can only confirm payment for your own reservations" });
+        }
+
+        // Business Rule: Only 'reserved' bookings can be confirmed
+        if (reservation.status !== 'reserved') {
+            return res.status(400).json({ 
+                error: `Cannot confirm payment for a ${reservation.status} reservation.` 
+            });
+        }
+
+        const result = await model.updateReservationStatus(id, 'confirmed');
+        res.json({ message: "Payment confirmed", result });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
 // =========================================================
 // OWNER / MANAGER HANDLERS
 // =========================================================
