@@ -9,12 +9,6 @@ import reservationRoutes from './src/modules/reservations/reservationRoutes.js';
 
 const app = express();
 
-// Simple request logger to help debug incoming web requests
-app.use((req, res, next) => {
-  console.log(`[HTTP] ${req.method} ${req.originalUrl} from ${req.ip}`);
-  next();
-});
-
 // CORS Configuration
 app.use(cors({
   origin: '*',

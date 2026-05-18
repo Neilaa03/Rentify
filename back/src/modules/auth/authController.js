@@ -1,7 +1,9 @@
 import { registerSchema, loginSchema } from './authSchemas.js';
-import { createUser, getUserByEmail } from './authModel.js';
+import { createUser, getUserByEmail, getUserById } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export const register = async (req, res) => {
     try {
@@ -53,12 +55,14 @@ export const login = async (req, res) => {
         // 3. Generate JWT
         const token = jwt.sign(
             { id: user.id, role: user.role },
-            process.env.JWT_SECRET || 'your-fallback-secret',
+            JWT_SECRET,
             { expiresIn: '24h' }
         );
 
-        // Return user (without password_hash) and the token
-        const { password_hash, ...userWithoutPassword } = user;
+        // Return user profile (without password_hash) and the token
+        // Fetch by id to ensure we have full profile fields even if email lookup is minimal.
+        const profile = (await getUserById(user.id)) || user;
+        const { password_hash, ...userWithoutPassword } = profile;
         res.json({
             user: userWithoutPassword,
             token

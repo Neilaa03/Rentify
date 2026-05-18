@@ -33,7 +33,13 @@ const ListingDetailsScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
         <ImageBackground source={{ uri: listing.image }} style={styles.heroImage}>
           <SafeAreaView style={styles.heroTopRow}>
             <TouchableOpacity style={styles.heroButton} onPress={() => navigation.goBack()}>
@@ -144,6 +150,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#090b1e',
   },
   scrollContent: {
     paddingBottom: 20,

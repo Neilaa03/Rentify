@@ -197,7 +197,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
 
     try {
       setLoading(true);
-      const token = await SecureStore.getItemAsync('userToken');
+      const token = await storage.getItemAsync('userToken');
       if (!token) {
         Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
         return;
@@ -218,11 +218,22 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Navigate to reservation details with the created reservation
-        navigation.navigate('ReservationDetails', {
-          reservation: data,
-          listing,
-        });
+        Alert.alert(
+          'Réservation créée',
+          "Votre réservation est en attente de paiement. Merci d’effectuer le paiement sous 24 heures pour la confirmer, sinon elle sera automatiquement annulée.",
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate to reservation details with the created reservation
+                navigation.navigate('ReservationDetails', {
+                  reservation: data,
+                  listing,
+                });
+              },
+            },
+          ]
+        );
       } else {
         Alert.alert('Erreur', data.error || 'Impossible de créer la réservation');
       }

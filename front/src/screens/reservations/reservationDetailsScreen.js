@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -15,17 +15,101 @@ import storage from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../constants/api';
+import { calculateReservationPrice } from '../../utils/reservationUtils';
 
 const ReservationDetailsScreen = ({ navigation, route }) => {
   const reservation = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
   const [loading, setLoading] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [account, setAccount] = useState(null);
+  const [listingFromApi, setListingFromApi] = useState(null);
+  const [actionLoading, setActionLoading] = useState(null); // 'cancel' | 'edit' | null
+
+  const goToReservations = () => {
+    const parent = navigation.getParent?.();
+    const navigate = parent?.navigate || navigation.navigate;
+    navigate('ReservationsTab', { screen: 'ReservationsList' });
+  };
+
+  const handleCancelReservation = async () => {
+    Alert.alert(
+      'Annuler la réservation',
+      'Êtes-vous sûr de vouloir annuler cette réservation ? Cette action est irréversible.',
+      [
+        {
+          text: 'Non',
+          onPress: () => {},
+          style: 'cancel',
+        },
+        {
+          text: 'Oui, annuler',
+          onPress: async () => {
+            try {
+              setActionLoading('cancel');
+              const token = await storage.getItemAsync('userToken');
+              if (!token) {
+                Alert.alert('Erreur', 'Veuillez vous reconnecter');
+                return;
+              }
+
+              const response = await fetch(API_ENDPOINTS.RESERVATIONS.CANCEL(reservation.id), {
+                method: 'DELETE',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erreur lors de l\'annulation');
+              }
+
+              Alert.alert('Succès', 'Réservation annulée avec succès', [
+                {
+                  text: 'OK',
+                  onPress: () => goToReservations(),
+                },
+              ]);
+            } catch (error) {
+              console.error('Cancel error:', error);
+              Alert.alert('Erreur', error.message || 'Une erreur est survenue');
+            } finally {
+              setActionLoading(null);
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
+  const handleEditDates = async () => {
+    try {
+      // Navigate to date picker with current reservation data
+      navigation.navigate('ReservationsTab', {
+        screen: 'ReservationDatePicker',
+        params: {
+          reservation: reservation,
+          listing: listingFromApi || listingFromParams,
+          isEditing: true,
+        },
+      });
+    } catch (error) {
+      console.error('Edit dates error:', error);
+      Alert.alert('Erreur', 'Impossible d\'accéder à l\'éditeur de dates');
+    }
+  };
+
+  const isReservationActive = reservation?.status === 'reserved';
 
   if (!reservation) {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={goToReservations} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Récapitulatif</Text>
@@ -44,7 +128,57 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   }
 
   const reservationListing = reservation?.listing || reservation?.listing?.car || null;
-  const listing = listingFromParams || reservationListing || {};
+  const listing = listingFromApi || listingFromParams || reservationListing || {};
+
+  const listingId =
+    reservation?.listingId ||
+    reservation?.listing_id ||
+    listingFromParams?.id ||
+    listingFromParams?.listingId ||
+    reservation?.listing?.id ||
+    null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const cachedProfile = await storage.getItemAsync('userProfile');
+        if (!cancelled && cachedProfile) setAccount(JSON.parse(cachedProfile));
+      } catch (e) {
+        // Ignore parse errors.
+      }
+
+      const token = await storage.getItemAsync('userToken');
+      if (!token) return;
+
+      try {
+        const [accountRes, listingRes] = await Promise.all([
+          fetch(API_ENDPOINTS.AUTH.ME, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          listingId ? fetch(API_ENDPOINTS.LISTINGS.GET(listingId)) : Promise.resolve(null),
+        ]);
+
+        if (!cancelled && accountRes?.ok) {
+          const accountJson = await accountRes.json();
+          setAccount(accountJson?.user || null);
+        }
+
+        if (!cancelled && listingRes?.ok) {
+          const listingJson = await listingRes.json();
+          setListingFromApi(listingJson || null);
+        }
+      } catch (e) {
+        // Ignore fetch errors; screen can still render from params.
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [listingId]);
 
   const startRaw =
     reservation?.startDate ||
@@ -59,7 +193,14 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
   const startDate = new Date(startRaw);
   const endDate = new Date(endRaw);
-  const totalDays = Math.max(1, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
+  const totalDays = useMemo(() => {
+    if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return 1;
+    if (!(endDate instanceof Date) || Number.isNaN(endDate.getTime())) return 1;
+    const startMidnight = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endMidnight = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const diffDays = Math.round((endMidnight - startMidnight) / (1000 * 60 * 60 * 24));
+    return Math.max(1, diffDays + 1);
+  }, [startRaw, endRaw]);
 
   const imageUri =
     listing?.image ||
@@ -75,7 +216,13 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const brand = listing?.brand || listing?.car?.brand || '';
   const model = listing?.model || listing?.car?.model || '';
   const year = listing?.year || listing?.car?.year || '—';
-  const seats = listing?.seats || listing?.car?.seats || '—';
+  const seats =
+    listing?.seats ||
+    listing?.car?.seats ||
+    reservation?.seats ||
+    reservation?.listing?.car?.seats ||
+    '—';
+  const city = listing?.city || listing?.car?.city || '';
   const pricePerDay =
     listing?.pricePerDay ||
     listing?.price_per_day ||
@@ -85,6 +232,10 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
   const handlePayment = async () => {
     try {
+      if (!termsAccepted) {
+        Alert.alert('Conditions requises', 'Veuillez accepter les conditions générales pour continuer.');
+        return;
+      }
       setLoading(true);
       // TODO: Integrate with payment gateway (Stripe, PayPal, etc.)
       // For now, just show a success message
@@ -115,11 +266,18 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const formatPrice = (value) => value.toLocaleString('fr-FR');
   const formatDate = (date) => new Date(date).toLocaleDateString('fr-FR');
 
+  const basePrice = useMemo(() => {
+    const computed = calculateReservationPrice(listing || {}, startRaw, endRaw);
+    return Number.isFinite(computed) ? computed : 0;
+  }, [listing, startRaw, endRaw]);
+  const serviceFee = useMemo(() => Math.round(basePrice * 0.1), [basePrice]);
+  const safeTotalPrice = useMemo(() => basePrice + serviceFee, [basePrice, serviceFee]);
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={goToReservations}
           style={styles.backButton}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -128,7 +286,15 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         <View style={{ width: 50 }} />
       </SafeAreaView>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        alwaysBounceVertical={false}
+        overScrollMode="never"
+      >
+
         {/* Vehicle Card */}
         <View style={styles.vehicleCard}>
           {imageUri ? (
@@ -148,22 +314,43 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           <View style={styles.vehicleInfo}>
             <Text style={styles.vehicleBrand}>{brand || '—'}</Text>
             <Text style={styles.vehicleModel}>{model || '—'}</Text>
-            <View style={styles.vehicleSpecs}>
-              <View style={styles.specBadge}>
-                <Ionicons name="calendar-outline" size={14} color="#a566ff" />
-                <Text style={styles.specText}>{year}</Text>
+            
+            <View style={styles.vehicleMetaRow}>
+              <View style={styles.metaItem}>
+                <Ionicons name="location-outline" size={16} color="#a566ff" />
+                <Text style={styles.metaText}>{city || '—'}</Text>
               </View>
-              <View style={styles.specBadge}>
-                <Ionicons name="people-outline" size={14} color="#a566ff" />
-                <Text style={styles.specText}>{seats} places</Text>
+              <View style={styles.metaItem}>
+                <Ionicons name="people-outline" size={16} color="#a566ff" />
+                <Text style={styles.metaText}>{seats} places</Text>
               </View>
             </View>
+
           </View>
         </View>
 
         {/* Dates Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Période de location</Text>
+          <View style={styles.sectionHeaderWithButton}>
+            <Text style={styles.sectionTitle}>Période de location</Text>
+            {isReservationActive && (
+              <TouchableOpacity
+                onPress={handleEditDates}
+                disabled={actionLoading !== null}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#a566ff', '#8f6cff']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.editDateButton}
+                >
+                  <Ionicons name="pencil-outline" size={16} color="#fff" />
+                  <Text style={styles.editDateButtonText}>Modifier</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          </View>
           
           <View style={styles.datesContainer}>
             <View style={styles.dateBox}>
@@ -193,17 +380,16 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Nom complet</Text>
-              <Text style={styles.infoValue}>Votre Nom</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>votre.email@example.com</Text>
+              <Text style={styles.infoValue}>
+                {account?.firstName || account?.first_name || account?.lastName || account?.last_name
+                  ? `${account?.firstName || account?.first_name || ''} ${account?.lastName || account?.last_name || ''}`.trim()
+                  : '—'}
+              </Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Téléphone</Text>
-              <Text style={styles.infoValue}>+213 XXX XXX XXX</Text>
+              <Text style={styles.infoValue}>{account?.phone || '—'}</Text>
             </View>
           </View>
         </View>
@@ -246,11 +432,11 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           <View style={styles.priceBreakdown}>
             <View style={styles.priceRow}>
               <Text style={styles.priceRowLabel}>
-                {Number(pricePerDay || 0).toLocaleString('fr-FR')} DA × {totalDays} jour
+                {totalDays} jour
                 {totalDays > 1 ? 's' : ''}
               </Text>
               <Text style={styles.priceRowValue}>
-                {(Number(pricePerDay || 0) * totalDays).toLocaleString('fr-FR')} DA
+                {Math.round(basePrice).toLocaleString('fr-FR')} DA
               </Text>
             </View>
 
@@ -259,7 +445,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
             <View style={styles.priceRow}>
               <Text style={styles.priceRowLabel}>Frais de service</Text>
               <Text style={styles.priceRowValue}>
-                {Math.round(reservation.totalPrice * 0.1).toLocaleString('fr-FR')} DA
+                {serviceFee.toLocaleString('fr-FR')} DA
               </Text>
             </View>
 
@@ -268,42 +454,72 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
             <View style={[styles.priceRow, styles.totalPriceRow]}>
               <Text style={styles.totalPriceLabel}>Prix total</Text>
               <Text style={styles.totalPriceValue}>
-                {formatPrice(reservation.totalPrice)} DA
+                {formatPrice(safeTotalPrice)} DA
               </Text>
             </View>
           </View>
         </View>
 
+        {/* Action Buttons - REMOVED, moved to payment bar and dates section */}
+
         {/* Terms & Conditions */}
         <View style={styles.termsSection}>
-          <View style={styles.termsCheckbox}>
-            <Ionicons name="checkbox-outline" size={20} color="#a566ff" />
+          <TouchableOpacity
+            onPress={() => setTermsAccepted((v) => !v)}
+            activeOpacity={0.8}
+            style={styles.termsCheckbox}
+          >
+            <Ionicons
+              name={termsAccepted ? 'checkbox' : 'square-outline'}
+              size={20}
+              color={termsAccepted ? '#23d49f' : '#a566ff'}
+            />
             <Text style={styles.termsText}>
               J'accepte les{' '}
               <Text style={styles.termsLink}>conditions générales</Text> et la
               <Text style={styles.termsLink}> politique de confidentialité</Text>
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
+
 
         <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Payment Button */}
       <View style={styles.paymentBar}>
-        <View>
-          <Text style={styles.paymentLabel}>Total à payer</Text>
-          <Text style={styles.paymentAmount}>
-            {formatPrice(reservation.totalPrice)} DA
-          </Text>
-        </View>
         <TouchableOpacity
-          onPress={handlePayment}
-          disabled={loading}
-          style={styles.paymentButtonWrapper}
+          onPress={handleCancelReservation}
+          disabled={actionLoading !== null}
+          activeOpacity={0.8}
+          style={styles.cancelButtonWrapper}
         >
           <LinearGradient
-            colors={[COLORS.secondary, COLORS.primary]}
+            colors={['#ff6b6b', '#ee5a52']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[
+              styles.paymentCancelButton,
+              actionLoading === 'cancel' && styles.actionButtonLoading,
+            ]}
+          >
+            {actionLoading === 'cancel' ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="trash-outline" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>Annuler</Text>
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handlePayment}
+          disabled={loading || !termsAccepted}
+          style={[styles.paymentButtonWrapper, (!termsAccepted || loading) ? styles.paymentButtonWrapperDisabled : null]}
+        >
+          <LinearGradient
+            colors={!termsAccepted || loading ? ['#3a3f66', '#2b2f52'] : [COLORS.secondary, COLORS.primary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.paymentButton}
@@ -350,6 +566,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 16,
+    backgroundColor: '#0f1228',
+  },
+  contentContainer: {
+    flexGrow: 1,
+    paddingBottom: 140,
   },
   vehicleCard: {
     borderRadius: 12,
@@ -408,6 +629,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 4,
   },
+  vehicleMetaRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  paymentButtonWrapperDisabled: {
+    opacity: 0.75,
+  },
   section: {
     marginBottom: 24,
   },
@@ -416,6 +656,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 12,
+  },
+  sectionHeaderWithButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  editDateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  editDateButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   datesContainer: {
     flexDirection: 'row',
@@ -576,6 +835,50 @@ const styles = StyleSheet.create({
     color: '#a566ff',
     fontWeight: '600',
   },
+  actionButtonsSection: {
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  actionSectionTitle: {
+    color: '#f6f8ff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+    marginLeft: 8,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButtonWrapper: {
+    flex: 1,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  actionButtonLoading: {
+    opacity: 0.9,
+  },
   paymentBar: {
     position: 'absolute',
     bottom: 0,
@@ -584,11 +887,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     backgroundColor: '#151837',
     borderTopWidth: 1,
     borderTopColor: 'rgba(148, 156, 233, 0.2)',
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  cancelButtonWrapper: {
+    flex: 0,
+  },
+  paymentCancelButton: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
   },
   paymentLabel: {
     color: '#8e95bf',
@@ -602,7 +918,6 @@ const styles = StyleSheet.create({
   },
   paymentButtonWrapper: {
     flex: 1,
-    marginLeft: 12,
   },
   paymentButton: {
     paddingHorizontal: 24,

@@ -13,11 +13,12 @@ import ReservationsScreen from '../../screens/reservations/reservationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+const APP_BACKGROUND = '#0f1228';
 
 // Stack for Home tab
 function HomeTabStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen 
         name="ListingDetails" 
@@ -41,7 +42,7 @@ function HomeTabStack() {
 // Stack for Search tab
 function SearchTabStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Search" component={HomeScreen} />
       <Stack.Screen 
         name="ListingDetailsFromSearch" 
@@ -60,7 +61,7 @@ function SearchTabStack() {
 // Stack for Reservations tab
 function ReservationsTabStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="ReservationsList" component={ReservationsScreen} />
       <Stack.Screen 
         name="ReservationDetails" 
@@ -74,7 +75,7 @@ function ReservationsTabStack() {
 // Stack for Profile tab
 function ProfileTabStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Profile" component={HomeScreen} />
     </Stack.Navigator>
   );
@@ -100,6 +101,7 @@ export function ClientNavigation() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        sceneContainerStyle: { backgroundColor: APP_BACKGROUND },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === 'HomeTab') {

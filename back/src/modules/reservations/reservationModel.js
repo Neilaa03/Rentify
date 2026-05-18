@@ -4,6 +4,8 @@ const RESERVATIONS_TABLE = 'reservations';
 const LISTINGS_TABLE = 'listings';
 const USERS_TABLE = 'users';
 
+const PAYMENT_GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 // =========================================================
 // DTO CONVERSION
 // =========================================================
@@ -26,6 +28,10 @@ const toReservationDto = (row) => ({
             ownerId: row.listings.cars.owner_id,
             brand: row.listings.cars.brand,
             model: row.listings.cars.model,
+            year: row.listings.cars.year,
+            seats: row.listings.cars.seats,
+            transmission: row.listings.cars.transmission,
+            fuelType: row.listings.cars.fuel_type,
             carImages: row.listings.cars.car_images || [],
         } : null,
     } : null,
@@ -85,11 +91,26 @@ export const getReservations = async (filters = {}) => {
 export const getReservationById = async (id) => {
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
-        .select('*, listings(id, car_id, city, cars(id, owner_id, brand, model, car_images(id, image_url, is_primary)))')
+        .select('*, listings(id, car_id, city, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))')
         .eq('id', id)
         .single();
 
     if (error || !data) throw new Error('Reservation not found');
+
+    // Auto-cancel unpaid reservations that exceeded grace period
+    if (data.status === 'reserved' && data.created_at) {
+        const createdAtMs = new Date(data.created_at).getTime();
+        if (!Number.isNaN(createdAtMs) && Date.now() - createdAtMs > PAYMENT_GRACE_MS) {
+            const { data: cancelled, error: cancelError } = await supabase
+                .from(RESERVATIONS_TABLE)
+                .update({ status: 'cancelled' })
+                .eq('id', id)
+                .select('*, listings(id, car_id, city, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))')
+                .single();
+            if (!cancelError && cancelled) return toReservationDto(cancelled);
+        }
+    }
+
     return toReservationDto(data);
 };
 
@@ -263,6 +284,15 @@ export const updateReservationDetails = async (id, updates) => {
 };
 
 export const getReservationsByRenter = async (renterId) => {
+    // Auto-cancel unpaid reservations older than grace period
+    const cutoffIso = new Date(Date.now() - PAYMENT_GRACE_MS).toISOString();
+    await supabase
+        .from(RESERVATIONS_TABLE)
+        .update({ status: 'cancelled' })
+        .eq('renter_id', renterId)
+        .eq('status', 'reserved')
+        .lt('created_at', cutoffIso);
+
     // Include listing and nested car data with images so frontend can display details without extra requests
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
