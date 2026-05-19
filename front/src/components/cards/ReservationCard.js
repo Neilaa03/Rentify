@@ -29,8 +29,12 @@ const ReservationCard = ({ reservation, targetRoute = 'ReservationDetails', onPr
     listing?.image ||
     listing?.car?.carImages?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
     listing?.car?.carImages?.find((i) => i?.image_url)?.image_url ||
+    listing?.car?.carImages?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
+    listing?.car?.carImages?.find((i) => i?.imageUrl)?.imageUrl ||
     listing?.car?.car_images?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
     listing?.car?.car_images?.find((i) => i?.image_url)?.image_url ||
+    listing?.car?.car_images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
+    listing?.car?.car_images?.find((i) => i?.imageUrl)?.imageUrl ||
     listing?.car?.images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
     listing?.car?.images?.find((i) => i?.imageUrl)?.imageUrl ||
     listing?.imageUrl ||

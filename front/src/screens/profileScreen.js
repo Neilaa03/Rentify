@@ -3,7 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../constants/api';
-import OwnerBottomNavigation from '../components/navigation/ownerBottomNavigation';
+import OwnerBottomNavigation from '../components/navigation/navigationOwner';
 
 const SectionCard = ({ items }) => (
   <View style={styles.sectionCard}>
