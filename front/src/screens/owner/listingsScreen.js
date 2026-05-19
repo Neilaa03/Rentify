@@ -18,7 +18,7 @@ import {
   toggleListingPublication,
 } from '../../services/owner';
 import { fetchJson } from '../../services/api';
-import OwnerBottomNavigation from '../../components/navigation/ownerBottomNavigation';
+import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -200,8 +200,8 @@ const OwnerListingsScreen = ({ navigation, route }) => {
             }}
           />
         )}
-        <OwnerBottomNavigation navigation={navigation} route={route} active="listings" />
       </View>
+      <OwnerBottomNavigation navigation={navigation} route={route} active="listings" />
     </SafeAreaView>
   );
 };

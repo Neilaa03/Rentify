@@ -6,9 +6,9 @@ import { COLORS } from '../constants/colors';
 const CustomCalendar = ({
   onDayPress,
   markedDates = {},
-  minDate = null, // 'YYYY-MM-DD'
-  maxDate = null, // 'YYYY-MM-DD'
-  disabledDates = [], // string[] or Set<string>
+  minDate = null,
+  maxDate = null,
+  disabledDates = [],
   locale = 'fr-FR',
   startFromMonday = true,
 }) => {

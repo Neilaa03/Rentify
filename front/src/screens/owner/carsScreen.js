@@ -15,7 +15,7 @@ import { COLORS } from '../../constants/colors';
 import { fetchJson } from '../../services/api';
 import { deleteOwnerCar } from '../../services/owner';
 import CarCard from '../../components/cards/CarCard';
-import OwnerBottomNavigation from '../../components/navigation/ownerBottomNavigation';
+import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
 
 const OwnerCarsScreen = ({ navigation, route }) => {
   const token = route?.params?.token;
