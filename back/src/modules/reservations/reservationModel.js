@@ -106,17 +106,12 @@ export const getReservationById = async (id) => {
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
         .select(
-            '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), renter(id, first_name, last_name, phone, email)'
+            '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), users(id, first_name, last_name, phone, email)'
         )
         .eq('id', id)
         .single();
 
     if (error || !data) throw new Error('Reservation not found');
-
-    // Map renter relationship to users field for DTO compatibility
-    if (data.renter && !data.users) {
-        data.users = data.renter;
-    }
 
     // Attach renter contact if not included by relations.
     if (!data.users && data.renter_id) {
@@ -137,14 +132,10 @@ export const getReservationById = async (id) => {
                 .update({ status: 'cancelled' })
                 .eq('id', id)
                 .select(
-                    '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), renter(id, first_name, last_name, phone, email)'
+                    '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), users(id, first_name, last_name, phone, email)'
                 )
                 .single();
             if (!cancelError && cancelled) {
-                // Map renter to users for DTO compatibility
-                if (cancelled.renter && !cancelled.users) {
-                    cancelled.users = cancelled.renter;
-                }
                 if (!cancelled.users && cancelled.renter_id) {
                     const { data: renter, error: renterError } = await supabase
                         .from(USERS_TABLE)
