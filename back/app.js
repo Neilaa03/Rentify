@@ -5,6 +5,7 @@ import carImageRoutes from './src/modules/car-images/carImageRoutes.js';
 import listingRoutes from './src/modules/car-listings/listingRoutes.js';
 import authRoutes from './src/modules/auth/authRoutes.js';
 import documentRoutes from './src/modules/documents/documentRoutes.js';
+import reservationRoutes from './src/modules/reservations/reservationRoutes.js';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api/car-images', carImageRoutes);
 app.use('/api/listings', listingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/reservations', reservationRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

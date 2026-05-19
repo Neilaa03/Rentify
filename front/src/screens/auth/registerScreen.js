@@ -3,8 +3,8 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, S
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/colors';
-import { API_ENDPOINTS } from '../constants/api';
+import { COLORS } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../constants/api';
 
 const RegisterScreen = ({ navigation }) => {
     const [firstName, setFirstName] = useState('');
@@ -114,7 +114,7 @@ const RegisterScreen = ({ navigation }) => {
                 // alert("Registration successful! Redirecting to login...");
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'Login' }],
+                    routes: [{ name: 'ClientApp' }],
                 });
             } else {
                 // BACKEND ERROR
@@ -145,7 +145,7 @@ const RegisterScreen = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <ImageBackground
-                source={require('../assets/background.png')}
+                source={require('../../assets/background.png')}
                 style={styles.background}
                 resizeMode="cover"
             >

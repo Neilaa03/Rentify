@@ -34,7 +34,7 @@ const LandingScreen = ({ navigation }) => {
 
                         <TouchableOpacity
                             style={styles.secondaryButton}
-                            onPress={() => navigation.navigate('Home')}
+                            onPress={() => navigation.navigate('ClientApp')}
                         >
                             <Text style={styles.buttonText}>Skip for now</Text>
                         </TouchableOpacity>

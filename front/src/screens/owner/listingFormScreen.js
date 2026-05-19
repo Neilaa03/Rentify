@@ -16,6 +16,7 @@ import {
   createOwnerListing,
   updateOwnerListing,
 } from '../../services/owner';
+import OwnerBottomNavigation from '../../components/navigation/ownerBottomNavigation';
 
 LocaleConfig.locales.fr = {
   monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
@@ -162,13 +163,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
       if (isCreateListingOnly) await submitCreateListingOnly();
       else await submitEdit();
 
-      navigation.reset({
-        index: 1,
-        routes: [
-          { name: 'OwnerDashboard', params: { token, user } },
-          { name: 'OwnerListings', params: { token, user } },
-        ],
-      });
+      navigation.navigate('OwnerListings', { token, user });
     } catch (error) {
       Alert.alert('Erreur', error.message || 'Sauvegarde impossible');
     } finally {
@@ -292,6 +287,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
             <Text style={styles.submitText}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</Text>
           </TouchableOpacity>
         </ScrollView>
+        <OwnerBottomNavigation navigation={navigation} route={route} active="add" />
       </View>
     </SafeAreaView>
   );
@@ -303,7 +299,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   iconBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  content: { paddingBottom: 24 },
+  content: { paddingBottom: 104 },
   sectionTitle: { color: '#fff', marginTop: 12, marginBottom: 8, fontSize: 18, fontWeight: '800' },
   label: { color: '#d8dcf7', marginTop: 8, marginBottom: 6, fontWeight: '600' },
   twoCols: { flexDirection: 'row', gap: 10 },

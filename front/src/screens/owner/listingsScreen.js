@@ -18,6 +18,7 @@ import {
   toggleListingPublication,
 } from '../../services/owner';
 import { fetchJson } from '../../services/api';
+import OwnerBottomNavigation from '../../components/navigation/ownerBottomNavigation';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -199,6 +200,7 @@ const OwnerListingsScreen = ({ navigation, route }) => {
             }}
           />
         )}
+        <OwnerBottomNavigation navigation={navigation} route={route} active="listings" />
       </View>
     </SafeAreaView>
   );
@@ -223,7 +225,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
   loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContent: { paddingBottom: 24 },
+  listContent: { paddingBottom: 96 },
   errorText: { color: '#ff8a9e', marginBottom: 8 },
   emptyText: { color: '#aab1dd', marginTop: 20 },
   card: {
