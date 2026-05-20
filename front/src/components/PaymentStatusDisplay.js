@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../../constants/colors';
 
 const PaymentStatusDisplay = ({ status, amount, paymentMethod }) => {
   const getStatusInfo = () => {
