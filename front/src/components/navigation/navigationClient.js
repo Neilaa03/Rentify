@@ -12,6 +12,8 @@ import ReservationDatePickerScreen from '../../screens/reservations/reservationD
 import ReservationDetailsScreen from '../../screens/reservations/reservationDetailsScreen';
 import ReservationsScreen from '../../screens/reservations/reservationsScreen';
 import ProfileScreen from '../../screens/profileScreen';
+import InboxScreen from '../../screens/messages/inboxScreen';
+import ChatScreen from '../../screens/messages/chatScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -22,6 +24,8 @@ function HomeTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen 
         name="ListingDetails" 
         component={ListingDetailsScreen}
@@ -46,6 +50,8 @@ function SearchTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Search" component={HomeScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen 
         name="ListingDetailsFromSearch" 
         component={ListingDetailsScreen}
@@ -65,6 +71,8 @@ function ReservationsTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="ReservationsList" component={ReservationsScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen
         name="ReservationDatePickerFromReservations"
         component={ReservationDatePickerScreen}
@@ -84,6 +92,8 @@ function ProfileTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
     </Stack.Navigator>
   );
 }

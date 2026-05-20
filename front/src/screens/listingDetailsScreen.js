@@ -180,7 +180,14 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.ownerMessageButton}>
+            <TouchableOpacity
+              style={styles.ownerMessageButton}
+              onPress={() => {
+                const otherUserId = listing?.car?.ownerId;
+                if (!otherUserId) return;
+                navigation.navigate('Chat', { otherUserId, otherUser: { id: otherUserId } });
+              }}
+            >
               <Ionicons name="chatbubble-outline" size={18} color="#8f6cff" />
             </TouchableOpacity>
           </View>

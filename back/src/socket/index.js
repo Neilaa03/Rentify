@@ -29,6 +29,21 @@ export const initSocket = (server) => {
       socket.join(userId);
     });
 
+    // Typing indicator forwarding (1:1)
+    // Client emits: typing { to: <userId>, isTyping: boolean }
+    // Server forwards to recipient room: typing { from: <userId>, isTyping: boolean }
+    socket.on('typing', (payload = {}) => {
+      try {
+        const from = socket.user?.id || payload?.from;
+        const to = payload?.to;
+        const isTyping = Boolean(payload?.isTyping);
+        if (!from || !to) return;
+        io.to(to).emit('typing', { from, isTyping });
+      } catch (_err) {
+        // ignore
+      }
+    });
+
     socket.on('disconnect', () => {});
   });
 

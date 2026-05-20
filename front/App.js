@@ -17,6 +17,8 @@ import OwnerCarsScreen from './src/screens/owner/carsScreen';
 import OwnerReservationsScreen from './src/screens/owner/reservationsScreen';
 import OwnerReservationDetailsScreen from './src/screens/owner/reservationDetailsScreen';
 import { ClientNavigation } from './src/components/navigation/navigationClient';
+import InboxScreen from './src/screens/messages/inboxScreen';
+import ChatScreen from './src/screens/messages/chatScreen';
 
 const Stack = createStackNavigator();
 const APP_BACKGROUND = '#0f1228';
@@ -61,6 +63,8 @@ export default function App() {
           <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
           <Stack.Screen name="OwnerReservations" component={OwnerReservationsScreen} />
           <Stack.Screen name="OwnerReservationDetails" component={OwnerReservationDetailsScreen} />
+          <Stack.Screen name="Inbox" component={InboxScreen} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="ClientApp" component={ClientNavigation} />
         </Stack.Navigator>
       </NavigationContainer>

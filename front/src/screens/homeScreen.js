@@ -82,9 +82,9 @@ const HomeScreen = ({ navigation, route }) => {
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 style={styles.logoutButton}
-                                onPress={() => navigation.navigate('Landing')}
+                                onPress={() => navigation.navigate('Inbox')}
                             >
-                                <Ionicons name="log-out" size={24} color="#fff" />
+                                <Ionicons name="mail-outline" size={24} color="#fff" />
                             </TouchableOpacity>
                         </View>
                     </View>

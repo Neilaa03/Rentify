@@ -81,15 +81,10 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             <Text style={styles.title}>Bonjour, {user?.first_name || 'Owner'} 👋</Text>
           </View>
           <TouchableOpacity
-            style={styles.logoutBtn}
-            onPress={() =>
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Landing' }],
-              })
-            }
+            style={styles.inboxBtn}
+            onPress={() => navigation.navigate('Inbox', { mode: 'owner_clients' })}
           >
-            <Text style={styles.logoutText}>Quitter</Text>
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -192,6 +187,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   logoutText: { color: '#b8bddf', fontWeight: '600' },
+  inboxBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(18, 21, 46, 0.65)',
+  },
   loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { paddingBottom: 96 },
   errorText: { color: '#ff7f90', marginBottom: 10 },
