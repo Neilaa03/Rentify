@@ -19,10 +19,24 @@ const toReservationDto = (row) => ({
     totalPrice: row.total_price,
     status: row.status,
     createdAt: row.created_at,
+    renter: (row.renter || row.users)
+        ? {
+            id: (row.renter || row.users).id,
+            firstName: (row.renter || row.users).first_name,
+            lastName: (row.renter || row.users).last_name,
+            phone: (row.renter || row.users).phone,
+            email: (row.renter || row.users).email,
+        }
+        : null,
     listing: row.listings ? {
         id: row.listings.id,
         carId: row.listings.car_id,
+        title: row.listings.title,
         city: row.listings.city,
+        country: row.listings.country,
+        pricePerDay: row.listings.price_per_day,
+        pricePerWeek: row.listings.price_per_week,
+        pricePerMonth: row.listings.price_per_month,
         car: row.listings.cars ? {
             id: row.listings.cars.id,
             ownerId: row.listings.cars.owner_id,
@@ -91,11 +105,23 @@ export const getReservations = async (filters = {}) => {
 export const getReservationById = async (id) => {
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
-        .select('*, listings(id, car_id, city, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))')
+        .select(
+            '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), users(id, first_name, last_name, phone, email)'
+        )
         .eq('id', id)
         .single();
 
     if (error || !data) throw new Error('Reservation not found');
+
+    // Attach renter contact if not included by relations.
+    if (!data.users && data.renter_id) {
+        const { data: renter, error: renterError } = await supabase
+            .from(USERS_TABLE)
+            .select('id, first_name, last_name, phone, email')
+            .eq('id', data.renter_id)
+            .single();
+        if (!renterError && renter) data.users = renter;
+    }
 
     // Auto-cancel unpaid reservations that exceeded grace period
     if (['reserved', 'payment_pending'].includes(data.status) && data.created_at) {
@@ -105,9 +131,21 @@ export const getReservationById = async (id) => {
                 .from(RESERVATIONS_TABLE)
                 .update({ status: 'cancelled' })
                 .eq('id', id)
-                .select('*, listings(id, car_id, city, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))')
+                .select(
+                    '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), users(id, first_name, last_name, phone, email)'
+                )
                 .single();
-            if (!cancelError && cancelled) return toReservationDto(cancelled);
+            if (!cancelError && cancelled) {
+                if (!cancelled.users && cancelled.renter_id) {
+                    const { data: renter, error: renterError } = await supabase
+                        .from(USERS_TABLE)
+                        .select('id, first_name, last_name, phone, email')
+                        .eq('id', cancelled.renter_id)
+                        .single();
+                    if (!renterError && renter) cancelled.users = renter;
+                }
+                return toReservationDto(cancelled);
+            }
         }
     }
 
@@ -296,7 +334,9 @@ export const getReservationsByRenter = async (renterId) => {
     // Include listing and nested car data with images so frontend can display details without extra requests
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
-        .select('*, listings(id, car_id, city, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, car_images(id, image_url, is_primary)))')
+        .select(
+            '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))'
+        )
         .eq('renter_id', renterId)
         .order('created_at', { ascending: false });
 
@@ -307,12 +347,38 @@ export const getReservationsByRenter = async (renterId) => {
 export const getListingReservations = async (listingId) => {
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
-        .select('*')
+        .select(
+            '*, users(id, first_name, last_name, phone, email), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))'
+        )
         .eq('listing_id', listingId)
         .order('start_date', { ascending: true });
 
     if (error) throw error;
-    return (data || []).map(toReservationDto);
+    const rows = data || [];
+
+    // Fallback: if relation "users" isn't wired in Supabase for renter_id, hydrate renters manually.
+    const missingRenterIds = [
+        ...new Set(rows.filter((row) => !row?.users && row?.renter_id).map((row) => row.renter_id)),
+    ];
+
+    if (missingRenterIds.length > 0) {
+        const { data: renters, error: renterError } = await supabase
+            .from(USERS_TABLE)
+            .select('id, first_name, last_name, phone, email')
+            .in('id', missingRenterIds);
+
+        if (!renterError) {
+            const renterById = {};
+            (renters || []).forEach((renter) => {
+                renterById[renter.id] = renter;
+            });
+            rows.forEach((row) => {
+                if (!row.users && row.renter_id) row.renter = renterById[row.renter_id] || null;
+            });
+        }
+    }
+
+    return rows.map(toReservationDto);
 };
 
 // =========================================================

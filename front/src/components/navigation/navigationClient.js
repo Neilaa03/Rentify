@@ -4,6 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeScreen from '../../screens/homeScreen';
 import ListingDetailsScreen from '../../screens/listingDetailsScreen';
@@ -89,16 +90,17 @@ function ProfileTabStack() {
 
 // Client Navigation Component
 export function ClientNavigation() {
+  const insets = useSafeAreaInsets();
+
   const defaultTabBarStyle = {
     backgroundColor: '#0f1228',
     borderTopWidth: 0,
-    marginHorizontal: 10,
-    marginBottom: 8,
+    marginHorizontal: 16,
     borderRadius: 18,
     height: 65,
     paddingVertical: 12,
     position: 'absolute',
-    bottom: 0,
+    bottom: 8 + (insets?.bottom || 0),
     left: 0,
     right: 0,
   };

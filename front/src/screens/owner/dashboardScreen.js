@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
-import OwnerBottomNavigation from '../../components/navigation/ownerBottomNavigation';
+import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -162,8 +162,8 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             )}
           </ScrollView>
         )}
-        <OwnerBottomNavigation navigation={navigation} route={route} active="dashboard" />
       </View>
+      <OwnerBottomNavigation navigation={navigation} route={route} active="dashboard" />
     </SafeAreaView>
   );
 };

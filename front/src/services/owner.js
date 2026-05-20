@@ -41,6 +41,7 @@ const normalizeListing = (item, docsByType) => {
     city: item.city || '',
     country: item.country || '',
     pricePerDay: item.pricePerDay ?? 0,
+    car: item?.car || null,
     isActive: Boolean(item?.isActive),
     state,
     stateLabel: stateLabelMap[state],

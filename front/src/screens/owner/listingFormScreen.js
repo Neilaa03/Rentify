@@ -16,7 +16,7 @@ import {
   createOwnerListing,
   updateOwnerListing,
 } from '../../services/owner';
-import OwnerBottomNavigation from '../../components/navigation/ownerBottomNavigation';
+import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
 
 LocaleConfig.locales.fr = {
   monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
@@ -287,8 +287,8 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
             <Text style={styles.submitText}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</Text>
           </TouchableOpacity>
         </ScrollView>
-        <OwnerBottomNavigation navigation={navigation} route={route} active="add" />
       </View>
+      <OwnerBottomNavigation navigation={navigation} route={route} active="add" />
     </SafeAreaView>
   );
 };
