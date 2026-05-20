@@ -1,8 +1,4 @@
-const API_BASE_URL =
-    process?.env?.EXPO_PUBLIC_API_BASE_URL 
-
-//    ||
-//   'http://IP_@:3000';
+const API_BASE_URL = process?.env?.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
 export const API_ENDPOINTS = {
     AUTH: {
@@ -18,5 +14,24 @@ export const API_ENDPOINTS = {
     LISTINGS: {
         LIST: `${API_BASE_URL}/api/listings`,
         GET: (id) => `${API_BASE_URL}/api/listings/${id}`,
+    },
+    RESERVATIONS: {
+        CREATE: `${API_BASE_URL}/api/reservations`,
+        GET_USER: `${API_BASE_URL}/api/reservations/me`,
+        GET: (id) => `${API_BASE_URL}/api/reservations/${id}`,
+        UPDATE_DETAILS: (id) => `${API_BASE_URL}/api/reservations/${id}/details`,
+        CANCEL: (id) => `${API_BASE_URL}/api/reservations/${id}/cancel`,
+        CONFIRM_PAYMENT: (id) => `${API_BASE_URL}/api/reservations/${id}/confirm-payment`,
+        GET_LISTING: (listingId) => `${API_BASE_URL}/api/reservations/listing/${listingId}`,
+        GET_CALENDAR_AVAILABILITY: (listingId) => `${API_BASE_URL}/api/reservations/calendar/availability/${listingId}`,
+        UPDATE_STATUS: (id) => `${API_BASE_URL}/api/reservations/${id}/status`,
+        GET_ALL: `${API_BASE_URL}/api/reservations`,
+    },
+    PAYMENTS: {
+        CREATE_CARD_PAYMENT: `${API_BASE_URL}/api/payments/create-card-payment`,
+        CREATE_CASH_PAYMENT: `${API_BASE_URL}/api/payments/create-cash-payment`,
+        CONFIRM_CASH_PAYMENT: `${API_BASE_URL}/api/payments/confirm-cash-payment`,
+        GET_STATUS: (reservationId) => `${API_BASE_URL}/api/payments/status/${reservationId}`,
+        WEBHOOK: `${API_BASE_URL}/api/payments/webhook`,
     },
 };

@@ -15,6 +15,7 @@ import { COLORS } from '../../constants/colors';
 import { fetchJson } from '../../services/api';
 import { deleteOwnerCar } from '../../services/owner';
 import CarCard from '../../components/cards/CarCard';
+import OwnerBottomNavigation from '../../components/navigation/ownerBottomNavigation';
 
 const OwnerCarsScreen = ({ navigation, route }) => {
   const token = route?.params?.token;
@@ -174,6 +175,7 @@ const OwnerCarsScreen = ({ navigation, route }) => {
           }
         />
       )}
+      <OwnerBottomNavigation navigation={navigation} route={route} active="cars" />
     </SafeAreaView>
   );
 };
@@ -207,6 +209,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+    paddingBottom: 96,
   },
   carCard: {
     backgroundColor: COLORS.cardBackground,

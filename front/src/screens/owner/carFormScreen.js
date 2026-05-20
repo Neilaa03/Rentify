@@ -601,13 +601,11 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       else if (isCreateListingOnly) await submitCreateListingOnly();
       else await submitEdit();
 
-      navigation.reset({
-        index: 1,
-        routes: [
-          { name: 'OwnerDashboard', params: { token, user } },
-          { name: isCarForm ? 'OwnerCars' : 'OwnerListings', params: { token, user } },
-        ],
-      });
+      if (isCarForm) {
+        navigation.navigate('OwnerCars', { token, user });
+      } else {
+        navigation.navigate('OwnerListings', { token, user });
+      }
     } catch (error) {
       console.error('Submit error:', error);
       Alert.alert('Erreur', error.message || 'Sauvegarde impossible');

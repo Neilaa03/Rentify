@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import storage from '../../utils/storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../constants/colors';
-import { API_ENDPOINTS } from '../constants/api';
+import { COLORS } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../constants/api';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({
         email: '',
         password: '',
@@ -20,6 +22,7 @@ const LoginScreen = ({ navigation }) => {
     };
 
     const handleLogin = async () => {
+        setLoading(true);
         console.log("Login button pressed");
 
         const nextErrors = { email: '', password: '', form: '' };
@@ -62,15 +65,64 @@ const LoginScreen = ({ navigation }) => {
             if (response.ok) {
                 // SUCCESS: data contains your user info and JWT token
                 console.log("Login successful!", data);
-                // alert("Login successful!");
-                const targetRoute = data?.user?.role === 'owner' ? 'OwnerDashboard' : 'Home';
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: targetRoute, params: { token: data?.token, user: data?.user } }],
-                });
+                // Save token to SecureStore
+                if (data.token) {
+                    await storage.setItemAsync('userToken', data.token);
+                    console.log('Token saved to storage');
+                }
+
+                const userParams = { token: data?.token, user: data?.user };
+                const isOwner = data?.user?.role === 'owner';
+                    
+                // Always refresh profile from backend so we have full name + phone reliably
+                try {
+                    if (data.token) {
+                        const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
+                            headers: { Authorization: `Bearer ${data.token}` },
+                        });
+                        const meJson = meRes.ok ? await meRes.json() : null;
+                        const rawUser = meJson?.user || data.user || null;
+                        if (rawUser) {
+                            const normalized = {
+                                id: rawUser.id,
+                                email: rawUser.email,
+                                firstName: rawUser.firstName || rawUser.first_name || '',
+                                lastName: rawUser.lastName || rawUser.last_name || '',
+                                phone: rawUser.phone || '',
+                                role: rawUser.role,
+                                isVerified: rawUser.isVerified ?? rawUser.is_verified,
+                                isActive: rawUser.isActive ?? rawUser.is_active,
+                            };
+                            await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+                        }
+                    }
+                } catch (e) {
+                    // Non-blocking
+                }
+                if (isOwner) {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'OwnerDashboard', params: userParams }],
+                    });
+
+                } else {
+                    navigation.reset({
+                        index: 0,
+                        routes: [
+                            {
+                                name: 'ClientApp',
+                                params: {
+                                    screen: 'HomeTab',
+                                    params: userParams,
+                                },
+                            },
+                        ],
+                    });
+                }
+            
             } else {
                 // BACKEND ERROR:
-                console.log("Login failed:", data.error);
+                console.log("Login failed:", data?.error);
                 const message = data?.error || "We couldn't log you in. Please try again.";
                 const lower = String(message).toLowerCase();
                 const mentionsEmail = lower.includes('email');
@@ -87,13 +139,15 @@ const LoginScreen = ({ navigation }) => {
                 password: '',
                 form: "We couldn't reach the server. Please try again.",
             });
-        }
+        }finally {
+   setLoading(false);
+}
     };
 
     return (
         <View style={styles.container}>
             <ImageBackground
-                source={require('../assets/background.png')}
+                source={require('../../assets/background.png')}
                 style={styles.background}
                 resizeMode="cover"
             >

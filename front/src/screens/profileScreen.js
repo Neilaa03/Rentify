@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../constants/api';
+import OwnerBottomNavigation from '../components/navigation/ownerBottomNavigation';
 
 const SectionCard = ({ items }) => (
   <View style={styles.sectionCard}>
@@ -33,7 +34,7 @@ const ProfileScreen = ({ navigation, route }) => {
   const [error, setError] = useState('');
 
   const token = route?.params?.token;
-  const isOwner = route?.params?.user?.role === 'owner';
+  const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -139,57 +140,7 @@ const ProfileScreen = ({ navigation, route }) => {
 
             <Text style={styles.version}>Rentify v1.0.0</Text>
           </ScrollView>
-
-          <View style={styles.footer}>
-            {isOwner ? (
-              <>
-                <TouchableOpacity
-                  style={styles.footerTab}
-                  onPress={() => navigation.navigate('OwnerDashboard', route?.params || {})}
-                >
-                  <Ionicons name="grid-outline" size={23} color="#8a90b8" />
-                  <Text style={styles.tabLabel}>Tableau de bord</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.footerTab}
-                  onPress={() => navigation.navigate('OwnerListings', route?.params || {})}
-                >
-                  <Ionicons name="car-sport-outline" size={23} color="#8a90b8" />
-                  <Text style={styles.tabLabel}>Mes annonces</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.footerTab}
-                  onPress={() => navigation.navigate('OwnerListingForm', { ...(route?.params || {}), mode: 'create' })}
-                >
-                  <Ionicons name="add-circle-outline" size={23} color="#8a90b8" />
-                  <Text style={styles.tabLabel}>Ajouter</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.footerTab}>
-                  <Ionicons name="person-outline" size={23} color="#8f6cff" />
-                  <Text style={[styles.tabLabel, { color: '#8f6cff' }]}>Profil</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity style={styles.footerTab} onPress={() => navigation.navigate('Home', route?.params || {})}>
-                  <Ionicons name="home-outline" size={23} color="#8a90b8" />
-                  <Text style={styles.tabLabel}>Accueil</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.footerTab}>
-                  <Ionicons name="search-outline" size={23} color="#8a90b8" />
-                  <Text style={styles.tabLabel}>Recherche</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.footerTab}>
-                  <Ionicons name="calendar-outline" size={23} color="#8a90b8" />
-                  <Text style={styles.tabLabel}>Reservations</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.footerTab}>
-                  <Ionicons name="person-outline" size={23} color="#8f6cff" />
-                  <Text style={[styles.tabLabel, { color: '#8f6cff' }]}>Profil</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+          {isOwner && <OwnerBottomNavigation navigation={navigation} route={route} active="profile" />}
         </SafeAreaView>
       </ImageBackground>
     </View>
@@ -200,7 +151,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   background: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(5, 6, 22, 0.72)' },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 18 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 96 },
   title: { fontSize: 40 / 2, color: '#f2f4ff', fontWeight: '700', marginTop: 10, marginBottom: 14 },
   profileCard: {
     borderRadius: 16,
@@ -294,20 +245,6 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: '#ff4f5e', fontSize: 16 / 1.95, fontWeight: '700' },
   version: { textAlign: 'center', color: '#7f84ae', fontSize: 12, marginTop: 14, marginBottom: 8 },
-  footer: {
-    marginHorizontal: 10,
-    marginBottom: 8,
-    borderRadius: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#151738',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-  },
-  footerTab: { alignItems: 'center', paddingVertical: 6, paddingHorizontal: 10 },
-  tabLabel: { color: '#8a90b8', fontSize: 11, marginTop: 4, fontWeight: '500' },
 });
 
 export default ProfileScreen;

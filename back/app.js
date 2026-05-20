@@ -7,6 +7,7 @@ import authRoutes from './src/modules/auth/authRoutes.js';
 import documentRoutes from './src/modules/documents/documentRoutes.js';
 import paymentRoutes from './src/modules/payments/paymentRoutes.js';
 import { handleStripeWebhook } from './src/modules/payments/paymentController.js';
+import reservationRoutes from './src/modules/reservations/reservationRoutes.js';
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/listings', listingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/reservations', reservationRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
