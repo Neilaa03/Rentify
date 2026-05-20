@@ -287,7 +287,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
   const handlePayment = async () => {
     try {
-      if (!termsAccepted) {
+      if (!termsAccepted && !canResumePendingCardPayment) {
         Alert.alert('Conditions requises', 'Veuillez accepter les conditions générales pour continuer.');
         return;
       }
@@ -703,10 +703,14 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handlePayment}
-            disabled={loading || !termsAccepted || !paymentMethod}
+            disabled={
+              loading ||
+              !paymentMethod ||
+              (!termsAccepted && !canResumePendingCardPayment)
+            }
             style={[
               styles.paymentButtonWrapper,
-              (!termsAccepted || loading || !paymentMethod) ? styles.paymentButtonWrapperDisabled : null,
+              (!termsAccepted && !canResumePendingCardPayment) || loading || !paymentMethod ? styles.paymentButtonWrapperDisabled : null,
             ]}
           >
             <LinearGradient
