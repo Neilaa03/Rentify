@@ -27,4 +27,11 @@ export const API_ENDPOINTS = {
         UPDATE_STATUS: (id) => `${API_BASE_URL}/api/reservations/${id}/status`,
         GET_ALL: `${API_BASE_URL}/api/reservations`,
     },
+    PAYMENTS: {
+        CREATE_CARD_PAYMENT: `${API_BASE_URL}/api/payments/create-card-payment`,
+        CREATE_CASH_PAYMENT: `${API_BASE_URL}/api/payments/create-cash-payment`,
+        CONFIRM_CASH_PAYMENT: `${API_BASE_URL}/api/payments/confirm-cash-payment`,
+        GET_STATUS: (reservationId) => `${API_BASE_URL}/api/payments/status/${reservationId}`,
+        WEBHOOK: `${API_BASE_URL}/api/payments/webhook`,
+    },
 };

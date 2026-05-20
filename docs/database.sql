@@ -21,7 +21,8 @@ CREATE TYPE reservation_status AS ENUM (
     'reserved',
     'refunded',
     'refund_pending',
-    'pickup_pending'
+    'pickup_pending',
+    'payment_pending'
 );
 
 CREATE TYPE pickup_status AS ENUM (
@@ -34,7 +35,9 @@ CREATE TYPE payment_status AS ENUM (
     'pending',
     'paid',
     'failed',
-    'refunded'
+    'refunded',
+    'completed',
+    'pending_cash'
 );
 
 CREATE TYPE refund_status AS ENUM (
@@ -305,7 +308,9 @@ CREATE TABLE payments (
 
     amount NUMERIC(10,2) NOT NULL,
 
-    payment_method VARCHAR(100),
+    payment_method VARCHAR(50) DEFAULT 'card', -- 'card' or 'cash'
+
+    transaction_reference TEXT,
 
     transaction_reference TEXT,
 
@@ -313,7 +318,9 @@ CREATE TABLE payments (
 
     paid_at TIMESTAMP,
 
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- =========================================================

@@ -21,6 +21,7 @@ import ReservationCard from '../../components/cards/ReservationCard';
 
 const ReservationsScreen = ({ navigation }) => {
   const [reservations, setReservations] = useState([]);
+  const [paymentByReservationId, setPaymentByReservationId] = useState({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -49,7 +50,41 @@ const ReservationsScreen = ({ navigation }) => {
       }
 
       const data = await response.json();
-      setReservations(Array.isArray(data) ? data : []);
+      const reservationList = Array.isArray(data) ? data : [];
+      setReservations(reservationList);
+
+      const pendingReservations = reservationList.filter((reservation) => reservation?.status === 'payment_pending');
+      if (pendingReservations.length === 0) {
+        setPaymentByReservationId({});
+        return;
+      }
+
+      const paymentResults = await Promise.all(
+        pendingReservations.map(async (reservation) => {
+          try {
+            const paymentResponse = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservation.id), {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (!paymentResponse.ok) return null;
+            const paymentData = await paymentResponse.json();
+            return [reservation.id, paymentData];
+          } catch (e) {
+            return null;
+          }
+        })
+      );
+
+      const nextMap = {};
+      paymentResults.forEach((entry) => {
+        if (!entry) return;
+        const [reservationId, payment] = entry;
+        nextMap[reservationId] = payment;
+      });
+      setPaymentByReservationId(nextMap);
     } catch (error) {
       console.error('Error fetching reservations:', error);
       Alert.alert('Erreur', 'Impossible de charger les réservations');
@@ -115,6 +150,15 @@ const ReservationsScreen = ({ navigation }) => {
     // Navigate to reservation details within the Reservations tab stack.
     const listing = reservation?.listing || reservation?.listing?.car || null;
     navigation.navigate('ReservationDetailsFromReservations', { reservation, listing });
+  };
+
+  const handleFinishPaymentPress = (reservation) => {
+    const listing = reservation?.listing || reservation?.listing?.car || null;
+    navigation.navigate('ReservationDetailsFromReservations', {
+      reservation,
+      listing,
+      resumeCardPayment: true,
+    });
   };
 
   if (loading) {
@@ -190,6 +234,11 @@ const ReservationsScreen = ({ navigation }) => {
                   key={reservation.id}
                   reservation={reservation}
                   onPress={handleReservationPress}
+                  showFinishPayment={
+                    reservation?.status === 'payment_pending' &&
+                    paymentByReservationId?.[reservation.id]?.paymentMethod === 'card'
+                  }
+                  onFinishPayment={handleFinishPaymentPress}
                 />
               ))
             )}

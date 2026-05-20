@@ -16,7 +16,13 @@ const formatDateRange = (from, to) => {
   }
 };
 
-const ReservationCard = ({ reservation, targetRoute = 'ReservationDetails', onPress }) => {
+const ReservationCard = ({
+  reservation,
+  targetRoute = 'ReservationDetails',
+  onPress,
+  showFinishPayment = false,
+  onFinishPayment,
+}) => {
   const navigation = useNavigation();
 
   const listing = reservation?.listing || {};
@@ -43,6 +49,11 @@ const ReservationCard = ({ reservation, targetRoute = 'ReservationDetails', onPr
   const handlePress = () => {
     if (onPress) return onPress(reservation);
     navigation.navigate(targetRoute, { reservation });
+  };
+
+  const handleFinishPaymentPress = () => {
+    if (onFinishPayment) return onFinishPayment(reservation);
+    handlePress();
   };
 
   // compute days (inclusive)
@@ -112,9 +123,14 @@ const ReservationCard = ({ reservation, targetRoute = 'ReservationDetails', onPr
 
       {/* Right Section: Status & Price */}
       <View style={styles.rightSection}>
-        <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}>
+        <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}> 
           <Text style={styles.statusText}>{status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}</Text>
         </View>
+        {showFinishPayment && (
+          <TouchableOpacity style={styles.finishPaymentButton} onPress={handleFinishPaymentPress}>
+            <Text style={styles.finishPaymentButtonText}>Finish payment</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.price}>{formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}</Text>
       </View>
     </TouchableOpacity>
@@ -222,6 +238,18 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.3,
+  },
+  finishPaymentButton: {
+    backgroundColor: '#0b63ff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  finishPaymentButtonText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 

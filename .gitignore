@@ -12,6 +12,9 @@ yarn.lock
 # Expo
 .expo/
 .expo-shared/
+front/ios/
+front/android/
+front/.expo/
 
 # IDE & Editor
 .vscode/

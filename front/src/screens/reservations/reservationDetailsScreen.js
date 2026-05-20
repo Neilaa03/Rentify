@@ -17,15 +17,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
+import PaymentMethodSelector from '../../components/PaymentMethodSelector';
+import PaymentStatusDisplay from '../../components/PaymentStatusDisplay';
+import { useStripe } from '@stripe/stripe-react-native';
 
 const ReservationDetailsScreen = ({ navigation, route }) => {
   const reservation = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
+  const resumeCardPayment = !!route?.params?.resumeCardPayment;
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [account, setAccount] = useState(null);
   const [listingFromApi, setListingFromApi] = useState(null);
   const [actionLoading, setActionLoading] = useState(null); // 'cancel' | 'edit' | null
+  const [paymentMethod, setPaymentMethod] = useState(null); // null | 'card' | 'cash'
+  const [paymentStatus, setPaymentStatus] = useState(null); // null | 'pending' | 'completed' | 'failed' | 'pending_cash'
+  const [paymentInfo, setPaymentInfo] = useState(null); // stores payment response data
 
   const goToReservations = () => {
     const parent = navigation.getParent?.();
@@ -100,6 +109,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   };
 
   const isReservationActive = reservation?.status === 'reserved';
+  const canResumePendingCardPayment = reservation?.status === 'payment_pending' && paymentMethod === 'card';
+  const shouldShowPaymentFlow = isReservationActive || canResumePendingCardPayment;
 
   if (!reservation) {
     return (
@@ -176,6 +187,54 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     };
   }, [listingId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPendingPayment = async () => {
+      if (reservation?.status !== 'payment_pending') return;
+
+      try {
+        const token = await storage.getItemAsync('userToken');
+        if (!token) return;
+
+        const response = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservation.id), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) return;
+        const payment = await response.json();
+        if (cancelled) return;
+
+        if (payment?.paymentMethod) {
+          setPaymentMethod(payment.paymentMethod);
+        }
+        setPaymentInfo(payment);
+        if (payment?.status === 'completed' || payment?.status === 'failed' || payment?.status === 'pending_cash') {
+          setPaymentStatus(payment.status);
+        } else {
+          setPaymentStatus(null);
+        }
+      } catch (e) {
+        // Ignore status fetch errors; user can still retry payment.
+      }
+    };
+
+    loadPendingPayment();
+    return () => {
+      cancelled = true;
+    };
+  }, [reservation?.id, reservation?.status]);
+
+  useEffect(() => {
+    if (!resumeCardPayment) return;
+    if (!canResumePendingCardPayment) return;
+    if (loading) return;
+    handlePayment();
+  }, [resumeCardPayment, canResumePendingCardPayment, loading]);
+
   const startRaw =
     reservation?.startDate ||
     reservation?.from ||
@@ -228,62 +287,149 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
   const handlePayment = async () => {
     try {
-      if (!termsAccepted) {
+      if (!termsAccepted && !canResumePendingCardPayment) {
         Alert.alert('Conditions requises', 'Veuillez accepter les conditions générales pour continuer.');
         return;
       }
+
+      if (!paymentMethod) {
+        Alert.alert('Méthode de paiement requise', 'Veuillez sélectionner une méthode de paiement.');
+        return;
+      }
+
       setLoading(true);
-      
-      // Get the user token
       const token = await storage.getItemAsync('userToken');
       if (!token) {
         Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
         return;
       }
 
-      // TODO: Integrate with payment gateway (Stripe, PayPal, etc.)
-      // For now, call the confirm-payment API to update status
-      const confirmResponse = await fetch(API_ENDPOINTS.RESERVATIONS.CONFIRM_PAYMENT(reservation.id), {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!confirmResponse.ok) {
-        let errorMessage = 'Failed to confirm payment';
-        try {
-          const errorData = await confirmResponse.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // Response is not JSON, use HTTP status
-          errorMessage = `Server error: ${confirmResponse.status}`;
-        }
-        throw new Error(errorMessage);
+      if (paymentMethod === 'cash') {
+        await handleCashPayment(token);
+      } else if (paymentMethod === 'card') {
+        await handleCardPayment(token);
       }
-
-      Alert.alert(
-        'Paiement confirmé',
-        'Votre réservation a été confirmée avec succès.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate back to home
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'HomeTab', params: { screen: 'Home' } }],
-              });
-            },
-          },
-        ]
-      );
     } catch (error) {
       console.error('Payment error:', error);
       Alert.alert('Erreur', error.message || 'Une erreur est survenue lors du paiement');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCardPayment = async (token) => {
+    try {
+      const paymentIntentResponse = await fetch(API_ENDPOINTS.PAYMENTS.CREATE_CARD_PAYMENT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          reservationId: reservation.id,
+          amount: safeTotalPrice,
+          currency: 'eur',
+        }),
+      });
+
+      if (!paymentIntentResponse.ok) {
+        let errorMessage = 'Failed to initialize card payment';
+        try {
+          const errorData = await paymentIntentResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `Server error: ${paymentIntentResponse.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const paymentData = await paymentIntentResponse.json();
+      if (!paymentData?.clientSecret) {
+        throw new Error('Stripe clientSecret not returned by server');
+      }
+
+      setPaymentInfo(paymentData);
+      setPaymentStatus('pending');
+
+      // Initialize PaymentSheet
+      const initResult = await initPaymentSheet({
+        merchantDisplayName: 'Rentify',
+        paymentIntentClientSecret: paymentData.clientSecret,
+        allowsDelayedPaymentMethods: false,
+      });
+
+      if (initResult.error) {
+        throw new Error(initResult.error.message || 'Failed to initialize payment sheet');
+      }
+
+      // Present PaymentSheet
+      const result = await presentPaymentSheet();
+      if (result.error) {
+        setPaymentStatus('failed');
+        throw new Error(result.error.message || 'Payment failed');
+      }
+
+      // Payment successful
+      setPaymentStatus('completed');
+      Alert.alert(
+        'Paiement réussi',
+        'Votre paiement a été traité avec succès. Votre réservation est confirmée!',
+        [
+          {
+            text: 'OK',
+            onPress: () => goToReservations(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Card payment error:', error);
+      setPaymentStatus('failed');
+      throw error;
+    }
+  };
+
+  const handleCashPayment = async (token) => {
+    try {
+      const cashPaymentResponse = await fetch(API_ENDPOINTS.PAYMENTS.CREATE_CASH_PAYMENT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          reservationId: reservation.id,
+          amount: safeTotalPrice,
+        }),
+      });
+
+      if (!cashPaymentResponse.ok) {
+        let errorMessage = 'Failed to create cash payment';
+        try {
+          const errorData = await cashPaymentResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `Server error: ${cashPaymentResponse.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const cashData = await cashPaymentResponse.json();
+      setPaymentInfo(cashData);
+      setPaymentStatus('pending_cash');
+
+      Alert.alert(
+        'Réservation confirmée',
+        'Votre réservation est confirmée. Le paiement en espèces sera effectué lors de la récupération du véhicule.',
+        [
+          {
+            text: 'OK',
+            onPress: () => goToReservations(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Cash payment error:', error);
+      throw error;
     }
   };
 
@@ -484,7 +630,22 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        {/* Action Buttons - REMOVED, moved to payment bar and dates section */}
+        {/* Payment Status Display */}
+        {paymentStatus && paymentInfo && (
+          <PaymentStatusDisplay
+            status={paymentStatus}
+            amount={safeTotalPrice}
+            paymentMethod={paymentMethod}
+          />
+        )}
+
+        {/* Payment Method Selector */}
+        {!paymentStatus && isReservationActive && (
+          <PaymentMethodSelector
+            selectedMethod={paymentMethod}
+            onMethodSelect={setPaymentMethod}
+          />
+        )}
 
       {/* Terms & Conditions */}
       {isReservationActive && (
@@ -513,7 +674,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* Payment Button */}
-      {isReservationActive && (
+      {shouldShowPaymentFlow && !paymentStatus && (
         <View style={styles.paymentBar}>
           <TouchableOpacity
             onPress={handleCancelReservation}
@@ -542,14 +703,18 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handlePayment}
-            disabled={loading || !termsAccepted}
+            disabled={
+              loading ||
+              !paymentMethod ||
+              (!termsAccepted && !canResumePendingCardPayment)
+            }
             style={[
               styles.paymentButtonWrapper,
-              (!termsAccepted || loading) ? styles.paymentButtonWrapperDisabled : null,
+              (!termsAccepted && !canResumePendingCardPayment) || loading || !paymentMethod ? styles.paymentButtonWrapperDisabled : null,
             ]}
           >
             <LinearGradient
-              colors={!termsAccepted || loading ? ['#3a3f66', '#2b2f52'] : [COLORS.secondary, COLORS.primary]}
+              colors={!termsAccepted || loading || !paymentMethod ? ['#3a3f66', '#2b2f52'] : [COLORS.secondary, COLORS.primary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.paymentButton}
@@ -557,7 +722,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
               {loading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.paymentButtonText}>Passer au paiement</Text>
+                <Text style={styles.paymentButtonText}>
+                  {canResumePendingCardPayment ? 'Finish payment' : 'Procéder au paiement'}
+                </Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
