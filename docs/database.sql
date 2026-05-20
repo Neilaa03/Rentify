@@ -22,8 +22,7 @@ CREATE TYPE reservation_status AS ENUM (
     'refunded',
     'refund_pending',
     'pickup_pending',
-    'payment_pending',
-    'pending_cash'
+    'payment_pending'
 );
 
 CREATE TYPE pickup_status AS ENUM (

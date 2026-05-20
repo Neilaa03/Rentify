@@ -31,6 +31,12 @@ export const createCardPaymentIntentHandler = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
+    if (!['reserved', 'payment_pending'].includes(reservation.status)) {
+      return res.status(400).json({
+        error: `Payment cannot be created for a ${reservation.status} reservation.`,
+      });
+    }
+
     // Check if payment already exists
     let payment = await getPaymentByReservationId(reservationId);
     
@@ -42,6 +48,8 @@ export const createCardPaymentIntentHandler = async (req, res) => {
         paymentMethod: 'card',
         status: 'pending',
       });
+    } else if (payment.paymentMethod !== 'card') {
+      return res.status(400).json({ error: 'This reservation is not using card payment.' });
     }
 
     // Create Stripe PaymentIntent
@@ -117,8 +125,8 @@ export const createCashPaymentHandler = async (req, res) => {
       });
     }
 
-    // Update reservation status to pending_cash (waiting for owner confirmation)
-    await updateReservationStatus(reservationId, 'pending_cash');
+    // Update reservation status to pickup_pending (waiting for owner confirmation)
+    await updateReservationStatus(reservationId, 'pickup_pending');
 
     return res.status(201).json({
       paymentId: payment.id,
@@ -293,4 +301,3 @@ export const getPaymentStatusHandler = async (req, res) => {
     return res.status(statusCode).json({ error: error.message || 'Failed to get payment status' });
   }
 };
-

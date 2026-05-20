@@ -24,6 +24,7 @@ import { useStripe } from '@stripe/stripe-react-native';
 const ReservationDetailsScreen = ({ navigation, route }) => {
   const reservation = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
+  const resumeCardPayment = !!route?.params?.resumeCardPayment;
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   
   const [loading, setLoading] = useState(false);
@@ -108,6 +109,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   };
 
   const isReservationActive = reservation?.status === 'reserved';
+  const canResumePendingCardPayment = reservation?.status === 'payment_pending' && paymentMethod === 'card';
+  const shouldShowPaymentFlow = isReservationActive || canResumePendingCardPayment;
 
   if (!reservation) {
     return (
@@ -183,6 +186,54 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       cancelled = true;
     };
   }, [listingId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPendingPayment = async () => {
+      if (reservation?.status !== 'payment_pending') return;
+
+      try {
+        const token = await storage.getItemAsync('userToken');
+        if (!token) return;
+
+        const response = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservation.id), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) return;
+        const payment = await response.json();
+        if (cancelled) return;
+
+        if (payment?.paymentMethod) {
+          setPaymentMethod(payment.paymentMethod);
+        }
+        setPaymentInfo(payment);
+        if (payment?.status === 'completed' || payment?.status === 'failed' || payment?.status === 'pending_cash') {
+          setPaymentStatus(payment.status);
+        } else {
+          setPaymentStatus(null);
+        }
+      } catch (e) {
+        // Ignore status fetch errors; user can still retry payment.
+      }
+    };
+
+    loadPendingPayment();
+    return () => {
+      cancelled = true;
+    };
+  }, [reservation?.id, reservation?.status]);
+
+  useEffect(() => {
+    if (!resumeCardPayment) return;
+    if (!canResumePendingCardPayment) return;
+    if (loading) return;
+    handlePayment();
+  }, [resumeCardPayment, canResumePendingCardPayment, loading]);
 
   const startRaw =
     reservation?.startDate ||
@@ -623,7 +674,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* Payment Button */}
-      {isReservationActive && !paymentStatus && (
+      {shouldShowPaymentFlow && !paymentStatus && (
         <View style={styles.paymentBar}>
           <TouchableOpacity
             onPress={handleCancelReservation}
@@ -667,7 +718,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
               {loading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.paymentButtonText}>Procéder au paiement</Text>
+                <Text style={styles.paymentButtonText}>
+                  {canResumePendingCardPayment ? 'Finish payment' : 'Procéder au paiement'}
+                </Text>
               )}
             </LinearGradient>
           </TouchableOpacity>

@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, Platform, ScrollView, SectionList } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import LandingScreen from './src/screens/landingScreen';
 import HomeScreen from './src/screens/homeScreen';
 import ListingDetailsScreen from './src/screens/listingDetailsScreen';
@@ -17,6 +18,7 @@ import { ClientNavigation } from './src/components/navigation/navigationClient';
 
 const Stack = createStackNavigator();
 const APP_BACKGROUND = '#0f1228';
+const STRIPE_PUBLISHABLE_KEY = process?.env?.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
 if (Platform.OS !== 'web') {
   ScrollView.defaultProps = ScrollView.defaultProps || {};
@@ -36,26 +38,28 @@ if (Platform.OS !== 'web') {
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-          cardStyle: { backgroundColor: APP_BACKGROUND },
-        }}
-      >
-        <Stack.Screen name="Landing" component={LandingScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
-        <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />
-        <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
-        <Stack.Screen name="OwnerCars" component={OwnerCarsScreen} />
-        <Stack.Screen name="OwnerCarForm" component={OwnerCarFormScreen} />
-        <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
-        <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
-        <Stack.Screen name="ClientApp" component={ClientNavigation} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+      <NavigationContainer>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            cardStyle: { backgroundColor: APP_BACKGROUND },
+          }}
+        >
+          <Stack.Screen name="Landing" component={LandingScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />
+          <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
+          <Stack.Screen name="OwnerCars" component={OwnerCarsScreen} />
+          <Stack.Screen name="OwnerCarForm" component={OwnerCarFormScreen} />
+          <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
+          <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
+          <Stack.Screen name="ClientApp" component={ClientNavigation} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </StripeProvider>
   );
 }
