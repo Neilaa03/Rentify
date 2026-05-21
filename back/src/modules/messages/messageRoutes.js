@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken, requireRoles } from '../../middleware/auth.js';
+import upload from '../../middleware/upload.js';
 import {
   sendMessageHandler,
   getConversationsHandler,
@@ -8,6 +9,7 @@ import {
   getThreadHandler,
   markReadHandler,
   markThreadReadHandler,
+  uploadChatImageHandler,
 } from './messageController.js';
 
 const router = Router();
@@ -16,6 +18,9 @@ router.use(authenticateToken);
 
 // Send a message to a user
 router.post('/', sendMessageHandler);
+
+// Upload a chat image (saved on Cloudinary)
+router.post('/upload-image', upload.single('image'), uploadChatImageHandler);
 
 // Get conversation summaries
 router.get('/conversations', getConversationsHandler);

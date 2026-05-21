@@ -1,10 +1,12 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { getConversations, getOwnerClients } from '../../services/messages';
+import { getConversations, getOwnerClientsExpanded } from '../../services/messages';
+import { getCurrentUserProfile } from '../../services/authSession';
+import { getSocket } from '../../services/socketClient';
 
 const initialsFor = (user) => {
   const first = (user?.firstName || user?.first_name || '').trim();
@@ -28,24 +30,34 @@ const formatTime = (iso) => {
   return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' });
 };
 
+const IMAGE_PREFIX = '__image__:';
+
 const InboxScreen = ({ navigation, route }) => {
   const mode = route?.params?.mode || 'conversations'; // 'conversations' | 'owner_clients'
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [typingByUser, setTypingByUser] = useState({});
+  const typingTimeoutsRef = useRef({});
+  const [meId, setMeId] = useState(null);
+  const reloadTimerRef = useRef(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ silent = false } = {}) => {
     try {
-      setIsLoading(true);
-      setError('');
-      const data = mode === 'owner_clients' ? await getOwnerClients() : await getConversations();
+      const hasContent = items.length > 0;
+      if (!silent && !hasContent) setIsLoading(true);
+      if (silent || hasContent) setIsRefreshing(true);
+      if (!silent) setError('');
+      const data = mode === 'owner_clients' ? await getOwnerClientsExpanded() : await getConversations();
       setItems(Array.isArray(data) ? data : []);
     } catch (e) {
-      setError(e?.message || 'Impossible de charger la messagerie');
+      if (!silent) setError(e?.message || 'Impossible de charger la messagerie');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [mode]);
+  }, [items.length, mode]);
 
   useFocusEffect(
     useCallback(() => {
@@ -53,11 +65,132 @@ const InboxScreen = ({ navigation, route }) => {
     }, [load]),
   );
 
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUserProfile()
+      .then((me) => {
+        if (!cancelled) setMeId(me?.id || null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let unsubscribed = false;
+    let socket;
+
+    const scheduleReload = () => {
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = setTimeout(() => {
+        load({ silent: true });
+      }, 120);
+    };
+
+    const setup = async () => {
+      try {
+        socket = await getSocket();
+      } catch (_err) {
+        return () => {};
+      }
+      if (unsubscribed) return () => {};
+
+      const onTyping = (payload) => {
+        const from = payload?.from;
+        if (!from) return;
+        const isTyping = Boolean(payload?.isTyping);
+
+        setTypingByUser((prev) => ({ ...prev, [from]: isTyping }));
+
+        if (typingTimeoutsRef.current[from]) clearTimeout(typingTimeoutsRef.current[from]);
+        if (isTyping) {
+          typingTimeoutsRef.current[from] = setTimeout(() => {
+            setTypingByUser((prev) => ({ ...prev, [from]: false }));
+          }, 2200);
+        }
+      };
+
+      const onNewMessage = (msg) => {
+        if (!msg) return;
+        // Always refresh as a correctness fallback (covers unknown threads / payload mismatches).
+        scheduleReload();
+
+        if (!meId) return;
+
+        const incoming = msg.receiverId === meId;
+        const outgoing = msg.senderId === meId;
+        if (!incoming && !outgoing) return;
+
+        const otherId = incoming ? msg.senderId : msg.receiverId;
+        if (!otherId) return;
+
+        setItems((prev) => {
+          const rows = Array.isArray(prev) ? prev : [];
+          const idx = rows.findIndex((r) => String(r?.otherUser?.id || r?.otherUserId) === String(otherId));
+          if (idx < 0) {
+            // If not present, rely on the scheduled reload.
+            return rows;
+          }
+
+          const row = rows[idx] || {};
+          const nextUnread = incoming ? (Number(row?.unreadCount) || 0) + 1 : Number(row?.unreadCount) || 0;
+
+          const nextRow = {
+            ...row,
+            hasMessages: true,
+            unreadCount: nextUnread,
+            lastMessage: msg,
+          };
+
+          const next = [...rows];
+          next.splice(idx, 1);
+          return [nextRow, ...next];
+        });
+      };
+
+      const onThreadRead = () => {
+        // Keep it simple + correct: refresh counts from server.
+        load();
+      };
+
+      socket.on('typing', onTyping);
+      socket.on('new_message', onNewMessage);
+      socket.on('message_sent', onNewMessage);
+      socket.on('thread_read', onThreadRead);
+      socket.on('message_read', onThreadRead);
+
+      return () => {
+        socket.off('typing', onTyping);
+        socket.off('new_message', onNewMessage);
+        socket.off('message_sent', onNewMessage);
+        socket.off('thread_read', onThreadRead);
+        socket.off('message_read', onThreadRead);
+      };
+    };
+
+    const teardownPromise = setup();
+    return () => {
+      unsubscribed = true;
+      Object.values(typingTimeoutsRef.current || {}).forEach((t) => clearTimeout(t));
+      typingTimeoutsRef.current = {};
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = null;
+      Promise.resolve(teardownPromise).then((teardown) => {
+        if (typeof teardown === 'function') teardown();
+      });
+    };
+  }, [load, meId]);
+
   const headerRight = useMemo(() => (
-    <TouchableOpacity style={styles.headerIcon} onPress={load} disabled={isLoading}>
-      <Ionicons name="refresh-outline" size={20} color="#d6dbff" />
+    <TouchableOpacity style={styles.headerIcon} onPress={() => load()} disabled={isLoading}>
+      {isRefreshing ? (
+        <Ionicons name="sync-outline" size={20} color="#d6dbff" />
+      ) : (
+        <Ionicons name="refresh-outline" size={20} color="#d6dbff" />
+      )}
     </TouchableOpacity>
-  ), [isLoading, load]);
+  ), [isLoading, isRefreshing, load]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -101,6 +234,15 @@ const InboxScreen = ({ navigation, route }) => {
             const unreadCount = item?.unreadCount || 0;
             const hasMessages = item?.hasMessages;
             const isEmptyOwnerClient = mode === 'owner_clients' && hasMessages === false;
+            const isTyping = Boolean(otherUser?.id && typingByUser?.[otherUser.id]);
+            const previewText = (() => {
+              if (isTyping) return 'Typing...';
+              if (isEmptyOwnerClient) return "Aucune conversation — envoie le premier message";
+              if (unreadCount > 1) return `+${unreadCount} new messages`;
+              const msg = last?.message || '';
+              if (typeof msg === 'string' && msg.startsWith(IMAGE_PREFIX)) return 'Photo';
+              return msg;
+            })();
 
             return (
               <TouchableOpacity
@@ -127,10 +269,25 @@ const InboxScreen = ({ navigation, route }) => {
                     <Text style={styles.time}>{formatTime(last?.createdAt)}</Text>
                   </View>
                   <View style={styles.rowBottom}>
-                    <Text style={[styles.preview, unreadCount ? styles.previewUnread : null]} numberOfLines={1}>
-                      {isEmptyOwnerClient ? "Aucune conversation — envoie le premier message" : (last?.message || '')}
+                    <Text
+                      style={[
+                        styles.preview,
+                        unreadCount ? styles.previewUnread : null,
+                        isTyping ? styles.previewTyping : null,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {previewText}
                     </Text>
-                    {unreadCount ? <View style={styles.unreadDot} /> : isEmptyOwnerClient ? <View style={styles.newPill}><Text style={styles.newPillText}>Nouveau</Text></View> : null}
+                    {unreadCount ? (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadBadgeText}>{unreadCount > 99 ? '99+' : String(unreadCount)}</Text>
+                      </View>
+                    ) : isEmptyOwnerClient ? (
+                      <View style={styles.newPill}>
+                        <Text style={styles.newPillText}>Nouveau</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -190,13 +347,18 @@ const styles = StyleSheet.create({
   rowBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   preview: { flex: 1, color: 'rgba(214,219,255,0.65)', fontSize: 13 },
   previewUnread: { color: '#f2f4ff', fontWeight: '800' },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  previewTyping: { color: 'rgba(143,108,255,0.95)', fontWeight: '800' },
+  unreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#8f6cff',
     marginLeft: 10,
   },
+  unreadBadgeText: { color: '#fff', fontWeight: '900', fontSize: 11 },
   newPill: {
     paddingHorizontal: 10,
     paddingVertical: 6,

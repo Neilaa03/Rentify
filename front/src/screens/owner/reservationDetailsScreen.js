@@ -375,12 +375,9 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
             >
               <Ionicons
                 name={chatStatus.checked && !chatStatus.hasMessages ? 'sparkles-outline' : 'chatbubble-ellipses-outline'}
-                size={16}
+                size={19}
                 color="#fff"
               />
-              <Text style={styles.messageClientBtnText}>
-                {chatStatus.checked && !chatStatus.hasMessages ? 'Nouveau' : 'Message'}
-              </Text>
             </TouchableOpacity>
           </View>
 
@@ -588,11 +585,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   messageClientBtn: {
-    flexDirection: 'row',
+    width: 48,
+    height: 48,
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 12,
+    justifyContent: 'center',
+    borderRadius: 16,
     backgroundColor: '#8f6cff',
   },
   messageClientBtnNew: {
@@ -600,7 +597,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(47, 123, 255, 0.55)',
   },
-  messageClientBtnText: { color: '#fff', fontWeight: '800', marginLeft: 8, fontSize: 12 },
   chatHint: { marginTop: -6, marginBottom: 10, color: '#8e95bf', fontSize: 12 },
   datesContainer: {
     flexDirection: 'row',

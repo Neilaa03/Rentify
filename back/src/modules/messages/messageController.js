@@ -1,5 +1,8 @@
 import * as model from './messageModel.js';
 import { getIO } from '../../socket/index.js';
+import cloudinary from '../../config/cloudinary.js';
+
+const allowedImageMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 export const sendMessageHandler = async (req, res) => {
   try {
@@ -95,5 +98,28 @@ export const getOwnerClientsHandler = async (req, res) => {
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+export const uploadChatImageHandler = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!allowedImageMimeTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: 'Invalid file type' });
+    }
+
+    const base64 = req.file.buffer.toString('base64');
+    const dataURI = `data:${req.file.mimetype};base64,${base64}`;
+
+    const uploadResult = await cloudinary.uploader.upload(dataURI, {
+      folder: 'rentify/chat-images',
+    });
+
+    return res.status(201).json({
+      url: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Chat image upload failed', details: err.message });
   }
 };

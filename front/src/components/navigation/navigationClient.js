@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { CommonActions, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeScreen from '../../screens/homeScreen';
@@ -146,6 +146,22 @@ export function ClientNavigation() {
       <Tab.Screen 
         name="HomeTab" 
         component={HomeTabStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'HomeTab',
+                    state: { routes: [{ name: 'Home' }] },
+                  },
+                ],
+              })
+            );
+          },
+        })}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'Home';
@@ -155,6 +171,22 @@ export function ClientNavigation() {
       <Tab.Screen 
         name="SearchTab" 
         component={SearchTabStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'SearchTab',
+                    state: { routes: [{ name: 'Search' }] },
+                  },
+                ],
+              })
+            );
+          },
+        })}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'Search';
@@ -166,11 +198,18 @@ export function ClientNavigation() {
         component={ReservationsTabStack}
         listeners={({ navigation, route }) => ({
           tabPress: (e) => {
-            const nestedState = route.state;
-            if (nestedState && nestedState.routes.length > 1) {
-              e.preventDefault();
-              navigation.navigate('ReservationsTab', { screen: 'ReservationsList' });
-            }
+            e.preventDefault();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'ReservationsTab',
+                    state: { routes: [{ name: 'ReservationsList' }] },
+                  },
+                ],
+              })
+            );
           },
         })}
         options={({ route }) => {
@@ -182,6 +221,22 @@ export function ClientNavigation() {
       <Tab.Screen 
         name="ProfileTab" 
         component={ProfileTabStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'ProfileTab',
+                    state: { routes: [{ name: 'Profile' }] },
+                  },
+                ],
+              })
+            );
+          },
+        })}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'Profile';

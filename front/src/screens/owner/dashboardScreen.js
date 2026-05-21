@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
 import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
+import MessageIconButton from '../../components/MessageIconButton';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -80,12 +81,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             <Text style={styles.kicker}>ESPACE PROPRIETAIRE</Text>
             <Text style={styles.title}>Bonjour, {user?.first_name || 'Owner'} 👋</Text>
           </View>
-          <TouchableOpacity
-            style={styles.inboxBtn}
-            onPress={() => navigation.navigate('Inbox', { mode: 'owner_clients' })}
-          >
-            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
-          </TouchableOpacity>
+          <MessageIconButton navigation={navigation} mode="owner_clients" style={styles.inboxBtn} iconSize={20} />
         </View>
 
         {isLoading ? (
