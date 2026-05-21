@@ -53,14 +53,15 @@ const ReservationsScreen = ({ navigation }) => {
       const reservationList = Array.isArray(data) ? data : [];
       setReservations(reservationList);
 
-      const pendingReservations = reservationList.filter((reservation) => reservation?.status === 'payment_pending');
-      if (pendingReservations.length === 0) {
+      // Fetch payment info for reservations that may need to complete card payments
+      const reservedReservations = reservationList.filter((reservation) => reservation?.status === 'reserved');
+      if (reservedReservations.length === 0) {
         setPaymentByReservationId({});
         return;
       }
 
       const paymentResults = await Promise.all(
-        pendingReservations.map(async (reservation) => {
+        reservedReservations.map(async (reservation) => {
           try {
             const paymentResponse = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservation.id), {
               headers: {
@@ -235,8 +236,9 @@ const ReservationsScreen = ({ navigation }) => {
                   reservation={reservation}
                   onPress={handleReservationPress}
                   showFinishPayment={
-                    reservation?.status === 'payment_pending' &&
-                    paymentByReservationId?.[reservation.id]?.paymentMethod === 'card'
+                    reservation?.status === 'reserved' &&
+                    paymentByReservationId?.[reservation.id]?.paymentMethod === 'card' &&
+                    paymentByReservationId?.[reservation.id]?.status === 'pending'
                   }
                   onFinishPayment={handleFinishPaymentPress}
                 />

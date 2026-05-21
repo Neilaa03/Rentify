@@ -73,7 +73,7 @@ export const checkDateConflict = async (listingId, startDate, endDate) => {
         .from(RESERVATIONS_TABLE)
         .select('id')
         .eq('listing_id', listingId)
-        .in('status', ['reserved', 'payment_pending', 'confirmed', 'pickup_pending'])
+        .in('status', ['reserved', 'confirmed', 'pickup_pending'])
         .or(`and(start_date.lte.${endDate},end_date.gte.${startDate})`);
 
     if (error) throw error;
@@ -124,7 +124,7 @@ export const getReservationById = async (id) => {
     }
 
     // Auto-cancel unpaid reservations that exceeded grace period
-    if (['reserved', 'payment_pending'].includes(data.status) && data.created_at) {
+    if (['reserved'].includes(data.status) && data.created_at) {
         const createdAtMs = new Date(data.created_at).getTime();
         if (!Number.isNaN(createdAtMs) && Date.now() - createdAtMs > PAYMENT_GRACE_MS) {
             const { data: cancelled, error: cancelError } = await supabase
@@ -262,7 +262,7 @@ export const updateReservationDetails = async (id, updates) => {
             .select('id')
             .eq('listing_id', existingReservation.listing_id)
             .neq('id', id) // Exclude this reservation
-            .in('status', ['reserved', 'payment_pending', 'confirmed', 'pickup_pending'])
+            .in('status', ['reserved', 'confirmed', 'pickup_pending'])
             .or(`and(start_date.lte.${endDate.toISOString().split('T')[0]},end_date.gte.${startDate.toISOString().split('T')[0]})`);
 
         if (!conflictError && conflicts && conflicts.length > 0) {
@@ -328,7 +328,7 @@ export const getReservationsByRenter = async (renterId) => {
         .from(RESERVATIONS_TABLE)
         .update({ status: 'cancelled' })
         .eq('renter_id', renterId)
-        .in('status', ['reserved', 'payment_pending'])
+        .in('status', ['reserved'])
         .lt('created_at', cutoffIso);
 
     // Include listing and nested car data with images so frontend can display details without extra requests
@@ -406,7 +406,7 @@ export const getListingAvailability = async (listingId) => {
         .from(RESERVATIONS_TABLE)
         .select('start_date, end_date, status')
         .eq('listing_id', listingId)
-        .in('status', ['reserved', 'payment_pending', 'confirmed', 'pickup_pending']);
+        .in('status', ['reserved', 'confirmed', 'pickup_pending']);
 
     if (resError) throw resError;
 

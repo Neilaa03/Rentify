@@ -26,6 +26,8 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   const [listingFromApi, setListingFromApi] = useState(null);
   const [reservationState, setReservationState] = useState(reservationFromParams || null);
   const [chatStatus, setChatStatus] = useState({ checked: false, hasMessages: false });
+  const [paymentInfo, setPaymentInfo] = useState(null);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   const goBack = () => navigation.goBack();
 
@@ -114,6 +116,20 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
         }
       } catch (_e) {
         // Non-blocking; can render from params.
+      }
+
+      // Fetch payment information
+      if (!token || !reservationFromParams?.id) return;
+      try {
+        const paymentRes = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservationFromParams.id), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!cancelled && paymentRes.ok) {
+          const paymentJson = await paymentRes.json();
+          setPaymentInfo(paymentJson || null);
+        }
+      } catch (_e) {
+        // Non-blocking; can render without payment info.
       }
     };
 
@@ -242,6 +258,38 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
       { text: 'En attente (pickup)', onPress: () => updateStatus('pickup_pending') },
       { text: 'Annulé', style: 'destructive', onPress: () => updateStatus('cancelled') },
     ]);
+  };
+
+  const confirmCashPayment = async () => {
+    if (!reservation?.id) return;
+    if (!token) {
+      Alert.alert('Erreur', 'Veuillez vous reconnecter');
+      return;
+    }
+    try {
+      setConfirmingPayment(true);
+      const res = await fetch(API_ENDPOINTS.PAYMENTS.CONFIRM_CASH_PAYMENT, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reservationId: reservation.id }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'Impossible de confirmer le paiement');
+
+      Alert.alert('Succès', 'Paiement en espèces confirmé');
+      
+      // Refresh the reservation state
+      setPaymentInfo((prev) => prev ? { ...prev, status: 'completed' } : null);
+      setReservationState((prev) => ({ ...(prev || reservation), status: 'confirmed' }));
+    } catch (e) {
+      Alert.alert('Erreur', e?.message || 'Impossible de confirmer le paiement');
+    } finally {
+      setConfirmingPayment(false);
+    }
   };
 
   return (
@@ -381,6 +429,39 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
               <Text style={styles.totalPriceValue}>{formatPrice(safeTotalPrice)} DA</Text>
             </View>
           </View>
+
+          {paymentInfo?.paymentMethod === 'cash' && (
+            <View style={styles.cashPaymentAlert}>
+              <View style={styles.cashPaymentAlertContent}>
+                <Ionicons name="cash-outline" size={20} color="#a566ff" />
+                <View style={styles.cashPaymentAlertText}>
+                  <Text style={styles.cashPaymentAlertTitle}>Paiement à la récupération</Text>
+                  <Text style={styles.cashPaymentAlertDescription}>
+                    {paymentInfo?.status === 'pending_cash'
+                      ? 'En attente de confirmation du paiement en espèces'
+                      : 'Paiement en espèces confirmé'}
+                  </Text>
+                </View>
+              </View>
+
+              {paymentInfo?.status === 'pending_cash' && (
+                <TouchableOpacity
+                  style={styles.confirmPaymentButton}
+                  onPress={confirmCashPayment}
+                  disabled={confirmingPayment}
+                >
+                  {confirmingPayment ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                      <Text style={styles.confirmPaymentButtonText}>Confirmer le paiement</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
 
 
@@ -645,6 +726,53 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusButtonText: { color: '#fff', fontWeight: '800' },
+  cashPaymentAlert: {
+    marginTop: 16,
+    backgroundColor: 'rgba(165, 102, 255, 0.12)',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(165, 102, 255, 0.35)',
+  },
+  cashPaymentAlertContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  cashPaymentAlertText: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  cashPaymentAlertTitle: {
+    color: '#a566ff',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  cashPaymentAlertDescription: {
+    color: '#cdd2ff',
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  confirmPaymentButton: {
+    marginTop: 12,
+    backgroundColor: 'rgba(165, 102, 255, 0.25)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(165, 102, 255, 0.5)',
+  },
+  confirmPaymentButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
 });
 
 export default OwnerReservationDetailsScreen;
