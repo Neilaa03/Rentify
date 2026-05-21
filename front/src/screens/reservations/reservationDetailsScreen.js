@@ -19,13 +19,31 @@ import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
 import PaymentMethodSelector from '../../components/PaymentMethodSelector';
 import PaymentStatusDisplay from '../../components/PaymentStatusDisplay';
-import { useStripe } from '@stripe/stripe-react-native';
+
+const useStripeSafe = () => {
+  if (Platform.OS === 'web') {
+    return {
+      initPaymentSheet: async () => ({ error: { message: 'Stripe is not supported on web' } }),
+      presentPaymentSheet: async () => ({ error: { message: 'Stripe is not supported on web' } }),
+    };
+  }
+
+  try {
+    const stripe = require('@stripe/stripe-react-native');
+    return stripe.useStripe();
+  } catch (e) {
+    return {
+      initPaymentSheet: async () => ({ error: { message: 'Stripe is not available' } }),
+      presentPaymentSheet: async () => ({ error: { message: 'Stripe is not available' } }),
+    };
+  }
+};
 
 const ReservationDetailsScreen = ({ navigation, route }) => {
   const reservation = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
   const resumeCardPayment = !!route?.params?.resumeCardPayment;
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { initPaymentSheet, presentPaymentSheet } = useStripeSafe();
   
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);

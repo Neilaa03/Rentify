@@ -180,8 +180,26 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.ownerMessageButton}>
-              <Ionicons name="chatbubble-outline" size={18} color="#8f6cff" />
+            <TouchableOpacity
+              style={styles.ownerMessageButton}
+              onPress={() => {
+                const otherUserId = listing?.car?.ownerId;
+                if (!otherUserId) return;
+                const rawName = String(listing?.owner?.name || '').trim();
+                const [firstName, ...rest] = rawName ? rawName.split(/\s+/) : [];
+                const lastName = rest.join(' ');
+                navigation.navigate('Chat', {
+                  otherUserId,
+                  otherUser: {
+                    id: otherUserId,
+                    name: rawName || undefined,
+                    firstName: firstName || undefined,
+                    lastName: lastName || undefined,
+                  },
+                });
+              }}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#8f6cff" />
             </TouchableOpacity>
           </View>
         </View>

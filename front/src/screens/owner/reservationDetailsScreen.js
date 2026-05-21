@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
+import { getThread } from '../../services/messages';
 
 const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   const reservationFromParams = route?.params?.reservation;
@@ -24,6 +25,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [listingFromApi, setListingFromApi] = useState(null);
   const [reservationState, setReservationState] = useState(reservationFromParams || null);
+  const [chatStatus, setChatStatus] = useState({ checked: false, hasMessages: false });
   const [paymentInfo, setPaymentInfo] = useState(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
 
@@ -64,6 +66,27 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
     listingFromParams?.listingId ||
     reservation?.listing?.id ||
     null;
+
+  useEffect(() => {
+    const otherUserId = reservation?.renter?.id || reservation?.renter_id;
+    if (!otherUserId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const thread = await getThread({ otherUserId });
+        if (cancelled) return;
+        setChatStatus({ checked: true, hasMessages: Array.isArray(thread) && thread.length > 0 });
+      } catch (_err) {
+        if (cancelled) return;
+        setChatStatus({ checked: true, hasMessages: false });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reservation?.renter?.id, reservation?.renter_id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -336,7 +359,31 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informations client</Text>
+          <View style={styles.sectionHeaderWithButton}>
+            <Text style={styles.sectionTitle}>Informations client</Text>
+            <TouchableOpacity
+              onPress={() => {
+                const otherUserId = reservation?.renter?.id || reservation?.renter_id;
+                if (!otherUserId) return;
+                navigation.navigate('Chat', { otherUserId, otherUser: reservation?.renter || { id: otherUserId } });
+              }}
+              activeOpacity={0.85}
+              style={[
+                styles.messageClientBtn,
+                chatStatus.checked && !chatStatus.hasMessages ? styles.messageClientBtnNew : null,
+              ]}
+            >
+              <Ionicons
+                name={chatStatus.checked && !chatStatus.hasMessages ? 'sparkles-outline' : 'chatbubble-ellipses-outline'}
+                size={19}
+                color="#fff"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {chatStatus.checked && !chatStatus.hasMessages ? (
+            <Text style={styles.chatHint}>Aucun message avec ce client pour le moment.</Text>
+          ) : null}
 
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
@@ -537,6 +584,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
   },
+  messageClientBtn: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: '#8f6cff',
+  },
+  messageClientBtnNew: {
+    backgroundColor: 'rgba(47, 123, 255, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(47, 123, 255, 0.55)',
+  },
+  chatHint: { marginTop: -6, marginBottom: 10, color: '#8e95bf', fontSize: 12 },
   datesContainer: {
     flexDirection: 'row',
     alignItems: 'center',

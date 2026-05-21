@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CommonActions } from '@react-navigation/native';
 
 const OwnerBottomNavigation = ({ navigation, route, active }) => {
   const insets = useSafeAreaInsets();
@@ -10,36 +11,45 @@ const OwnerBottomNavigation = ({ navigation, route, active }) => {
   delete baseParams.listing;
   delete baseParams.mode;
 
+  const resetTo = (screenName) => {
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: screenName, params: baseParams }],
+      })
+    );
+  };
+
   const tabs = [
     {
       key: 'dashboard',
       label: 'Dashboard',
       icon: 'grid-outline',
-      onPress: () => navigation.navigate('OwnerDashboard', params),
+      onPress: () => resetTo('OwnerDashboard'),
     },
     {
       key: 'cars',
       label: 'Vehicules',
       icon: 'car-outline',
-      onPress: () => navigation.navigate('OwnerCars', params),
+      onPress: () => resetTo('OwnerCars'),
     },
     {
       key: 'listings',
       label: 'Annonces',
       icon: 'car-sport-outline',
-      onPress: () => navigation.navigate('OwnerListings', params),
+      onPress: () => resetTo('OwnerListings'),
     },
     {
       key: 'reservations',
       label: 'Reservations',
       icon: 'calendar-outline',
-      onPress: () => navigation.navigate('OwnerReservations', params),
+      onPress: () => resetTo('OwnerReservations'),
     },
     {
       key: 'profile',
       label: 'Profil',
       icon: 'person-outline',
-      onPress: () => navigation.navigate('Profile', params),
+      onPress: () => resetTo('Profile'),
     },
   ];
 

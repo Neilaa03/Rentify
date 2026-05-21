@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 import ListingCard from '../components/cards/ListingCard';
+import MessageIconButton from '../components/MessageIconButton';
 import { getListings } from '../services/listings';
 
 const HomeScreen = ({ navigation, route }) => {
@@ -80,12 +81,7 @@ const HomeScreen = ({ navigation, route }) => {
                             <TouchableOpacity style={styles.headerIcon}>
                                 <Ionicons name="heart-outline" size={24} color="#fff" />
                             </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={styles.logoutButton}
-                                onPress={() => navigation.navigate('Landing')}
-                            >
-                                <Ionicons name="log-out" size={24} color="#fff" />
-                            </TouchableOpacity>
+                            <MessageIconButton navigation={navigation} style={styles.logoutButton} iconSize={24} />
                         </View>
                     </View>
 

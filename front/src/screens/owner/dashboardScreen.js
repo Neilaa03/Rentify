@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
 import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
+import MessageIconButton from '../../components/MessageIconButton';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -80,17 +81,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             <Text style={styles.kicker}>ESPACE PROPRIETAIRE</Text>
             <Text style={styles.title}>Bonjour, {user?.first_name || 'Owner'} 👋</Text>
           </View>
-          <TouchableOpacity
-            style={styles.logoutBtn}
-            onPress={() =>
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Landing' }],
-              })
-            }
-          >
-            <Text style={styles.logoutText}>Quitter</Text>
-          </TouchableOpacity>
+          <MessageIconButton navigation={navigation} mode="owner_clients" style={styles.inboxBtn} iconSize={20} />
         </View>
 
         {isLoading ? (
@@ -192,6 +183,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   logoutText: { color: '#b8bddf', fontWeight: '600' },
+  inboxBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(18, 21, 46, 0.65)',
+  },
   loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { paddingBottom: 96 },
   errorText: { color: '#ff7f90', marginBottom: 10 },

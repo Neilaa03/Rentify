@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
-import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { CommonActions, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import HomeScreen from '../../screens/homeScreen';
@@ -12,6 +12,8 @@ import ReservationDatePickerScreen from '../../screens/reservations/reservationD
 import ReservationDetailsScreen from '../../screens/reservations/reservationDetailsScreen';
 import ReservationsScreen from '../../screens/reservations/reservationsScreen';
 import ProfileScreen from '../../screens/profileScreen';
+import InboxScreen from '../../screens/messages/inboxScreen';
+import ChatScreen from '../../screens/messages/chatScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -22,6 +24,8 @@ function HomeTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen 
         name="ListingDetails" 
         component={ListingDetailsScreen}
@@ -46,6 +50,8 @@ function SearchTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Search" component={HomeScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen 
         name="ListingDetailsFromSearch" 
         component={ListingDetailsScreen}
@@ -65,6 +71,8 @@ function ReservationsTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="ReservationsList" component={ReservationsScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen
         name="ReservationDatePickerFromReservations"
         component={ReservationDatePickerScreen}
@@ -84,6 +92,8 @@ function ProfileTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Inbox" component={InboxScreen} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
     </Stack.Navigator>
   );
 }
@@ -136,6 +146,22 @@ export function ClientNavigation() {
       <Tab.Screen 
         name="HomeTab" 
         component={HomeTabStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'HomeTab',
+                    state: { routes: [{ name: 'Home' }] },
+                  },
+                ],
+              })
+            );
+          },
+        })}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'Home';
@@ -145,6 +171,22 @@ export function ClientNavigation() {
       <Tab.Screen 
         name="SearchTab" 
         component={SearchTabStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'SearchTab',
+                    state: { routes: [{ name: 'Search' }] },
+                  },
+                ],
+              })
+            );
+          },
+        })}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'Search';
@@ -156,11 +198,18 @@ export function ClientNavigation() {
         component={ReservationsTabStack}
         listeners={({ navigation, route }) => ({
           tabPress: (e) => {
-            const nestedState = route.state;
-            if (nestedState && nestedState.routes.length > 1) {
-              e.preventDefault();
-              navigation.navigate('ReservationsTab', { screen: 'ReservationsList' });
-            }
+            e.preventDefault();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'ReservationsTab',
+                    state: { routes: [{ name: 'ReservationsList' }] },
+                  },
+                ],
+              })
+            );
           },
         })}
         options={({ route }) => {
@@ -172,6 +221,22 @@ export function ClientNavigation() {
       <Tab.Screen 
         name="ProfileTab" 
         component={ProfileTabStack}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [
+                  {
+                    name: 'ProfileTab',
+                    state: { routes: [{ name: 'Profile' }] },
+                  },
+                ],
+              })
+            );
+          },
+        })}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'Profile';
