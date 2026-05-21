@@ -384,8 +384,14 @@ CREATE TABLE notifications (
 
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
-    title VARCHAR(255),
-    message TEXT,
+    type VARCHAR(50) NOT NULL,
+    -- reservation_created | payment_success | message | etc
+
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+
+    data JSONB, 
+    -- store ids like reservationId, messageId
 
     is_read BOOLEAN DEFAULT FALSE,
 

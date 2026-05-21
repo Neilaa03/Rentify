@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
 import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
+import { getNotificationUnreadCount } from '../../services/notifications';
+import { useFocusEffect } from '@react-navigation/native';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -36,6 +38,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [error, setError] = useState('');
   const [dashboard, setDashboard] = useState({
     stats: {
@@ -47,6 +50,16 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
     },
     activity: [],
   });
+
+  const loadUnreadNotifications = useCallback(async () => {
+    try {
+      const count = await getNotificationUnreadCount();
+      setUnreadNotifications(count);
+    } catch (err) {
+      console.warn('Failed to load notification count:', err);
+      setUnreadNotifications(0);
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!token || !user?.id) return;
@@ -67,6 +80,12 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
     loadData();
   }, [loadData]);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadUnreadNotifications();
+    }, [loadUnreadNotifications])
+  );
+
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
@@ -81,15 +100,20 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             <Text style={styles.title}>Bonjour, {user?.first_name || 'Owner'} 👋</Text>
           </View>
           <TouchableOpacity
-            style={styles.logoutBtn}
-            onPress={() =>
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Landing' }],
-              })
-            }
+            style={styles.notificationButton}
+            onPress={() => navigation.navigate('NotificationScreen', 
+                { user: route?.params?.user }
+            )}
           >
-            <Text style={styles.logoutText}>Quitter</Text>
+            <Ionicons name="notifications-outline" size={24} color="#fff" />
+
+            {unreadNotifications > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -262,6 +286,34 @@ const styles = StyleSheet.create({
   rightActivity: { alignItems: 'flex-end' },
   badge: { fontSize: 12, fontWeight: '700', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   activityPrice: { color: '#8f7dff', fontWeight: '800', marginTop: 7 },
+  notificationButton: {
+  position: 'relative',
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: 'rgba(255,255,255,0.08)',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+notificationBadge: {
+  position: 'absolute',
+  top: -4,
+  right: -4,
+  minWidth: 18,
+  height: 18,
+  borderRadius: 9,
+  backgroundColor: '#ff4d4f',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingHorizontal: 4,
+},
+
+notificationBadgeText: {
+  color: '#fff',
+  fontSize: 10,
+  fontWeight: '700',
+},
 });
 
 export default OwnerDashboardScreen;

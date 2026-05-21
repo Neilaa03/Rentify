@@ -11,6 +11,8 @@ import ListingDetailsScreen from '../../screens/listingDetailsScreen';
 import ReservationDatePickerScreen from '../../screens/reservations/reservationDatePickerScreen';
 import ReservationDetailsScreen from '../../screens/reservations/reservationDetailsScreen';
 import ReservationsScreen from '../../screens/reservations/reservationsScreen';
+import NotificationsScreen from '../../screens/notificationsScreen';
+import ChatScreen from '../../screens/chatScreen';
 import ProfileScreen from '../../screens/profileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -35,6 +37,16 @@ function HomeTabStack() {
       <Stack.Screen 
         name="ReservationDetails" 
         component={ReservationDetailsScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen
+        name="NotificationScreen"
+        component={NotificationsScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
     </Stack.Navigator>

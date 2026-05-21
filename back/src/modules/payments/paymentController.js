@@ -8,6 +8,7 @@ import {
     updateReservationStatus,
 } from './paymentDbModel.js';
 import { getReservationById } from '../reservations/reservationModel.js';
+import { createNotification } from '../notifications/notificationModel.js';
 
 // =========================================================
 // CARD PAYMENT: Create Payment Intent
@@ -222,13 +223,9 @@ export const handleStripeWebhook = async (req, res) => {
     return res.status(400).json({ error: `Webhook Error: ${error.message}` });
   }
 
-  // STEP 2: Tell Stripe "Got it!" right away. 
-  // This stops Stripe's 10-second countdown timer.
   res.status(200).json({ received: true });
-
-  // STEP 3: Process your database business logic in the background
-  // Wrap this in an independent try/catch so background errors don't crash your server
-  try {
+  setImmediate(async () => {
+    try {
     console.log('Processing Stripe webhook event in background:', event.type);
 
     switch (event.type) {
@@ -251,7 +248,18 @@ export const handleStripeWebhook = async (req, res) => {
 
           // Update reservation status to confirmed
           if (reservationId) {
-            await updateReservationStatus(reservationId, 'confirmed');
+            const confirmedReservation = await updateReservationStatus(reservationId, 'confirmed');
+            try {
+              await createNotification({
+                userId: confirmedReservation.renterId,
+                type: 'payment_success',
+                title: 'Paiement réussi',
+                message: `Le paiement de votre réservation ${confirmedReservation.listing?.title || ''} a été effectué avec succès.`,
+                data: { reservationId: confirmedReservation.id },
+              });
+            } catch (notifyError) {
+              console.error('Failed to create payment success notification:', notifyError);
+            }
           }
         }
         break;
@@ -280,11 +288,10 @@ export const handleStripeWebhook = async (req, res) => {
       default:
         console.log(`Unhandled Stripe event type: ${event.type}`);
     }
-  } catch (processingError) {
-    // If your database fails, log it here for your eyes only.
-    // Do not return an error status code to Stripe, as the webhook payload itself was valid.
-    console.error('Database processing failed for verified webhook:', processingError.message);
-  }
+  } catch (err) {
+      console.error(err);
+    }
+  });
 };
 
 // =========================================================
@@ -327,7 +334,19 @@ export const confirmCashPaymentHandler = async (req, res) => {
     });
 
     // Update reservation status to confirmed
-    await updateReservationStatus(reservationId, 'confirmed');
+    const confirmedReservation = await updateReservationStatus(reservationId, 'confirmed');
+
+    try {
+      await createNotification({
+        userId: confirmedReservation.renterId,
+        type: 'payment_success',
+        title: 'Paiement confirmé',
+        message: `Le paiement pour votre réservation ${confirmedReservation.listing?.title || ''} a été confirmé.`,
+        data: { reservationId: confirmedReservation.id },
+      });
+    } catch (notifyError) {
+      console.error('Failed to create payment success notification:', notifyError);
+    }
 
     return res.status(200).json({
       message: 'Cash payment confirmed',
@@ -396,7 +415,10 @@ export const getPaymentStatusHandler = async (req, res) => {
           payment = await getPaymentById(payment.id);
         } else if (intent?.status === 'requires_payment_method' || intent?.status === 'requires_confirmation' || intent?.status === 'processing') {
           // Keep pending state. No action needed.
-        } else if (intent?.status === 'canceled' || intent?.status === 'requires_action' || intent?.status === 'failed') {
+        } else if (
+          intent?.status === 'canceled' ||
+          intent?.status === 'requires_payment_method'
+        ) {
           await updatePaymentStatus(payment.id, 'failed', {
             transactionReference: payment.stripePaymentIntentId,
           });

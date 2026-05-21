@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, Text, ImageBackground, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/colors';
 import ListingCard from '../components/cards/ListingCard';
 import { getListings } from '../services/listings';
+import { getNotificationUnreadCount } from '../services/notifications';
 
 const HomeScreen = ({ navigation, route }) => {
     const [activeTab, setActiveTab] = useState('Accueil');
@@ -14,6 +16,8 @@ const HomeScreen = ({ navigation, route }) => {
     const [listings, setListings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
+    const [notificationLoading, setNotificationLoading] = useState(false);
 
     const filterOptions = [
         'Tous',
@@ -39,9 +43,28 @@ const HomeScreen = ({ navigation, route }) => {
         }
     };
 
+    const loadUnreadNotifications = async () => {
+        try {
+            setNotificationLoading(true);
+            const count = await getNotificationUnreadCount();
+            setUnreadNotifications(count);
+        } catch (err) {
+            console.warn('Failed to load notification count:', err);
+            setUnreadNotifications(0);
+        } finally {
+            setNotificationLoading(false);
+        }
+    };
+
     useEffect(() => {
         loadListings();
     }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadUnreadNotifications();
+        }, [])
+    );
 
     const filteredListings = useMemo(() => listings
         .filter((listing) => {
@@ -77,6 +100,19 @@ const HomeScreen = ({ navigation, route }) => {
                     <View style={styles.header}>
                         <Text style={styles.logo}>Tous les véhicules</Text>
                         <View style={styles.headerRight}>
+                            <TouchableOpacity
+                                style={styles.notificationButton}
+                                onPress={() => navigation.navigate('NotificationScreen')}
+                            >
+                                <Ionicons name="notifications-outline" size={24} color="#fff" />
+                                {unreadNotifications > 0 && (
+                                    <View style={styles.notificationBadge}>
+                                        <Text style={styles.notificationBadgeText}>
+                                            {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                                        </Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                             <TouchableOpacity style={styles.headerIcon}>
                                 <Ionicons name="heart-outline" size={24} color="#fff" />
                             </TouchableOpacity>
@@ -239,6 +275,27 @@ const styles = StyleSheet.create({
     headerIcon: {
         padding: 8,
         marginRight: 8,
+    },
+    notificationButton: {
+        padding: 8,
+        marginRight: 8,
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#ff4f5e',
+        paddingHorizontal: 4,
+    },
+    notificationBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '700',
     },
     logoutButton: {
         padding: 8,
