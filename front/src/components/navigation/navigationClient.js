@@ -154,6 +154,15 @@ export function ClientNavigation() {
       <Tab.Screen 
         name="ReservationsTab" 
         component={ReservationsTabStack}
+        listeners={({ navigation, route }) => ({
+          tabPress: (e) => {
+            const nestedState = route.state;
+            if (nestedState && nestedState.routes.length > 1) {
+              e.preventDefault();
+              navigation.navigate('ReservationsTab', { screen: 'ReservationsList' });
+            }
+          },
+        })}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'ReservationsList';

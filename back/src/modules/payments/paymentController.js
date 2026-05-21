@@ -1,6 +1,7 @@
-import { constructWebhookEvent, createPaymentIntent } from './paymentModel.js';
+import { constructWebhookEvent, createPaymentIntent, stripe } from './paymentModel.js';
 import {
     createPayment,
+    getPaymentById,
     getPaymentByReservationId,
     getPaymentByStripeIntentId,
     updatePaymentStatus,
@@ -31,7 +32,7 @@ export const createCardPaymentIntentHandler = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    if (!['reserved', 'payment_pending'].includes(reservation.status)) {
+    if (reservation.status !== 'reserved') {
       return res.status(400).json({
         error: `Payment cannot be created for a ${reservation.status} reservation.`,
       });
@@ -70,9 +71,6 @@ export const createCardPaymentIntentHandler = async (req, res) => {
     payment = await updatePaymentStatus(payment.id, 'pending', {
       stripePaymentIntentId: intent.id,
     });
-
-    // Update reservation status to payment_pending
-    await updateReservationStatus(reservationId, 'payment_pending');
 
     return res.status(201).json({
       paymentId: payment.id,
@@ -125,9 +123,6 @@ export const createCashPaymentHandler = async (req, res) => {
       });
     }
 
-    // Update reservation status to pickup_pending (waiting for owner confirmation)
-    await updateReservationStatus(reservationId, 'pickup_pending');
-
     return res.status(201).json({
       paymentId: payment.id,
       message: 'Cash payment pending. Owner will confirm on pickup.',
@@ -145,15 +140,96 @@ export const createCashPaymentHandler = async (req, res) => {
 // STRIPE WEBHOOK: Handle Payment Events
 // =========================================================
 
+// export const handleStripeWebhook = async (req, res) => {
+//   try {
+//     const signature = req.headers['stripe-signature'];
+//     const event = constructWebhookEvent({
+//       rawBody: req.body,
+//       signature,
+//     });
+
+//     console.log('Stripe webhook event:', event.type);
+
+//     switch (event.type) {
+//       case 'payment_intent.succeeded': {
+//         const paymentIntent = event.data.object;
+//         const { reservationId, paymentId } = paymentIntent.metadata || {};
+
+//         console.log('Payment succeeded:', {
+//           id: paymentIntent.id,
+//           reservationId,
+//           paymentId,
+//         });
+
+//         if (paymentId) {
+//           // Update payment status to paid
+//           await updatePaymentStatus(paymentId, 'completed', {
+//             paidAt: new Date().toISOString(),
+//             transactionReference: paymentIntent.id,
+//           });
+
+//           // Update reservation status to confirmed
+//           if (reservationId) {
+//             await updateReservationStatus(reservationId, 'confirmed');
+//           }
+//         }
+//         break;
+//       }
+
+//       case 'payment_intent.payment_failed': {
+//         const paymentIntent = event.data.object;
+//         const { reservationId, paymentId } = paymentIntent.metadata || {};
+
+//         console.log('Payment failed:', {
+//           id: paymentIntent.id,
+//           reservationId,
+//           paymentId,
+//           last_payment_error: paymentIntent.last_payment_error?.message,
+//         });
+
+//         if (paymentId) {
+//           // Update payment status to failed
+//           await updatePaymentStatus(paymentId, 'failed', {
+//             transactionReference: paymentIntent.id,
+//           });
+//         }
+//         break;
+//       }
+
+//       default:
+//         console.log(`Unhandled Stripe event type: ${event.type}`);
+//     }
+
+//     return res.status(200).json({ received: true });
+//   } catch (error) {
+//     console.error('Stripe webhook verification failed:', error.message);
+//     return res.status(400).json({ error: `Webhook Error: ${error.message}` });
+//   }
+// };
+
 export const handleStripeWebhook = async (req, res) => {
+  let event;
+
+  // STEP 1: Verify the event authenticity immediately
   try {
     const signature = req.headers['stripe-signature'];
-    const event = constructWebhookEvent({
+    event = constructWebhookEvent({
       rawBody: req.body,
       signature,
     });
+  } catch (error) {
+    console.error('Stripe webhook verification failed:', error.message);
+    return res.status(400).json({ error: `Webhook Error: ${error.message}` });
+  }
 
-    console.log('Stripe webhook event:', event.type);
+  // STEP 2: Tell Stripe "Got it!" right away. 
+  // This stops Stripe's 10-second countdown timer.
+  res.status(200).json({ received: true });
+
+  // STEP 3: Process your database business logic in the background
+  // Wrap this in an independent try/catch so background errors don't crash your server
+  try {
+    console.log('Processing Stripe webhook event in background:', event.type);
 
     switch (event.type) {
       case 'payment_intent.succeeded': {
@@ -204,11 +280,10 @@ export const handleStripeWebhook = async (req, res) => {
       default:
         console.log(`Unhandled Stripe event type: ${event.type}`);
     }
-
-    return res.status(200).json({ received: true });
-  } catch (error) {
-    console.error('Stripe webhook verification failed:', error.message);
-    return res.status(400).json({ error: `Webhook Error: ${error.message}` });
+  } catch (processingError) {
+    // If your database fails, log it here for your eyes only.
+    // Do not return an error status code to Stripe, as the webhook payload itself was valid.
+    console.error('Database processing failed for verified webhook:', processingError.message);
   }
 };
 
@@ -284,14 +359,52 @@ export const getPaymentStatusHandler = async (req, res) => {
       return res.status(404).json({ error: 'Reservation not found' });
     }
 
-    if (reservation.renterId !== userId) {
+    // Allow renter or owner to view payment status
+    const isRenter = reservation.renterId === userId;
+    const isOwner = reservation.listing?.car?.ownerId === userId;
+
+    if (!isRenter && !isOwner) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
     // Get payment
-    const payment = await getPaymentByReservationId(reservationId);
+    let payment = await getPaymentByReservationId(reservationId);
     if (!payment) {
       return res.status(404).json({ error: 'Payment not found' });
+    }
+
+    // If the reservation is using card payment and the payment is still pending,
+    // verify the Stripe PaymentIntent status and sync it if completed or failed.
+    if (
+      payment.paymentMethod === 'card' &&
+      payment.status === 'pending' &&
+      payment.stripePaymentIntentId &&
+      stripe
+    ) {
+      try {
+        const intent = await stripe.paymentIntents.retrieve(payment.stripePaymentIntentId);
+        if (intent?.status === 'succeeded') {
+          await updatePaymentStatus(payment.id, 'completed', {
+            paidAt: new Date().toISOString(),
+            transactionReference: payment.stripePaymentIntentId,
+          });
+
+          if (reservationId) {
+            await updateReservationStatus(reservationId, 'confirmed');
+          }
+
+          payment = await getPaymentById(payment.id);
+        } else if (intent?.status === 'requires_payment_method' || intent?.status === 'requires_confirmation' || intent?.status === 'processing') {
+          // Keep pending state. No action needed.
+        } else if (intent?.status === 'canceled' || intent?.status === 'requires_action' || intent?.status === 'failed') {
+          await updatePaymentStatus(payment.id, 'failed', {
+            transactionReference: payment.stripePaymentIntentId,
+          });
+          payment = await getPaymentById(payment.id);
+        }
+      } catch (intentError) {
+        console.error('Stripe retrieve payment intent error:', intentError);
+      }
     }
 
     return res.status(200).json(payment);

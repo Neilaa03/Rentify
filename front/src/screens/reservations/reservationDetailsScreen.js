@@ -36,10 +36,36 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const [paymentStatus, setPaymentStatus] = useState(null); // null | 'pending' | 'completed' | 'failed' | 'pending_cash'
   const [paymentInfo, setPaymentInfo] = useState(null); // stores payment response data
 
-  const goToReservations = () => {
+  const goBackToPrevious = () => {
     const parent = navigation.getParent?.();
-    const navigate = parent?.navigate || navigation.navigate;
-    navigate('ReservationsTab', { screen: 'ReservationsList' });
+    const originTab = route?.params?.originTab;
+    const listingObject = route?.params?.listing;
+
+    if (originTab === 'HomeTab' && parent?.navigate) {
+      parent.navigate('HomeTab', {
+        screen: 'ListingDetails',
+        params: { listing: listingObject },
+      });
+      return;
+    }
+
+    if (originTab === 'SearchTab' && parent?.navigate) {
+      parent.navigate('SearchTab', {
+        screen: 'ListingDetailsFromSearch',
+        params: { listing: listingObject },
+      });
+      return;
+    }
+
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+
+    if (parent?.navigate) {
+      parent.navigate('ReservationsTab', { screen: 'ReservationsList' });
+      return;
+    }
   };
 
   const handleCancelReservation = async () => {
@@ -79,7 +105,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
               Alert.alert('Succès', 'Réservation annulée avec succès', [
                 {
                   text: 'OK',
-                  onPress: () => goToReservations(),
+                  onPress: () => goBackToPrevious(),
                 },
               ]);
             } catch (error) {
@@ -93,6 +119,35 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         },
       ]
     );
+  };
+
+  const refreshPaymentStatus = async (token) => {
+    if (!reservation?.id) return null;
+    try {
+      const response = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservation.id), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) return null;
+
+      const payment = await response.json();
+      if (payment?.paymentMethod) {
+        setPaymentMethod(payment.paymentMethod);
+      }
+      setPaymentInfo(payment);
+      if (payment?.status === 'completed' || payment?.status === 'failed' || payment?.status === 'pending_cash' || payment?.status === 'pending') {
+        setPaymentStatus(payment.status);
+      } else {
+        setPaymentStatus(null);
+      }
+
+      return payment;
+    } catch (e) {
+      console.error('refreshPaymentStatus error:', e);
+      return null;
+    }
   };
 
   const handleEditDates = async () => {
@@ -109,14 +164,35 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   };
 
   const isReservationActive = reservation?.status === 'reserved';
-  const canResumePendingCardPayment = reservation?.status === 'payment_pending' && paymentMethod === 'card';
-  const shouldShowPaymentFlow = isReservationActive || canResumePendingCardPayment;
+  const canResumePendingCardPayment =
+    reservation?.status === 'reserved' &&
+    paymentMethod === 'card' &&
+    paymentStatus === 'pending';
+
+  const showPaymentMethodSelector =
+    isReservationActive &&
+    (paymentStatus === null || paymentStatus === 'failed');
+
+  const showTermsSection =
+    isReservationActive &&
+    (paymentStatus === null || paymentStatus === 'failed');
+
+  const showActionBar = reservation?.status === 'reserved';
+  const showPayButton =
+    reservation?.status === 'reserved' &&
+    (paymentStatus === null || paymentStatus === 'failed' || canResumePendingCardPayment);
+
+  const paymentButtonLabel = canResumePendingCardPayment
+    ? 'Finish payment'
+    : paymentStatus === 'failed'
+    ? 'Réessayer le paiement'
+    : 'Procéder au paiement';
 
   if (!reservation) {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.header}>
-          <TouchableOpacity onPress={goToReservations} style={styles.backButton}>
+          <TouchableOpacity onPress={goBackToPrevious} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Récapitulatif</Text>
@@ -190,8 +266,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   useEffect(() => {
     let cancelled = false;
 
-    const loadPendingPayment = async () => {
-      if (reservation?.status !== 'payment_pending') return;
+    const loadPaymentInfo = async () => {
+      if (reservation?.status !== 'reserved') return;
 
       try {
         const token = await storage.getItemAsync('userToken');
@@ -212,7 +288,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           setPaymentMethod(payment.paymentMethod);
         }
         setPaymentInfo(payment);
-        if (payment?.status === 'completed' || payment?.status === 'failed' || payment?.status === 'pending_cash') {
+        if (payment?.status === 'completed' || payment?.status === 'failed' || payment?.status === 'pending_cash' || payment?.status === 'pending') {
           setPaymentStatus(payment.status);
         } else {
           setPaymentStatus(null);
@@ -222,7 +298,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       }
     };
 
-    loadPendingPayment();
+    loadPaymentInfo();
     return () => {
       cancelled = true;
     };
@@ -369,15 +445,35 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         throw new Error(result.error.message || 'Payment failed');
       }
 
-      // Payment successful
-      setPaymentStatus('completed');
+      const refreshed = await refreshPaymentStatus(token);
+      if (refreshed?.status === 'completed' || refreshed?.status === 'paid') {
+        setPaymentStatus('completed');
+        Alert.alert(
+          'Paiement réussi',
+          'Votre paiement a été traité avec succès. Votre réservation est confirmée!',
+          [
+            {
+              text: 'OK',
+              onPress: () => goBackToPrevious(),
+            },
+          ]
+        );
+        return;
+      }
+
+      if (refreshed?.status === 'failed') {
+        setPaymentStatus('failed');
+        throw new Error('Le paiement a échoué. Veuillez réessayer.');
+      }
+
+      setPaymentStatus('pending');
       Alert.alert(
-        'Paiement réussi',
-        'Votre paiement a été traité avec succès. Votre réservation est confirmée!',
+        'Paiement en cours',
+        'Le paiement a été initié. Le statut sera mis à jour dès que possible.',
         [
           {
             text: 'OK',
-            onPress: () => goToReservations(),
+            onPress: () => {},
           },
         ]
       );
@@ -423,7 +519,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         [
           {
             text: 'OK',
-            onPress: () => goToReservations(),
+            onPress: () => goBackToPrevious(),
           },
         ]
       );
@@ -447,7 +543,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <SafeAreaView style={styles.header}>
         <TouchableOpacity
-          onPress={goToReservations}
+          onPress={goBackToPrevious}
           style={styles.backButton}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -640,7 +736,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         )}
 
         {/* Payment Method Selector */}
-        {!paymentStatus && isReservationActive && (
+        {showPaymentMethodSelector && (
           <PaymentMethodSelector
             selectedMethod={paymentMethod}
             onMethodSelect={setPaymentMethod}
@@ -648,7 +744,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         )}
 
       {/* Terms & Conditions */}
-      {isReservationActive && (
+      {showTermsSection && (
         <View style={styles.termsSection}>
           <TouchableOpacity
             onPress={() => setTermsAccepted((v) => !v)}
@@ -674,7 +770,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       </ScrollView>
 
       {/* Payment Button */}
-      {shouldShowPaymentFlow && !paymentStatus && (
+      {showActionBar && (
         <View style={styles.paymentBar}>
           <TouchableOpacity
             onPress={handleCancelReservation}
@@ -701,33 +797,36 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
               )}
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handlePayment}
-            disabled={
-              loading ||
-              !paymentMethod ||
-              (!termsAccepted && !canResumePendingCardPayment)
-            }
-            style={[
-              styles.paymentButtonWrapper,
-              (!termsAccepted && !canResumePendingCardPayment) || loading || !paymentMethod ? styles.paymentButtonWrapperDisabled : null,
-            ]}
-          >
-            <LinearGradient
-              colors={!termsAccepted || loading || !paymentMethod ? ['#3a3f66', '#2b2f52'] : [COLORS.secondary, COLORS.primary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.paymentButton}
+
+          {showPayButton && (
+            <TouchableOpacity
+              onPress={handlePayment}
+              disabled={
+                loading ||
+                !paymentMethod ||
+                (!termsAccepted && !canResumePendingCardPayment)
+              }
+              style={[
+                styles.paymentButtonWrapper,
+                (!termsAccepted && !canResumePendingCardPayment) || loading || !paymentMethod ? styles.paymentButtonWrapperDisabled : null,
+              ]}
             >
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.paymentButtonText}>
-                  {canResumePendingCardPayment ? 'Finish payment' : 'Procéder au paiement'}
-                </Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={!termsAccepted || loading || !paymentMethod ? ['#3a3f66', '#2b2f52'] : [COLORS.secondary, COLORS.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.paymentButton}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.paymentButtonText}>
+                    {paymentButtonLabel}
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
