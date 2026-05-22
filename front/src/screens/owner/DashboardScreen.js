@@ -12,9 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
-import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
 import { getNotificationUnreadCount } from '../../services/notifications';
 import { useFocusEffect } from '@react-navigation/native';
+import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
+import MessageIconButton from '../../components/messaging/MessageIconButton';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -115,6 +116,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
               </View>
             )}
           </TouchableOpacity>
+          <MessageIconButton navigation={navigation} mode="owner_clients" style={styles.inboxBtn} iconSize={20} />
         </View>
 
         {isLoading ? (
@@ -216,6 +218,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   logoutText: { color: '#b8bddf', fontWeight: '600' },
+  inboxBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(18, 21, 46, 0.65)',
+  },
   loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { paddingBottom: 96 },
   errorText: { color: '#ff7f90', marginBottom: 10 },

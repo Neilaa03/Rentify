@@ -17,16 +17,34 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
-import PaymentMethodSelector from '../../components/PaymentMethodSelector';
-import PaymentStatusDisplay from '../../components/PaymentStatusDisplay';
-import { useStripe } from '@stripe/stripe-react-native';
+import PaymentMethodSelector from '../../components/payment/PaymentMethodSelector';
+import PaymentStatusDisplay from '../../components/payment/PaymentStatusDisplay';
+
+const useStripeSafe = () => {
+  if (Platform.OS === 'web') {
+    return {
+      initPaymentSheet: async () => ({ error: { message: 'Stripe is not supported on web' } }),
+      presentPaymentSheet: async () => ({ error: { message: 'Stripe is not supported on web' } }),
+    };
+  }
+
+  try {
+    const stripe = require('@stripe/stripe-react-native');
+    return stripe.useStripe();
+  } catch (e) {
+    return {
+      initPaymentSheet: async () => ({ error: { message: 'Stripe is not available' } }),
+      presentPaymentSheet: async () => ({ error: { message: 'Stripe is not available' } }),
+    };
+  }
+};
 
 const ReservationDetailsScreen = ({ navigation, route }) => {
   const reservationIdParam = route?.params?.reservationId;
   const [reservation, setReservation] = useState(route?.params?.reservation || null);
   const listingFromParams = route?.params?.listing;
   const resumeCardPayment = !!route?.params?.resumeCardPayment;
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { initPaymentSheet, presentPaymentSheet } = useStripeSafe();
   
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -41,6 +59,34 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     const parent = navigation.getParent?.();
     const navigate = parent?.navigate || navigation.navigate;
     navigate('ReservationsTab', { screen: 'ReservationsList' });
+    const originTab = route?.params?.originTab;
+    const listingObject = route?.params?.listing;
+
+    if (originTab === 'HomeTab' && parent?.navigate) {
+      parent.navigate('HomeTab', {
+        screen: 'ListingDetails',
+        params: { listing: listingObject },
+      });
+      return;
+    }
+
+    if ((originTab === 'FavoritesTab' || originTab === 'SearchTab') && parent?.navigate) {
+      parent.navigate('FavoritesTab', {
+        screen: 'ListingDetailsFromFavorites',
+        params: { listing: listingObject },
+      });
+      return;
+    }
+
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+
+    if (parent?.navigate) {
+      parent.navigate('ReservationsTab', { screen: 'ReservationsList' });
+      return;
+    }
   };
 
   const handleCancelReservation = async () => {

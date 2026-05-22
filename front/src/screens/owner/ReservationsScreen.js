@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import ReservationCard from '../../components/cards/ReservationCard';
-import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
+import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import { getOwnerListings } from '../../services/owner';
 
 const OwnerReservationsScreen = ({ navigation, route }) => {

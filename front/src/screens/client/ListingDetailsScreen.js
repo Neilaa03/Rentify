@@ -3,7 +3,8 @@ import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../constants/colors';
+import { COLORS } from '../../constants/colors';
+import { useFavorites } from '../../contexts/FavoritesContext';
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -21,6 +22,7 @@ const SpecCard = ({ icon, value, label }) => (
 const ListingDetailsScreen = ({ navigation, route }) => {
   const listing = route?.params?.listing;
   const [activeIndex, setActiveIndex] = useState(0);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const imageUrls = useMemo(() => {
     const toImageUrl = (img) => {
@@ -82,8 +84,16 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               <Ionicons name="arrow-back" size={20} color="#fff" />
             </TouchableOpacity>
             <View style={styles.heroActionsRight}>
-              <TouchableOpacity style={styles.heroButton}>
-                <Ionicons name="heart-outline" size={20} color="#fff" />
+              <TouchableOpacity
+                style={styles.heroButton}
+                onPress={() => toggleFavorite(listing.id)}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name={isFavorite(listing.id) ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color={isFavorite(listing.id) ? COLORS.primary : '#fff'}
+                />
               </TouchableOpacity>
               <TouchableOpacity style={styles.heroButton}>
                 <Ionicons name="share-social-outline" size={20} color="#fff" />
@@ -180,8 +190,26 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.ownerMessageButton}>
-              <Ionicons name="chatbubble-outline" size={18} color="#8f6cff" />
+            <TouchableOpacity
+              style={styles.ownerMessageButton}
+              onPress={() => {
+                const otherUserId = listing?.car?.ownerId;
+                if (!otherUserId) return;
+                const rawName = String(listing?.owner?.name || '').trim();
+                const [firstName, ...rest] = rawName ? rawName.split(/\s+/) : [];
+                const lastName = rest.join(' ');
+                navigation.navigate('Chat', {
+                  otherUserId,
+                  otherUser: {
+                    id: otherUserId,
+                    name: rawName || undefined,
+                    firstName: firstName || undefined,
+                    lastName: lastName || undefined,
+                  },
+                });
+              }}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#8f6cff" />
             </TouchableOpacity>
           </View>
         </View>

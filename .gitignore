@@ -46,6 +46,10 @@ dist/
 build/
 web-build/
 
+# Web platform entrypoints (local-only workaround)
+front/App.web.js
+front/src/screens/reservations/reservationDetailsScreen.web.js
+
 # Certificates & Keys
 *.jks
 *.p8

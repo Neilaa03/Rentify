@@ -3,10 +3,12 @@ import { StyleSheet, View, Text, ImageBackground, TouchableOpacity, ScrollView, 
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants/colors';
-import ListingCard from '../components/cards/ListingCard';
-import { getListings } from '../services/listings';
-import { getNotificationUnreadCount } from '../services/notifications';
+import { COLORS } from '../../constants/colors';
+import ListingCard from '../../components/cards/ListingCard';
+import MessageIconButton from '../../components/messaging/MessageIconButton';
+import { getListings } from '../../services/listings';
+import { useFavorites } from '../../contexts/FavoritesContext';
+import { getNotificationUnreadCount } from '../../services/notifications';
 
 const HomeScreen = ({ navigation, route }) => {
     const [activeTab, setActiveTab] = useState('Accueil');
@@ -18,6 +20,7 @@ const HomeScreen = ({ navigation, route }) => {
     const [error, setError] = useState('');
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [notificationLoading, setNotificationLoading] = useState(false);
+    const { isFavorite, toggleFavorite } = useFavorites();
 
     const filterOptions = [
         'Tous',
@@ -92,10 +95,10 @@ const HomeScreen = ({ navigation, route }) => {
     return (
         <View style={styles.container}>
             <ImageBackground
-                source={require('../assets/background.png')}
+                source={require('../../assets/background.png')}
                 style={styles.background}
                 resizeMode="cover"
-            >
+              >
                 <SafeAreaView style={styles.overlay}>
                     <View style={styles.header}>
                         <Text style={styles.logo}>Tous les véhicules</Text>
@@ -122,6 +125,7 @@ const HomeScreen = ({ navigation, route }) => {
                             >
                                 <Ionicons name="log-out" size={24} color="#fff" />
                             </TouchableOpacity>
+                            <MessageIconButton navigation={navigation} style={styles.logoutButton} iconSize={24} />
                         </View>
                     </View>
 
@@ -231,6 +235,8 @@ const HomeScreen = ({ navigation, route }) => {
                             <ListingCard
                                 key={listing.id}
                                 listing={listing}
+                                isFavorite={isFavorite(listing.id)}
+                                onToggleFavorite={() => toggleFavorite(listing.id)}
                                 onPress={() => navigation.navigate('ListingDetails', { listing })}
                             />
                         ))}
