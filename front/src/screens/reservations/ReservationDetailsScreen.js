@@ -17,8 +17,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
-import PaymentMethodSelector from '../../components/PaymentMethodSelector';
-import PaymentStatusDisplay from '../../components/PaymentStatusDisplay';
+import PaymentMethodSelector from '../../components/payment/PaymentMethodSelector';
+import PaymentStatusDisplay from '../../components/payment/PaymentStatusDisplay';
 
 const useStripeSafe = () => {
   if (Platform.OS === 'web') {
@@ -67,9 +67,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (originTab === 'SearchTab' && parent?.navigate) {
-      parent.navigate('SearchTab', {
-        screen: 'ListingDetailsFromSearch',
+    if ((originTab === 'FavoritesTab' || originTab === 'SearchTab') && parent?.navigate) {
+      parent.navigate('FavoritesTab', {
+        screen: 'ListingDetailsFromFavorites',
         params: { listing: listingObject },
       });
       return;

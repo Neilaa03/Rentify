@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { API_ENDPOINTS } from '../constants/api';
-import OwnerBottomNavigation from '../components/navigation/navigationOwner';
+import { API_ENDPOINTS } from '../../constants/api';
+import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 
 const SectionCard = ({ items }) => (
   <View style={styles.sectionCard}>
@@ -79,7 +79,7 @@ const ProfileScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <ImageBackground source={require('../assets/background.png')} style={styles.background} resizeMode="cover">
+      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView style={styles.overlay}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             <Text style={styles.title}>Profil</Text>

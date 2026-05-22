@@ -29,7 +29,7 @@ const toCarDto = (carRow) => {
   };
 };
 
-const toListingDto = (row) => ({
+export const toListingDto = (row) => ({
   id: row.id,
   carId: row.car_id,
   title: row.title,
@@ -66,7 +66,7 @@ const toListingTablePayload = (payload) => {
   return mapped;
 };
 
-const baseSelect =
+export const listingBaseSelect =
   'id, car_id, title, description, country, city, price_per_day, price_per_week, price_per_month, available_from, available_to, is_active, created_at, cars!inner(*, car_images(*))';
 
 export const getListings = async (filters = {}) => {
@@ -89,7 +89,7 @@ export const getListings = async (filters = {}) => {
 
   let query = supabase
     .from(LISTINGS_TABLE)
-    .select(baseSelect, { count: 'exact' })
+    .select(listingBaseSelect, { count: 'exact' })
     .order('price_per_day', { ascending: sortOrder === 'asc' });
 
   if (country) query = query.ilike('country', `%${country}%`);
@@ -127,7 +127,7 @@ export const getListings = async (filters = {}) => {
 export const getListingById = async (id) => {
   const { data, error } = await supabase
     .from(LISTINGS_TABLE)
-    .select(baseSelect)
+    .select(listingBaseSelect)
     .eq('id', id)
     .single();
 
@@ -140,7 +140,7 @@ export const createListing = async (payload) => {
   const { data, error } = await supabase
     .from(LISTINGS_TABLE)
     .insert([insertPayload])
-    .select(baseSelect)
+    .select(listingBaseSelect)
     .single();
 
   if (error) throw error;
@@ -153,7 +153,7 @@ export const updateListing = async (id, updates) => {
     .from(LISTINGS_TABLE)
     .update(updatePayload)
     .eq('id', id)
-    .select(baseSelect)
+    .select(listingBaseSelect)
     .single();
 
   if (error || !data) throw new Error('Update failed');
