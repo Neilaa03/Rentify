@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../../constants/colors';
 
 const FALLBACK_IMAGE = 'https://picsum.photos/seed/listing-fallback/900/600';
 
@@ -12,7 +13,7 @@ const toImageUrl = (img) => {
   return img.imageUrl || img.image_url || img.url || null;
 };
 
-const ListingCard = ({ listing, onPress }) => {
+const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const scrollRef = useRef(null);
@@ -91,8 +92,16 @@ const ListingCard = ({ listing, onPress }) => {
                 <Text style={styles.unavailableText}>Indisponible</Text>
               </View>
             )}
-            <TouchableOpacity style={styles.iconButton} activeOpacity={0.8}>
-              <Ionicons name="heart-outline" size={20} color="#fff" />
+            <TouchableOpacity
+              style={styles.iconButton}
+              activeOpacity={0.8}
+              onPress={onToggleFavorite}
+            >
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={20}
+                color={isFavorite ? COLORS.primary : '#fff'}
+              />
             </TouchableOpacity>
           </View>
 

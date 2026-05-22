@@ -18,7 +18,7 @@ import {
   toggleListingPublication,
 } from '../../services/owner';
 import { fetchJson } from '../../services/api';
-import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
+import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },

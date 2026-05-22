@@ -228,6 +228,23 @@ CREATE TABLE listings (
 );
 
 -- =========================================================
+-- FAVORITES
+-- =========================================================
+
+CREATE TABLE favorites (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    UNIQUE (user_id, listing_id)
+);
+
+-- =========================================================
 -- RESERVATIONS
 -- =========================================================
 
@@ -425,6 +442,10 @@ CREATE INDEX idx_documents_car_id ON documents(car_id);
 CREATE INDEX idx_documents_company_id ON documents(company_id);
 
 CREATE INDEX idx_listings_car_id ON listings(car_id);
+
+CREATE INDEX idx_favorites_user_id ON favorites(user_id);
+
+CREATE INDEX idx_favorites_listing_id ON favorites(listing_id);
 
 CREATE INDEX idx_reservations_listing_id ON reservations(listing_id);
 

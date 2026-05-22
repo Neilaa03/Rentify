@@ -1,6 +1,6 @@
 import { fetchJson } from './api';
 
-const pickListingImage = (item) => {
+export const pickListingImage = (item) => {
   const images = item?.car?.images || [];
   const primaryImage = images.find((image) => image?.isPrimary && image?.imageUrl);
   if (primaryImage?.imageUrl) return primaryImage.imageUrl;
@@ -11,7 +11,7 @@ const pickListingImage = (item) => {
   return `https://picsum.photos/seed/listing-${item.id}/900/600`;
 };
 
-const toUiListing = (item) => {
+export const toUiListing = (item) => {
   const carImages = Array.isArray(item?.car?.images)
     ? item.car.images
         .map((image) => image?.imageUrl || image?.image_url || image?.url || null)
