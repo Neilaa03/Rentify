@@ -497,7 +497,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       setPaymentStatus('processing');
 
       const paymentResult = await waitForPaymentConfirmation(token);
-      const goBackToPrevious = () => navigation.pop(2);
+      const goBackToPrevious = () => navigation.navigate('ReservationsTab', { screen: 'ReservationDetails', params: { reservationId: reservation.id } });
 
       if (paymentResult.success) {
         setPaymentStatus('completed');
