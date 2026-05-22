@@ -12,8 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
-import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
-import MessageIconButton from '../../components/MessageIconButton';
+import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
+import MessageIconButton from '../../components/messaging/MessageIconButton';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },

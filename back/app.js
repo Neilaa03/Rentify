@@ -9,6 +9,7 @@ import paymentRoutes from './src/modules/payments/paymentRoutes.js';
 import { handleStripeWebhook } from './src/modules/payments/paymentController.js';
 import reservationRoutes from './src/modules/reservations/reservationRoutes.js';
 import messageRoutes from './src/modules/messages/messageRoutes.js';
+import favoritesRoutes from './src/modules/favorites/favoritesRoutes.js';
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reservations', reservationRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/favorites', favoritesRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

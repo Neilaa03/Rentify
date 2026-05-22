@@ -7,7 +7,7 @@ const LandingScreen = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <ImageBackground
-                source={require('../assets/background.png')}
+                source={require('../../assets/background.png')}
                 style={styles.background}
                 resizeMode="cover"
             >

@@ -16,7 +16,7 @@ import {
   createOwnerListing,
   updateOwnerListing,
 } from '../../services/owner';
-import OwnerBottomNavigation from '../../components/navigation/navigationOwner';
+import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 
 LocaleConfig.locales.fr = {
   monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],

@@ -6,14 +6,16 @@ import { COLORS } from '../../constants/colors';
 import { CommonActions, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import HomeScreen from '../../screens/homeScreen';
-import ListingDetailsScreen from '../../screens/listingDetailsScreen';
-import ReservationDatePickerScreen from '../../screens/reservations/reservationDatePickerScreen';
-import ReservationDetailsScreen from '../../screens/reservations/reservationDetailsScreen';
-import ReservationsScreen from '../../screens/reservations/reservationsScreen';
-import ProfileScreen from '../../screens/profileScreen';
-import InboxScreen from '../../screens/messages/inboxScreen';
-import ChatScreen from '../../screens/messages/chatScreen';
+import HomeScreen from '../../screens/client/HomeScreen';
+import FavoritesScreen from '../../screens/client/FavoritesScreen';
+import ListingDetailsScreen from '../../screens/client/ListingDetailsScreen';
+import ReservationDatePickerScreen from '../../screens/reservations/ReservationDatePickerScreen';
+import ReservationDetailsScreen from '../../screens/reservations/ReservationDetailsScreen';
+import ReservationsScreen from '../../screens/reservations/ReservationsScreen';
+import ProfileScreen from '../../screens/client/ProfileScreen';
+import InboxScreen from '../../screens/messages/InboxScreen';
+import ChatScreen from '../../screens/messages/ChatScreen';
+import { FavoritesProvider } from '../../contexts/FavoritesContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -45,20 +47,20 @@ function HomeTabStack() {
   );
 }
 
-// Stack for Search tab
-function SearchTabStack() {
+// Stack for Favorites tab
+function FavoritesTabStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
-      <Stack.Screen name="Search" component={HomeScreen} />
+      <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen 
-        name="ListingDetailsFromSearch" 
+        name="ListingDetailsFromFavorites" 
         component={ListingDetailsScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
       <Stack.Screen 
-        name="ReservationDatePickerFromSearch" 
+        name="ReservationDatePickerFromFavorites" 
         component={ReservationDatePickerScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
@@ -116,33 +118,34 @@ export function ClientNavigation() {
   };
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        sceneContainerStyle: { backgroundColor: APP_BACKGROUND },
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'HomeTab') {
-            iconName = 'home-outline';
-          } else if (route.name === 'SearchTab') {
-            iconName = 'search-outline';
-          } else if (route.name === 'ReservationsTab') {
-            iconName = 'calendar-outline';
-          } else if (route.name === 'ProfileTab') {
-            iconName = 'person-outline';
-          }
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: '#8a90b8',
-        tabBarStyle: defaultTabBarStyle,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginTop: 4,
-        },
-      })}
-    >
+    <FavoritesProvider>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          sceneContainerStyle: { backgroundColor: APP_BACKGROUND },
+          tabBarIcon: ({ focused, color, size }) => {
+            let iconName;
+            if (route.name === 'HomeTab') {
+              iconName = 'home-outline';
+            } else if (route.name === 'FavoritesTab') {
+              iconName = focused ? 'heart' : 'heart-outline';
+            } else if (route.name === 'ReservationsTab') {
+              iconName = 'calendar-outline';
+            } else if (route.name === 'ProfileTab') {
+              iconName = 'person-outline';
+            }
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+          tabBarActiveTintColor: COLORS.primary,
+          tabBarInactiveTintColor: '#8a90b8',
+          tabBarStyle: defaultTabBarStyle,
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+            marginTop: 4,
+          },
+        })}
+      >
       <Tab.Screen 
         name="HomeTab" 
         component={HomeTabStack}
@@ -169,8 +172,8 @@ export function ClientNavigation() {
         }}
       />
       <Tab.Screen 
-        name="SearchTab" 
-        component={SearchTabStack}
+        name="FavoritesTab" 
+        component={FavoritesTabStack}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
@@ -179,8 +182,8 @@ export function ClientNavigation() {
                 index: 0,
                 routes: [
                   {
-                    name: 'SearchTab',
-                    state: { routes: [{ name: 'Search' }] },
+                    name: 'FavoritesTab',
+                    state: { routes: [{ name: 'Favorites' }] },
                   },
                 ],
               })
@@ -189,8 +192,8 @@ export function ClientNavigation() {
         })}
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
-          const hide = routeName && routeName !== 'Search';
-          return { tabBarLabel: 'Recherche', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+          const hide = routeName && routeName !== 'Favorites';
+          return { tabBarLabel: 'Favoris', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
         }}
       />
       <Tab.Screen 
@@ -244,5 +247,6 @@ export function ClientNavigation() {
         }}
       />
     </Tab.Navigator>
+    </FavoritesProvider>
   );
 }

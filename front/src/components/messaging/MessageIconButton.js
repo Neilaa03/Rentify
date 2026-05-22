@@ -3,9 +3,9 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { getCurrentUserProfile } from '../services/authSession';
-import { getConversations, getOwnerClientsExpanded } from '../services/messages';
-import { getSocket } from '../services/socketClient';
+import { getCurrentUserProfile } from '../../services/authSession';
+import { getConversations, getOwnerClientsExpanded } from '../../services/messages';
+import { getSocket } from '../../services/socketClient';
 
 const clampBadge = (n) => {
   const x = Number(n) || 0;
