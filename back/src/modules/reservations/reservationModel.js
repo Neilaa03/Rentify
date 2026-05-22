@@ -6,6 +6,48 @@ const USERS_TABLE = 'users';
 const PICKUP_TABLE = 'pickup';
 
 const PAYMENT_GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const HANDOVER_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+const toUtcMidnightMs = (ymd) => {
+    if (!ymd) return NaN;
+    const ms = Date.parse(`${ymd}T00:00:00.000Z`);
+    return Number.isFinite(ms) ? ms : NaN;
+};
+
+const shouldOpenPickupWindow = (reservationRow) => {
+    const startMs = toUtcMidnightMs(reservationRow?.start_date);
+    if (!Number.isFinite(startMs)) return false;
+    return Date.now() >= startMs - HANDOVER_WINDOW_MS;
+};
+
+const shouldOpenReturnWindow = (reservationRow) => {
+    const endMs = toUtcMidnightMs(reservationRow?.end_date);
+    if (!Number.isFinite(endMs)) return false;
+    return Date.now() >= endMs - HANDOVER_WINDOW_MS;
+};
+
+const maybeAdvanceStatusInRow = async (reservationRow) => {
+    if (!reservationRow?.id || !reservationRow?.status) return reservationRow;
+
+    let nextStatus = null;
+    if (reservationRow.status === 'confirmed' && shouldOpenPickupWindow(reservationRow)) {
+        nextStatus = 'pickup_pending';
+    } else if (reservationRow.status === 'active' && shouldOpenReturnWindow(reservationRow)) {
+        nextStatus = 'return_pending';
+    }
+
+    if (!nextStatus) return reservationRow;
+
+    const { data, error } = await supabase
+        .from(RESERVATIONS_TABLE)
+        .update({ status: nextStatus })
+        .eq('id', reservationRow.id)
+        .select('id, status')
+        .single();
+
+    if (error || !data) return reservationRow;
+    return { ...reservationRow, status: data.status };
+};
 
 // =========================================================
 // DTO CONVERSION
@@ -113,8 +155,9 @@ export const getReservations = async (filters = {}) => {
 
     const { data, error } = await query;
     if (error) throw error;
-
-    return (data || []).map(toReservationDto);
+    const rows = data || [];
+    const advanced = await Promise.all(rows.map(maybeAdvanceStatusInRow));
+    return advanced.map(toReservationDto);
 };
 
 export const getReservationById = async (id) => {
@@ -128,19 +171,21 @@ export const getReservationById = async (id) => {
 
     if (error || !data) throw new Error('Reservation not found');
 
+    const advanced = await maybeAdvanceStatusInRow(data);
+
     // Attach renter contact if not included by relations.
-    if (!data.users && data.renter_id) {
+    if (!advanced.users && advanced.renter_id) {
         const { data: renter, error: renterError } = await supabase
             .from(USERS_TABLE)
             .select('id, first_name, last_name, phone, email')
-            .eq('id', data.renter_id)
+            .eq('id', advanced.renter_id)
             .single();
-        if (!renterError && renter) data.users = renter;
+        if (!renterError && renter) advanced.users = renter;
     }
 
     // Auto-cancel unpaid reservations that exceeded grace period
-    if (['reserved'].includes(data.status) && data.created_at) {
-        const createdAtMs = new Date(data.created_at).getTime();
+    if (['reserved'].includes(advanced.status) && advanced.created_at) {
+        const createdAtMs = new Date(advanced.created_at).getTime();
         if (!Number.isNaN(createdAtMs) && Date.now() - createdAtMs > PAYMENT_GRACE_MS) {
             const { data: cancelled, error: cancelError } = await supabase
                 .from(RESERVATIONS_TABLE)
@@ -164,7 +209,35 @@ export const getReservationById = async (id) => {
         }
     }
 
-    return toReservationDto(data);
+    return toReservationDto(advanced);
+};
+
+const assertTransitionAllowed = (fromStatus, toStatus, reservationRow) => {
+    const allowed = {
+        reserved: new Set(['confirmed', 'cancelled']),
+        confirmed: new Set(['pickup_pending', 'cancelled']),
+        pickup_pending: new Set(['active', 'cancelled']),
+        active: new Set(['return_pending']),
+        return_pending: new Set(['refund_pending']),
+        refund_pending: new Set(['refunded']),
+    };
+
+    const targets = allowed[fromStatus];
+    if (!targets || !targets.has(toStatus)) {
+        throw new Error(`Invalid status transition: ${fromStatus} -> ${toStatus}`);
+    }
+
+    if (fromStatus === 'confirmed' && toStatus === 'pickup_pending') {
+        if (!shouldOpenPickupWindow(reservationRow)) {
+            throw new Error('Pickup is only available within 24 hours before start date.');
+        }
+    }
+
+    if (fromStatus === 'active' && toStatus === 'return_pending') {
+        if (!shouldOpenReturnWindow(reservationRow)) {
+            throw new Error('Return is only available within 24 hours before end date.');
+        }
+    }
 };
 
 export const createReservation = async (payload, renterId) => {
@@ -289,6 +362,15 @@ export const createReservation = async (payload, renterId) => {
 };
 
 export const updateReservationStatus = async (id, newStatus) => {
+    const { data: existing, error: fetchError } = await supabase
+        .from(RESERVATIONS_TABLE)
+        .select('id, status, start_date, end_date')
+        .eq('id', id)
+        .single();
+    if (fetchError || !existing) throw new Error('Reservation not found');
+
+    assertTransitionAllowed(existing.status, newStatus, existing);
+
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
         .update({ status: newStatus })

@@ -4,6 +4,8 @@ const ReservationStatus = z.enum([
     'confirmed',
     'cancelled',
     'reserved',
+    'active',
+    'return_pending',
     'refunded',
     'refund_pending',
     'pickup_pending',

@@ -725,6 +725,30 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
 
+        {reservation?.status === 'pickup_pending' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Récupération</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('PickupCode', { reservationId: reservation.id, flow: 'pickup' })}
+              activeOpacity={0.85}
+              style={styles.pickupActionWrap}
+            >
+              <LinearGradient
+                colors={['#4C6FFF', COLORS.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.pickupAction}
+              >
+                <Ionicons name="key-outline" size={18} color="#fff" />
+                <Text style={styles.pickupActionText}>Voir le code de récupération</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.pickupHintText}>
+              Disponible uniquement dans les 24h avant le début de la réservation.
+            </Text>
+          </View>
+        )}
+
         {/* Price Breakdown */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Détail du prix</Text>
@@ -990,6 +1014,27 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
+  },
+  pickupActionWrap: {
+    marginTop: 6,
+  },
+  pickupAction: {
+    height: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  pickupActionText: {
+    color: '#fff',
+    fontWeight: '900',
+  },
+  pickupHintText: {
+    marginTop: 10,
+    color: '#8e95bf',
+    fontSize: 12,
+    lineHeight: 16,
   },
   sectionTitle: {
     color: '#f6f8ff',

@@ -26,6 +26,11 @@ export const API_ENDPOINTS = {
         GET_CALENDAR_AVAILABILITY: (listingId) => `${API_BASE_URL}/api/reservations/calendar/availability/${listingId}`,
         UPDATE_STATUS: (id) => `${API_BASE_URL}/api/reservations/${id}/status`,
         GET_ALL: `${API_BASE_URL}/api/reservations`,
+        PICKUP: {
+            GENERATE: (id) => `${API_BASE_URL}/api/reservations/${id}/pickup/generate`,
+            PAYLOAD: (id) => `${API_BASE_URL}/api/reservations/${id}/pickup/payload`,
+            VERIFY: (id) => `${API_BASE_URL}/api/reservations/${id}/pickup/verify`,
+        },
     },
     PAYMENTS: {
         CREATE_CARD_PAYMENT: `${API_BASE_URL}/api/payments/create-card-payment`,

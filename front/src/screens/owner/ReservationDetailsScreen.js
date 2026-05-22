@@ -467,6 +467,30 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
           )}
         </View>
 
+        {status === 'pickup_pending' ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Récupération</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('OwnerPickupVerify', { reservationId: reservation?.id, token, flow: 'pickup' })}
+              activeOpacity={0.85}
+              style={styles.handoverActionWrap}
+            >
+              <LinearGradient
+                colors={['#4C6FFF', '#8f6cff']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.handoverAction}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                <Text style={styles.handoverActionText}>Vérifier le code de récupération</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.handoverHint}>
+              Disponible uniquement dans les 24h avant le début de la réservation.
+            </Text>
+          </View>
+        ) : null}
+
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderWithButton}>
@@ -707,6 +731,27 @@ const styles = StyleSheet.create({
     color: '#a566ff',
     fontWeight: '900',
     fontSize: 16,
+  },
+  handoverActionWrap: {
+    marginTop: 10,
+  },
+  handoverAction: {
+    height: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  handoverActionText: {
+    color: '#fff',
+    fontWeight: '900',
+  },
+  handoverHint: {
+    marginTop: 10,
+    color: '#aeb4e6',
+    fontSize: 12,
+    lineHeight: 16,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,

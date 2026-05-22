@@ -15,6 +15,7 @@ import {
     getAllReservations,
     getListingAvailabilityHandler,
 } from './reservationController.js';
+import pickupRoutes from '../pickup/pickupRoutes.js';
 
 const router = Router();
 
@@ -52,6 +53,9 @@ router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);
 
 // Patch: Update reservation status (for owner/manager workflow)
 router.patch('/:id/status', verifyOwner, updateReservationStatusHandler);
+
+// Pickup flows (code generation / payload / verification)
+router.use('/:id/pickup', pickupRoutes);
 
 // =========================================================
 // GENERIC ROUTES (must come last)
