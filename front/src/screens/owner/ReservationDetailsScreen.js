@@ -187,10 +187,9 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
     '—';
   const city = listing?.city || listing?.location || listing?.car?.city || '';
 
-  const safeTotalPrice = Number(reservation?.totalPrice || 0);
-  const computed = calculateReservationPrice(listing, startRaw, endRaw);
-  const basePrice = computed.basePrice || safeTotalPrice;
-  const serviceFee = computed.serviceFee || 0;
+  const rentalSubtotal = calculateReservationPrice(listing || {}, startRaw, endRaw, { deliveryFee: 0 });
+  const deliveryFee = Number(reservation?.pickup?.deliveryFee ?? reservation?.pickup?.delivery_fee ?? 0) || 0;
+  const safeTotalPrice = Number(reservation?.totalPrice || 0) || Math.max(0, rentalSubtotal + deliveryFee);
 
   const formatDate = (date) => {
     try {
@@ -416,7 +415,14 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
               <Text style={styles.priceRowLabel}>
                 {totalDays} jour{totalDays > 1 ? 's' : ''}
               </Text>
-              <Text style={styles.priceRowValue}>{formatPrice(basePrice)} DA</Text>
+              <Text style={styles.priceRowValue}>{formatPrice(rentalSubtotal)} DA</Text>
+            </View>
+
+            <View style={styles.dividerSmall} />
+
+            <View style={styles.priceRow}>
+              <Text style={styles.priceRowLabel}>Frais de livraison</Text>
+              <Text style={styles.priceRowValue}>{formatPrice(deliveryFee)} DA</Text>
             </View>
 
             <View style={styles.dividerSmall} />

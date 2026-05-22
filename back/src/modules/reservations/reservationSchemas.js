@@ -9,13 +9,23 @@ const ReservationStatus = z.enum([
     'pickup_pending',
 ]);
 
+const PickupMethod = z.enum(['owner_place', 'company_place', 'renter_delivery']);
+
 export const createReservationSchema = z.object({
     listingId: z.string().uuid('listingId must be a valid UUID'),
     startDate: z.string().date('startDate must be a valid date (YYYY-MM-DD)'),
     endDate: z.string().date('endDate must be a valid date (YYYY-MM-DD)'),
+    pickupMethod: PickupMethod.default('owner_place'),
+    pickupAddress: z.string().trim().min(1).optional(),
 }).refine((data) => new Date(data.startDate) < new Date(data.endDate), {
     message: 'End date must be after start date',
     path: ['endDate'],
+}).refine((data) => {
+    if (data.pickupMethod === 'renter_delivery') return Boolean(data.pickupAddress);
+    return true;
+}, {
+    message: 'pickupAddress is required when pickupMethod is renter_delivery',
+    path: ['pickupAddress'],
 });
 
 export const updateStatusSchema = z.object({

@@ -550,12 +550,28 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const formatPrice = (value) => value.toLocaleString('fr-FR');
   const formatDate = (date) => new Date(date).toLocaleDateString('fr-FR');
 
-  const basePrice = useMemo(() => {
-    const computed = calculateReservationPrice(listing || {}, startRaw, endRaw);
+  const rentalSubtotal = useMemo(() => {
+    const computed = calculateReservationPrice(listing || {}, startRaw, endRaw, { deliveryFee: 0 });
     return Number.isFinite(computed) ? computed : 0;
   }, [listing, startRaw, endRaw]);
-  const serviceFee = useMemo(() => Math.round(basePrice * 0.1), [basePrice]);
-  const safeTotalPrice = useMemo(() => basePrice + serviceFee, [basePrice, serviceFee]);
+
+  const deliveryFee = useMemo(() => {
+    const fee =
+      reservation?.pickup?.deliveryFee ??
+      reservation?.pickup?.delivery_fee ??
+      0;
+    const normalized = Number(fee || 0);
+    return Number.isFinite(normalized) ? Math.max(0, normalized) : 0;
+  }, [reservation]);
+
+  const serviceFee = useMemo(() => {
+    return Math.round(rentalSubtotal * 0.1);
+  }, [rentalSubtotal]);
+
+  const safeTotalPrice = useMemo(
+    () => rentalSubtotal + deliveryFee + serviceFee,
+    [rentalSubtotal, deliveryFee, serviceFee]
+  );
 
   return (
     <View style={styles.container}>
@@ -720,7 +736,16 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
                 {totalDays > 1 ? 's' : ''}
               </Text>
               <Text style={styles.priceRowValue}>
-                {Math.round(basePrice).toLocaleString('fr-FR')} DA
+                {Math.round(rentalSubtotal).toLocaleString('fr-FR')} DA
+              </Text>
+            </View>
+
+            <View style={styles.dividerSmall} />
+
+            <View style={styles.priceRow}>
+              <Text style={styles.priceRowLabel}>Frais de livraison</Text>
+              <Text style={styles.priceRowValue}>
+                {Math.round(deliveryFee).toLocaleString('fr-FR')} DA
               </Text>
             </View>
 

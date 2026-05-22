@@ -54,7 +54,7 @@ export const calculateTotalDays = (startDateStr, endDateStr) => {
  * Calculate reservation price based on pricing tiers
  * INCLUDES both start and end dates in day count
  */
-export const calculateReservationPrice = (listing, startDateStr, endDateStr) => {
+export const calculateReservationPrice = (listing, startDateStr, endDateStr, options = {}) => {
   const startDate = parseLocalDate(startDateStr);
   const endDate = parseLocalDate(endDateStr);
   
@@ -88,7 +88,12 @@ export const calculateReservationPrice = (listing, startDateStr, endDateStr) => 
   
   // Apply daily pricing to remaining days
   price += remainingDays * pricePerDay;
-  
+
+  const extraDeliveryFee = Number(options?.deliveryFee || 0);
+  if (Number.isFinite(extraDeliveryFee) && extraDeliveryFee > 0) {
+    price += extraDeliveryFee;
+  }
+
   return Math.max(0, price);
 };
 
