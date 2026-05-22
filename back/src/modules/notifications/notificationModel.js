@@ -1,4 +1,5 @@
 import { supabase } from '../../config/supabase.js';
+import { getIO } from '../../socket/index.js';
 
 const NOTIFICATIONS_TABLE = 'notifications';
 
@@ -20,6 +21,13 @@ export const createNotification = async ({ userId, type, title, message, data = 
 
   if (error) {
     throw error;
+  }
+
+  try {
+    const io = getIO();
+    io.to(userId).emit('notification_created', inserted);
+  } catch (_err) {
+    // socket not initialized — ignore
   }
 
   return inserted;
@@ -62,6 +70,14 @@ export const markNotificationAsRead = async (notificationId, userId) => {
     .single();
 
   if (error) throw error;
+
+  try {
+    const io = getIO();
+    io.to(userId).emit('notification_read', { notificationId });
+  } catch (_err) {
+    // socket not initialized — ignore
+  }
+
   return data;
 };
 
@@ -72,5 +88,13 @@ export const markAllNotificationsAsRead = async (userId) => {
     .eq('user_id', userId);
 
   if (error) throw error;
+
+  try {
+    const io = getIO();
+    io.to(userId).emit('notifications_all_read', { userId });
+  } catch (_err) {
+    // socket not initialized — ignore
+  }
+
   return true;
 };

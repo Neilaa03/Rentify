@@ -12,10 +12,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
-import { getNotificationUnreadCount } from '../../services/notifications';
-import { useFocusEffect } from '@react-navigation/native';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import MessageIconButton from '../../components/messaging/MessageIconButton';
+import NotificationIconButton from '../../components/notifications/NotificationIconButton';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -39,7 +38,6 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [error, setError] = useState('');
   const [dashboard, setDashboard] = useState({
     stats: {
@@ -51,16 +49,6 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
     },
     activity: [],
   });
-
-  const loadUnreadNotifications = useCallback(async () => {
-    try {
-      const count = await getNotificationUnreadCount();
-      setUnreadNotifications(count);
-    } catch (err) {
-      console.warn('Failed to load notification count:', err);
-      setUnreadNotifications(0);
-    }
-  }, []);
 
   const loadData = useCallback(async () => {
     if (!token || !user?.id) return;
@@ -81,12 +69,6 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
     loadData();
   }, [loadData]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadUnreadNotifications();
-    }, [loadUnreadNotifications])
-  );
-
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
@@ -100,22 +82,12 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             <Text style={styles.kicker}>ESPACE PROPRIETAIRE</Text>
             <Text style={styles.title}>Bonjour, {user?.first_name || 'Owner'} 👋</Text>
           </View>
-          <TouchableOpacity
+          <NotificationIconButton
+            navigation={navigation}
             style={styles.notificationButton}
-            onPress={() => navigation.navigate('NotificationScreen', 
-                { user: route?.params?.user }
-            )}
-          >
-            <Ionicons name="notifications-outline" size={24} color="#fff" />
-
-            {unreadNotifications > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
-                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+            iconSize={24}
+            routeParams={{ user: route?.params?.user }}
+          />
           <MessageIconButton navigation={navigation} mode="owner_clients" style={styles.inboxBtn} iconSize={20} />
         </View>
 

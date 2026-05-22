@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -72,7 +72,7 @@ const NotificationsScreen = ({ navigation, route }) => {
     }
   };
 
-  const loadNotifications = async (selectedFilter = filter) => {
+  const loadNotifications = useCallback(async (selectedFilter = filter) => {
     setIsLoading(true);
     setError('');
     try {
@@ -87,12 +87,12 @@ const NotificationsScreen = ({ navigation, route }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filter]);
 
   useFocusEffect(
     useCallback(() => {
       loadNotifications();
-    }, [filter])
+    }, [loadNotifications])
   );
 
   const handleRefresh = async () => {

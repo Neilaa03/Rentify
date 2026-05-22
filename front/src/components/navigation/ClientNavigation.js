@@ -49,11 +49,6 @@ function HomeTabStack() {
         component={NotificationsScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
-      <Stack.Screen
-        name="Chat"
-        component={ChatScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
     </Stack.Navigator>
   );
 }
