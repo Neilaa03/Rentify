@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
@@ -40,7 +41,7 @@ const useStripeSafe = () => {
 };
 
 const ReservationDetailsScreen = ({ navigation, route }) => {
-  const reservation = route?.params?.reservation;
+  const reservationFromParams = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
   const resumeCardPayment = !!route?.params?.resumeCardPayment;
   const { initPaymentSheet, presentPaymentSheet } = useStripeSafe();
@@ -53,6 +54,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const [paymentMethod, setPaymentMethod] = useState(null); // null | 'card' | 'cash'
   const [paymentStatus, setPaymentStatus] = useState(null); // null | 'pending' | 'completed' | 'failed' | 'pending_cash'
   const [paymentInfo, setPaymentInfo] = useState(null); // stores payment response data
+  const [reservationState, setReservationState] = useState(reservationFromParams || null);
+
+  const reservation = reservationState || reservationFromParams;
 
   const goBackToPrevious = () => {
     const parent = navigation.getParent?.();
@@ -205,6 +209,29 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     : paymentStatus === 'failed'
     ? 'Réessayer le paiement'
     : 'Procéder au paiement';
+
+  const refreshReservation = useCallback(async () => {
+    if (!reservationFromParams?.id) return;
+    try {
+      const token = await storage.getItemAsync('userToken');
+      if (!token) return;
+      const res = await fetch(API_ENDPOINTS.RESERVATIONS.GET(reservationFromParams.id), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      setReservationState(json || null);
+    } catch (_e) {
+      // ignore
+    }
+  }, [reservationFromParams?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Ensures status updates (e.g. pickup verified -> active) are visible immediately.
+      refreshReservation();
+    }, [refreshReservation])
+  );
 
   if (!reservation) {
     return (

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { supabase } from '../../config/supabase.js';
 import { getReservationById, updateReservationStatus } from '../reservations/reservationModel.js';
+import QRCode from 'qrcode';
 
 const PICKUP_TABLE = 'pickup';
 
@@ -54,6 +55,7 @@ export const generatePickupPayload = async ({ reservationId }) => {
   const rawCode = String(Math.floor(100000 + Math.random() * 900000));
   const rawQrToken = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + PICKUP_CODE_TTL_MS).toISOString();
+  const qrDataUrl = await QRCode.toDataURL(rawQrToken, { margin: 1, width: 420, errorCorrectionLevel: 'M' });
 
   const { error: updateError } = await supabase
     .from(PICKUP_TABLE)
@@ -74,15 +76,13 @@ export const generatePickupPayload = async ({ reservationId }) => {
     expiresAt,
     code: rawCode,
     qrToken: rawQrToken,
+    qrDataUrl,
   };
 };
 
 export const getPickupPayloadStatus = async ({ reservationId }) => {
   const reservation = await getReservationById(reservationId);
   if (!reservation) throw new Error('Reservation not found');
-  if (reservation.status !== 'pickup_pending') {
-    throw new Error('Pickup payload is only available when status is pickup_pending.');
-  }
 
   const pickupRow = await getPickupRowByReservationId(reservationId);
   if (!pickupRow) throw new Error('Pickup record not found.');
@@ -90,6 +90,7 @@ export const getPickupPayloadStatus = async ({ reservationId }) => {
   const hasPayload = Boolean(pickupRow.pickup_code_hash && pickupRow.pickup_code_expires_at);
   return {
     reservationId,
+    reservationStatus: reservation.status,
     hasPayload,
     expiresAt: pickupRow.pickup_code_expires_at || null,
     verifiedAt: pickupRow.pickup_verified_at || null,

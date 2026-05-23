@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,19 +15,19 @@ const formatCountdown = (ms) => {
   return `${min}:${sec}`;
 };
 
-const getGenerateEndpoint = ({ flow, reservationId }) => {
-  if (flow === 'pickup') return API_ENDPOINTS.RESERVATIONS.PICKUP.GENERATE(reservationId);
-  return null;
-};
+const getGenerateEndpoint = ({ reservationId }) => API_ENDPOINTS.RESERVATIONS.PICKUP.GENERATE(reservationId);
+const getPayloadEndpoint = ({ reservationId }) => API_ENDPOINTS.RESERVATIONS.PICKUP.PAYLOAD(reservationId);
 
 const HandoverCodeScreen = ({ navigation, route }) => {
   const reservationId = route?.params?.reservationId;
-  const flow = route?.params?.flow || 'pickup'; // 'pickup' | 'return'
-  const title = flow === 'return' ? 'Code de retour' : 'Code de récupération';
+  const title = 'Code de récupération';
 
   const [loading, setLoading] = useState(false);
-  const [payload, setPayload] = useState(null); // { code, expiresAt, qrToken }
+  const [payload, setPayload] = useState(null); // { code, expiresAt, qrToken, qrDataUrl }
   const [nowMs, setNowMs] = useState(Date.now());
+  const [mode, setMode] = useState('qr'); // 'qr' | 'code'
+  const canShowQr = Boolean(payload?.qrDataUrl);
+  const [verifiedAt, setVerifiedAt] = useState(null);
 
   useEffect(() => {
     const interval = setInterval(() => setNowMs(Date.now()), 1000);
@@ -46,12 +46,11 @@ const HandoverCodeScreen = ({ navigation, route }) => {
   }, [expiresMs, nowMs]);
 
   const generate = async () => {
-    if (!reservationId) return;
-    const endpoint = getGenerateEndpoint({ flow, reservationId });
-    if (!endpoint) {
-      Alert.alert('Indisponible', 'Ce flux n’est pas encore disponible.');
+    if (!reservationId) {
+      Alert.alert('Erreur', 'reservationId manquant');
       return;
     }
+    const endpoint = getGenerateEndpoint({ reservationId });
 
     try {
       setLoading(true);
@@ -70,6 +69,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {
       if (!response.ok) throw new Error(data?.error || 'Impossible de générer le code');
 
       setPayload(data);
+      setVerifiedAt(null);
     } catch (e) {
       Alert.alert('Erreur', e.message || 'Une erreur est survenue');
     } finally {
@@ -80,7 +80,53 @@ const HandoverCodeScreen = ({ navigation, route }) => {
   useEffect(() => {
     generate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reservationId, flow]);
+  }, [reservationId]);
+
+  // Poll pickup payload status so the renter gets immediate feedback when the owner validates.
+  useEffect(() => {
+    let cancelled = false;
+    let timer = null;
+
+    const poll = async () => {
+      if (!reservationId) return;
+      try {
+        const token = await storage.getItemAsync('userToken');
+        if (!token) return;
+
+        const res = await fetch(getPayloadEndpoint({ reservationId }), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const msg = String(body?.error || '');
+          // If the API is still on the old behavior (payload forbidden once not pickup_pending),
+          // treat it as "already validated" so the renter still gets the success UX.
+          if (msg.includes('Pickup payload is only available when status is pickup_pending')) {
+            if (!cancelled) setVerifiedAt(new Date().toISOString());
+            return;
+          }
+          return;
+        }
+        const json = await res.json();
+        if (cancelled) return;
+        if (json?.verifiedAt) {
+          setVerifiedAt(json.verifiedAt);
+        }
+      } catch (_e) {
+        // ignore
+      } finally {
+        if (!cancelled) timer = setTimeout(poll, 2000);
+      }
+    };
+
+    poll();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [reservationId]);
+
+  // Do not auto-redirect; wait for user to confirm in the modal.
 
   return (
     <LinearGradient colors={[COLORS.bg, COLORS.bg2]} style={styles.container}>
@@ -96,13 +142,61 @@ const HandoverCodeScreen = ({ navigation, route }) => {
         <View style={styles.card}>
           <Text style={styles.lead}>Présentez ce code pour valider la remise du véhicule</Text>
 
-          <View style={styles.codeBox}>
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.codeText}>{payload?.code || '— — — — — —'}</Text>
-            )}
+          <View style={styles.modeTabs}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setMode('qr')}
+              style={[styles.modeTab, mode === 'qr' && styles.modeTabActive]}
+            >
+              <Text style={[styles.modeTabText, mode === 'qr' && styles.modeTabTextActive]}>QR</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setMode('code')}
+              style={[styles.modeTab, mode === 'code' && styles.modeTabActive]}
+            >
+              <Text style={[styles.modeTabText, mode === 'code' && styles.modeTabTextActive]}>Code</Text>
+            </TouchableOpacity>
           </View>
+
+          {mode === 'qr' && canShowQr ? (
+            <View style={styles.qrBox}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <View style={styles.qrInner}>
+                  <Image source={{ uri: payload?.qrDataUrl }} style={styles.qrImage} resizeMode="contain" />
+                </View>
+              )}
+              <Text style={styles.qrHint}>Scannez ce QR code côté propriétaire.</Text>
+              <TouchableOpacity onPress={() => setMode('code')} activeOpacity={0.85} style={styles.altLinkWrap}>
+                <Text style={styles.altLink}>Utiliser le code à 6 chiffres</Text>
+              </TouchableOpacity>
+            </View>
+          ) : mode === 'qr' && !canShowQr ? (
+            <View style={styles.qrBox}>
+              <Ionicons name="qr-code-outline" size={40} color="rgba(255,255,255,0.7)" />
+              <Text style={styles.qrHint}>
+                QR indisponible pour le moment, utilisez le code.
+              </Text>
+              <TouchableOpacity onPress={() => setMode('code')} activeOpacity={0.85} style={styles.altLinkWrap}>
+                <Text style={styles.altLink}>Utiliser le code à 6 chiffres</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.codeBox}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.codeText}>{payload?.code || '— — — — — —'}</Text>
+              )}
+              {canShowQr ? (
+                <TouchableOpacity onPress={() => setMode('qr')} activeOpacity={0.85} style={styles.altLinkWrap}>
+                  <Text style={styles.altLink}>Utiliser le QR code</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          )}
 
           <View style={styles.metaRow}>
             <Ionicons name="time-outline" size={16} color={COLORS.textMuted} />
@@ -126,6 +220,30 @@ const HandoverCodeScreen = ({ navigation, route }) => {
           </Text>
         </View>
       </View>
+
+      <Modal transparent visible={Boolean(verifiedAt)} animationType="fade">
+        <View style={styles.successBackdrop}>
+          <View style={styles.successCard}>
+            <View style={styles.successIconWrap}>
+              <Ionicons name="checkmark" size={30} color="#0f1228" />
+            </View>
+            <Text style={styles.successTitle}>Récupération validée</Text>
+            <Text style={styles.successSubtitle}>Le propriétaire a confirmé la remise du véhicule.</Text>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => {
+                setVerifiedAt(null);
+                navigation.goBack();
+              }}
+              style={{ marginTop: 14 }}
+            >
+              <LinearGradient colors={['#4C6FFF', COLORS.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.successButton}>
+                <Text style={styles.successButtonText}>Retour aux détails</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 };
@@ -163,6 +281,27 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   lead: { color: COLORS.textMuted, marginBottom: 12 },
+  modeTabs: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  modeTab: {
+    flex: 1,
+    height: 38,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  modeTabActive: {
+    backgroundColor: 'rgba(143,108,255,0.18)',
+    borderColor: 'rgba(143,108,255,0.55)',
+  },
+  modeTabText: { color: 'rgba(255,255,255,0.72)', fontWeight: '900' },
+  modeTabTextActive: { color: '#fff' },
   codeBox: {
     borderRadius: 16,
     paddingVertical: 18,
@@ -173,6 +312,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   codeText: { color: '#fff', fontSize: 32, fontWeight: '800', letterSpacing: 3 },
+  qrBox: {
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qrInner: {
+    padding: 10,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+  },
+  qrImage: { width: 210, height: 210 },
+  qrHint: { marginTop: 10, color: COLORS.textMuted, textAlign: 'center' },
+  altLinkWrap: { marginTop: 12 },
+  altLink: { color: '#cdd2ff', fontWeight: '800' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   metaText: { color: COLORS.textMuted },
   buttonWrap: { marginTop: 16 },
@@ -187,7 +345,35 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.7 },
   buttonText: { color: '#fff', fontWeight: '800' },
   hint: { marginTop: 14, color: COLORS.textMuted, lineHeight: 18 },
+  successBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  successCard: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 20,
+    backgroundColor: '#151738',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    padding: 18,
+    alignItems: 'center',
+  },
+  successIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: '#2ECC71',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successTitle: { marginTop: 12, color: '#fff', fontSize: 18, fontWeight: '900' },
+  successSubtitle: { marginTop: 6, color: 'rgba(255,255,255,0.70)', textAlign: 'center', lineHeight: 18 },
+  successButton: { height: 46, paddingHorizontal: 20, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  successButtonText: { color: '#fff', fontWeight: '900' },
 });
 
 export default HandoverCodeScreen;
-

@@ -23,7 +23,6 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   const reservationFromParams = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
   const token = route?.params?.token;
-  const reservationId = reservationFromParams?.id;
 
   const [loading, setLoading] = useState(false);
   const [listingFromApi, setListingFromApi] = useState(null);
@@ -32,7 +31,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   const [paymentInfo, setPaymentInfo] = useState(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState(reservationFromParams?.status || null);
+  const [pendingStatus, setPendingStatus] = useState(reservationFromParams?.status || 'reserved');
 
   const goBack = () => navigation.goBack();
 
@@ -73,36 +72,31 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
     null;
 
   const refreshReservation = useCallback(async () => {
-    if (!token || !reservationId) return;
+    if (!token || !reservationFromParams?.id) return;
     try {
-      const res = await fetch(API_ENDPOINTS.RESERVATIONS.GET(reservationId), {
+      const res = await fetch(API_ENDPOINTS.RESERVATIONS.GET(reservationFromParams.id), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
       const json = await res.json();
       setReservationState(json || null);
-    } catch (_e) {
-      // Non-blocking; can render from cached state.
-    }
-  }, [reservationId, token]);
+    } catch (_e) {}
+  }, [reservationFromParams?.id, token]);
 
   const refreshPaymentInfo = useCallback(async () => {
-    if (!token || !reservationId) return;
+    if (!token || !reservationFromParams?.id) return;
     try {
-      const paymentRes = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservationId), {
+      const paymentRes = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservationFromParams.id), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!paymentRes.ok) return;
       const paymentJson = await paymentRes.json();
       setPaymentInfo(paymentJson || null);
-    } catch (_e) {
-      // Non-blocking.
-    }
-  }, [reservationId, token]);
+    } catch (_e) {}
+  }, [reservationFromParams?.id, token]);
 
   useFocusEffect(
     useCallback(() => {
-      // Ensure status updates (e.g., pickup verify -> active) appear immediately when coming back.
       refreshReservation();
       refreshPaymentInfo();
     }, [refreshPaymentInfo, refreshReservation])
@@ -262,11 +256,14 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
     return labels[status] || status || '—';
   };
 
+  const status = reservation?.status;
+
   const getStatusColor = (value) => {
     const map = {
       reserved: '#F4C430', // jaune
       pickup_pending: '#FF8C00', // orange
       return_pending: '#FF8C00', // orange
+      payment_pending: '#FF8C00', // orange
       confirmed: '#6EC1FF', // light blue
       active: '#2ECC71', // green
       cancelled: '#FF4D4F', // red
@@ -274,8 +271,6 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
     };
     return map[value] || '#cfd4ff';
   };
-
-  const status = reservation?.status;
 
   const STATUS_OPTIONS = useMemo(
     () => [
@@ -334,7 +329,6 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   const closeStatusPicker = () => setStatusModalOpen(false);
 
   const confirmStatusChange = async () => {
-    if (!pendingStatus) return;
     await updateStatus(pendingStatus);
     setStatusModalOpen(false);
   };

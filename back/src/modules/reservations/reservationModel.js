@@ -385,6 +385,26 @@ export const updateReservationStatus = async (id, newStatus) => {
         .single();
 
     if (error || !data) throw new Error('Failed to update reservation status');
+
+    // Test helper: allow re-testing pickup verification by clearing pickup verification fields
+    // when a reservation is moved back into pickup_pending.
+    if (isStatusTestMode() && newStatus === 'pickup_pending') {
+        const { error: pickupResetError } = await supabase
+            .from(PICKUP_TABLE)
+            .update({
+                status: 'pending',
+                confirmed_at: null,
+                pickup_code_hash: null,
+                pickup_qr_token_hash: null,
+                pickup_code_expires_at: null,
+                pickup_attempts: 0,
+                pickup_verified_at: null,
+                pickup_verified_by: null,
+            })
+            .eq('reservation_id', id);
+        if (pickupResetError) throw pickupResetError;
+    }
+
     return toReservationDto(data);
 };
 
