@@ -776,6 +776,30 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           </View>
         )}
 
+        {reservation?.status === 'return_pending' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Retour</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ReturnVerify', { reservationId: reservation.id, flow: 'return' })}
+              activeOpacity={0.85}
+              style={styles.pickupActionWrap}
+            >
+              <LinearGradient
+                colors={['#4C6FFF', COLORS.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.pickupAction}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                <Text style={styles.pickupActionText}>Vérifier le QR code de retour</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.pickupHintText}>
+              Disponible uniquement dans les 24h avant la fin de la réservation.
+            </Text>
+          </View>
+        )}
+
         {/* Price Breakdown */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Détail du prix</Text>

@@ -31,6 +31,11 @@ export const API_ENDPOINTS = {
             PAYLOAD: (id) => `${API_BASE_URL}/api/reservations/${id}/pickup/payload`,
             VERIFY: (id) => `${API_BASE_URL}/api/reservations/${id}/pickup/verify`,
         },
+        RETURN: {
+            GENERATE: (id) => `${API_BASE_URL}/api/reservations/${id}/return/generate`,
+            PAYLOAD: (id) => `${API_BASE_URL}/api/reservations/${id}/return/payload`,
+            VERIFY: (id) => `${API_BASE_URL}/api/reservations/${id}/return/verify`,
+        },
     },
     PAYMENTS: {
         CREATE_CARD_PAYMENT: `${API_BASE_URL}/api/payments/create-card-payment`,

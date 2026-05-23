@@ -17,6 +17,7 @@ import OwnerCarsScreen from './src/screens/owner/CarsScreen';
 import OwnerReservationsScreen from './src/screens/owner/ReservationsScreen';
 import OwnerReservationDetailsScreen from './src/screens/owner/ReservationDetailsScreen';
 import HandoverVerifyScreen from './src/screens/handover/HandoverVerifyScreen';
+import HandoverCodeScreen from './src/screens/handover/HandoverCodeScreen';
 import { ClientNavigation } from './src/components/navigation/ClientNavigation';
 import InboxScreen from './src/screens/messages/InboxScreen';
 import ChatScreen from './src/screens/messages/ChatScreen';
@@ -78,6 +79,7 @@ export default function App() {
             <Stack.Screen name="OwnerReservations" component={OwnerReservationsScreen} />
             <Stack.Screen name="OwnerReservationDetails" component={OwnerReservationDetailsScreen} />
             <Stack.Screen name="OwnerPickupVerify" component={HandoverVerifyScreen} />
+            <Stack.Screen name="OwnerReturnCode" component={HandoverCodeScreen} />
             <Stack.Screen name="Inbox" component={InboxScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="ClientApp" component={ClientNavigation} />

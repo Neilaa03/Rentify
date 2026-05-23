@@ -12,6 +12,7 @@ import ListingDetailsScreen from '../../screens/client/ListingDetailsScreen';
 import ReservationDatePickerScreen from '../../screens/reservations/ReservationDatePickerScreen';
 import ReservationDetailsScreen from '../../screens/reservations/ReservationDetailsScreen';
 import HandoverCodeScreen from '../../screens/handover/HandoverCodeScreen';
+import HandoverVerifyScreen from '../../screens/handover/HandoverVerifyScreen';
 import ReservationsScreen from '../../screens/reservations/ReservationsScreen';
 import ProfileScreen from '../../screens/client/ProfileScreen';
 import InboxScreen from '../../screens/messages/InboxScreen';
@@ -49,6 +50,11 @@ function HomeTabStack() {
         component={HandoverCodeScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
+      <Stack.Screen
+        name="ReturnVerify"
+        component={HandoverVerifyScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
     </Stack.Navigator>
   );
 }
@@ -73,6 +79,11 @@ function FavoritesTabStack() {
       <Stack.Screen
         name="PickupCode"
         component={HandoverCodeScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen
+        name="ReturnVerify"
+        component={HandoverVerifyScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
     </Stack.Navigator>

@@ -15,12 +15,19 @@ const formatCountdown = (ms) => {
   return `${min}:${sec}`;
 };
 
-const getGenerateEndpoint = ({ reservationId }) => API_ENDPOINTS.RESERVATIONS.PICKUP.GENERATE(reservationId);
-const getPayloadEndpoint = ({ reservationId }) => API_ENDPOINTS.RESERVATIONS.PICKUP.PAYLOAD(reservationId);
+const getGenerateEndpoint = ({ flow, reservationId }) => {
+  if (flow === 'return') return API_ENDPOINTS.RESERVATIONS.RETURN.GENERATE(reservationId);
+  return API_ENDPOINTS.RESERVATIONS.PICKUP.GENERATE(reservationId);
+};
+const getPayloadEndpoint = ({ flow, reservationId }) => {
+  if (flow === 'return') return API_ENDPOINTS.RESERVATIONS.RETURN.PAYLOAD(reservationId);
+  return API_ENDPOINTS.RESERVATIONS.PICKUP.PAYLOAD(reservationId);
+};
 
 const HandoverCodeScreen = ({ navigation, route }) => {
   const reservationId = route?.params?.reservationId;
-  const title = 'Code de récupération';
+  const flow = route?.params?.flow || 'pickup'; // pickup | return
+  const title = flow === 'return' ? 'Code de retour' : 'Code de récupération';
 
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState(null); // { code, expiresAt, qrToken, qrDataUrl }
@@ -50,7 +57,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {
       Alert.alert('Erreur', 'reservationId manquant');
       return;
     }
-    const endpoint = getGenerateEndpoint({ reservationId });
+    const endpoint = getGenerateEndpoint({ flow, reservationId });
 
     try {
       setLoading(true);
@@ -93,7 +100,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {
         const token = await storage.getItemAsync('userToken');
         if (!token) return;
 
-        const res = await fetch(getPayloadEndpoint({ reservationId }), {
+        const res = await fetch(getPayloadEndpoint({ flow, reservationId }), {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {
@@ -101,7 +108,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {
           const msg = String(body?.error || '');
           // If the API is still on the old behavior (payload forbidden once not pickup_pending),
           // treat it as "already validated" so the renter still gets the success UX.
-          if (msg.includes('Pickup payload is only available when status is pickup_pending')) {
+          if (msg.includes('payload is only available when status is')) {
             if (!cancelled) setVerifiedAt(new Date().toISOString());
             return;
           }
@@ -124,7 +131,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [reservationId]);
+  }, [flow, reservationId]);
 
   // Do not auto-redirect; wait for user to confirm in the modal.
 

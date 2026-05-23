@@ -565,6 +565,30 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
           </View>
         ) : null}
 
+        {status === 'return_pending' ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Retour</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('OwnerReturnCode', { reservationId: reservation?.id, flow: 'return' })}
+              activeOpacity={0.85}
+              style={styles.handoverActionWrap}
+            >
+              <LinearGradient
+                colors={['#4C6FFF', '#8f6cff']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.handoverAction}
+              >
+                <Ionicons name="qr-code-outline" size={18} color="#fff" />
+                <Text style={styles.handoverActionText}>Afficher le QR code de retour</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.handoverHint}>
+              Disponible uniquement dans les 24h avant la fin de la réservation.
+            </Text>
+          </View>
+        ) : null}
+
 
         <View style={styles.section}>
           <View style={styles.sectionHeaderWithButton}>

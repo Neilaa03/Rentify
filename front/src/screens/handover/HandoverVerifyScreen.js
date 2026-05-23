@@ -25,14 +25,15 @@ const useCameraSafe = () => {
 };
 
 const getVerifyEndpoint = ({ flow, reservationId }) => {
-  // Pickup only for now (return flow not implemented yet)
+  if (flow === 'return') return API_ENDPOINTS.RESERVATIONS.RETURN.VERIFY(reservationId);
   return API_ENDPOINTS.RESERVATIONS.PICKUP.VERIFY(reservationId);
 };
 
 const HandoverVerifyScreen = ({ navigation, route }) => {
   const reservationId = route?.params?.reservationId;
+  const flow = route?.params?.flow || 'pickup'; // pickup | return
   const tokenFromParams = route?.params?.token || null;
-  const title = 'Vérifier récupération';
+  const title = flow === 'return' ? 'Vérifier retour' : 'Vérifier récupération';
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,7 +51,7 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
 
   const submit = async ({ code: codeValue, qrToken } = {}) => {
     if (!reservationId) return;
-    const endpoint = getVerifyEndpoint({ reservationId });
+    const endpoint = getVerifyEndpoint({ flow, reservationId });
     if (!endpoint) {
       Alert.alert('Indisponible', 'Ce flux n’est pas encore disponible.');
       return;
