@@ -18,6 +18,18 @@ const getPepper = () => {
 const sha256Hex = (value) => crypto.createHash('sha256').update(String(value), 'utf8').digest('hex');
 const hashWithPepper = (value) => sha256Hex(`${getPepper()}::${String(value)}`);
 
+const parseDbTimestampToMs = (value) => {
+  if (!value) return NaN;
+  const raw = String(value).trim();
+  if (!raw) return NaN;
+
+  // Supabase/Postgres `timestamp without time zone` often comes back without a timezone suffix.
+  // Treat those as UTC to avoid server-local timezone skew causing immediate expiry.
+  const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(raw);
+  const normalized = hasTimezone ? raw : `${raw}Z`;
+  return Date.parse(normalized);
+};
+
 export const getPickupRowByReservationId = async (reservationId) => {
   const { data, error } = await supabase
     .from(PICKUP_TABLE)
@@ -98,7 +110,7 @@ export const verifyPickup = async ({ reservationId, verifierUserId, code, qrToke
   const attempts = Number(pickupRow.pickup_attempts || 0);
   if (attempts >= PICKUP_MAX_ATTEMPTS) throw new Error('Too many attempts. Pickup is locked.');
 
-  const expiresMs = pickupRow.pickup_code_expires_at ? Date.parse(pickupRow.pickup_code_expires_at) : NaN;
+  const expiresMs = parseDbTimestampToMs(pickupRow.pickup_code_expires_at);
   if (!Number.isFinite(expiresMs) || Date.now() > expiresMs) {
     throw new Error('Pickup code expired.');
   }
@@ -132,4 +144,3 @@ export const verifyPickup = async ({ reservationId, verifierUserId, code, qrToke
   await updateReservationStatus(reservationId, 'active');
   return { reservationId, verifiedAt: nowIso };
 };
-

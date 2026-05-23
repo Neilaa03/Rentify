@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   ActivityIndicator,
   Alert,
   ImageBackground,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
@@ -21,6 +23,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   const reservationFromParams = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
   const token = route?.params?.token;
+  const reservationId = reservationFromParams?.id;
 
   const [loading, setLoading] = useState(false);
   const [listingFromApi, setListingFromApi] = useState(null);
@@ -28,6 +31,8 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   const [chatStatus, setChatStatus] = useState({ checked: false, hasMessages: false });
   const [paymentInfo, setPaymentInfo] = useState(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState(reservationFromParams?.status || null);
 
   const goBack = () => navigation.goBack();
 
@@ -66,6 +71,42 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
     listingFromParams?.listingId ||
     reservation?.listing?.id ||
     null;
+
+  const refreshReservation = useCallback(async () => {
+    if (!token || !reservationId) return;
+    try {
+      const res = await fetch(API_ENDPOINTS.RESERVATIONS.GET(reservationId), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      setReservationState(json || null);
+    } catch (_e) {
+      // Non-blocking; can render from cached state.
+    }
+  }, [reservationId, token]);
+
+  const refreshPaymentInfo = useCallback(async () => {
+    if (!token || !reservationId) return;
+    try {
+      const paymentRes = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservationId), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!paymentRes.ok) return;
+      const paymentJson = await paymentRes.json();
+      setPaymentInfo(paymentJson || null);
+    } catch (_e) {
+      // Non-blocking.
+    }
+  }, [reservationId, token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Ensure status updates (e.g., pickup verify -> active) appear immediately when coming back.
+      refreshReservation();
+      refreshPaymentInfo();
+    }, [refreshPaymentInfo, refreshReservation])
+  );
 
   useEffect(() => {
     const otherUserId = reservation?.renter?.id || reservation?.renter_id;
@@ -210,12 +251,47 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
       reserved: 'Réservé',
       confirmed: 'Confirmé',
       pickup_pending: 'En attente de récupération',
+      return_pending: 'En attente de retour',
+      refund_pending: 'Remboursement en attente',
+      refunded: 'Remboursé',
+      payment_pending: 'Paiement en attente',
+      active: 'Actif',
+      finished: 'Terminé',
       cancelled: 'Annulé',
     };
     return labels[status] || status || '—';
   };
 
+  const getStatusColor = (value) => {
+    const map = {
+      reserved: '#F4C430', // jaune
+      pickup_pending: '#FF8C00', // orange
+      return_pending: '#FF8C00', // orange
+      confirmed: '#6EC1FF', // light blue
+      active: '#2ECC71', // green
+      cancelled: '#FF4D4F', // red
+      finished: '#3B1B78', // dark purple
+    };
+    return map[value] || '#cfd4ff';
+  };
+
   const status = reservation?.status;
+
+  const STATUS_OPTIONS = useMemo(
+    () => [
+      { value: 'confirmed', label: 'Confirmé' },
+      { value: 'reserved', label: 'Réservé' },
+      { value: 'payment_pending', label: 'En attente (paiement)' },
+      { value: 'pickup_pending', label: 'En attente (pickup)' },
+      { value: 'active', label: 'Actif' },
+      { value: 'return_pending', label: 'En attente (retour)' },
+      { value: 'refund_pending', label: 'Remboursement en attente' },
+      { value: 'refunded', label: 'Remboursé' },
+      { value: 'finished', label: 'Terminé' },
+      { value: 'cancelled', label: 'Annulé' },
+    ],
+    []
+  );
 
   const handleStatusInfo = () => {
     Alert.alert('Statut', getStatusLabel(status));
@@ -251,12 +327,16 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
   };
 
   const openStatusPicker = () => {
-    Alert.alert('Mettre à jour le statut', 'Choisissez un statut', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Confirmé', onPress: () => updateStatus('confirmed') },
-      { text: 'En attente (pickup)', onPress: () => updateStatus('pickup_pending') },
-      { text: 'Annulé', style: 'destructive', onPress: () => updateStatus('cancelled') },
-    ]);
+    setPendingStatus(status || 'reserved');
+    setStatusModalOpen(true);
+  };
+
+  const closeStatusPicker = () => setStatusModalOpen(false);
+
+  const confirmStatusChange = async () => {
+    if (!pendingStatus) return;
+    await updateStatus(pendingStatus);
+    setStatusModalOpen(false);
   };
 
   const confirmCashPayment = async () => {
@@ -505,7 +585,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Actuel</Text>
-              <Text style={styles.infoValue}>{getStatusLabel(status)}</Text>
+              <Text style={[styles.infoValue, { color: getStatusColor(status) }]}>{getStatusLabel(status)}</Text>
             </View>
           </View>
         </View>
@@ -519,6 +599,50 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
           <Text style={styles.loadingText}>Chargement...</Text>
         </View>
       ) : null}
+
+      <Modal transparent visible={statusModalOpen} animationType="fade" onRequestClose={closeStatusPicker}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Mettre à jour le statut</Text>
+            <Text style={styles.modalSubtitle}>Choisissez un statut, puis confirmez.</Text>
+
+            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+              {STATUS_OPTIONS.map((opt) => {
+                const selected = pendingStatus === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    activeOpacity={0.85}
+                    onPress={() => setPendingStatus(opt.value)}
+                    style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                  >
+                    <View style={[styles.modalRadio, selected && styles.modalRadioSelected]}>
+                      {selected ? <View style={styles.modalRadioDot} /> : null}
+                    </View>
+                    <Text style={styles.modalOptionText}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <View style={{ height: 10 }} />
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity onPress={closeStatusPicker} activeOpacity={0.85} style={styles.modalButtonGhost}>
+                <Text style={styles.modalButtonGhostText}>Annuler</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmStatusChange}
+                disabled={!pendingStatus || loading}
+                activeOpacity={0.85}
+                style={[styles.modalButtonPrimary, (!pendingStatus || loading) && styles.modalButtonDisabled]}
+              >
+                <Text style={styles.modalButtonPrimaryText}>Confirmer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -764,6 +888,75 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 18,
+    backgroundColor: '#151738',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    padding: 16,
+  },
+  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  modalSubtitle: { color: 'rgba(255,255,255,0.65)', marginTop: 6, marginBottom: 12 },
+  modalList: { maxHeight: 360 },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 10,
+  },
+  modalOptionSelected: {
+    borderColor: 'rgba(143,108,255,0.85)',
+    backgroundColor: 'rgba(143,108,255,0.10)',
+  },
+  modalRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  modalRadioSelected: { borderColor: '#8f6cff' },
+  modalRadioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#8f6cff' },
+  modalOptionText: { color: '#fff', fontWeight: '700' },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 6 },
+  modalButtonGhost: {
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  modalButtonGhostText: { color: '#fff', fontWeight: '800' },
+  modalButtonPrimary: {
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8f6cff',
+  },
+  modalButtonPrimaryText: { color: '#fff', fontWeight: '900' },
+  modalButtonDisabled: { opacity: 0.6 },
   statusButton: {
     flexDirection: 'row',
     alignItems: 'center',

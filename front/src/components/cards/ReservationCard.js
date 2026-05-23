@@ -68,15 +68,19 @@ const ReservationCard = ({
   } catch (e) {}
 
   const statusColors = {
-    confirmed: '#22c55e',
-    cancelled: '#EB5757',
-    reserved: '#6C4DFF',
-    pickup_pending: '#FFA500',
-    refunded: '#9CA3AF',
-    refund_pending: '#F59E0B',
+    reserved: '#edc13c', // jaune
+    confirmed: '#6EC1FF', // light blue
+    pickup_pending: '#FF8C00', // orange
+    return_pending: '#FF8C00', // orange
+    payment_pending: '#FF8C00', // (test/status-only)
+    active: '#2ECC71', // green
+    cancelled: '#FF4D4F', // red
+    refunded: '#3895dc',
+    refund_pending: '#FF8C00',
+    finished: '#5e1b78', // dark purple
   };
 
-  const badgeColor = statusColors[status] || '#6C4DFF';
+  const badgeColor = statusColors[status] || '#6EC1FF';
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={handlePress}>

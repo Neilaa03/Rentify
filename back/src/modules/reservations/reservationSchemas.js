@@ -9,6 +9,8 @@ const ReservationStatus = z.enum([
     'refunded',
     'refund_pending',
     'pickup_pending',
+    'payment_pending',
+    'finished',
 ]);
 
 const PickupMethod = z.enum(['owner_place', 'company_place', 'renter_delivery']);
