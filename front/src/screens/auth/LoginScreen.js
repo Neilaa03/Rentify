@@ -73,6 +73,7 @@ const LoginScreen = ({ navigation }) => {
 
                 const userParams = { token: data?.token, user: data?.user };
                 const isOwner = data?.user?.role === 'owner';
+                const isAdmin = data?.user?.role === 'admin';
                     
                 // Always refresh profile from backend so we have full name + phone reliably
                 try {
@@ -99,7 +100,12 @@ const LoginScreen = ({ navigation }) => {
                 } catch (e) {
                     // Non-blocking
                 }
-                if (isOwner) {
+                if (isAdmin) {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'AdminDashboard', params: userParams }],
+                    });
+                } else if (isOwner) {
                     navigation.reset({
                         index: 0,
                         routes: [{ name: 'OwnerDashboard', params: userParams }],

@@ -11,6 +11,7 @@ import reservationRoutes from './src/modules/reservations/reservationRoutes.js';
 import notificationRoutes from './src/modules/notifications/notificationRoutes.js';
 import messageRoutes from './src/modules/messages/messageRoutes.js';
 import favoritesRoutes from './src/modules/favorites/favoritesRoutes.js';
+import adminRoutes from './src/modules/admin/adminRoutes.js';
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/reservations', reservationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/favorites', favoritesRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

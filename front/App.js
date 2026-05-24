@@ -21,6 +21,12 @@ import NotificationsScreen from './src/screens/notificationsScreen';
 import { ClientNavigation } from './src/components/navigation/ClientNavigation';
 import InboxScreen from './src/screens/messages/InboxScreen';
 import ChatScreen from './src/screens/messages/ChatScreen';
+import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
+import AdminUsersScreen from './src/screens/admin/AdminUsersScreen';
+import AdminCarsScreen from './src/screens/admin/AdminCarsScreen';
+import AdminReservationsScreen from './src/screens/admin/AdminReservationsScreen';
+import AdminPaymentsScreen from './src/screens/admin/AdminPaymentsScreen';
+import AdminReportsScreen from './src/screens/admin/AdminReportsScreen';
 
 const Stack = createStackNavigator();
 const APP_BACKGROUND = '#0f1228';
@@ -82,6 +88,12 @@ export default function App() {
             <Stack.Screen name="Inbox" component={InboxScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} />
             <Stack.Screen name="ClientApp" component={ClientNavigation} />
+            <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+            <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
+            <Stack.Screen name="AdminCars" component={AdminCarsScreen} />
+            <Stack.Screen name="AdminReservations" component={AdminReservationsScreen} />
+            <Stack.Screen name="AdminPayments" component={AdminPaymentsScreen} />
+            <Stack.Screen name="AdminReports" component={AdminReportsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </NativeStripeProvider>
