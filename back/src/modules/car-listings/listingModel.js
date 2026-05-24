@@ -39,6 +39,8 @@ export const toListingDto = (row) => ({
   pricePerDay: row.price_per_day,
   pricePerWeek: row.price_per_week,
   pricePerMonth: row.price_per_month,
+  pickupAddress: row.pickup_address,
+  deliveryFee: row.delivery_fee,
   availableFrom: row.available_from,
   availableTo: row.available_to,
   isActive: row.is_active,
@@ -59,6 +61,8 @@ const toListingTablePayload = (payload) => {
   if (payload.pricePerMonth !== undefined) {
     mapped.price_per_month = payload.pricePerMonth;
   }
+  if (payload.pickupAddress !== undefined) mapped.pickup_address = payload.pickupAddress;
+  if (payload.deliveryFee !== undefined) mapped.delivery_fee = payload.deliveryFee;
   if (payload.availableFrom !== undefined) mapped.available_from = payload.availableFrom;
   if (payload.availableTo !== undefined) mapped.available_to = payload.availableTo;
   if (payload.isActive !== undefined) mapped.is_active = payload.isActive;
@@ -67,7 +71,7 @@ const toListingTablePayload = (payload) => {
 };
 
 export const listingBaseSelect =
-  'id, car_id, title, description, country, city, price_per_day, price_per_week, price_per_month, available_from, available_to, is_active, created_at, cars!inner(*, car_images(*))';
+  'id, car_id, title, description, country, city, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, available_from, available_to, is_active, created_at, cars!inner(*, car_images(*))';
 
 export const getListings = async (filters = {}) => {
   const {

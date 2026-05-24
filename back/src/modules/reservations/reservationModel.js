@@ -3,8 +3,53 @@ import { supabase } from '../../config/supabase.js';
 const RESERVATIONS_TABLE = 'reservations';
 const LISTINGS_TABLE = 'listings';
 const USERS_TABLE = 'users';
+const PICKUP_TABLE = 'pickup';
 
 const PAYMENT_GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const HANDOVER_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+const isStatusTestMode = () => String(process.env.RESERVATION_STATUS_TEST_MODE || '').toLowerCase() === 'true';
+
+const toUtcMidnightMs = (ymd) => {
+    if (!ymd) return NaN;
+    const ms = Date.parse(`${ymd}T00:00:00.000Z`);
+    return Number.isFinite(ms) ? ms : NaN;
+};
+
+const shouldOpenPickupWindow = (reservationRow) => {
+    const startMs = toUtcMidnightMs(reservationRow?.start_date);
+    if (!Number.isFinite(startMs)) return false;
+    return Date.now() >= startMs - HANDOVER_WINDOW_MS;
+};
+
+const shouldOpenReturnWindow = (reservationRow) => {
+    const endMs = toUtcMidnightMs(reservationRow?.end_date);
+    if (!Number.isFinite(endMs)) return false;
+    return Date.now() >= endMs - HANDOVER_WINDOW_MS;
+};
+
+const maybeAdvanceStatusInRow = async (reservationRow) => {
+    if (!reservationRow?.id || !reservationRow?.status) return reservationRow;
+
+    let nextStatus = null;
+    if (reservationRow.status === 'confirmed' && shouldOpenPickupWindow(reservationRow)) {
+        nextStatus = 'pickup_pending';
+    } else if (reservationRow.status === 'active' && shouldOpenReturnWindow(reservationRow)) {
+        nextStatus = 'return_pending';
+    }
+
+    if (!nextStatus) return reservationRow;
+
+    const { data, error } = await supabase
+        .from(RESERVATIONS_TABLE)
+        .update({ status: nextStatus })
+        .eq('id', reservationRow.id)
+        .select('id, status')
+        .single();
+
+    if (error || !data) return reservationRow;
+    return { ...reservationRow, status: data.status };
+};
 
 // =========================================================
 // DTO CONVERSION
@@ -19,6 +64,18 @@ const toReservationDto = (row) => ({
     totalPrice: row.total_price,
     status: row.status,
     createdAt: row.created_at,
+    pickup: (() => {
+        const pickupRow = Array.isArray(row.pickup) ? row.pickup[0] : row.pickup;
+        if (!pickupRow) return null;
+        return {
+            id: pickupRow.id,
+            status: pickupRow.status,
+            confirmedAt: pickupRow.confirmed_at,
+            pickupMethod: pickupRow.pickup_method,
+            pickupAddress: pickupRow.pickup_address,
+            deliveryFee: pickupRow.delivery_fee,
+        };
+    })(),
     renter: (row.renter || row.users)
         ? {
             id: (row.renter || row.users).id,
@@ -37,6 +94,8 @@ const toReservationDto = (row) => ({
         pricePerDay: row.listings.price_per_day,
         pricePerWeek: row.listings.price_per_week,
         pricePerMonth: row.listings.price_per_month,
+        pickupAddress: row.listings.pickup_address,
+        deliveryFee: row.listings.delivery_fee,
         car: row.listings.cars ? {
             id: row.listings.cars.id,
             ownerId: row.listings.cars.owner_id,
@@ -89,7 +148,7 @@ export const getReservations = async (filters = {}) => {
 
     let query = supabase
         .from(RESERVATIONS_TABLE)
-        .select('*')
+        .select('*, pickup(*)')
         .range((page - 1) * limit, page * limit - 1);
 
     if (status) query = query.eq('status', status);
@@ -98,34 +157,37 @@ export const getReservations = async (filters = {}) => {
 
     const { data, error } = await query;
     if (error) throw error;
-
-    return (data || []).map(toReservationDto);
+    const rows = data || [];
+    const advanced = await Promise.all(rows.map(maybeAdvanceStatusInRow));
+    return advanced.map(toReservationDto);
 };
 
 export const getReservationById = async (id) => {
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
         .select(
-            '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), users(id, first_name, last_name, phone, email)'
+            '*, pickup(*), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), users(id, first_name, last_name, phone, email)'
         )
         .eq('id', id)
         .single();
 
     if (error || !data) throw new Error('Reservation not found');
 
+    const advanced = await maybeAdvanceStatusInRow(data);
+
     // Attach renter contact if not included by relations.
-    if (!data.users && data.renter_id) {
+    if (!advanced.users && advanced.renter_id) {
         const { data: renter, error: renterError } = await supabase
             .from(USERS_TABLE)
             .select('id, first_name, last_name, phone, email')
-            .eq('id', data.renter_id)
+            .eq('id', advanced.renter_id)
             .single();
-        if (!renterError && renter) data.users = renter;
+        if (!renterError && renter) advanced.users = renter;
     }
 
     // Auto-cancel unpaid reservations that exceeded grace period
-    if (['reserved'].includes(data.status) && data.created_at) {
-        const createdAtMs = new Date(data.created_at).getTime();
+    if (['reserved'].includes(advanced.status) && advanced.created_at) {
+        const createdAtMs = new Date(advanced.created_at).getTime();
         if (!Number.isNaN(createdAtMs) && Date.now() - createdAtMs > PAYMENT_GRACE_MS) {
             const { data: cancelled, error: cancelError } = await supabase
                 .from(RESERVATIONS_TABLE)
@@ -149,7 +211,39 @@ export const getReservationById = async (id) => {
         }
     }
 
-    return toReservationDto(data);
+    return toReservationDto(advanced);
+};
+
+const assertTransitionAllowed = (fromStatus, toStatus, reservationRow) => {
+    if (isStatusTestMode()) return;
+
+    const allowed = {
+        reserved: new Set(['confirmed', 'cancelled']),
+        confirmed: new Set(['pickup_pending', 'cancelled']),
+        pickup_pending: new Set(['active', 'cancelled']),
+        active: new Set(['return_pending']),
+        return_pending: new Set(['refund_pending']),
+        refund_pending: new Set(['refunded']),
+        payment_pending: new Set(['confirmed', 'cancelled']),
+        finished: new Set([]),
+    };
+
+    const targets = allowed[fromStatus];
+    if (!targets || !targets.has(toStatus)) {
+        throw new Error(`Invalid status transition: ${fromStatus} -> ${toStatus}`);
+    }
+
+    if (fromStatus === 'confirmed' && toStatus === 'pickup_pending') {
+        if (!shouldOpenPickupWindow(reservationRow)) {
+            throw new Error('Pickup is only available within 24 hours before start date.');
+        }
+    }
+
+    if (fromStatus === 'active' && toStatus === 'return_pending') {
+        if (!shouldOpenReturnWindow(reservationRow)) {
+            throw new Error('Return is only available within 24 hours before end date.');
+        }
+    }
 };
 
 export const createReservation = async (payload, renterId) => {
@@ -167,7 +261,7 @@ export const createReservation = async (payload, renterId) => {
     // Fetch listing to get pricing
     const { data: listingData, error: listingError } = await supabase
         .from(LISTINGS_TABLE)
-        .select('price_per_day, price_per_week, price_per_month')
+        .select('price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee')
         .eq('id', payload.listingId)
         .single();
 
@@ -205,6 +299,27 @@ export const createReservation = async (payload, renterId) => {
     // Apply daily pricing for remaining days
     totalPrice += remainingDays * listingData.price_per_day;
 
+    const listingDeliveryFee = Number(listingData.delivery_fee || 0);
+    const pickupMethod = payload.pickupMethod || 'owner_place';
+
+    let deliveryFeeApplied = 0;
+    let pickupAddressSnapshot = null;
+
+    if (pickupMethod === 'renter_delivery') {
+        if (listingDeliveryFee <= 0) {
+            throw new Error('This listing does not support delivery');
+        }
+        deliveryFeeApplied = listingDeliveryFee;
+        pickupAddressSnapshot = payload.pickupAddress || null;
+    } else {
+        pickupAddressSnapshot = listingData.pickup_address || null;
+        if (!pickupAddressSnapshot) {
+            throw new Error('Listing pickup address is missing');
+        }
+    }
+
+    totalPrice += deliveryFeeApplied;
+
     // Validate totalPrice is a valid number
     if (isNaN(totalPrice) || !isFinite(totalPrice)) {
         throw new Error('Failed to calculate reservation price');
@@ -224,10 +339,44 @@ export const createReservation = async (payload, renterId) => {
         .single();
 
     if (error) throw error;
-    return toReservationDto(data);
+
+    const { error: pickupError } = await supabase
+        .from(PICKUP_TABLE)
+        .insert([{
+            reservation_id: data.id,
+            status: 'pending',
+            pickup_method: pickupMethod,
+            pickup_address: pickupAddressSnapshot,
+            delivery_fee: deliveryFeeApplied,
+        }]);
+
+    if (pickupError) {
+        await supabase.from(RESERVATIONS_TABLE).delete().eq('id', data.id);
+        throw pickupError;
+    }
+
+    const { data: created, error: fetchCreatedError } = await supabase
+        .from(RESERVATIONS_TABLE)
+        .select(
+            '*, pickup(*), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), users(id, first_name, last_name, phone, email)'
+        )
+        .eq('id', data.id)
+        .single();
+
+    if (fetchCreatedError || !created) throw new Error('Failed to fetch created reservation');
+    return toReservationDto(created);
 };
 
 export const updateReservationStatus = async (id, newStatus) => {
+    const { data: existing, error: fetchError } = await supabase
+        .from(RESERVATIONS_TABLE)
+        .select('id, status, start_date, end_date')
+        .eq('id', id)
+        .single();
+    if (fetchError || !existing) throw new Error('Reservation not found');
+
+    assertTransitionAllowed(existing.status, newStatus, existing);
+
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
         .update({ status: newStatus })
@@ -236,6 +385,26 @@ export const updateReservationStatus = async (id, newStatus) => {
         .single();
 
     if (error || !data) throw new Error('Failed to update reservation status');
+
+    // Test helper: allow re-testing pickup verification by clearing pickup verification fields
+    // when a reservation is moved back into pickup_pending.
+    if (isStatusTestMode() && newStatus === 'pickup_pending') {
+        const { error: pickupResetError } = await supabase
+            .from(PICKUP_TABLE)
+            .update({
+                status: 'pending',
+                confirmed_at: null,
+                pickup_code_hash: null,
+                pickup_qr_token_hash: null,
+                pickup_code_expires_at: null,
+                pickup_attempts: 0,
+                pickup_verified_at: null,
+                pickup_verified_by: null,
+            })
+            .eq('reservation_id', id);
+        if (pickupResetError) throw pickupResetError;
+    }
+
     return toReservationDto(data);
 };
 
@@ -270,7 +439,17 @@ export const updateReservationDetails = async (id, updates) => {
         }
     }
 
-    // Fetch listing to recalculate price
+    // Fetch pickup details (delivery fee snapshot)
+    const { data: pickupRows, error: pickupFetchError } = await supabase
+        .from(PICKUP_TABLE)
+        .select('delivery_fee')
+        .eq('reservation_id', id)
+        .limit(1);
+
+    if (pickupFetchError) throw pickupFetchError;
+    const deliveryFeeApplied = Number((pickupRows && pickupRows[0] && pickupRows[0].delivery_fee) || 0);
+
+    // Fetch listing to recalculate base price
     const { data: listingData, error: listingError } = await supabase
         .from(LISTINGS_TABLE)
         .select('price_per_day, price_per_week, price_per_month')
@@ -303,6 +482,8 @@ export const updateReservationDetails = async (id, updates) => {
     // Apply daily pricing for remaining days
     totalPrice += remainingDays * listingData.price_per_day;
 
+    totalPrice += deliveryFeeApplied;
+
     // Prepare update payload
     const updatePayload = {
         start_date: startDate.toISOString().split('T')[0],
@@ -318,7 +499,15 @@ export const updateReservationDetails = async (id, updates) => {
         .single();
 
     if (error || !data) throw new Error('Failed to update reservation');
-    return toReservationDto(data);
+    const { data: full, error: fullError } = await supabase
+        .from(RESERVATIONS_TABLE)
+        .select(
+            '*, pickup(*), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary))), users(id, first_name, last_name, phone, email)'
+        )
+        .eq('id', id)
+        .single();
+    if (fullError || !full) throw new Error('Failed to fetch updated reservation');
+    return toReservationDto(full);
 };
 
 export const getReservationsByRenter = async (renterId) => {
@@ -335,7 +524,7 @@ export const getReservationsByRenter = async (renterId) => {
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
         .select(
-            '*, listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))'
+            '*, pickup(*), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))'
         )
         .eq('renter_id', renterId)
         .order('created_at', { ascending: false });
@@ -348,7 +537,7 @@ export const getListingReservations = async (listingId) => {
     const { data, error } = await supabase
         .from(RESERVATIONS_TABLE)
         .select(
-            '*, users(id, first_name, last_name, phone, email), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))'
+            '*, pickup(*), users(id, first_name, last_name, phone, email), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))'
         )
         .eq('listing_id', listingId)
         .order('start_date', { ascending: true });

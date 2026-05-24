@@ -29,6 +29,8 @@ export const toUiListing = (item) => {
     images: carImages,
     car: item.car || null,
     pricePerDay: item.pricePerDay ?? 0,
+    pickupAddress: item.pickupAddress ?? item.pickup_address ?? '',
+    deliveryFee: item.deliveryFee ?? item.delivery_fee ?? 0,
     available: Boolean(item.isActive),
     fuel: item.car?.fuelType || 'N/A',
     transmission: item.car?.transmission || 'N/A',

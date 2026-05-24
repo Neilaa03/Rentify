@@ -9,6 +9,8 @@ const listingBaseSchema = z.object({
   pricePerDay: z.coerce.number().min(0, 'pricePerDay must be >= 0'),
   pricePerWeek: z.coerce.number().min(0).optional(),
   pricePerMonth: z.coerce.number().min(0).optional(),
+  pickupAddress: z.string().trim().min(1, 'pickupAddress is required'),
+  deliveryFee: z.coerce.number().min(0, 'deliveryFee must be >= 0').optional(),
   availableFrom: z.string().date('availableFrom must be a valid date (YYYY-MM-DD)'),
   availableTo: z.string().date('availableTo must be a valid date (YYYY-MM-DD)'),
   isActive: z.coerce.boolean().optional(),

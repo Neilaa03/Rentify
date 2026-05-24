@@ -11,6 +11,8 @@ import FavoritesScreen from '../../screens/client/FavoritesScreen';
 import ListingDetailsScreen from '../../screens/client/ListingDetailsScreen';
 import ReservationDatePickerScreen from '../../screens/reservations/ReservationDatePickerScreen';
 import ReservationDetailsScreen from '../../screens/reservations/ReservationDetailsScreen';
+import HandoverCodeScreen from '../../screens/handover/HandoverCodeScreen';
+import HandoverVerifyScreen from '../../screens/handover/HandoverVerifyScreen';
 import ReservationsScreen from '../../screens/reservations/ReservationsScreen';
 import ProfileScreen from '../../screens/client/ProfileScreen';
 import InboxScreen from '../../screens/messages/InboxScreen';
@@ -43,6 +45,16 @@ function HomeTabStack() {
         component={ReservationDetailsScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
+      <Stack.Screen
+        name="PickupCode"
+        component={HandoverCodeScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen
+        name="ReturnVerify"
+        component={HandoverVerifyScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
     </Stack.Navigator>
   );
 }
@@ -64,6 +76,16 @@ function FavoritesTabStack() {
         component={ReservationDatePickerScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
+      <Stack.Screen
+        name="PickupCode"
+        component={HandoverCodeScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen
+        name="ReturnVerify"
+        component={HandoverVerifyScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
     </Stack.Navigator>
   );
 }
@@ -83,6 +105,11 @@ function ReservationsTabStack() {
       <Stack.Screen 
         name="ReservationDetailsFromReservations" 
         component={ReservationDetailsScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+      <Stack.Screen
+        name="PickupCode"
+        component={HandoverCodeScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
     </Stack.Navigator>

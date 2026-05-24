@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   Platform,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
@@ -36,6 +37,8 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   const [reservedDates, setReservedDates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [estimatedPrice, setEstimatedPrice] = useState(0);
+  const [pickupMethod, setPickupMethod] = useState('owner_place');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
 
   // Fetch full listing details and reserved dates
   useEffect(() => {
@@ -64,6 +67,10 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   useEffect(() => {
     updateMarkedDates(startDate, endDate);
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (startDate && endDate) calculatePrice(startDate, endDate);
+  }, [pickupMethod]);
 
   const fetchListingDetails = async () => {
     try {
@@ -234,7 +241,10 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   };
 
   const calculatePrice = (start, end) => {
-    const price = calculateReservationPrice(listing, start, end);
+    const deliveryFee = Number(listing?.deliveryFee ?? listing?.delivery_fee ?? 0);
+    const price = calculateReservationPrice(listing, start, end, {
+      deliveryFee: pickupMethod === 'renter_delivery' ? deliveryFee : 0,
+    });
     setEstimatedPrice(price);
   };
 
@@ -254,6 +264,11 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   const handlePrimaryAction = async () => {
     if (!startDate || !endDate) {
       Alert.alert('Erreur', 'Veuillez sélectionner une plage de dates');
+      return;
+    }
+
+    if (!isEditing && pickupMethod === 'renter_delivery' && !deliveryAddress.trim()) {
+      Alert.alert('Adresse requise', 'Veuillez saisir votre adresse de livraison');
       return;
     }
 
@@ -282,6 +297,8 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
                   listingId: listing.id,
                   startDate,
                   endDate,
+                  pickupMethod,
+                  pickupAddress: pickupMethod === 'renter_delivery' ? deliveryAddress.trim() : undefined,
                 }
           ),
         }
@@ -416,6 +433,72 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
             startFromMonday
           />
         </View>
+
+        {!isEditing ? (
+          <View style={styles.pickupSection}>
+            <Text style={styles.pickupTitle}>Récupération</Text>
+            <View style={styles.pickupRow}>
+              <TouchableOpacity
+                onPress={() => {
+                  setPickupMethod('owner_place');
+                  setDeliveryAddress('');
+                }}
+                style={[styles.pickupOption, pickupMethod === 'owner_place' && styles.pickupOptionActive]}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.pickupOptionText, pickupMethod === 'owner_place' && styles.pickupOptionTextActive]}>
+                  Chez le propriétaire
+                </Text>
+                {listing?.pickupAddress ? (
+                  <Text style={styles.pickupHint} numberOfLines={2}>{listing.pickupAddress}</Text>
+                ) : (
+                  <Text style={styles.pickupHint} numberOfLines={2}>Adresse non précisée</Text>
+                )}
+              </TouchableOpacity>
+
+              {(() => {
+                const fee = Number(listing?.deliveryFee ?? listing?.delivery_fee ?? 0);
+                const deliveryAvailable = Number.isFinite(fee) && fee > 0;
+                return (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (!deliveryAvailable) return;
+                      setPickupMethod('renter_delivery');
+                    }}
+                    disabled={!deliveryAvailable}
+                    style={[
+                      styles.pickupOption,
+                      pickupMethod === 'renter_delivery' && styles.pickupOptionActive,
+                      !deliveryAvailable && styles.pickupOptionDisabled,
+                    ]}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.pickupOptionText, pickupMethod === 'renter_delivery' && styles.pickupOptionTextActive]}>
+                      Livraison
+                    </Text>
+                    <Text style={styles.pickupHint}>
+                      {deliveryAvailable ? `+${fee.toLocaleString('fr-FR')} DA` : 'Non disponible'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
+            </View>
+
+            {pickupMethod === 'renter_delivery' ? (
+              <View style={styles.deliveryInputWrap}>
+                <Text style={styles.deliveryLabel}>Adresse de livraison</Text>
+                <TextInput
+                  style={styles.deliveryInput}
+                  value={deliveryAddress}
+                  onChangeText={setDeliveryAddress}
+                  placeholder="Ex: Rue..., Ville..."
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  multiline
+                />
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         {/* Selected Dates Summary */}
         {(startDate || endDate) && (
@@ -593,10 +676,15 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   summarySection: {
+    marginTop: 18,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
     marginBottom: 18,
   },
   sectionTitle: {
     color: COLORS.text,
+    marginBottom: 16,
     fontSize: 18,
     fontWeight: '700',
   },
@@ -671,6 +759,67 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: 18,
     fontWeight: '700',
+  },
+  pickupSection: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  pickupTitle: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  pickupRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  pickupOption: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  pickupOptionActive: {
+    borderColor: 'rgba(143,108,255,0.8)',
+    backgroundColor: 'rgba(143,108,255,0.18)',
+  },
+  pickupOptionDisabled: {
+    opacity: 0.6,
+  },
+  pickupOptionText: {
+    color: COLORS.text,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  pickupOptionTextActive: {
+    color: '#fff',
+  },
+  pickupHint: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  deliveryInputWrap: {
+    marginTop: 10,
+  },
+  deliveryLabel: {
+    color: COLORS.textMuted,
+    marginBottom: 6,
+  },
+  deliveryInput: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    color: '#fff',
   },
   clearButton: {
     paddingVertical: 10,

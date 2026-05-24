@@ -148,6 +148,20 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.description}>{listing.description}</Text>
 
+          <Text style={styles.sectionTitle}>Récupération</Text>
+          <View style={styles.pickupInfoCard}>
+            <View style={styles.pickupInfoRow}>
+              <Ionicons name="location-outline" size={16} color="#cfd3ff" />
+              <Text style={styles.pickupInfoText}>{listing.pickupAddress || 'Adresse non précisée'}</Text>
+            </View>
+            <View style={styles.pickupInfoRow}>
+              <Ionicons name="car-outline" size={16} color="#cfd3ff" />
+              <Text style={styles.pickupInfoText}>
+                Livraison: {Number(listing.deliveryFee || 0) > 0 ? `${Number(listing.deliveryFee).toLocaleString('fr-FR')} DA` : 'non disponible'}
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.reservationCard}>
             <View style={styles.reservationInfo}>
               <Text style={styles.reservationLabel}>Prix par jour</Text>
@@ -407,6 +421,25 @@ const styles = StyleSheet.create({
     color: '#9aa2cc',
     fontSize: 15,
     lineHeight: 22,
+  },
+  pickupInfoCard: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+  },
+  pickupInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  pickupInfoText: {
+    flex: 1,
+    color: '#cfd3ff',
+    lineHeight: 18,
   },
   ownerCard: {
     marginTop: 18,
