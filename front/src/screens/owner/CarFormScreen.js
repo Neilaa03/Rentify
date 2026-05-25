@@ -185,14 +185,26 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
 
   const handleDocumentPress = async (type) => {
     const document = form.documents[type];
-    if (document?.uri) {
+    const candidateUrl =
+      (typeof document?.documentUrl === 'string' && document.documentUrl.trim()) ||
+      (typeof document?.uri === 'string' && document.uri.trim()) ||
+      '';
+
+    if (candidateUrl) {
       try {
-        await Linking.openURL(document.uri);
+        await Linking.openURL(candidateUrl);
         return;
       } catch (error) {
-        console.warn('Unable to open document', error);
-        Alert.alert('Erreur', 'Impossible d’ouvrir le document.');
-        return;
+        console.warn('Unable to open document directly, trying fallback', error);
+        try {
+          const fallbackViewerUrl = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(candidateUrl)}`;
+          await Linking.openURL(fallbackViewerUrl);
+          return;
+        } catch (fallbackError) {
+          console.warn('Fallback open failed', fallbackError);
+          Alert.alert('Erreur', 'Impossible d’ouvrir le document.');
+          return;
+        }
       }
     }
 
@@ -222,25 +234,22 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const pickDocument = async (type) => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
-                type: [
-                  'application/pdf',
-                  'application/msword',
-                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                  'application/vnd.ms-excel',
-                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                  'text/plain',
-                ],
+                type: ['application/pdf'],
                 copyToCacheDirectory: true,
             });
 
-            if (result.type !== 'success') return;
+            if (result?.canceled) return;
 
-            const { uri, name, mimeType } = result;
+            const asset = Array.isArray(result?.assets) ? result.assets[0] : result;
+            const uri = asset?.uri;
+            const name = asset?.name;
+            const mimeType = asset?.mimeType || asset?.type;
 
             if (!uri || !name) return;
 
-            if (mimeType?.startsWith('image/')) {
-              return Alert.alert('Format non autorisé', 'Les images ne sont pas autorisées pour les documents. Choisissez un document PDF ou DOC.');
+            const isValidMime = mimeType === 'application/pdf';
+            if (!isValidMime) {
+              return Alert.alert('Format non autorisé', 'Choisissez uniquement un fichier PDF.');
             }
 
             setStagedDocuments((prev) => ({
@@ -261,19 +270,61 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const staged = stagedDocuments[type];
     if (!staged) return;
 
-    setDocumentField(type, {
-      ...form.documents[type],
-      uri: staged.uri,
-      name: staged.name,
-      mimeType: staged.mimeType,
-      status: 'pending',
-    });
+    const targetCarId = car?.id || form?.carId || null;
 
-    setStagedDocuments((prev) => {
-      const updated = { ...prev };
-      delete updated[type];
-      return updated;
-    });
+    if (!targetCarId) {
+      setDocumentField(type, {
+        ...form.documents[type],
+        uri: staged.uri,
+        name: staged.name,
+        mimeType: staged.mimeType,
+        status: 'pending',
+      });
+      setStagedDocuments((prev) => {
+        const updated = { ...prev };
+        delete updated[type];
+        return updated;
+      });
+      Alert.alert(
+        'Document prêt',
+        'Le document est prêt et sera envoyé quand vous cliquerez sur Enregistrer le véhicule.'
+      );
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const uploaded = await uploadCarDocument({
+        token,
+        carId: targetCarId,
+        documentType: type,
+        file: {
+          uri: staged.uri,
+          name: staged.name || `${type}.pdf`,
+          type: staged.mimeType || 'application/pdf',
+        },
+      });
+
+      setDocumentField(type, {
+        ...form.documents[type],
+        id: uploaded?.id || form.documents[type]?.id,
+        uri: uploaded?.documentUrl || staged.uri,
+        documentUrl: uploaded?.documentUrl || staged.uri,
+        name: staged.name,
+        mimeType: staged.mimeType,
+        status: uploaded?.status || 'pending',
+      });
+
+      setStagedDocuments((prev) => {
+        const updated = { ...prev };
+        delete updated[type];
+        return updated;
+      });
+    } catch (error) {
+      Alert.alert('Erreur', error.message || 'Upload du document impossible');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const cancelDocumentUpload = (type) => {
@@ -407,12 +458,16 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const uploadDocuments = Object.entries(form.documents)
       //.filter(([, document]) => document?.uri?.trim())
       .filter(([, document]) => Boolean(document?.uri))
+      .filter(([, document]) => {
+        const isRemoteUrl = typeof document?.uri === 'string' && document.uri.startsWith('http');
+        return !(document?.id && isRemoteUrl);
+      })
       .filter(( [documentType, document] ) => document.uri !== existingDocumentUrls[documentType])
-      .map(([documentType, document]) => {
+      .map(async ([documentType, document]) => {
         const isRemoteUrl = typeof document.uri === 'string' && document.uri.startsWith('http');
 
         if (isRemoteUrl) {
-          return createCarDocument({
+          const created = await createCarDocument({
             token,
             payload: {
               carId,
@@ -420,6 +475,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
               documentUrl: document.uri.trim(),
             },
           });
+          return { documentType, uploaded: created };
         }
 
         //   setForm(prev => ({
@@ -433,7 +489,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         //       },
         //   }));
 
-        return uploadCarDocument({
+        const uploaded = await uploadCarDocument({
           token,
           carId,
           documentType,
@@ -443,6 +499,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
             type: document.mimeType || 'application/octet-stream',
           },
         });
+        return { documentType, uploaded };
       });
 
     const uploadImages = form.images
@@ -473,7 +530,32 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         });
       });
 
-    await Promise.all([...uploadDocuments, ...uploadImages]);
+    const uploadedDocuments = await Promise.all(uploadDocuments);
+    await Promise.all(uploadImages);
+
+    if (uploadedDocuments.length > 0) {
+      setForm((prev) => {
+        const nextDocuments = { ...prev.documents };
+        for (const result of uploadedDocuments) {
+          const documentType = result?.documentType;
+          const uploadedUrl = result?.uploaded?.documentUrl;
+          const uploadedId = result?.uploaded?.id;
+          if (!documentType || !uploadedUrl || !nextDocuments[documentType]) continue;
+
+          nextDocuments[documentType] = {
+            ...nextDocuments[documentType],
+            id: uploadedId || nextDocuments[documentType]?.id,
+            uri: uploadedUrl,
+            documentUrl: uploadedUrl,
+          };
+        }
+
+        return {
+          ...prev,
+          documents: nextDocuments,
+        };
+      });
+    }
   };
 
   const submitCreateCar = async () => {

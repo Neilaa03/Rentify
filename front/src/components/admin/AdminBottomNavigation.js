@@ -18,11 +18,11 @@ const AdminBottomNavigation = ({ navigation, route, active }) => {
   };
 
   const tabs = [
-    { key: 'dashboard', label: 'Dashboard', icon: 'grid-outline', to: 'AdminDashboard' },
-    { key: 'users', label: 'Users', icon: 'people-outline', to: 'AdminUsers' },
-    { key: 'cars', label: 'Cars', icon: 'car-outline', to: 'AdminCars' },
-    { key: 'reservations', label: 'Bookings', icon: 'calendar-outline', to: 'AdminReservations' },
-    { key: 'more', label: 'Reports', icon: 'flag-outline', to: 'AdminReports' },
+    { key: 'dashboard', label: 'Tableau de bord', icon: 'grid-outline', to: 'AdminDashboard' },
+    { key: 'users', label: 'Comptes', icon: 'people-outline', to: 'AdminUsers' },
+    { key: 'documents', label: 'Documents', icon: 'document-text-outline', to: 'AdminCars' },
+    { key: 'activity', label: 'Activite', icon: 'pulse-outline', to: 'AdminReservations' },
+    { key: 'reports', label: 'Signalements', icon: 'flag-outline', to: 'AdminReports' },
   ];
 
   return (
@@ -47,17 +47,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    borderRadius: 18,
+    borderRadius: 16,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: '#151738',
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  footerTab: { flex: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4 },
-  tabLabel: { color: '#8a90b8', fontSize: 10, marginTop: 4, fontWeight: '500' },
+  footerTab: { flex: 1, alignItems: 'center', paddingVertical: 4, paddingHorizontal: 2 },
+  tabLabel: { color: '#8a90b8', fontSize: 9, marginTop: 4, fontWeight: '500' },
   tabLabelActive: { color: '#8f6cff' },
 });
 
