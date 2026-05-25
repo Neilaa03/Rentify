@@ -41,6 +41,7 @@ const useStripeSafe = () => {
 };
 
 const ReservationDetailsScreen = ({ navigation, route }) => {
+  const reservationIdParam = route?.params?.reservationId;
   const reservationFromParams = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
   const resumeCardPayment = !!route?.params?.resumeCardPayment;
@@ -58,8 +59,10 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
   const reservation = reservationState || reservationFromParams;
 
-  const goBackToPrevious = () => {
+  const goToReservations = () => {
     const parent = navigation.getParent?.();
+    const navigate = parent?.navigate || navigation.navigate;
+    navigate('ReservationsTab', { screen: 'ReservationsList' });
     const originTab = route?.params?.originTab;
     const listingObject = route?.params?.listing;
 
@@ -127,7 +130,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
               Alert.alert('Succès', 'Réservation annulée avec succès', [
                 {
                   text: 'OK',
-                  onPress: () => goBackToPrevious(),
+                  onPress: () => goToReservations(),
                 },
               ]);
             } catch (error) {
@@ -159,7 +162,13 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         setPaymentMethod(payment.paymentMethod);
       }
       setPaymentInfo(payment);
-      if (payment?.status === 'completed' || payment?.status === 'failed' || payment?.status === 'pending_cash' || payment?.status === 'pending') {
+      if (
+        payment?.status === 'completed' || 
+        payment?.status === 'failed' || 
+        payment?.status === 'pending_cash' || 
+        payment?.status === 'pending' ||
+        payment?.status === 'processing'
+      ) {
         setPaymentStatus(payment.status);
       } else {
         setPaymentStatus(null);
@@ -237,7 +246,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.header}>
-          <TouchableOpacity onPress={goBackToPrevious} style={styles.backButton}>
+          <TouchableOpacity onPress={goToReservations} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Récapitulatif</Text>
@@ -307,6 +316,40 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       cancelled = true;
     };
   }, [listingId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadReservation = async () => {
+      if (reservation || !reservationIdParam) return;
+
+      try {
+        const token = await storage.getItemAsync('userToken');
+        if (!token) return;
+
+        const response = await fetch(API_ENDPOINTS.RESERVATIONS.GET(reservationIdParam), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (cancelled) return;
+
+        setReservationState(data);
+      } catch (error) {
+        console.error('Reservation fetch error:', error);
+      }
+    };
+
+    loadReservation();
+    return () => {
+      cancelled = true;
+    };
+  }, [reservationIdParam, reservation]);
 
   useEffect(() => {
     let cancelled = false;
@@ -438,6 +481,40 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     }
   };
 
+  const waitForPaymentConfirmation = async (token) => {
+    const maxAttempts = 15;
+
+    for (let i = 0; i < maxAttempts; i++) {
+      const payment = await refreshPaymentStatus(token);
+
+      console.log('Polling payment:', payment);
+
+      if (
+        payment?.status === 'completed' ||
+        payment?.status === 'paid'
+      ) {
+        return {
+          success: true,
+        };
+      }
+
+      if (payment?.status === 'failed') {
+        return {
+          success: false,
+          failed: true,
+        };
+      }
+
+      // wait 2 sec
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    return {
+      success: false,
+      timeout: true,
+    };
+  };
+
   const handleCardPayment = async (token) => {
     try {
       const paymentIntentResponse = await fetch(API_ENDPOINTS.PAYMENTS.CREATE_CARD_PAYMENT, {
@@ -490,8 +567,12 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         throw new Error(result.error.message || 'Payment failed');
       }
 
-      const refreshed = await refreshPaymentStatus(token);
-      if (refreshed?.status === 'completed' || refreshed?.status === 'paid') {
+      setPaymentStatus('processing');
+
+      const paymentResult = await waitForPaymentConfirmation(token);
+      const goBackToPrevious = () => navigation.navigate('ReservationsTab', { screen: 'ReservationDetails', params: { reservationId: reservation.id } });
+
+      if (paymentResult.success) {
         setPaymentStatus('completed');
         Alert.alert(
           'Paiement réussi',
@@ -506,7 +587,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         return;
       }
 
-      if (refreshed?.status === 'failed') {
+      if (paymentResult.failed) {
         setPaymentStatus('failed');
         throw new Error('Le paiement a échoué. Veuillez réessayer.');
       }
@@ -514,13 +595,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       setPaymentStatus('pending');
       Alert.alert(
         'Paiement en cours',
-        'Le paiement a été initié. Le statut sera mis à jour dès que possible.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {},
-          },
-        ]
+        'Le paiement est toujours en cours de traitement. Veuillez vérifier plus tard.',
       );
     } catch (error) {
       console.error('Card payment error:', error);
@@ -564,7 +639,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         [
           {
             text: 'OK',
-            onPress: () => goBackToPrevious(),
+            onPress: () => goToReservations(),
           },
         ]
       );
@@ -604,7 +679,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <SafeAreaView style={styles.header}>
         <TouchableOpacity
-          onPress={goBackToPrevious}
+          onPress={goToReservations}
           style={styles.backButton}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />

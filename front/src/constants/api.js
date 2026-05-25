@@ -37,6 +37,12 @@ export const API_ENDPOINTS = {
             VERIFY: (id) => `${API_BASE_URL}/api/reservations/${id}/return/verify`,
         },
     },
+    NOTIFICATIONS: {
+        LIST: `${API_BASE_URL}/api/notifications`,
+        UNREAD_COUNT: `${API_BASE_URL}/api/notifications/unread-count`,
+        MARK_AS_READ: (id) => `${API_BASE_URL}/api/notifications/${id}/read`,
+        MARK_ALL_AS_READ: `${API_BASE_URL}/api/notifications/read-all`,
+    },
     PAYMENTS: {
         CREATE_CARD_PAYMENT: `${API_BASE_URL}/api/payments/create-card-payment`,
         CREATE_CASH_PAYMENT: `${API_BASE_URL}/api/payments/create-cash-payment`,

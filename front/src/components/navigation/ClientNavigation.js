@@ -16,6 +16,7 @@ import HandoverVerifyScreen from '../../screens/handover/HandoverVerifyScreen';
 import ReservationsScreen from '../../screens/reservations/ReservationsScreen';
 import ProfileScreen from '../../screens/client/ProfileScreen';
 import InboxScreen from '../../screens/messages/InboxScreen';
+import NotificationsScreen from '../../screens/notificationsScreen';
 import ChatScreen from '../../screens/messages/ChatScreen';
 import { FavoritesProvider } from '../../contexts/FavoritesContext';
 
@@ -46,6 +47,11 @@ function HomeTabStack() {
         options={{ tabBarStyle: { display: 'none' } }}
       />
       <Stack.Screen
+        name="NotificationScreen"
+        component={NotificationsScreen}
+        options={{ tabBarStyle: { display: 'none' } }}
+      />
+       <Stack.Screen
         name="PickupCode"
         component={HandoverCodeScreen}
         options={{ tabBarStyle: { display: 'none' } }}

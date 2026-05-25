@@ -157,6 +157,7 @@ export const uploadDocumentHandler = async (req, res) => {
     const allowedMimeTypes = [
       'image/jpeg',
       'image/png',
+      'image/webp',
       'application/pdf',
     ];
 
@@ -206,8 +207,26 @@ export const uploadDocumentHandler = async (req, res) => {
 
     const dataURI = `data:${uploadedFile.mimetype};base64,${base64}`;
 
+    const resourceType = uploadedFile.mimetype === 'application/pdf' ? 'raw' : 'image';
+
+    // const uploadResult = await cloudinary.uploader.upload(dataURI, {
+    //   folder: 'rentify/documents',
+    //   resource_type: resourceType,
+    // });
+    const originalName = uploadedFile.originalname || 'document.pdf';
+
+// remove extension for public_id
+    const fileNameWithoutExtension = originalName.replace(/\.[^/.]+$/, '');
+
     const uploadResult = await cloudinary.uploader.upload(dataURI, {
       folder: 'rentify/documents',
+      resource_type: resourceType,
+
+      public_id: fileNameWithoutExtension,
+
+      use_filename: true,
+      unique_filename: false,
+      type: 'upload',
     });
 
     // insert in database 

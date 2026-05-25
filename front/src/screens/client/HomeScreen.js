@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import ListingCard from '../../components/cards/ListingCard';
 import MessageIconButton from '../../components/messaging/MessageIconButton';
+import NotificationIconButton from '../../components/notifications/NotificationIconButton';
 import { getListings } from '../../services/listings';
 import { useFavorites } from '../../contexts/FavoritesContext';
 
@@ -80,6 +81,16 @@ const HomeScreen = ({ navigation, route }) => {
                     <View style={styles.header}>
                         <Text style={styles.logo}>Tous les véhicules</Text>
                         <View style={styles.headerRight}>
+                            <NotificationIconButton navigation={navigation} style={styles.notificationButton} iconSize={24} />
+                            <TouchableOpacity style={styles.headerIcon}>
+                                <Ionicons name="heart-outline" size={24} color="#fff" />
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={styles.logoutButton}
+                                onPress={() => navigation.navigate('Landing')}
+                            >
+                                <Ionicons name="log-out" size={24} color="#fff" />
+                            </TouchableOpacity>
                             <MessageIconButton navigation={navigation} style={styles.logoutButton} iconSize={24} />
                         </View>
                     </View>
@@ -236,6 +247,27 @@ const styles = StyleSheet.create({
     headerIcon: {
         padding: 8,
         marginRight: 8,
+    },
+    notificationButton: {
+        padding: 8,
+        marginRight: 8,
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#ff4f5e',
+        paddingHorizontal: 4,
+    },
+    notificationBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '700',
     },
     logoutButton: {
         padding: 8,

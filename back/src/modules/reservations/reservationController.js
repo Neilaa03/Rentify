@@ -1,4 +1,5 @@
 import * as model from './reservationModel.js';
+import { createNotification } from '../notifications/notificationModel.js';
 import {
     createReservationSchema,
     updateStatusSchema,
@@ -15,6 +16,21 @@ export const createReservationHandler = async (req, res) => {
     try {
         const payload = createReservationSchema.parse(req.body);
         const result = await model.createReservation(payload, req.user.id);
+        try {
+            const reservation = await model.getReservationById(result.id);
+            const ownerId = reservation?.listing?.car?.ownerId;
+            if (ownerId) {
+                await createNotification({
+                    userId: ownerId,
+                    type: 'reservation_created',
+                    title: 'Nouvelle réservation',
+                    message: `Vous avez une nouvelle réservation pour ${reservation.listing?.title || 'votre annonce'} du ${reservation.startDate} au ${reservation.endDate}.`,
+                    data: { reservationId: reservation.id, listingId: reservation.listingId },
+                });
+            }
+        } catch (notifyError) {
+            console.error('Failed to create reservation notification:', notifyError);
+        }
         res.status(201).json(result);
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -154,6 +170,30 @@ export const updateReservationStatusHandler = async (req, res) => {
         const { status } = updateStatusSchema.parse(req.body);
         
         const result = await model.updateReservationStatus(id, status);
+        try {
+            const notificationPayload = {
+                userId: result.renterId,
+                data: { reservationId: result.id },
+            };
+
+            if (status === 'confirmed') {
+                await createNotification({
+                    ...notificationPayload,
+                    type: 'reservation_confirmed',
+                    title: 'Réservation acceptée',
+                    message: `Votre réservation pour ${result.listing?.title || 'votre annonce'} a été acceptée.`,
+                });
+            } else if (status === 'cancelled') {
+                await createNotification({
+                    ...notificationPayload,
+                    type: 'reservation_rejected',
+                    title: 'Réservation refusée',
+                    message: `Votre réservation pour ${result.listing?.title || 'votre annonce'} a été refusée.`,
+                });
+            }
+        } catch (notifyError) {
+            console.error('Failed to create reservation status notification:', notifyError);
+        }
         res.json(result);
     } catch (err) {
         res.status(400).json({ error: err.message });

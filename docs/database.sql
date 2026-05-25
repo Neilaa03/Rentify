@@ -21,7 +21,9 @@ CREATE TYPE reservation_status AS ENUM (
     'reserved',
     'refunded',
     'refund_pending',
-    'pickup_pending'
+    'pickup_pending',
+    'return_pending',
+    'finished'
 );
 
 CREATE TYPE pickup_status AS ENUM (
@@ -401,8 +403,14 @@ CREATE TABLE notifications (
 
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
-    title VARCHAR(255),
-    message TEXT,
+    type VARCHAR(50) NOT NULL,
+    -- reservation_created | payment_success | message | etc
+
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+
+    data JSONB, 
+    -- store ids like reservationId, messageId
 
     is_read BOOLEAN DEFAULT FALSE,
 

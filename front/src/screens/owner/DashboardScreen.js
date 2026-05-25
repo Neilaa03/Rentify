@@ -14,6 +14,7 @@ import { COLORS } from '../../constants/colors';
 import { getOwnerDashboardData } from '../../services/owner';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import MessageIconButton from '../../components/messaging/MessageIconButton';
+import NotificationIconButton from '../../components/notifications/NotificationIconButton';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -81,6 +82,12 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
             <Text style={styles.kicker}>ESPACE PROPRIETAIRE</Text>
             <Text style={styles.title}>Bonjour, {user?.first_name || 'Owner'} 👋</Text>
           </View>
+          <NotificationIconButton
+            navigation={navigation}
+            style={styles.notificationButton}
+            iconSize={24}
+            routeParams={{ user: route?.params?.user }}
+          />
           <MessageIconButton navigation={navigation} mode="owner_clients" style={styles.inboxBtn} iconSize={20} />
         </View>
 
@@ -263,6 +270,34 @@ const styles = StyleSheet.create({
   rightActivity: { alignItems: 'flex-end' },
   badge: { fontSize: 12, fontWeight: '700', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
   activityPrice: { color: '#8f7dff', fontWeight: '800', marginTop: 7 },
+  notificationButton: {
+  position: 'relative',
+  width: 44,
+  height: 44,
+  borderRadius: 22,
+  backgroundColor: 'rgba(255,255,255,0.08)',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+notificationBadge: {
+  position: 'absolute',
+  top: -4,
+  right: -4,
+  minWidth: 18,
+  height: 18,
+  borderRadius: 9,
+  backgroundColor: '#ff4d4f',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingHorizontal: 4,
+},
+
+notificationBadgeText: {
+  color: '#fff',
+  fontSize: 10,
+  fontWeight: '700',
+},
 });
 
 export default OwnerDashboardScreen;
