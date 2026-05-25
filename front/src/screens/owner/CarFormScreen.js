@@ -126,6 +126,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     carId: listing?.carId || '',
     title: listing?.title || '',
     pricePerDay: listing?.pricePerDay ? String(listing.pricePerDay) : '',
+    pickupAddress: listing?.pickupAddress || listing?.pickup_address || '',
+    deliveryFee: listing?.deliveryFee !== undefined ? String(listing.deliveryFee) : listing?.delivery_fee !== undefined ? String(listing.delivery_fee) : '0',
     city: listing?.city || '',
     country: listing?.country || 'Algeria',
     description: prefill?.description || '',
@@ -370,6 +372,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const common = Boolean(
       form.title.trim() &&
         form.pricePerDay &&
+        form.pickupAddress.trim() &&
         form.city.trim() &&
         form.country.trim() &&
         form.availableFrom &&
@@ -405,6 +408,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         country: form.country.trim(),
         city: form.city.trim(),
         pricePerDay: Number(form.pricePerDay),
+        pickupAddress: form.pickupAddress.trim(),
+        deliveryFee: Number(form.deliveryFee || 0),
         availableFrom: form.availableFrom,
         availableTo: form.availableTo,
         isActive: false,
@@ -641,6 +646,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         country: form.country.trim(),
         city: form.city.trim(),
         pricePerDay: Number(form.pricePerDay),
+        pickupAddress: form.pickupAddress.trim(),
+        deliveryFee: Number(form.deliveryFee || 0),
         availableFrom: form.availableFrom,
         availableTo: form.availableTo,
         isActive: false,
@@ -658,6 +665,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         country: form.country.trim(),
         city: form.city.trim(),
         pricePerDay: Number(form.pricePerDay),
+        pickupAddress: form.pickupAddress.trim(),
+        deliveryFee: Number(form.deliveryFee || 0),
         availableFrom: form.availableFrom,
         availableTo: form.availableTo,
         isActive: false,
@@ -1003,6 +1012,25 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
                   <TextInput style={styles.input} value={form.city} onChangeText={(v) => setField('city', v)} />
                 </View>
               </View>
+
+              <Text style={styles.label}>Adresse de recuperation (chez vous / agence) *</Text>
+              <TextInput
+                style={styles.input}
+                value={form.pickupAddress}
+                onChangeText={(v) => setField('pickupAddress', v)}
+                placeholder="Ex: 12 Rue ..., Alger"
+                placeholderTextColor="#9aa3d8"
+              />
+
+              <Text style={styles.label}>Frais de livraison (DA)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={form.deliveryFee}
+                onChangeText={(v) => setField('deliveryFee', v)}
+                placeholder="0"
+                placeholderTextColor="#9aa3d8"
+              />
 
               <Text style={styles.label}>Pays *</Text>
               <TextInput style={styles.input} value={form.country} onChangeText={(v) => setField('country', v)} />

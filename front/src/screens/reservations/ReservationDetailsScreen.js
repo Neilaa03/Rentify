@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
@@ -41,7 +42,7 @@ const useStripeSafe = () => {
 
 const ReservationDetailsScreen = ({ navigation, route }) => {
   const reservationIdParam = route?.params?.reservationId;
-  const [reservation, setReservation] = useState(route?.params?.reservation || null);
+  const reservationFromParams = route?.params?.reservation;
   const listingFromParams = route?.params?.listing;
   const resumeCardPayment = !!route?.params?.resumeCardPayment;
   const { initPaymentSheet, presentPaymentSheet } = useStripeSafe();
@@ -54,6 +55,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const [paymentMethod, setPaymentMethod] = useState(null); // null | 'card' | 'cash'
   const [paymentStatus, setPaymentStatus] = useState(null); // null | 'pending' | 'completed' | 'failed' | 'pending_cash'
   const [paymentInfo, setPaymentInfo] = useState(null); // stores payment response data
+  const [reservationState, setReservationState] = useState(reservationFromParams || null);
+
+  const reservation = reservationState || reservationFromParams;
 
   const goToReservations = () => {
     const parent = navigation.getParent?.();
@@ -215,6 +219,29 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     ? 'Réessayer le paiement'
     : 'Procéder au paiement';
 
+  const refreshReservation = useCallback(async () => {
+    if (!reservationFromParams?.id) return;
+    try {
+      const token = await storage.getItemAsync('userToken');
+      if (!token) return;
+      const res = await fetch(API_ENDPOINTS.RESERVATIONS.GET(reservationFromParams.id), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      setReservationState(json || null);
+    } catch (_e) {
+      // ignore
+    }
+  }, [reservationFromParams?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Ensures status updates (e.g. pickup verified -> active) are visible immediately.
+      refreshReservation();
+    }, [refreshReservation])
+  );
+
   if (!reservation) {
     return (
       <View style={styles.container}>
@@ -312,7 +339,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         const data = await response.json();
         if (cancelled) return;
 
-        setReservation(data);
+        setReservationState(data);
       } catch (error) {
         console.error('Reservation fetch error:', error);
       }
@@ -625,12 +652,28 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const formatPrice = (value) => value.toLocaleString('fr-FR');
   const formatDate = (date) => new Date(date).toLocaleDateString('fr-FR');
 
-  const basePrice = useMemo(() => {
-    const computed = calculateReservationPrice(listing || {}, startRaw, endRaw);
+  const rentalSubtotal = useMemo(() => {
+    const computed = calculateReservationPrice(listing || {}, startRaw, endRaw, { deliveryFee: 0 });
     return Number.isFinite(computed) ? computed : 0;
   }, [listing, startRaw, endRaw]);
-  const serviceFee = useMemo(() => Math.round(basePrice * 0.1), [basePrice]);
-  const safeTotalPrice = useMemo(() => basePrice + serviceFee, [basePrice, serviceFee]);
+
+  const deliveryFee = useMemo(() => {
+    const fee =
+      reservation?.pickup?.deliveryFee ??
+      reservation?.pickup?.delivery_fee ??
+      0;
+    const normalized = Number(fee || 0);
+    return Number.isFinite(normalized) ? Math.max(0, normalized) : 0;
+  }, [reservation]);
+
+  const serviceFee = useMemo(() => {
+    return Math.round(rentalSubtotal * 0.1);
+  }, [rentalSubtotal]);
+
+  const safeTotalPrice = useMemo(
+    () => rentalSubtotal + deliveryFee + serviceFee,
+    [rentalSubtotal, deliveryFee, serviceFee]
+  );
 
   return (
     <View style={styles.container}>
@@ -784,6 +827,54 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
 
+        {reservation?.status === 'pickup_pending' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Récupération</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('PickupCode', { reservationId: reservation.id, flow: 'pickup' })}
+              activeOpacity={0.85}
+              style={styles.pickupActionWrap}
+            >
+              <LinearGradient
+                colors={['#4C6FFF', COLORS.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.pickupAction}
+              >
+                <Ionicons name="key-outline" size={18} color="#fff" />
+                <Text style={styles.pickupActionText}>Voir le code de récupération</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.pickupHintText}>
+              Disponible uniquement dans les 24h avant le début de la réservation.
+            </Text>
+          </View>
+        )}
+
+        {reservation?.status === 'return_pending' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Retour</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ReturnVerify', { reservationId: reservation.id, flow: 'return' })}
+              activeOpacity={0.85}
+              style={styles.pickupActionWrap}
+            >
+              <LinearGradient
+                colors={['#4C6FFF', COLORS.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.pickupAction}
+              >
+                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                <Text style={styles.pickupActionText}>Vérifier le QR code de retour</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <Text style={styles.pickupHintText}>
+              Disponible uniquement dans les 24h avant la fin de la réservation.
+            </Text>
+          </View>
+        )}
+
         {/* Price Breakdown */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Détail du prix</Text>
@@ -795,7 +886,16 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
                 {totalDays > 1 ? 's' : ''}
               </Text>
               <Text style={styles.priceRowValue}>
-                {Math.round(basePrice).toLocaleString('fr-FR')} DA
+                {Math.round(rentalSubtotal).toLocaleString('fr-FR')} DA
+              </Text>
+            </View>
+
+            <View style={styles.dividerSmall} />
+
+            <View style={styles.priceRow}>
+              <Text style={styles.priceRowLabel}>Frais de livraison</Text>
+              <Text style={styles.priceRowValue}>
+                {Math.round(deliveryFee).toLocaleString('fr-FR')} DA
               </Text>
             </View>
 
@@ -1040,6 +1140,27 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
+  },
+  pickupActionWrap: {
+    marginTop: 6,
+  },
+  pickupAction: {
+    height: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  pickupActionText: {
+    color: '#fff',
+    fontWeight: '900',
+  },
+  pickupHintText: {
+    marginTop: 10,
+    color: '#8e95bf',
+    fontSize: 12,
+    lineHeight: 16,
   },
   sectionTitle: {
     color: '#f6f8ff',
