@@ -682,18 +682,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     [rentalSubtotal, deliveryFee, serviceFee]
   );
 
-  const isPastReservation = useMemo(() => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const end = new Date(endRaw);
-      end.setHours(0, 0, 0, 0);
-      return end < today;
-    } catch (_e) {
-      return false;
-    }
-  }, [endRaw]);
-
   const canLeaveReview = reservation?.status === 'finished';
   const canAddAnotherReview = canLeaveReview && (Array.isArray(reviews) ? reviews.length : 0) < 5;
 
@@ -1030,8 +1018,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           />
         )}
 
-        {/* Review Section (past reservations) */}
-        {isPastReservation && reservation?.status !== 'cancelled' && (
+        {/* Review Section (finished reservations) */}
+        {canLeaveReview && reservation?.status !== 'cancelled' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Avis</Text>
             {reviewLoading ? (
@@ -1094,10 +1082,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
               </>
             ) : !reviewLoading && canLeaveReview && !canAddAnotherReview ? (
               <Text style={styles.reviewLimitReachedText}>Limite atteinte (5 avis).</Text>
-            ) : !reviewLoading && !canLeaveReview ? (
-              <Text style={styles.reviewNotReadyText}>
-                Vous pourrez laisser un avis une fois la réservation terminée.
-              </Text>
             ) : null}
           </View>
         )}

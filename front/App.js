@@ -15,6 +15,7 @@ import OwnerListingsScreen from './src/screens/owner/ListingsScreen';
 import OwnerListingFormScreen from './src/screens/owner/ListingFormScreen';
 import OwnerCarFormScreen from './src/screens/owner/CarFormScreen';
 import OwnerCarsScreen from './src/screens/owner/CarsScreen';
+import OwnerCarReviewsScreen from './src/screens/owner/CarReviewsScreen';
 import OwnerReservationsScreen from './src/screens/owner/ReservationsScreen';
 import OwnerReservationDetailsScreen from './src/screens/owner/ReservationDetailsScreen';
 import NotificationsScreen from './src/screens/notificationsScreen';
@@ -82,6 +83,7 @@ export default function App() {
             <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
             <Stack.Screen name="OwnerCars" component={OwnerCarsScreen} />
             <Stack.Screen name="OwnerCarForm" component={OwnerCarFormScreen} />
+            <Stack.Screen name="OwnerCarReviews" component={OwnerCarReviewsScreen} />
             <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
             <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
             <Stack.Screen name="OwnerReservations" component={OwnerReservationsScreen} />

@@ -73,9 +73,12 @@ export const createReview = async ({ reservationId, reviewerId, rating, comment 
   return toReviewDto(data);
 };
 
-export const getReviewsByCarId = async ({ carId, page, limit }) => {
+export const getReviewsByCarId = async ({ carId, page, limit, sortBy = 'createdAt', sortOrder = 'desc' }) => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
+
+  const orderColumn = sortBy === 'rating' ? 'rating' : 'created_at';
+  const ascending = sortOrder === 'asc';
 
   const { data, error } = await supabase
     .from(FEEDBACK_TABLE)
@@ -83,6 +86,7 @@ export const getReviewsByCarId = async ({ carId, page, limit }) => {
       'id, reservation_id, reviewer_id, rating, comment, created_at, reservations!inner(id, listing_id, listings!inner(id, car_id)), users(id, first_name, last_name, profile_picture)'
     )
     .eq('reservations.listings.car_id', carId)
+    .order(orderColumn, { ascending })
     .order('created_at', { ascending: false })
     .range(from, to);
 

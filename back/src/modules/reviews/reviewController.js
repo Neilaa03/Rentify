@@ -60,8 +60,8 @@ export const createReservationReviewHandler = async (req, res) => {
 export const listCarReviewsHandler = async (req, res) => {
   try {
     const { carId } = carIdParamSchema.parse(req.params);
-    const { page, limit } = paginationSchema.parse(req.query);
-    const items = await model.getReviewsByCarId({ carId, page, limit });
+    const { page, limit, sortBy, sortOrder } = paginationSchema.parse(req.query);
+    const items = await model.getReviewsByCarId({ carId, page, limit, sortBy, sortOrder });
     res.json({ items, page, limit });
   } catch (err) {
     res.status(400).json({ error: err.message });
