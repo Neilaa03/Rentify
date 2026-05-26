@@ -1,15 +1,6 @@
 import * as model from './reviewModel.js';
 import { carIdParamSchema, createReviewSchema, paginationSchema, reservationIdParamSchema } from './reviewSchemas.js';
 
-const isReservationEnded = (reservationRow) => {
-  const ymd = reservationRow?.end_date;
-  if (!ymd) return false;
-  const endMs = Date.parse(`${ymd}T00:00:00.000Z`);
-  if (!Number.isFinite(endMs)) return false;
-  const todayMs = Date.parse(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z');
-  return endMs < todayMs;
-};
-
 export const getReservationReviewHandler = async (req, res) => {
   try {
     const { reservationId } = reservationIdParamSchema.parse(req.params);
@@ -41,10 +32,8 @@ export const createReservationReviewHandler = async (req, res) => {
       return res.status(403).json({ error: 'You can only review your own reservations.' });
     }
 
-    const endedByDate = isReservationEnded(reservation);
-    const endedByStatus = ['finished', 'refunded', 'refund_pending', 'return_pending'].includes(reservation.status);
-    if (!endedByDate && !endedByStatus) {
-      return res.status(400).json({ error: 'You can only review after the reservation ends.' });
+    if (reservation.status !== 'finished') {
+      return res.status(400).json({ error: 'You can only review reservations in finished status.' });
     }
 
     const existing = await model.getReviewByReservationId(reservationId);
@@ -85,4 +74,3 @@ export const carReviewSummaryHandler = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
-
