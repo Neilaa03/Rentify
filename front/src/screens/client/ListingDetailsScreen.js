@@ -11,6 +11,7 @@ import ReviewCard from '../../components/reviews/ReviewCard';
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const roundToHalf = (value) => Math.round(value * 2) / 2;
 
 const SpecCard = ({ icon, value, label }) => (
   <View style={styles.specCard}>
@@ -29,6 +30,7 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   const [reviewSummary, setReviewSummary] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
 
   const carId = listing?.carId || listing?.car?.id || listing?.car_id || null;
 
@@ -68,6 +70,22 @@ const ListingDetailsScreen = ({ navigation, route }) => {
       cancelled = true;
     };
   }, [carId]);
+
+  const averageRatingRounded = useMemo(() => {
+    const avg = Number(reviewSummary?.averageRating || 0) || 0;
+    return roundToHalf(avg);
+  }, [reviewSummary?.averageRating]);
+
+  const reviewCount = Number(reviewSummary?.reviewCount || 0) || 0;
+  const slideWidth = SCREEN_WIDTH - 64;
+
+  const handleReviewsScroll = (event) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent || {};
+    const width = layoutMeasurement?.width || slideWidth;
+    const x = contentOffset?.x || 0;
+    const next = Math.round(x / Math.max(1, width));
+    if (next !== activeReviewIndex) setActiveReviewIndex(next);
+  };
 
   const imageUrls = useMemo(() => {
     const toImageUrl = (img) => {
@@ -194,13 +212,11 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           <Text style={styles.description}>{listing.description}</Text>
 
           <View style={styles.reviewsHeaderRow}>
-            <Text style={styles.sectionTitle}>Avis</Text>
-            {reviewSummary?.reviewCount ? (
+            <Text style={styles.sectionTitle}>{`Avis${reviewCount ? ` (${reviewCount})` : ''}`}</Text>
+            {reviewCount ? (
               <View style={styles.reviewsSummaryRight}>
-                <RatingStars rating={reviewSummary?.averageRating} />
-                <Text style={styles.reviewsCountText}>
-                  {Number(reviewSummary.reviewCount) || 0}
-                </Text>
+                <RatingStars rating={averageRatingRounded} />
+                <Text style={styles.reviewsAvgText}>{averageRatingRounded.toFixed(1)}</Text>
               </View>
             ) : null}
           </View>
@@ -211,11 +227,38 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               <Text style={styles.reviewsLoadingText}>Chargement…</Text>
             </View>
           ) : reviews.length ? (
-            <View style={{ marginBottom: 6 }}>
-              {reviews.map((r) => (
-                <ReviewCard key={r.id} review={r} />
-              ))}
-            </View>
+            <>
+              <ScrollView
+                horizontal
+                pagingEnabled={false}
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={slideWidth}
+                decelerationRate="fast"
+                onScroll={handleReviewsScroll}
+                scrollEventThrottle={16}
+                contentContainerStyle={styles.reviewsCarousel}
+              >
+                {reviews.map((r) => (
+                  <View key={r.id} style={[styles.reviewsSlide, { width: slideWidth }]}>
+                    <ReviewCard review={r} />
+                  </View>
+                ))}
+              </ScrollView>
+
+              {reviews.length > 1 ? (
+                <View style={styles.reviewsDotsRow}>
+                  {reviews.map((_, index) => (
+                    <View
+                      key={`review-dot-${index}`}
+                      style={[
+                        styles.reviewsDot,
+                        index === activeReviewIndex && styles.reviewsDotActive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </>
           ) : (
             <Text style={styles.reviewsEmptyText}>Aucun avis pour le moment.</Text>
           )}
@@ -500,10 +543,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  reviewsCountText: {
+  reviewsAvgText: {
     color: '#cfd3ff',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+  reviewsCarousel: {
+    paddingRight: 16,
+    marginBottom: 14,
+  },
+  reviewsSlide: {
+    marginRight: 12,
+  },
+  reviewsDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: -2,
+    marginBottom: 14,
+  },
+  reviewsDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  reviewsDotActive: {
+    width: 18,
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   reviewsLoadingRow: {
     flexDirection: 'row',

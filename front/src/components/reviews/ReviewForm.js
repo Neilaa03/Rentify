@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+    import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 
