@@ -9,6 +9,7 @@ import {
   Alert,
   ImageBackground,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
@@ -60,7 +61,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const [reservationState, setReservationState] = useState(reservationFromParams || null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [review, setReview] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   const reservation = reservationState || reservationFromParams;
 
@@ -692,6 +694,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     }
   }, [endRaw]);
 
+  const canLeaveReview = reservation?.status === 'finished';
+  const canAddAnotherReview = canLeaveReview && (Array.isArray(reviews) ? reviews.length : 0) < 5;
+
   const fetchReview = useCallback(async () => {
     if (!reservation?.id) return;
     try {
@@ -706,16 +711,12 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         },
       });
 
-      if (res.status === 404) {
-        setReview(null);
-        return;
-      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Erreur lors du chargement de l’avis');
       }
       const json = await res.json();
-      setReview(json || null);
+      setReviews(Array.isArray(json) ? json : json ? [json] : []);
     } catch (e) {
       console.error('fetchReview error:', e);
     } finally {
@@ -749,7 +750,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         }
 
         const json = await res.json();
-        setReview(json || null);
+        setReviews((prev) => [json, ...(Array.isArray(prev) ? prev : [])].filter(Boolean));
+        setReviewModalOpen(false);
         Alert.alert('Merci !', 'Votre avis a été envoyé.');
       } catch (e) {
         console.error('submitReview error:', e);
@@ -1037,11 +1039,66 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
                 <ActivityIndicator size="small" color={COLORS.primary} />
                 <Text style={styles.reviewLoadingText}>Chargement…</Text>
               </View>
-            ) : review ? (
-              <ReviewCard review={review} />
-            ) : (
-              <ReviewForm submitting={reviewSubmitting} onSubmit={submitReview} />
-            )}
+            ) : Array.isArray(reviews) && reviews.length ? (
+              <View style={{ marginTop: 6 }}>
+                {reviews.map((r) => (
+                  <ReviewCard key={r.id} review={r} />
+                ))}
+              </View>
+            ) : null}
+
+            {!reviewLoading && canAddAnotherReview ? (
+              <>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setReviewModalOpen(true)}
+                  style={styles.reviewButtonWrap}
+                >
+                  <LinearGradient
+                    colors={[COLORS.secondary, COLORS.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.reviewButton}
+                  >
+                    <Ionicons name="chatbox-ellipses-outline" size={18} color="#fff" />
+                    <Text style={styles.reviewButtonText}>Donner mon avis</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                <Text style={styles.reviewLimitHint}>
+                  {5 - (Array.isArray(reviews) ? reviews.length : 0)} avis restant(s).
+                </Text>
+
+                <Modal
+                  visible={reviewModalOpen}
+                  transparent
+                  animationType="fade"
+                  onRequestClose={() => setReviewModalOpen(false)}
+                >
+                  <View style={styles.reviewModalBackdrop}>
+                    <View style={styles.reviewModalCard}>
+                      <View style={styles.reviewModalHeader}>
+                        <Text style={styles.reviewModalTitle}>Votre avis</Text>
+                        <TouchableOpacity
+                          onPress={() => setReviewModalOpen(false)}
+                          activeOpacity={0.8}
+                          style={styles.reviewModalClose}
+                          disabled={reviewSubmitting}
+                        >
+                          <Ionicons name="close" size={22} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                      <ReviewForm submitting={reviewSubmitting} onSubmit={submitReview} />
+                    </View>
+                  </View>
+                </Modal>
+              </>
+            ) : !reviewLoading && canLeaveReview && !canAddAnotherReview ? (
+              <Text style={styles.reviewLimitReachedText}>Limite atteinte (5 avis).</Text>
+            ) : !reviewLoading && !canLeaveReview ? (
+              <Text style={styles.reviewNotReadyText}>
+                Vous pourrez laisser un avis une fois la réservation terminée.
+              </Text>
+            ) : null}
           </View>
         )}
 
@@ -1450,6 +1507,70 @@ const styles = StyleSheet.create({
     color: '#8e95bf',
     fontSize: 13,
     fontWeight: '600',
+  },
+  reviewNotReadyText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  reviewLimitHint: {
+    marginTop: 8,
+    color: '#8e95bf',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  reviewLimitReachedText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  reviewButtonWrap: {
+    marginTop: 4,
+  },
+  reviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  reviewButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  reviewModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 16,
+    justifyContent: 'center',
+  },
+  reviewModalCard: {
+    borderRadius: 16,
+    backgroundColor: '#0f1228',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.2)',
+    padding: 14,
+  },
+  reviewModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  reviewModalTitle: {
+    color: '#f6f8ff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  reviewModalClose: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: 'rgba(148, 156, 233, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   termsCheckbox: {
     flexDirection: 'row',

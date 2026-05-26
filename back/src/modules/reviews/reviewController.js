@@ -15,8 +15,8 @@ export const getReservationReviewHandler = async (req, res) => {
       return res.status(403).json({ error: 'Access denied.' });
     }
 
-    const review = await model.getReviewByReservationId(reservationId);
-    res.json(review);
+    const reviews = await model.getReviewByReservationId(reservationId);
+    res.json(reviews);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -36,9 +36,12 @@ export const createReservationReviewHandler = async (req, res) => {
       return res.status(400).json({ error: 'You can only review reservations in finished status.' });
     }
 
-    const existing = await model.getReviewByReservationId(reservationId);
-    if (existing) {
-      return res.status(409).json({ error: 'Review already submitted for this reservation.' });
+    const existingCount = await model.getReviewCountForReservationByReviewer({
+      reservationId,
+      reviewerId: req.user.id,
+    });
+    if (existingCount >= 5) {
+      return res.status(400).json({ error: 'You have reached the maximum of 5 reviews for this reservation.' });
     }
 
     const review = await model.createReview({

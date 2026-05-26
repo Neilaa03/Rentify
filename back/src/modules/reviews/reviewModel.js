@@ -34,12 +34,25 @@ export const getReservationForReview = async (reservationId) => {
 export const getReviewByReservationId = async (reservationId) => {
   const { data, error } = await supabase
     .from(FEEDBACK_TABLE)
-    .select('id, reservation_id, reviewer_id, rating, comment, created_at, users(id, first_name, last_name, profile_picture)')
+    .select(
+      'id, reservation_id, reviewer_id, rating, comment, created_at, users(id, first_name, last_name, profile_picture)'
+    )
     .eq('reservation_id', reservationId)
-    .maybeSingle();
+    .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data ? toReviewDto(data) : null;
+  return (data || []).map(toReviewDto);
+};
+
+export const getReviewCountForReservationByReviewer = async ({ reservationId, reviewerId }) => {
+  const { count, error } = await supabase
+    .from(FEEDBACK_TABLE)
+    .select('id', { count: 'exact', head: true })
+    .eq('reservation_id', reservationId)
+    .eq('reviewer_id', reviewerId);
+
+  if (error) throw error;
+  return Number(count || 0) || 0;
 };
 
 export const createReview = async ({ reservationId, reviewerId, rating, comment }) => {
@@ -91,4 +104,3 @@ export const getCarReviewSummary = async ({ carId }) => {
 
   return { carId, reviewCount, averageRating };
 };
-
