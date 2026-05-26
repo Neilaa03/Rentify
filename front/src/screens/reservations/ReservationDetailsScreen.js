@@ -20,6 +20,8 @@ import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
 import PaymentMethodSelector from '../../components/payment/PaymentMethodSelector';
 import PaymentStatusDisplay from '../../components/payment/PaymentStatusDisplay';
+import ReviewCard from '../../components/reviews/ReviewCard';
+import ReviewForm from '../../components/reviews/ReviewForm';
 
 const useStripeSafe = () => {
   if (Platform.OS === 'web') {
@@ -56,6 +58,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const [paymentStatus, setPaymentStatus] = useState(null); // null | 'pending' | 'completed' | 'failed' | 'pending_cash'
   const [paymentInfo, setPaymentInfo] = useState(null); // stores payment response data
   const [reservationState, setReservationState] = useState(reservationFromParams || null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [review, setReview] = useState(null);
 
   const reservation = reservationState || reservationFromParams;
 
@@ -675,6 +680,93 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     [rentalSubtotal, deliveryFee, serviceFee]
   );
 
+  const isPastReservation = useMemo(() => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const end = new Date(endRaw);
+      end.setHours(0, 0, 0, 0);
+      return end < today;
+    } catch (_e) {
+      return false;
+    }
+  }, [endRaw]);
+
+  const fetchReview = useCallback(async () => {
+    if (!reservation?.id) return;
+    try {
+      setReviewLoading(true);
+      const token = await storage.getItemAsync('userToken');
+      if (!token) return;
+
+      const res = await fetch(API_ENDPOINTS.REVIEWS.RESERVATION_GET(reservation.id), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (res.status === 404) {
+        setReview(null);
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur lors du chargement de l’avis');
+      }
+      const json = await res.json();
+      setReview(json || null);
+    } catch (e) {
+      console.error('fetchReview error:', e);
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [reservation?.id]);
+
+  const submitReview = useCallback(
+    async ({ rating, comment }) => {
+      if (!reservation?.id) return;
+      try {
+        setReviewSubmitting(true);
+        const token = await storage.getItemAsync('userToken');
+        if (!token) {
+          Alert.alert('Erreur', 'Veuillez vous reconnecter');
+          return;
+        }
+
+        const res = await fetch(API_ENDPOINTS.REVIEWS.RESERVATION_CREATE(reservation.id), {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ rating, comment }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Erreur lors de l’envoi de l’avis');
+        }
+
+        const json = await res.json();
+        setReview(json || null);
+        Alert.alert('Merci !', 'Votre avis a été envoyé.');
+      } catch (e) {
+        console.error('submitReview error:', e);
+        Alert.alert('Erreur', e.message || 'Une erreur est survenue');
+      } finally {
+        setReviewSubmitting(false);
+      }
+    },
+    [reservation?.id]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchReview();
+    }, [fetchReview])
+  );
+
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.header}>
@@ -934,6 +1026,23 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
             selectedMethod={paymentMethod}
             onMethodSelect={setPaymentMethod}
           />
+        )}
+
+        {/* Review Section (past reservations) */}
+        {isPastReservation && reservation?.status !== 'cancelled' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Avis</Text>
+            {reviewLoading ? (
+              <View style={styles.reviewLoadingRow}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.reviewLoadingText}>Chargement…</Text>
+              </View>
+            ) : review ? (
+              <ReviewCard review={review} />
+            ) : (
+              <ReviewForm submitting={reviewSubmitting} onSubmit={submitReview} />
+            )}
+          </View>
         )}
 
       {/* Terms & Conditions */}
@@ -1330,6 +1439,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: 'rgba(143, 108, 255, 0.1)',
+  },
+  reviewLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+  },
+  reviewLoadingText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    fontWeight: '600',
   },
   termsCheckbox: {
     flexDirection: 'row',

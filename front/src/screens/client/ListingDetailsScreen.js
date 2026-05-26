@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { useFavorites } from '../../contexts/FavoritesContext';
+import { API_ENDPOINTS } from '../../constants/api';
+import RatingStars from '../../components/reviews/RatingStars';
+import ReviewCard from '../../components/reviews/ReviewCard';
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -23,6 +26,48 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   const listing = route?.params?.listing;
   const [activeIndex, setActiveIndex] = useState(0);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const [reviewSummary, setReviewSummary] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  const carId = listing?.carId || listing?.car?.id || listing?.car_id || null;
+
+  useEffect(() => {
+    if (!carId) return undefined;
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setReviewsLoading(true);
+        const [summaryRes, reviewsRes] = await Promise.all([
+          fetch(API_ENDPOINTS.REVIEWS.CAR_SUMMARY(carId)),
+          fetch(`${API_ENDPOINTS.REVIEWS.CAR_LIST(carId)}?limit=3&page=1`),
+        ]);
+
+        if (!cancelled && summaryRes.ok) {
+          const json = await summaryRes.json();
+          setReviewSummary(json || null);
+        }
+
+        if (!cancelled && reviewsRes.ok) {
+          const json = await reviewsRes.json();
+          setReviews(Array.isArray(json?.items) ? json.items : []);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setReviewSummary(null);
+          setReviews([]);
+        }
+      } finally {
+        if (!cancelled) setReviewsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [carId]);
 
   const imageUrls = useMemo(() => {
     const toImageUrl = (img) => {
@@ -147,6 +192,33 @@ const ListingDetailsScreen = ({ navigation, route }) => {
 
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.description}>{listing.description}</Text>
+
+          <View style={styles.reviewsHeaderRow}>
+            <Text style={styles.sectionTitle}>Avis</Text>
+            {reviewSummary?.reviewCount ? (
+              <View style={styles.reviewsSummaryRight}>
+                <RatingStars rating={reviewSummary?.averageRating} />
+                <Text style={styles.reviewsCountText}>
+                  {Number(reviewSummary.reviewCount) || 0}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          {reviewsLoading ? (
+            <View style={styles.reviewsLoadingRow}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={styles.reviewsLoadingText}>Chargement…</Text>
+            </View>
+          ) : reviews.length ? (
+            <View style={{ marginBottom: 6 }}>
+              {reviews.map((r) => (
+                <ReviewCard key={r.id} review={r} />
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.reviewsEmptyText}>Aucun avis pour le moment.</Text>
+          )}
 
           <Text style={styles.sectionTitle}>Récupération</Text>
           <View style={styles.pickupInfoCard}>
@@ -416,6 +488,38 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 10,
     marginBottom: 8,
+  },
+  reviewsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  reviewsSummaryRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewsCountText: {
+    color: '#cfd3ff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  reviewsLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  reviewsLoadingText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  reviewsEmptyText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    marginBottom: 14,
   },
   description: {
     color: '#9aa2cc',

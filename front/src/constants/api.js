@@ -50,4 +50,10 @@ export const API_ENDPOINTS = {
         GET_STATUS: (reservationId) => `${API_BASE_URL}/api/payments/status/${reservationId}`,
         WEBHOOK: `${API_BASE_URL}/api/payments/webhook`,
     },
+    REVIEWS: {
+        CAR_LIST: (carId) => `${API_BASE_URL}/api/reviews/cars/${carId}`,
+        CAR_SUMMARY: (carId) => `${API_BASE_URL}/api/reviews/cars/${carId}/summary`,
+        RESERVATION_GET: (reservationId) => `${API_BASE_URL}/api/reviews/reservations/${reservationId}`,
+        RESERVATION_CREATE: (reservationId) => `${API_BASE_URL}/api/reviews/reservations/${reservationId}`,
+    },
 };
