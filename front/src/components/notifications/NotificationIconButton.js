@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
+import { getCurrentUserProfile } from '../../services/authSession';
 import { getNotificationUnreadCount } from '../../services/notifications';
 import { getSocket } from '../../services/socketClient';
 
@@ -15,6 +16,7 @@ const clampBadge = (n) => {
 
 const NotificationIconButton = ({ navigation, style, iconSize = 22, color = '#fff', routeParams }) => {
   const [unread, setUnread] = useState(0);
+  const [meId, setMeId] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -32,6 +34,18 @@ const NotificationIconButton = ({ navigation, style, iconSize = 22, color = '#ff
   );
 
   useEffect(() => {
+    let cancelled = false;
+    getCurrentUserProfile()
+      .then((me) => {
+        if (!cancelled) setMeId(me?.id || null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     let unsubscribed = false;
     let socket;
 
@@ -43,14 +57,37 @@ const NotificationIconButton = ({ navigation, style, iconSize = 22, color = '#ff
       }
       if (unsubscribed) return () => {};
 
-      socket.on('notification_created', load);
-      socket.on('notification_read', load);
-      socket.on('notifications_all_read', load);
+      const onCreated = (notification) => {
+        if (!notification) return;
+        if (!meId) return;
+        const ownerId = String(notification.user_id || notification.userId || '');
+        if (ownerId !== String(meId)) return;
+        if (notification.is_read) return;
+
+        setUnread((prev) => prev + 1);
+        load();
+      };
+
+      const onRead = () => {
+        setUnread((prev) => Math.max(0, prev - 1));
+        load();
+      };
+
+      const onAllRead = () => {
+        setUnread(0);
+        load();
+      };
+
+      socket.on('connect', load);
+      socket.on('notification_created', onCreated);
+      socket.on('notification_read', onRead);
+      socket.on('notifications_all_read', onAllRead);
 
       return () => {
-        socket.off('notification_created', load);
-        socket.off('notification_read', load);
-        socket.off('notifications_all_read', load);
+        socket.off('connect', load);
+        socket.off('notification_created', onCreated);
+        socket.off('notification_read', onRead);
+        socket.off('notifications_all_read', onAllRead);
       };
     };
 
@@ -61,7 +98,7 @@ const NotificationIconButton = ({ navigation, style, iconSize = 22, color = '#ff
         if (typeof teardown === 'function') teardown();
       });
     };
-  }, [load]);
+  }, [load, meId]);
 
   const badge = useMemo(() => clampBadge(unread), [unread]);
 

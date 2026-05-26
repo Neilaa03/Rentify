@@ -10,6 +10,21 @@ import {
 import { getReservationById } from '../reservations/reservationModel.js';
 import { createNotification } from '../notifications/notificationModel.js';
 
+const notifyOwnerReservationCreated = async ({ reservation, paymentMethod }) => {
+  const ownerId = reservation?.listing?.car?.ownerId;
+  if (!ownerId) return;
+
+  const methodLabel = paymentMethod === 'cash' ? 'en espece' : 'par carte';
+
+  await createNotification({
+    userId: ownerId,
+    type: 'reservation_created',
+    title: 'Nouvelle reservation',
+    message: `Nouvelle reservation pour ${reservation.listing?.title || 'votre annonce'} du ${reservation.startDate} au ${reservation.endDate}, paiement choisi ${methodLabel}.`,
+    data: { reservationId: reservation.id, listingId: reservation.listingId, paymentMethod },
+  });
+};
+
 // =========================================================
 // CARD PAYMENT: Create Payment Intent
 // =========================================================
@@ -42,6 +57,7 @@ export const createCardPaymentIntentHandler = async (req, res) => {
     // Check if payment already exists
     let payment = await getPaymentByReservationId(reservationId);
     
+    let createdPayment = false;
     if (!payment) {
       // Create payment record
       payment = await createPayment({
@@ -50,8 +66,17 @@ export const createCardPaymentIntentHandler = async (req, res) => {
         paymentMethod: 'card',
         status: 'pending',
       });
+      createdPayment = true;
     } else if (payment.paymentMethod !== 'card') {
       return res.status(400).json({ error: 'This reservation is not using card payment.' });
+    }
+
+    if (createdPayment) {
+      try {
+        await notifyOwnerReservationCreated({ reservation, paymentMethod: 'card' });
+      } catch (notifyError) {
+        console.error('Failed to create reservation notification after card selection:', notifyError);
+      }
     }
 
     // Create Stripe PaymentIntent
@@ -114,6 +139,7 @@ export const createCashPaymentHandler = async (req, res) => {
     // Check if payment already exists
     let payment = await getPaymentByReservationId(reservationId);
     
+    let createdPayment = false;
     if (!payment) {
       // Create cash payment record with pending_cash status
       payment = await createPayment({
@@ -122,6 +148,15 @@ export const createCashPaymentHandler = async (req, res) => {
         paymentMethod: 'cash',
         status: 'pending_cash',
       });
+      createdPayment = true;
+    }
+
+    if (createdPayment) {
+      try {
+        await notifyOwnerReservationCreated({ reservation, paymentMethod: 'cash' });
+      } catch (notifyError) {
+        console.error('Failed to create reservation notification after cash selection:', notifyError);
+      }
     }
 
     return res.status(201).json({
