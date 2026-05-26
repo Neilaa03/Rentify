@@ -1,13 +1,17 @@
-import React, { useMemo, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { useFavorites } from '../../contexts/FavoritesContext';
+import { API_ENDPOINTS } from '../../constants/api';
+import RatingStars from '../../components/reviews/RatingStars';
+import ReviewCard from '../../components/reviews/ReviewCard';
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const roundToHalf = (value) => Math.round(value * 2) / 2;
 
 const SpecCard = ({ icon, value, label }) => (
   <View style={styles.specCard}>
@@ -23,6 +27,65 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   const listing = route?.params?.listing;
   const [activeIndex, setActiveIndex] = useState(0);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const [reviewSummary, setReviewSummary] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+
+  const carId = listing?.carId || listing?.car?.id || listing?.car_id || null;
+
+  useEffect(() => {
+    if (!carId) return undefined;
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setReviewsLoading(true);
+        const [summaryRes, reviewsRes] = await Promise.all([
+          fetch(API_ENDPOINTS.REVIEWS.CAR_SUMMARY(carId)),
+          fetch(`${API_ENDPOINTS.REVIEWS.CAR_LIST(carId)}?limit=3&page=1`),
+        ]);
+
+        if (!cancelled && summaryRes.ok) {
+          const json = await summaryRes.json();
+          setReviewSummary(json || null);
+        }
+
+        if (!cancelled && reviewsRes.ok) {
+          const json = await reviewsRes.json();
+          setReviews(Array.isArray(json?.items) ? json.items : []);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setReviewSummary(null);
+          setReviews([]);
+        }
+      } finally {
+        if (!cancelled) setReviewsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [carId]);
+
+  const averageRatingRounded = useMemo(() => {
+    const avg = Number(reviewSummary?.averageRating || 0) || 0;
+    return roundToHalf(avg);
+  }, [reviewSummary?.averageRating]);
+
+  const reviewCount = Number(reviewSummary?.reviewCount || 0) || 0;
+  const slideWidth = SCREEN_WIDTH - 64;
+
+  const handleReviewsScroll = (event) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent || {};
+    const width = layoutMeasurement?.width || slideWidth;
+    const x = contentOffset?.x || 0;
+    const next = Math.round(x / Math.max(1, width));
+    if (next !== activeReviewIndex) setActiveReviewIndex(next);
+  };
 
   const imageUrls = useMemo(() => {
     const toImageUrl = (img) => {
@@ -147,6 +210,58 @@ const ListingDetailsScreen = ({ navigation, route }) => {
 
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.description}>{listing.description}</Text>
+
+          <View style={styles.reviewsHeaderRow}>
+            <Text style={styles.sectionTitle}>{`Avis${reviewCount ? ` (${reviewCount})` : ''}`}</Text>
+            {reviewCount ? (
+              <View style={styles.reviewsSummaryRight}>
+                <RatingStars rating={averageRatingRounded} />
+                <Text style={styles.reviewsAvgText}>{averageRatingRounded.toFixed(1)}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {reviewsLoading ? (
+            <View style={styles.reviewsLoadingRow}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={styles.reviewsLoadingText}>Chargement…</Text>
+            </View>
+          ) : reviews.length ? (
+            <>
+              <ScrollView
+                horizontal
+                pagingEnabled={false}
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={slideWidth}
+                decelerationRate="fast"
+                onScroll={handleReviewsScroll}
+                scrollEventThrottle={16}
+                contentContainerStyle={styles.reviewsCarousel}
+              >
+                {reviews.map((r) => (
+                  <View key={r.id} style={[styles.reviewsSlide, { width: slideWidth }]}>
+                    <ReviewCard review={r} />
+                  </View>
+                ))}
+              </ScrollView>
+
+              {reviews.length > 1 ? (
+                <View style={styles.reviewsDotsRow}>
+                  {reviews.map((_, index) => (
+                    <View
+                      key={`review-dot-${index}`}
+                      style={[
+                        styles.reviewsDot,
+                        index === activeReviewIndex && styles.reviewsDotActive,
+                      ]}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.reviewsEmptyText}>Aucun avis pour le moment.</Text>
+          )}
 
           <Text style={styles.sectionTitle}>Récupération</Text>
           <View style={styles.pickupInfoCard}>
@@ -416,6 +531,64 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 10,
     marginBottom: 8,
+  },
+  reviewsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  reviewsSummaryRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewsAvgText: {
+    color: '#cfd3ff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  reviewsCarousel: {
+    paddingRight: 16,
+    marginBottom: 14,
+  },
+  reviewsSlide: {
+    marginRight: 12,
+  },
+  reviewsDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: -2,
+    marginBottom: 14,
+  },
+  reviewsDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  reviewsDotActive: {
+    width: 18,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  reviewsLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  reviewsLoadingText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  reviewsEmptyText: {
+    color: '#8e95bf',
+    fontSize: 13,
+    marginBottom: 14,
   },
   description: {
     color: '#9aa2cc',

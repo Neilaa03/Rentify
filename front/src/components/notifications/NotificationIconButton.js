@@ -46,11 +46,13 @@ const NotificationIconButton = ({ navigation, style, iconSize = 22, color = '#ff
       socket.on('notification_created', load);
       socket.on('notification_read', load);
       socket.on('notifications_all_read', load);
+      socket.on('notification_deleted', load);
 
       return () => {
         socket.off('notification_created', load);
         socket.off('notification_read', load);
         socket.off('notifications_all_read', load);
+        socket.off('notification_deleted', load);
       };
     };
 

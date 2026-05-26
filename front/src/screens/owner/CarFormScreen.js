@@ -767,7 +767,17 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><Ionicons name="chevron-back" size={22} color="#fff" /></TouchableOpacity>
           <Text style={styles.headerTitle}>{isCreateCarAndListing ? 'Publier un véhicule' : isCreateCar ? 'Ajouter un véhicule' : isCreateListingOnly ? 'Nouvelle annonce' : isEditCar ? 'Modifier le véhicule' : 'Modifier annonce'}</Text>
-          <View style={styles.iconBtn} />
+          {isEditCar && car?.id ? (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('OwnerCarReviews', { token, carId: car.id, car })}
+              style={styles.iconBtn}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="chatbubbles-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.iconBtn} />
+          )}
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>

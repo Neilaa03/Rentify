@@ -38,6 +38,7 @@ export const getNotificationsForUser = async (userId, filter = 'all') => {
     .from(NOTIFICATIONS_TABLE)
     .select('*')
     .eq('user_id', userId)
+    .not('is_read', 'is', null)
     .order('created_at', { ascending: false });
 
   if (filter === 'unread') {
@@ -55,6 +56,7 @@ export const getUnreadCount = async (userId) => {
     .from(NOTIFICATIONS_TABLE)
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
+    .not('is_read', 'is', null)
     .eq('is_read', false);
 
   if (error) throw error;
@@ -66,6 +68,7 @@ export const markNotificationAsRead = async (notificationId, userId) => {
     .from(NOTIFICATIONS_TABLE)
     .update({ is_read: true })
     .match({ id: notificationId, user_id: userId })
+    .not('is_read', 'is', null)
     .select()
     .single();
 
@@ -85,7 +88,8 @@ export const markAllNotificationsAsRead = async (userId) => {
   const { error } = await supabase
     .from(NOTIFICATIONS_TABLE)
     .update({ is_read: true })
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .not('is_read', 'is', null);
 
   if (error) throw error;
 
@@ -97,4 +101,24 @@ export const markAllNotificationsAsRead = async (userId) => {
   }
 
   return true;
+};
+
+export const deleteNotification = async (notificationId, userId) => {
+  const { data, error } = await supabase
+    .from(NOTIFICATIONS_TABLE)
+    .update({ is_read: null })
+    .match({ id: notificationId, user_id: userId })
+    .select()
+    .maybeSingle();
+
+  if (error) throw error;
+
+  try {
+    const io = getIO();
+    io.to(userId).emit('notification_deleted', { notificationId });
+  } catch (_err) {
+    // socket not initialized — ignore
+  }
+
+  return data || null;
 };

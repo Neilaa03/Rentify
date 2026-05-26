@@ -11,7 +11,7 @@ const toImageUrl = (img) => {
   return img.imageUrl || img.image_url || img.url || null;
 };
 
-const CarCard = ({ car, onPress, onEdit, onDelete }) => {
+const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const scrollRef = useRef(null);
@@ -94,6 +94,16 @@ const CarCard = ({ car, onPress, onEdit, onDelete }) => {
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>En ligne</Text>
         </View>
+
+        {typeof onReviewsPress === 'function' ? (
+          <TouchableOpacity
+            style={styles.reviewsBadge}
+            activeOpacity={0.85}
+            onPress={onReviewsPress}
+          >
+            <Ionicons name="chatbubbles-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <View style={styles.body}>
@@ -190,6 +200,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '700',
+  },
+  reviewsBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 18, 40, 0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
   body: {
     padding: 16,
