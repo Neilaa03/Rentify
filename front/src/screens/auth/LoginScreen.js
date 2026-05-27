@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ImageBackground, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
+import AuthHeader from '../../components/auth/AuthHeader';
+import AuthInputField from '../../components/auth/AuthInputField';
+import AuthGradientButton from '../../components/auth/AuthGradientButton';
+import { isTablet, moderateScale, rf } from '../../utils/responsive';
 
 const LoginScreen = ({ navigation }) => {
+    const tabletLayout = isTablet();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -158,81 +162,79 @@ const LoginScreen = ({ navigation }) => {
                 resizeMode="cover"
             >
                 <SafeAreaView style={styles.overlay}>
-                <View style={styles.content}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Welcome Back</Text>
-                    <Text style={styles.subtitle}>Log in to continue your journey with Rentify</Text>
-                </View>
-
-                <View style={styles.form}>
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Email Address</Text>
-                        <TextInput 
-                            style={[
-                                styles.input,
-                                email.trim() ? styles.inputFilled : null,
-                                errors.email ? styles.inputError : null
-                            ]}
-                            placeholder="example@mail.com"
-                            placeholderTextColor="rgba(255,255,255,0.6)"
-                            value={email}
-                            onChangeText={(text) => {
-                                setEmail(text);
-                                clearError('email');
-                                clearError('form');
-                            }}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                        />
-                        {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-                    </View>
-
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Password</Text>
-                        <TextInput 
-                            style={[
-                                styles.input,
-                                password ? styles.inputFilled : null,
-                                errors.password ? styles.inputError : null
-                            ]}
-                            placeholder="••••••••"
-                            placeholderTextColor="rgba(255,255,255,0.6)"
-                            value={password}
-                            onChangeText={(text) => {
-                                setPassword(text);
-                                clearError('password');
-                                clearError('form');
-                            }}
-                            secureTextEntry
-                        />
-                        {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-                    </View>
-
-                    <TouchableOpacity style={styles.forgotPassword}>
-                        <Text style={styles.forgotText}>Forgot Password?</Text>
-                    </TouchableOpacity>
-
-                    {!!errors.form && <Text style={styles.formErrorText}>{errors.form}</Text>}
-
-                    <TouchableOpacity onPress={handleLogin}>
-                        <LinearGradient
-                            colors={[COLORS.secondary, COLORS.primary]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.loginButton}
+                    <KeyboardAvoidingView
+                        style={styles.keyboardAvoid}
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    >
+                        <ScrollView
+                            style={styles.scrollView}
+                            contentContainerStyle={styles.scrollContent}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
                         >
-                            <Text style={styles.buttonText}>Login</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
+                            <View
+                                style={[
+                                    styles.content,
+                                    {
+                                        maxWidth: tabletLayout ? 520 : '100%',
+                                        width: '100%',
+                                        alignSelf: 'center',
+                                    },
+                                ]}
+                            >
+                                <AuthHeader
+                                    title="Welcome Back"
+                                    subtitle="Log in to continue your journey with Rentify"
+                                />
 
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>Don't have an account? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                        <Text style={styles.linkText}>Sign Up</Text>
-                    </TouchableOpacity>
-                </View>
-                </View>
+                                <View style={styles.form}>
+                                    <AuthInputField
+                                        label="Email Address"
+                                        error={errors.email}
+                                        inputStyle={[email.trim() ? styles.inputFilled : null]}
+                                        placeholder="example@mail.com"
+                                        value={email}
+                                        onChangeText={(text) => {
+                                            setEmail(text);
+                                            clearError('email');
+                                            clearError('form');
+                                        }}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                    />
+
+                                    <AuthInputField
+                                        label="Password"
+                                        error={errors.password}
+                                        inputStyle={[password ? styles.inputFilled : null]}
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChangeText={(text) => {
+                                            setPassword(text);
+                                            clearError('password');
+                                            clearError('form');
+                                        }}
+                                        secureTextEntry
+                                    />
+
+                                    <TouchableOpacity style={styles.forgotPassword}>
+                                        <Text style={styles.forgotText}>Forgot Password?</Text>
+                                    </TouchableOpacity>
+
+                                    {!!errors.form && <Text style={styles.formErrorText}>{errors.form}</Text>}
+
+                                    <AuthGradientButton label="Login" onPress={handleLogin} disabled={loading} />
+                                </View>
+
+                                <View style={styles.footer}>
+                                    <Text style={styles.footerText}>Don't have an account? </Text>
+                                    <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                                        <Text style={styles.linkText}>Sign Up</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
                 </SafeAreaView>
             </ImageBackground>
         </View>
@@ -242,47 +244,39 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { flex: 1 },
-    overlay: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.3)' },
-    content: { marginTop: -64 },
-    header: { marginBottom: 40 },
-    title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-    subtitle: { fontSize: 16, color: '#aaa', marginTop: 8 },
-    form: { width: '100%' },
-    inputContainer: { marginBottom: 20 },
-    label: { color: '#fff', marginBottom: 8, fontSize: 14, fontWeight: '500' },
-    input: {
-        backgroundColor: 'rgba(255,255,255,0.16)',
-        borderRadius: 12,
-        padding: 16,
-        color: '#fff',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)'
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        paddingHorizontal: moderateScale(20),
     },
+    keyboardAvoid: { flex: 1 },
+    scrollView: { flex: 1 },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingVertical: moderateScale(24),
+    },
+    content: {},
+    form: { width: '100%' },
     inputFilled: {
         backgroundColor: 'rgba(230, 215, 255, 0.26)',
         borderColor: 'rgba(166, 110, 255, 0.35)',
     },
-    inputError: {
-        borderColor: 'rgba(255, 92, 92, 0.9)',
-    },
-    errorText: {
-        marginTop: 8,
-        color: 'rgba(255, 92, 92, 0.95)',
-        fontSize: 12,
-        lineHeight: 16,
-    },
     formErrorText: {
-        marginBottom: 16,
+        marginBottom: moderateScale(14),
         color: 'rgba(255, 92, 92, 0.95)',
-        fontSize: 13,
-        lineHeight: 18,
+        fontSize: rf(13, 12, 15),
+        lineHeight: rf(18, 16, 22),
         textAlign: 'center',
     },
-    forgotPassword: { alignSelf: 'flex-end', marginBottom: 30 },
-    forgotText: { color: COLORS.primary, fontSize: 14 },
-    loginButton: { height: 55, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-    buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40 },
+    forgotPassword: { alignSelf: 'flex-end', marginBottom: moderateScale(26) },
+    forgotText: { color: COLORS.primary, fontSize: rf(14, 12, 16) },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: moderateScale(30),
+        flexWrap: 'wrap',
+    },
     footerText: { color: '#aaa' },
     linkText: { color: COLORS.secondary, fontWeight: 'bold' }
 });

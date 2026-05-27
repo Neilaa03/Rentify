@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ImageBackground, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import storage from '../../utils/storage';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
+import AuthHeader from '../../components/auth/AuthHeader';
+import AuthInputField from '../../components/auth/AuthInputField';
+import AuthGradientButton from '../../components/auth/AuthGradientButton';
+import { isTablet, moderateScale, rf } from '../../utils/responsive';
 
 const RegisterScreen = ({ navigation }) => {
+    const tabletLayout = isTablet();
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -237,18 +241,27 @@ const RegisterScreen = ({ navigation }) => {
                         </TouchableOpacity>
 
                         <View style={styles.header}>
-                            <Text style={styles.title}>Create Account</Text>
-                            <Text style={styles.subtitle}>Join Rentify and start your journey</Text>
+                            <AuthHeader
+                                title="Create Account"
+                                subtitle="Join Rentify and start your journey"
+                            />
                         </View>
 
-                        <View style={styles.form}>
+                        <View
+                            style={[
+                                styles.form,
+                                {
+                                    maxWidth: tabletLayout ? 620 : '100%',
+                                    alignSelf: 'center',
+                                },
+                            ]}
+                        >
                             <View style={styles.nameRow}>
                                 <View style={[styles.inputContainer, styles.halfInput, styles.halfInputLeft]}>
-                                    <Text style={styles.label}>First Name</Text>
-                                    <TextInput 
-                                        style={[styles.input, errors.firstName ? styles.inputError : null]}
+                                    <AuthInputField
+                                        label="First Name"
+                                        error={errors.firstName}
                                         placeholder="John"
-                                        placeholderTextColor="rgba(255,255,255,0.6)"
                                         value={firstName}
                                         onChangeText={(text) => {
                                             setFirstName(text);
@@ -257,15 +270,13 @@ const RegisterScreen = ({ navigation }) => {
                                         }}
                                         autoCapitalize="words"
                                     />
-                                    {!!errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
                                 </View>
 
                                 <View style={[styles.inputContainer, styles.halfInput, styles.halfInputRight]}>
-                                    <Text style={styles.label}>Last Name</Text>
-                                    <TextInput 
-                                        style={[styles.input, errors.lastName ? styles.inputError : null]}
+                                    <AuthInputField
+                                        label="Last Name"
+                                        error={errors.lastName}
                                         placeholder="Doe"
-                                        placeholderTextColor="rgba(255,255,255,0.6)"
                                         value={lastName}
                                         onChangeText={(text) => {
                                             setLastName(text);
@@ -274,16 +285,14 @@ const RegisterScreen = ({ navigation }) => {
                                         }}
                                         autoCapitalize="words"
                                     />
-                                    {!!errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
                                 </View>
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Email Address</Text>
-                                <TextInput 
-                                    style={[styles.input, errors.email ? styles.inputError : null]}
+                                <AuthInputField
+                                    label="Email Address"
+                                    error={errors.email}
                                     placeholder="example@mail.com"
-                                    placeholderTextColor="rgba(255,255,255,0.6)"
                                     value={email}
                                     onChangeText={(text) => {
                                         setEmail(text);
@@ -293,15 +302,13 @@ const RegisterScreen = ({ navigation }) => {
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                 />
-                                {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Phone Number</Text>
-                                <TextInput 
-                                    style={[styles.input, errors.phone ? styles.inputError : null]}
+                                <AuthInputField
+                                    label="Phone Number"
+                                    error={errors.phone}
                                     placeholder="+1 (555) 000-0000"
-                                    placeholderTextColor="rgba(255,255,255,0.6)"
                                     value={phone}
                                     onChangeText={(text) => {
                                         setPhone(text);
@@ -310,7 +317,6 @@ const RegisterScreen = ({ navigation }) => {
                                     }}
                                     keyboardType="phone-pad"
                                 />
-                                {!!errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
                             </View>
 
                             <View style={styles.inputContainer}>
@@ -335,7 +341,7 @@ const RegisterScreen = ({ navigation }) => {
                                             ]}>
                                                 <Ionicons
                                                     name={role.icon}
-                                                    size={32}
+                                                    size={moderateScale(26)}
                                                     color={selectedRole === role.id ? '#fff' : 'rgba(255,255,255,0.75)'}
                                                 />
                                             </View>
@@ -352,11 +358,10 @@ const RegisterScreen = ({ navigation }) => {
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Password</Text>
-                                <TextInput 
-                                    style={[styles.input, errors.password ? styles.inputError : null]}
+                                <AuthInputField
+                                    label="Password"
+                                    error={errors.password}
                                     placeholder="••••••••"
-                                    placeholderTextColor="rgba(255,255,255,0.6)"
                                     value={password}
                                     onChangeText={(text) => {
                                         setPassword(text);
@@ -365,15 +370,13 @@ const RegisterScreen = ({ navigation }) => {
                                     }}
                                     secureTextEntry
                                 />
-                                {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Confirm Password</Text>
-                                <TextInput 
-                                    style={[styles.input, errors.confirmPassword ? styles.inputError : null]}
+                                <AuthInputField
+                                    label="Confirm Password"
+                                    error={errors.confirmPassword}
                                     placeholder="••••••••"
-                                    placeholderTextColor="rgba(255,255,255,0.6)"
                                     value={confirmPassword}
                                     onChangeText={(text) => {
                                         setConfirmPassword(text);
@@ -382,20 +385,10 @@ const RegisterScreen = ({ navigation }) => {
                                     }}
                                     secureTextEntry
                                 />
-                                {!!errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
                                 {!!errors.form && <Text style={styles.errorText}>{errors.form}</Text>}
                             </View>
 
-                            <TouchableOpacity onPress={handleRegister}>
-                                <LinearGradient
-                                    colors={[COLORS.secondary, COLORS.primary]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.registerButton}
-                                >
-                                    <Text style={styles.buttonText}>Create Account</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
+                            <AuthGradientButton label="Create Account" onPress={handleRegister} />
                         </View>
 
                         <View style={styles.footer}>
@@ -417,73 +410,66 @@ const styles = StyleSheet.create({
     background: { flex: 1 },
     overlay: { 
         flex: 1, 
-        paddingHorizontal: 24,
+        paddingHorizontal: moderateScale(20),
         backgroundColor: 'rgba(0,0,0,0.3)',
     },
     keyboardAvoid: { flex: 1 },
     scrollView: {
         flex: 1,
-        paddingVertical: 20,
+        paddingVertical: moderateScale(18),
     },
     scrollContent: {
-        paddingBottom: 28,
+        flexGrow: 1,
+        paddingBottom: moderateScale(24),
     },
     backButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
+        width: moderateScale(46),
+        aspectRatio: 1,
+        borderRadius: moderateScale(12),
         backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: moderateScale(18),
     },
-    header: { marginBottom: 30 },
-    title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-    subtitle: { fontSize: 16, color: '#aaa', marginTop: 8 },
+    header: { marginBottom: moderateScale(4) },
     form: { width: '100%' },
     nameRow: {
         flexDirection: 'row',
         width: '100%',
+        flexWrap: 'wrap',
     },
     halfInput: {
-        flex: 1,
+        flexGrow: 1,
+        flexBasis: 160,
     },
     halfInputLeft: {
-        marginRight: 8,
+        marginRight: moderateScale(6),
     },
     halfInputRight: {
-        marginLeft: 8,
+        marginLeft: moderateScale(6),
     },
-    inputContainer: { marginBottom: 20 },
-    label: { color: '#fff', marginBottom: 8, fontSize: 14, fontWeight: '500' },
-    input: {
-        backgroundColor: 'rgba(255,255,255,0.16)',
-        borderRadius: 12,
-        padding: 16,
-        color: '#fff',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)'
-    },
-    inputError: {
-        borderColor: 'rgba(255, 92, 92, 0.9)',
-    },
+    inputContainer: { marginBottom: moderateScale(2) },
+    label: { color: '#fff', marginBottom: moderateScale(8), fontSize: rf(14, 12, 16), fontWeight: '500' },
     errorText: {
-        marginTop: 8,
+        marginTop: moderateScale(8),
         color: 'rgba(255, 92, 92, 0.95)',
-        fontSize: 12,
-        lineHeight: 16,
+        fontSize: rf(12, 11, 14),
+        lineHeight: rf(16, 14, 20),
     },
     rolesContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        marginBottom: moderateScale(8),
     },
     roleButton: {
-        flex: 1,
+        width: '31%',
+        minWidth: 92,
         alignItems: 'center',
-        paddingVertical: 16,
-        marginHorizontal: 6,
-        borderRadius: 12,
+        paddingVertical: moderateScale(14),
+        marginHorizontal: moderateScale(4),
+        marginBottom: moderateScale(8),
+        borderRadius: moderateScale(12),
         backgroundColor: 'rgba(255,255,255,0.16)',
         borderWidth: 2,
         borderColor: 'rgba(255,255,255,0.3)',
@@ -493,29 +479,27 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(166, 110, 255, 0.2)',
     },
     roleIconContainer: {
-        width: 56,
-        height: 56,
-        borderRadius: 12,
+        width: moderateScale(50),
+        aspectRatio: 1,
+        borderRadius: moderateScale(12),
         backgroundColor: 'rgba(255,255,255,0.12)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: moderateScale(8),
     },
     roleIconContainerActive: {
         backgroundColor: COLORS.primary,
     },
     roleLabel: { 
         color: 'rgba(255,255,255,0.75)',
-        fontSize: 12, 
+        fontSize: rf(12, 11, 14), 
         fontWeight: '500',
         textAlign: 'center',
     },
     roleLabelActive: {
         color: '#fff',
     },
-    registerButton: { height: 55, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-    buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30, marginBottom: 20 },
+    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: moderateScale(28), marginBottom: moderateScale(16), flexWrap: 'wrap' },
     footerText: { color: '#aaa' },
     linkText: { color: COLORS.secondary, fontWeight: 'bold' }
 });
