@@ -56,6 +56,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const [paymentStatus, setPaymentStatus] = useState(null); // null | 'pending' | 'completed' | 'failed' | 'pending_cash'
   const [paymentInfo, setPaymentInfo] = useState(null); // stores payment response data
   const [reservationState, setReservationState] = useState(reservationFromParams || null);
+  const [ownerConnectStatus, setOwnerConnectStatus] = useState(null);
 
   const reservation = reservationState || reservationFromParams;
 
@@ -212,6 +213,11 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const showPayButton =
     reservation?.status === 'reserved' &&
     (paymentStatus === null || paymentStatus === 'failed' || canResumePendingCardPayment);
+
+  const isCardEnabledForOwner = Boolean(ownerConnectStatus?.cardPaymentsAvailable);
+  const disabledCardReason = isCardEnabledForOwner
+    ? ''
+    : 'Paiement carte indisponible: le proprietaire n\'a pas encore configure ses paiements Stripe.';
 
   const paymentButtonLabel = canResumePendingCardPayment
     ? 'Finish payment'
@@ -391,6 +397,43 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       cancelled = true;
     };
   }, [reservation?.id, reservation?.status]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOwnerConnectStatus = async () => {
+      const ownerId = reservation?.listing?.car?.ownerId;
+      if (!ownerId) return;
+
+      try {
+        const token = await storage.getItemAsync('userToken');
+        if (!token) return;
+
+        const response = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_STATUS(ownerId), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) return;
+        const status = await response.json();
+        if (cancelled) return;
+
+        setOwnerConnectStatus(status || null);
+        if (!status?.cardPaymentsAvailable && paymentMethod === 'card') {
+          setPaymentMethod('cash');
+        }
+      } catch (_error) {
+        // Keep UI usable with cash even if connect status fetch fails.
+      }
+    };
+
+    loadOwnerConnectStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [reservation?.listing?.car?.ownerId, paymentMethod]);
 
   useEffect(() => {
     if (!resumeCardPayment) return;
@@ -933,6 +976,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           <PaymentMethodSelector
             selectedMethod={paymentMethod}
             onMethodSelect={setPaymentMethod}
+            isCardEnabled={isCardEnabledForOwner}
+            disabledCardReason={disabledCardReason}
           />
         )}
 

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -11,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
+import { API_ENDPOINTS } from '../../constants/api';
 import { getOwnerDashboardData } from '../../services/owner';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import MessageIconButton from '../../components/messaging/MessageIconButton';
@@ -49,6 +52,8 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
     },
     activity: [],
   });
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [connectStatus, setConnectStatus] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!token || !user?.id) return;
@@ -68,6 +73,81 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const loadConnectStatus = async () => {
+      if (!token || !user?.id) return;
+      try {
+        const response = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_STATUS(user.id), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) return;
+        const status = await response.json();
+        setConnectStatus(status || null);
+      } catch (_e) {
+        // ignore
+      }
+    };
+    loadConnectStatus();
+  }, [token, user?.id]);
+
+  const configureStripePayouts = async () => {
+    if (!token) {
+      const msg = 'Session expirée. Reconnectez-vous puis réessayez.';
+      setError(msg);
+      Alert.alert('Configurer Stripe', msg);
+      return;
+    }
+    if (!user?.id) {
+      const msg = 'Utilisateur introuvable. Rechargez la page.';
+      setError(msg);
+      Alert.alert('Configurer Stripe', msg);
+      return;
+    }
+
+    try {
+      setConnectLoading(true);
+      const response = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_ONBOARDING_LINK, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || 'Impossible de configurer Stripe');
+      }
+      const payload = await response.json();
+      const url = payload?.onboardingUrl;
+      if (!url) throw new Error('Lien Stripe indisponible');
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) {
+        throw new Error('Impossible d’ouvrir le lien Stripe sur cet appareil');
+      }
+      await Linking.openURL(url);
+
+      const statusResponse = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_STATUS(user.id), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (statusResponse.ok) {
+        const status = await statusResponse.json();
+        setConnectStatus(status || null);
+      }
+    } catch (e) {
+      const msg = e.message || 'Impossible de configurer Stripe';
+      setError(msg);
+      Alert.alert('Configurer Stripe', msg);
+    } finally {
+      setConnectLoading(false);
+    }
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -130,6 +210,32 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
                 <Ionicons name="list-outline" size={24} color="#8f7dff" />
                 <Text style={styles.quickTitle}>Mes annonces</Text>
                 <Text style={styles.quickSubtitle}>Gérer et publier</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.connectCard}>
+              <View style={styles.connectCardHeader}>
+                <Ionicons name="card-outline" size={20} color="#8f7dff" />
+                <Text style={styles.connectTitle}>Paiements carte proprietaire</Text>
+              </View>
+              <Text style={styles.connectText}>
+                {connectStatus?.cardPaymentsAvailable
+                  ? 'Votre compte Stripe est pret. Les clients peuvent payer par carte.'
+                  : 'Configurez Stripe pour recevoir les paiements carte des clients.'}
+              </Text>
+              <TouchableOpacity
+                onPress={configureStripePayouts}
+                disabled={connectLoading}
+                style={styles.connectBtn}
+                activeOpacity={0.85}
+              >
+                {connectLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.connectBtnText}>
+                    {connectStatus?.cardPaymentsAvailable ? 'Mettre a jour Stripe' : 'Configurer Stripe'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -244,6 +350,32 @@ const styles = StyleSheet.create({
   },
   quickTitle: { color: '#fff', fontSize: 22 / 1.7, fontWeight: '700', marginTop: 10 },
   quickSubtitle: { color: '#ced2f1', marginTop: 4 },
+  connectCard: {
+    marginTop: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(146,151,214,0.2)',
+    backgroundColor: 'rgba(21,23,58,0.9)',
+    padding: 14,
+  },
+  connectCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  connectTitle: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  connectText: { color: '#bcc1e2', marginTop: 8, fontSize: 12, lineHeight: 18 },
+  connectBtn: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#8f7dff',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 140,
+    alignItems: 'center',
+  },
+  connectBtnText: { color: '#fff', fontWeight: '700' },
   sectionHeader: { marginTop: 18, marginBottom: 10 },
   sectionTitle: { color: '#fff', fontWeight: '700', fontSize: 30 / 1.6 },
   emptyCard: {

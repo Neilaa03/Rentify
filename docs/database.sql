@@ -100,7 +100,9 @@ CREATE TABLE users (
     is_active BOOLEAN DEFAULT TRUE,
 
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    stripe_account_id text;
 );
 
 -- =========================================================

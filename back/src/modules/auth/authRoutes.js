@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, me } from './authController.js';
+import { register, login, me, updateMe } from './authController.js';
 import { authenticateToken, requireRoles } from '../../middleware/auth.js';
 import { getUserById } from './authModel.js';
 
@@ -8,6 +8,7 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 router.get('/me', authenticateToken, me);
+router.patch('/me', authenticateToken, updateMe);
 
 // Protected route: Only logged-in users can see their data
 router.get('/me', authenticateToken, async (req, res) => {

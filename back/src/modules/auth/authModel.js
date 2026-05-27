@@ -45,3 +45,19 @@ export const getUserById = async (id) => {
     if (error) return null;
     return data;
 };
+
+export const updateUserById = async (id, payload) => {
+    const updatePayload = {};
+    if (payload.email !== undefined) updatePayload.email = payload.email;
+    if (payload.phone !== undefined) updatePayload.phone = payload.phone;
+
+    const { data, error } = await supabase
+        .from('users')
+        .update(updatePayload)
+        .eq('id', id)
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active')
+        .single();
+
+    if (error) throw error;
+    return data;
+};

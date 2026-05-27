@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, S
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import storage from '../../utils/storage';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 
@@ -29,6 +30,8 @@ const RegisterScreen = ({ navigation }) => {
         if (!errors[key]) return;
         setErrors((prev) => ({ ...prev, [key]: '' }));
     };
+
+    const normalizeRole = (role) => String(role || '').trim().toLowerCase();
 
     const handleRegister = async () => {
         console.log("Register button pressed");
@@ -111,12 +114,77 @@ const RegisterScreen = ({ navigation }) => {
             if (response.ok) {
                 // SUCCESS
                 console.log("Registration successful!", data);
-                // alert("Registration successful! Redirecting to login...");
+                // Some backends return no token on register. In that case,
+                // immediately log in to create a fresh authenticated session.
+                let sessionToken = data?.token;
+                let sessionUser = data?.user;
+                if (!sessionToken) {
+                    const loginResponse = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: trimmedEmail,
+                            password: password,
+                        }),
+                    });
+
+                    const loginData = await loginResponse.json();
+                    if (!loginResponse.ok || !loginData?.token || !loginData?.user) {
+                        throw new Error(
+                            loginData?.error || 'Account created, but automatic login failed. Please log in.'
+                        );
+                    }
+                    sessionToken = loginData.token;
+                    sessionUser = loginData.user;
+                }
+
+                if (sessionToken) {
+                    await storage.setItemAsync('userToken', sessionToken);
+                }
+
+                const rawUser = sessionUser || null;
+                if (rawUser) {
+                    const normalized = {
+                        id: rawUser.id,
+                        email: rawUser.email,
+                        firstName: rawUser.firstName || rawUser.first_name || '',
+                        lastName: rawUser.lastName || rawUser.last_name || '',
+                        phone: rawUser.phone || '',
+                        role: rawUser.role,
+                        isVerified: rawUser.isVerified ?? rawUser.is_verified,
+                        isActive: rawUser.isActive ?? rawUser.is_active,
+                    };
+                    await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+                }
+
+                const userParams = { token: sessionToken, user: sessionUser };
+                const role = normalizeRole(sessionUser?.role || selectedRole);
+                const isOwner = role === 'owner';
+                const isAdmin = role === 'admin';
+                const isClient = role === 'client';
+
+                if (isClient) { 
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'ClientApp' }],
+                    routes: [{ name: 'ClientApp', params: { screen: 'HomeTab', params: userParams } }],
+                });
+            } else if (isOwner) {
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'OwnerDashboard', params: userParams }],
+                });
+            } else if (isAdmin) {
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'AdminDashboard', params: userParams }],
                 });
             } else {
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'ClientApp', params: { screen: 'HomeTab', params: userParams } }],
+                });
+            }}
+            else {
                 // BACKEND ERROR
                 console.log("Registration failed:", data.error);
                 const message = data?.error || "We couldn't create your account. Please try again.";
@@ -139,7 +207,7 @@ const RegisterScreen = ({ navigation }) => {
     const roles = [
         { id: 'client', label: 'Client', icon: 'person' },
         { id: 'owner', label: 'Vehicle Owner', icon: 'car' },
-        { id: 'company', label: 'Company', icon: 'business' },
+        { id: 'companyManager', label: 'Company', icon: 'business' },
     ];
 
     return (

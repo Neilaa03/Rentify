@@ -48,6 +48,8 @@ export const API_ENDPOINTS = {
         CREATE_CASH_PAYMENT: `${API_BASE_URL}/api/payments/create-cash-payment`,
         CONFIRM_CASH_PAYMENT: `${API_BASE_URL}/api/payments/confirm-cash-payment`,
         GET_STATUS: (reservationId) => `${API_BASE_URL}/api/payments/status/${reservationId}`,
+        CONNECT_ONBOARDING_LINK: `${API_BASE_URL}/api/payments/connect/onboarding-link`,
+        CONNECT_STATUS: (ownerId) => `${API_BASE_URL}/api/payments/connect/status/${ownerId}`,
         WEBHOOK: `${API_BASE_URL}/api/payments/webhook`,
     },
 };

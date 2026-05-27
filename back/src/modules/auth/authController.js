@@ -1,5 +1,5 @@
-import { registerSchema, loginSchema } from './authSchemas.js';
-import { createUser, getUserByEmail, getUserById } from './authModel.js';
+import { registerSchema, loginSchema, updateMeSchema } from './authSchemas.js';
+import { createUser, getUserByEmail, getUserById, updateUserById } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -18,9 +18,16 @@ export const register = async (req, res) => {
             isVerified: isVerified
         });
 
+        const token = jwt.sign(
+            { id: newUser.id, role: newUser.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
         res.status(201).json({
             message: isVerified ? 'Registration complete' : 'Registration pending verification',
-            user: newUser
+            user: newUser,
+            token
         });
     } catch (err) {
         res.status(400).json({ error: err.message });
@@ -79,6 +86,19 @@ export const me = async (req, res) => {
         }
 
         res.json({ user });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+export const updateMe = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        const payload = updateMeSchema.parse(req.body);
+        const updated = await updateUserById(userId, payload);
+        res.json({ user: updated });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }
