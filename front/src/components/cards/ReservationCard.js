@@ -9,21 +9,27 @@ const formatDateRange = (from, to) => {
   try {
     const f = new Date(from);
     const t = new Date(to);
-    const opts = { year: 'numeric', month: 'short', day: 'numeric' };
+    const opts = { year: '2-digit', month: 'short', day: 'numeric' };
     return `${f.toLocaleDateString('en-US', opts)} → ${t.toLocaleDateString('en-US', opts)}`;
   } catch (e) {
     return '';
   }
 };
 
-const formatShortDate = (value) => {
+const formatSingleDate = (value) => {
   try {
     const date = new Date(value);
-    const opts = { day: '2-digit', month: '2-digit', year: '2-digit' };
-    return date.toLocaleDateString('fr-FR', opts);
+    const opts = { year: '2-digit', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', opts);
   } catch (e) {
     return '';
   }
+};
+
+const adaptFont = (width, regular, small, verySmall) => {
+  if (width <= 340) return verySmall;
+  if (width <= 380) return small;
+  return regular;
 };
 
 const ReservationCard = ({
@@ -37,6 +43,15 @@ const ReservationCard = ({
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const tightLayout = width <= 380;
+  const fontSize = {
+    carName: adaptFont(width, 17, 15.5, 14.5),
+    city: adaptFont(width, 12, 11.5, 10.5),
+    date: adaptFont(width, 14, 12, 11.2),
+    duration: adaptFont(width, 14, 12.5, 11.5),
+    status: adaptFont(width, 11, 10.5, 9.5),
+    price: adaptFont(width, compact ? 18 : 22, compact ? 14.5 : 14, compact ? 13.5 : 12.5),
+    finishPayment: adaptFont(width, 11, 10.5, 9.5),
+  };
 
   const listing = reservation?.listing || {};
   const status = reservation?.status || '';
@@ -116,11 +131,11 @@ const ReservationCard = ({
       <View style={[styles.contentWrapper, tightLayout && styles.tightContentWrapper]}>
         {/* Top: Car Name */}
         <View style={styles.titleSection}>
-          <Text style={styles.carName} numberOfLines={1}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
+          <Text style={[styles.carName, { fontSize: fontSize.carName }]} numberOfLines={1}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
           {listing?.city && (
             <View style={styles.cityContainer}>
               <Ionicons name="location-outline" size={12} color="#8b91ba" />
-              <Text style={styles.cityText}>{listing.city}</Text>
+              <Text style={[styles.cityText, { fontSize: fontSize.city }]}>{listing.city}</Text>
             </View>
           )}
         </View>
@@ -130,36 +145,36 @@ const ReservationCard = ({
           <Ionicons name="calendar-outline" size={14} color="#8b91ba" />
           {tightLayout ? (
             <View style={styles.stackedDateText}>
-              <Text style={[styles.dateText, styles.tightDateText]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatShortDate(start)} →</Text>
-              <Text style={[styles.dateText, styles.tightDateText]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatShortDate(end)}</Text>
+              <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(start)} →</Text>
+              <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(end)}</Text>
             </View>
           ) : (
-            <Text style={styles.dateText} numberOfLines={1}>{formatDateRange(start, end)}</Text>
+            <Text style={[styles.dateText, { fontSize: fontSize.date }]} numberOfLines={1}>{formatDateRange(start, end)}</Text>
           )}
         </View>
 
         {/* Bottom: Duration */}
         <View style={styles.durationSection}>
           <Ionicons name="time-outline" size={14} color="#8b91ba" />
-          <Text style={styles.durationText}>{days ? `${days} days` : '—'}</Text>
+          <Text style={[styles.durationText, { fontSize: fontSize.duration }]}>{days ? `${days} days` : '—'}</Text>
         </View>
       </View>
 
       {/* Right Section: Status & Price */}
       <View style={[styles.rightSection, compact && styles.compactRightSection, tightLayout && styles.tightRightSection]}>
         <View style={[styles.statusBadge, tightLayout && styles.tightStatusBadge, { backgroundColor: badgeColor }]}> 
-          <Text style={[styles.statusText, tightLayout && styles.tightStatusText]} numberOfLines={1}>
+          <Text style={[styles.statusText, { fontSize: fontSize.status }]} numberOfLines={1}>
             {status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}
           </Text>
         </View>
         {showFinishPayment && (
           <TouchableOpacity style={[styles.finishPaymentButton, tightLayout && styles.tightFinishPaymentButton]} onPress={handleFinishPaymentPress}>
-            <Text style={[styles.finishPaymentButtonText, tightLayout && styles.tightFinishPaymentButtonText]} numberOfLines={1}>
+            <Text style={[styles.finishPaymentButtonText, { fontSize: fontSize.finishPayment }]} numberOfLines={1}>
               Finish payment
             </Text>
           </TouchableOpacity>
         )}
-        <Text style={[styles.price, compact && styles.compactPrice, tightLayout && styles.tightPrice]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+        <Text style={[styles.price, compact && styles.compactPrice, { fontSize: fontSize.price }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
           {formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}
         </Text>
       </View>
@@ -234,11 +249,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: '#fff',
-    fontSize: 11,
     fontWeight: '700',
-  },
-  tightStatusText: {
-    fontSize: 9,
   },
   contentWrapper: {
     flex: 1,
@@ -254,7 +265,6 @@ const styles = StyleSheet.create({
   },
   carName: {
     color: '#F5F7FF',
-    fontSize: 16,
     fontWeight: '700',
     maxWidth: '90%',
   },
@@ -266,7 +276,6 @@ const styles = StyleSheet.create({
   },
   cityText: {
     color: '#8b91ba',
-    fontSize: 12,
     fontWeight: '400',
   },
   dateSection: {
@@ -286,14 +295,12 @@ const styles = StyleSheet.create({
   },
   dateText: {
     color: '#8b91ba',
-    fontSize: 12,
     marginLeft: 6,
     fontWeight: '500',
     flexShrink: 1,
   },
   tightDateText: {
     marginLeft: 0,
-    fontSize: 12,
   },
   durationSection: {
     flexDirection: 'row',
@@ -301,7 +308,6 @@ const styles = StyleSheet.create({
   },
   durationText: {
     color: '#8b91ba',
-    fontSize: 13,
     marginLeft: 6,
     fontWeight: '500',
   },
@@ -322,16 +328,11 @@ const styles = StyleSheet.create({
   },
   price: {
     color: '#0b63ff',
-    fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.3,
   },
   compactPrice: {
-    fontSize: 16,
     letterSpacing: 0,
-  },
-  tightPrice: {
-    fontSize: 13,
   },
   finishPaymentButton: {
     backgroundColor: '#0b63ff',
@@ -347,11 +348,7 @@ const styles = StyleSheet.create({
   },
   finishPaymentButtonText: {
     color: '#fff',
-    fontSize: 11,
     fontWeight: '700',
-  },
-  tightFinishPaymentButtonText: {
-    fontSize: 9,
   },
 });
 
