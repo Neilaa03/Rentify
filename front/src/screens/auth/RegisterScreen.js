@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,7 +60,7 @@ const RegisterScreen = ({ navigation }) => {
         if (!password) nextErrors.password = "Please create a password.";
         if (!confirmPassword) nextErrors.confirmPassword = "Please confirm your password.";
 
-        if (password && password.length < 6) nextErrors.password = "Use at least 6 characters.";
+        if (password && password.length < 8) nextErrors.password = "Use at least 8 characters.";
         if (password && confirmPassword && password !== confirmPassword) {
             nextErrors.confirmPassword = "Passwords don't match.";
         }
@@ -113,10 +113,6 @@ const RegisterScreen = ({ navigation }) => {
             if (response.ok) {
                 // SUCCESS
                 console.log("Registration successful!", data);
-                Alert.alert(
-                    'Verify your email',
-                    `We sent a verification link to ${trimmedEmail}. Please open your email and click the link to verify your account.`
-                );
                 navigation.reset({
                     index: 0,
                     routes: [{ name: 'VerifyEmail', params: { email: trimmedEmail } }],

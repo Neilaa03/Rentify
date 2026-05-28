@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, Alert } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -134,7 +134,6 @@ const LoginScreen = ({ navigation }) => {
                 const message = data?.error || "We couldn't log you in. Please try again.";
                 if (data?.error === 'EMAIL_NOT_VERIFIED') {
                     navigation.navigate('VerifyEmail', { email: trimmedEmail });
-                    Alert.alert('Verify your email', 'Please verify your email address before logging in.');
                     setErrors({ email: '', password: '', form: 'Please verify your email first.' });
                     return;
                 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, Platform, ScrollView, SectionList } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import * as Linking from 'expo-linking';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -66,10 +67,21 @@ const getNativeStripeProvider = () => {
 
 export default function App() {
   const NativeStripeProvider = getNativeStripeProvider();
+  const linking = {
+    prefixes: [Linking.createURL('/'), 'rentify://'],
+    config: {
+      screens: {
+        VerifyEmail: 'verify-email',
+        Login: 'login',
+        Register: 'register',
+        Landing: '',
+      },
+    },
+  };
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NativeStripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
           <Stack.Navigator
             screenOptions={{
               headerShown: false,

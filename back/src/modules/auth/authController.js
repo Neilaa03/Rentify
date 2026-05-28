@@ -13,16 +13,60 @@ import { sendVerificationEmail } from '../../services/mailer.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const APP_BASE_URL = process.env.APP_BASE_URL || '';
+const PUBLIC_BACKEND_BASE_URL = process.env.PUBLIC_BACKEND_BASE_URL || '';
+const APP_DEEP_LINK_BASE = process.env.APP_DEEP_LINK_BASE || '';
 const EMAIL_VERIFICATION_TTL_MINUTES = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES || 60 * 24);
 
 const hashToken = (token) =>
     crypto.createHash('sha256').update(token).digest('hex');
 
-const buildVerifyUrl = ({ email, token }) => {
-    if (!APP_BASE_URL) {
-        throw new Error('Missing APP_BASE_URL env var.');
+const formatValidationError = (err) => {
+    const issues = err?.issues;
+    if (!Array.isArray(issues) || issues.length === 0) return null;
+
+    const fields = {};
+    for (const issue of issues) {
+        const key = Array.isArray(issue.path) && issue.path.length ? String(issue.path[0]) : 'form';
+        if (!fields[key]) fields[key] = issue.message || 'Invalid value';
     }
-    return `${APP_BASE_URL.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
+
+    const first = issues[0];
+    const firstField = Array.isArray(first.path) && first.path.length ? String(first.path[0]) : null;
+    const message = firstField ? `${firstField}: ${first.message}` : (first.message || 'Invalid input');
+
+    return { message, fields };
+};
+
+const formatAppError = (err) => {
+    const validation = formatValidationError(err);
+    if (validation) return { status: 400, ...validation };
+
+    const rawMessage = String(err?.message || '');
+    const code = String(err?.code || '');
+
+    if (code === '23505' || rawMessage.toLowerCase().includes('duplicate key') || rawMessage.toLowerCase().includes('users_email')) {
+        return { status: 409, message: 'Email already registered' };
+    }
+
+    if (rawMessage.includes('Email not configured.')) {
+        return { status: 500, message: 'Email service is not configured' };
+    }
+
+    if (rawMessage.toLowerCase().includes('missing app_base_url')) {
+        return { status: 500, message: 'Server configuration error' };
+    }
+
+    return { status: 400, message: 'Request failed' };
+};
+
+const buildVerifyUrl = ({ email, token }) => {
+    // Prefer sending users to the backend verify endpoint (works on mobile + web),
+    // which can then redirect into the app via deep link.
+    const base = PUBLIC_BACKEND_BASE_URL || '';
+    if (!base) {
+        throw new Error('Missing PUBLIC_BACKEND_BASE_URL env var.');
+    }
+    return `${base.replace(/\/$/, '')}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&redirect=1`;
 };
 
 export const register = async (req, res) => {
@@ -76,7 +120,8 @@ export const register = async (req, res) => {
             user: newUser,
         });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }
 };
 
@@ -119,7 +164,8 @@ export const login = async (req, res) => {
 
     } catch (err) {
         console.error('Login error:', err);
-        res.status(400).json({ error: err.message });
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }
 };
 
@@ -144,6 +190,7 @@ export const me = async (req, res) => {
 export const verifyEmail = async (req, res) => {
     try {
         const { email = '', token = '' } = req.query;
+        const redirect = String(req.query.redirect || '').toLowerCase() === '1' || String(req.query.redirect || '').toLowerCase() === 'true';
         if (!email || !token) {
             return res.status(400).json({ error: 'Missing email or token' });
         }
@@ -151,13 +198,24 @@ export const verifyEmail = async (req, res) => {
         const tokenHash = hashToken(String(token));
         const result = await verifyEmailByToken({ email: String(email), tokenHash });
 
+        if (redirect) {
+            if (!APP_DEEP_LINK_BASE) {
+                // Fallback: redirect to app base url (web) with status params.
+                const fallback = `${APP_BASE_URL.replace(/\/$/, '')}/?verified=${result.ok ? '1' : '0'}&reason=${encodeURIComponent(result.ok ? '' : (result.reason || 'FAILED'))}&email=${encodeURIComponent(String(email))}`;
+                return res.redirect(302, fallback);
+            }
+            const deepLink = `${APP_DEEP_LINK_BASE.replace(/\/$/, '')}/verify-email?verified=${result.ok ? '1' : '0'}&reason=${encodeURIComponent(result.ok ? '' : (result.reason || 'FAILED'))}&email=${encodeURIComponent(String(email))}`;
+            return res.redirect(302, deepLink);
+        }
+
         if (!result.ok) {
-            return res.status(400).json({ error: 'VERIFICATION_FAILED', reason: result.reason });
+            return res.status(400).json({ error: 'Verification failed' });
         }
 
         return res.json({ message: 'Email verified', user: result.user });
     } catch (err) {
-        return res.status(400).json({ error: err.message });
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }
 };
 
@@ -190,6 +248,7 @@ export const resendVerification = async (req, res) => {
 
         return res.json({ message: 'Verification email sent' });
     } catch (err) {
-        return res.status(400).json({ error: err.message });
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }
 };
