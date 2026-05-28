@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
+import { appFont } from '../../utils/responsive';
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/540x280';
 
@@ -188,7 +189,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: appFont(12),
     fontWeight: '700',
   },
   body: {
@@ -206,17 +207,17 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: appFont(17),
     fontWeight: '700',
     marginBottom: 6,
   },
   subtitle: {
     color: '#c3c8e1',
-    fontSize: 13,
+    fontSize: appFont(13),
   },
   priceText: {
     color: COLORS.primary,
-    fontSize: 15,
+    fontSize: appFont(15),
     fontWeight: '700',
   },
   detailsRow: {
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     color: '#a7adcf',
-    fontSize: 12,
+    fontSize: appFont(12),
   },
   actionsRow: {
     flexDirection: 'row',
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: appFont(14),
     fontWeight: '700',
   },
   deleteButton: {
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: '#ff5a5a',
-    fontSize: 14,
+    fontSize: appFont(14),
     fontWeight: '700',
   },
 });

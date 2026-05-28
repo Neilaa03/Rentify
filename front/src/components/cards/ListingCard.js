@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
+import { appFont } from '../../utils/responsive';
 
 const FALLBACK_IMAGE = 'https://picsum.photos/seed/listing-fallback/900/600';
 
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
   },
   unavailableText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: appFont(12),
     fontWeight: '700',
   },
   iconButton: {
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   priceText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: appFont(14),
   },
   content: {
     paddingHorizontal: 14,
@@ -256,7 +257,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#F5F7FF',
-    fontSize: 29 / 2,
+    fontSize: appFont(14.5),
     fontWeight: '700',
     maxWidth: '76%',
   },
@@ -271,12 +272,12 @@ const styles = StyleSheet.create({
   ratingText: {
     color: '#F8B84E',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: appFont(13),
     marginLeft: 4,
   },
   subtitle: {
     color: '#8b91ba',
-    fontSize: 13,
+    fontSize: appFont(13),
     marginBottom: 10,
   },
   chipsRow: {
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: '#9aa0c8',
-    fontSize: 12,
+    fontSize: appFont(12),
     marginLeft: 5,
   },
 });
