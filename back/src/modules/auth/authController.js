@@ -15,6 +15,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 const APP_BASE_URL = process.env.APP_BASE_URL || '';
 const PUBLIC_BACKEND_BASE_URL = process.env.PUBLIC_BACKEND_BASE_URL || '';
 const APP_DEEP_LINK_BASE = process.env.APP_DEEP_LINK_BASE || '';
+const DEV_HOST = String(process.env.DEV_HOST || '').trim();
+const DEV_EXPO_PORT = Number(process.env.DEV_EXPO_PORT || 8081);
 const EMAIL_VERIFICATION_TTL_MINUTES = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES || 60 * 24);
 
 const hashToken = (token) =>
@@ -56,16 +58,54 @@ const formatAppError = (err) => {
         return { status: 500, message: 'Server configuration error' };
     }
 
+    if (rawMessage.toLowerCase().includes('unable to determine public backend base url')) {
+        return { status: 500, message: 'Server configuration error' };
+    }
+
     return { status: 400, message: 'Request failed' };
 };
 
-const buildVerifyUrl = ({ email, token }) => {
+const inferPublicBackendBaseUrlFromRequest = (req) => {
+    const forwardedProto = String(req?.headers?.['x-forwarded-proto'] || '').split(',')[0].trim();
+    const forwardedHost = String(req?.headers?.['x-forwarded-host'] || '').split(',')[0].trim();
+
+    const proto = forwardedProto || req?.protocol;
+    const host = forwardedHost || req?.get?.('host');
+
+    if (!proto || !host) return '';
+    return `${proto}://${host}`;
+};
+
+const inferPublicBackendBaseUrlFromDevHost = () => {
+    if (!DEV_HOST) return '';
+    const port = Number(process.env.PORT || 3000);
+    return `http://${DEV_HOST}:${port}`;
+};
+
+const inferAppBaseUrlFromDevHost = () => {
+    if (!DEV_HOST) return '';
+    return `http://${DEV_HOST}:${DEV_EXPO_PORT}`;
+};
+
+const inferAppDeepLinkBaseFromDevHost = () => {
+    if (!DEV_HOST) return '';
+    return `exp://${DEV_HOST}:${DEV_EXPO_PORT}/--`;
+};
+
+const buildVerifyUrl = ({ req, email, token }) => {
     // Prefer sending users to the backend verify endpoint (works on mobile + web),
     // which can then redirect into the app via deep link.
-    const base = PUBLIC_BACKEND_BASE_URL || '';
+    const base = (
+        PUBLIC_BACKEND_BASE_URL ||
+        inferPublicBackendBaseUrlFromRequest(req) ||
+        inferPublicBackendBaseUrlFromDevHost() ||
+        ''
+    ).trim();
+
     if (!base) {
-        throw new Error('Missing PUBLIC_BACKEND_BASE_URL env var.');
+        throw new Error('Unable to determine public backend base URL (set PUBLIC_BACKEND_BASE_URL, or set DEV_HOST, or ensure Host header is present).');
     }
+
     return `${base.replace(/\/$/, '')}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&redirect=1`;
 };
 
@@ -95,7 +135,7 @@ export const register = async (req, res) => {
                 expiresAt,
             });
 
-            const verifyUrl = buildVerifyUrl({ email: existing.email, token });
+            const verifyUrl = buildVerifyUrl({ req, email: existing.email, token });
             await sendVerificationEmail({ to: existing.email, verifyUrl });
 
             return res.status(201).json({
@@ -112,7 +152,7 @@ export const register = async (req, res) => {
             emailVerificationExpiresAt: expiresAt,
         });
 
-        const verifyUrl = buildVerifyUrl({ email: newUser.email, token });
+        const verifyUrl = buildVerifyUrl({ req, email: newUser.email, token });
         await sendVerificationEmail({ to: newUser.email, verifyUrl });
 
         res.status(201).json({
@@ -199,12 +239,19 @@ export const verifyEmail = async (req, res) => {
         const result = await verifyEmailByToken({ email: String(email), tokenHash });
 
         if (redirect) {
-            if (!APP_DEEP_LINK_BASE) {
+            const appDeepLinkBase = (APP_DEEP_LINK_BASE || inferAppDeepLinkBaseFromDevHost() || '').trim();
+            const appBaseUrl = (APP_BASE_URL || inferAppBaseUrlFromDevHost() || '').trim();
+
+            if (!appDeepLinkBase) {
                 // Fallback: redirect to app base url (web) with status params.
-                const fallback = `${APP_BASE_URL.replace(/\/$/, '')}/?verified=${result.ok ? '1' : '0'}&reason=${encodeURIComponent(result.ok ? '' : (result.reason || 'FAILED'))}&email=${encodeURIComponent(String(email))}`;
+                if (!appBaseUrl) {
+                    return res.status(500).json({ error: 'Server configuration error' });
+                }
+                const fallback = `${appBaseUrl.replace(/\/$/, '')}/?verified=${result.ok ? '1' : '0'}&reason=${encodeURIComponent(result.ok ? '' : (result.reason || 'FAILED'))}&email=${encodeURIComponent(String(email))}`;
                 return res.redirect(302, fallback);
             }
-            const deepLink = `${APP_DEEP_LINK_BASE.replace(/\/$/, '')}/verify-email?verified=${result.ok ? '1' : '0'}&reason=${encodeURIComponent(result.ok ? '' : (result.reason || 'FAILED'))}&email=${encodeURIComponent(String(email))}`;
+
+            const deepLink = `${appDeepLinkBase.replace(/\/$/, '')}/verify-email?verified=${result.ok ? '1' : '0'}&reason=${encodeURIComponent(result.ok ? '' : (result.reason || 'FAILED'))}&email=${encodeURIComponent(String(email))}`;
             return res.redirect(302, deepLink);
         }
 
@@ -243,7 +290,7 @@ export const resendVerification = async (req, res) => {
             expiresAt,
         });
 
-        const verifyUrl = buildVerifyUrl({ email: user.email, token });
+        const verifyUrl = buildVerifyUrl({ req, email: user.email, token });
         await sendVerificationEmail({ to: user.email, verifyUrl });
 
         return res.json({ message: 'Verification email sent' });
