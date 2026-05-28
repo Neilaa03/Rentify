@@ -14,7 +14,7 @@ const assertStripeConfigured = () => {
   }
 };
 
-export const createPaymentIntent = async ({ amount, currency = 'usd', metadata = {} }) => {
+export const createPaymentIntent = async ({ amount, currency = 'usd', metadata = {}, transferGroup }) => {
   assertStripeConfigured();
 
   if (!Number.isInteger(amount) || amount <= 0) {
@@ -28,6 +28,7 @@ export const createPaymentIntent = async ({ amount, currency = 'usd', metadata =
     currency: String(currency).toLowerCase(),
     metadata,
     automatic_payment_methods: { enabled: true },
+    ...(transferGroup ? { transfer_group: transferGroup } : {}),
   });
 
   return intent;
@@ -61,6 +62,7 @@ export const createPaymentIntentWithDestination = async ({
     automatic_payment_methods: { enabled: true },
     transfer_data: { destination: destinationAccountId },
     application_fee_amount: applicationFeeAmount,
+    ...(metadata?.transferGroup ? { transfer_group: metadata.transferGroup } : {}),
   });
 
   return intent;

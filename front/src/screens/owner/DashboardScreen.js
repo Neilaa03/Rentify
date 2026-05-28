@@ -223,6 +223,20 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
                   ? 'Votre compte Stripe est pret. Les clients peuvent payer par carte.'
                   : 'Configurez Stripe pour recevoir les paiements carte des clients.'}
               </Text>
+              <View style={styles.balanceRow}>
+                <View style={styles.balanceChip}>
+                  <Text style={styles.balanceValue}>
+                    {(Number(connectStatus?.pendingBalance || 0)).toLocaleString('fr-FR')} DA
+                  </Text>
+                  <Text style={styles.balanceLabel}>En attente</Text>
+                </View>
+                <View style={styles.balanceChip}>
+                  <Text style={styles.balanceValue}>
+                    {(Number(connectStatus?.availableBalance || 0)).toLocaleString('fr-FR')} DA
+                  </Text>
+                  <Text style={styles.balanceLabel}>Disponible</Text>
+                </View>
+              </View>
               <TouchableOpacity
                 onPress={configureStripePayouts}
                 disabled={connectLoading}
@@ -365,6 +379,22 @@ const styles = StyleSheet.create({
   },
   connectTitle: { color: '#fff', fontWeight: '700', fontSize: 14 },
   connectText: { color: '#bcc1e2', marginTop: 8, fontSize: 12, lineHeight: 18 },
+  balanceRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  balanceChip: {
+    flex: 1,
+    backgroundColor: 'rgba(143,125,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(143,125,255,0.18)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  balanceValue: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  balanceLabel: { color: '#bcc1e2', fontSize: 11, marginTop: 2 },
   connectBtn: {
     marginTop: 12,
     alignSelf: 'flex-start',

@@ -17,7 +17,7 @@ export const createUser = async (userData) => {
             is_active: true
         }
         ])
-        .select('id, email, first_name, last_name, phone, role, is_verified, is_active')
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active, stripe_account_id, pending_balance, available_balance')
         .single();
 
     if (error) throw error;
@@ -27,7 +27,7 @@ export const createUser = async (userData) => {
 export const getUserByEmail = async (email) => {
     const { data, error } = await supabase
         .from('users')
-        .select('id, email, password_hash, first_name, last_name, phone, role, is_active, is_verified')
+        .select('id, email, password_hash, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, pending_balance, available_balance')
         .eq('email', email)
         .single();
 
@@ -38,7 +38,7 @@ export const getUserByEmail = async (email) => {
 export const getUserById = async (id) => {
     const { data, error } = await supabase
         .from('users')
-        .select('id, email, first_name, last_name, phone, role, is_active, is_verified')
+        .select('id, email, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, pending_balance, available_balance')
         .eq('id', id)
         .single();
 
@@ -55,7 +55,7 @@ export const updateUserById = async (id, payload) => {
         .from('users')
         .update(updatePayload)
         .eq('id', id)
-        .select('id, email, first_name, last_name, phone, role, is_verified, is_active')
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active, stripe_account_id, pending_balance, available_balance')
         .single();
 
     if (error) throw error;

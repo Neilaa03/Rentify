@@ -165,6 +165,9 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       setPaymentInfo(payment);
       if (
         payment?.status === 'completed' || 
+        payment?.status === 'released' ||
+        payment?.status === 'held_in_escrow' ||
+        payment?.status === 'disputed' ||
         payment?.status === 'failed' || 
         payment?.status === 'pending_cash' || 
         payment?.status === 'pending' ||
@@ -213,6 +216,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const showPayButton =
     reservation?.status === 'reserved' &&
     (paymentStatus === null || paymentStatus === 'failed' || canResumePendingCardPayment);
+
+  const showConfirmHandoverButton = paymentStatus === 'held_in_escrow';
 
   const isCardEnabledForOwner = Boolean(ownerConnectStatus?.cardPaymentsAvailable);
   const disabledCardReason = isCardEnabledForOwner
@@ -384,6 +389,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         setPaymentInfo(payment);
         if (payment?.status === 'completed' || payment?.status === 'failed' || payment?.status === 'pending_cash' || payment?.status === 'pending') {
           setPaymentStatus(payment.status);
+        } else if (payment?.status === 'held_in_escrow' || payment?.status === 'released' || payment?.status === 'disputed') {
+          setPaymentStatus(payment.status);
         } else {
           setPaymentStatus(null);
         }
@@ -532,10 +539,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
       console.log('Polling payment:', payment);
 
-      if (
-        payment?.status === 'completed' ||
-        payment?.status === 'paid'
-      ) {
+      if (payment?.status === 'held_in_escrow' || payment?.status === 'released') {
         return {
           success: true,
         };
@@ -613,17 +617,15 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       setPaymentStatus('processing');
 
       const paymentResult = await waitForPaymentConfirmation(token);
-      const goBackToPrevious = () => navigation.navigate('ReservationsTab', { screen: 'ReservationDetails', params: { reservationId: reservation.id } });
-
       if (paymentResult.success) {
-        setPaymentStatus('completed');
+        setPaymentStatus('held_in_escrow');
         Alert.alert(
-          'Paiement réussi',
-          'Votre paiement a été traité avec succès. Votre réservation est confirmée!',
+          'Paiement sécurisé',
+          'Votre paiement est maintenant sécurisé en escrow. Vous pourrez confirmer la remise du véhicule une fois la voiture reçue.',
           [
             {
               text: 'OK',
-              onPress: () => goBackToPrevious(),
+              onPress: () => refreshPaymentStatus(token),
             },
           ]
         );
@@ -689,6 +691,65 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     } catch (error) {
       console.error('Cash payment error:', error);
       throw error;
+    }
+  };
+
+  const handleConfirmHandover = async () => {
+    try {
+      const token = await storage.getItemAsync('userToken');
+      if (!token) {
+        Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
+        return;
+      }
+
+      const response = await fetch(API_ENDPOINTS.RESERVATIONS.CONFIRM_HANDOVER(reservation.id), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Impossible de confirmer la remise');
+      }
+
+      setPaymentStatus('released');
+      setPaymentInfo((prev) => ({ ...(prev || {}), status: 'released' }));
+      Alert.alert('Succès', 'La remise du véhicule a été confirmée et les fonds ont été libérés.');
+    } catch (error) {
+      Alert.alert('Erreur', error.message || 'Impossible de confirmer la remise');
+    }
+  };
+
+  const handleDisputeHandover = async () => {
+    try {
+      const token = await storage.getItemAsync('userToken');
+      if (!token) {
+        Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
+        return;
+      }
+
+      const response = await fetch(API_ENDPOINTS.RESERVATIONS.DISPUTE(reservation.id), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: 'client_reported_issue' }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Impossible de déclarer un litige');
+      }
+
+      setPaymentStatus('disputed');
+      setPaymentInfo((prev) => ({ ...(prev || {}), status: 'disputed' }));
+      Alert.alert('Litige enregistré', 'Le paiement reste bloqué jusqu’à la résolution.');
+    } catch (error) {
+      Alert.alert('Erreur', error.message || 'Impossible de créer le litige');
     }
   };
 
@@ -969,6 +1030,23 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
             amount={safeTotalPrice}
             paymentMethod={paymentMethod}
           />
+        )}
+
+        {showConfirmHandoverButton && (
+          <View style={styles.escrowActionCard}>
+            <Text style={styles.escrowActionTitle}>Paiement sécurisé en escrow</Text>
+            <Text style={styles.escrowActionText}>
+              Confirmez seulement quand vous avez bien reçu le véhicule. Les fonds seront alors transférés au propriétaire.
+            </Text>
+            <View style={styles.escrowActionRow}>
+              <TouchableOpacity onPress={handleDisputeHandover} activeOpacity={0.85} style={styles.escrowGhostButton}>
+                <Text style={styles.escrowGhostButtonText}>Signaler un litige</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleConfirmHandover} activeOpacity={0.85} style={styles.escrowPrimaryButton}>
+                <Text style={styles.escrowPrimaryButtonText}>Confirmer car reçu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
 
         {/* Payment Method Selector */}
@@ -1390,6 +1468,58 @@ const styles = StyleSheet.create({
   termsLink: {
     color: '#a566ff',
     fontWeight: '600',
+  },
+  escrowActionCard: {
+    backgroundColor: 'rgba(79, 140, 255, 0.12)',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 140, 255, 0.22)',
+  },
+  escrowActionTitle: {
+    color: '#f6f8ff',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  escrowActionText: {
+    color: '#c9d2ff',
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 14,
+  },
+  escrowActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  escrowGhostButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(246,248,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  escrowGhostButtonText: {
+    color: '#f6f8ff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  escrowPrimaryButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#23d49f',
+  },
+  escrowPrimaryButtonText: {
+    color: '#0d1227',
+    fontSize: 13,
+    fontWeight: '800',
   },
   actionButtonsSection: {
     marginBottom: 24,

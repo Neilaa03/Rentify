@@ -17,6 +17,27 @@ const PaymentStatusDisplay = ({ status, amount, paymentMethod }) => {
           color: '#f39c12',
           showSpinner: true,
         };
+      case 'held_in_escrow':
+        return {
+          icon: 'shield-checkmark',
+          label: 'Paiement sécurisé en escrow',
+          color: '#4f8cff',
+          showSpinner: false,
+        };
+      case 'released':
+        return {
+          icon: 'checkmark-done-circle',
+          label: 'Fonds libérés au propriétaire',
+          color: '#27ae60',
+          showSpinner: false,
+        };
+      case 'disputed':
+        return {
+          icon: 'alert-circle',
+          label: 'Paiement en litige',
+          color: '#e67e22',
+          showSpinner: false,
+        };
       case 'completed':
       case 'paid':
         return {
@@ -69,7 +90,7 @@ const PaymentStatusDisplay = ({ status, amount, paymentMethod }) => {
         <View style={styles.textContainer}>
           <Text style={styles.label}>{statusInfo.label}</Text>
           <Text style={styles.amount}>
-            {paymentMethod === 'cash' ? 'Espèces' : 'Carte bancaire'} • {amount}€
+            {paymentMethod === 'cash' ? 'Espèces' : 'Carte bancaire'} • {Number(amount || 0).toLocaleString('fr-FR')} DA
           </Text>
         </View>
       </View>

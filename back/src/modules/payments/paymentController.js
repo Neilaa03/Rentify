@@ -2,8 +2,7 @@ import {
   constructWebhookEvent,
   createAccountOnboardingLink,
   createConnectedAccount,
-  createPaymentIntentWithDestination,
-  getConnectedAccount,
+  createPaymentIntent,
   stripe,
 } from './paymentModel.js';
 import {
@@ -16,151 +15,20 @@ import {
 } from './paymentDbModel.js';
 import { getReservationById } from '../reservations/reservationModel.js';
 import { createNotification } from '../notifications/notificationModel.js';
-import { supabase } from '../../config/supabase.js';
-
-const USERS_TABLE = 'users';
-const MISSING_STRIPE_COLUMN_CODE = '42703';
-
-const getUserStripeAccountId = async (userId) => {
-  const { data, error } = await supabase
-    .from(USERS_TABLE)
-    .select('id, email, first_name, last_name, phone, stripe_account_id')
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return null;
-  return data;
-};
-
-const setUserStripeAccountId = async ({ userId, stripeAccountId }) => {
-  const { data, error } = await supabase
-    .from(USERS_TABLE)
-    .update({ stripe_account_id: stripeAccountId })
-    .eq('id', userId)
-    .select('id, email, first_name, last_name, phone, stripe_account_id')
-    .single();
-
-  if (error || !data) throw error || new Error('Failed to persist stripe account id');
-  return data;
-};
-
-const getUserBasicProfile = async (userId) => {
-  const { data, error } = await supabase
-    .from(USERS_TABLE)
-    .select('id, email, first_name, last_name, phone')
-    .eq('id', userId)
-    .maybeSingle();
-  if (error) throw error;
-  return data || null;
-};
-
-const isMissingStripeColumnError = (error) => error?.code === MISSING_STRIPE_COLUMN_CODE;
-
-const buildAccountPrefill = (user) => {
-  const firstName = user?.first_name?.trim();
-  const lastName = user?.last_name?.trim();
-  const phone = user?.phone?.trim();
-  const email = user?.email?.trim();
-
-  const individual = {};
-  if (firstName) individual.first_name = firstName;
-  if (lastName) individual.last_name = lastName;
-  if (email) individual.email = email;
-  if (phone) individual.phone = phone;
-
-  return {
-    business_type: 'individual',
-    ...(Object.keys(individual).length > 0 ? { individual } : {}),
-  };
-};
-
-const findStripeAccountIdForOwner = async ({ ownerId, email }) => {
-  if (!stripe) return null;
-  if (!ownerId && !email) return null;
-
-  let startingAfter;
-  do {
-    const page = await stripe.accounts.list({ limit: 100, ...(startingAfter ? { starting_after: startingAfter } : {}) });
-    const match = (page.data || []).find((account) => {
-      const metadataOwnerId = account?.metadata?.platform_user_id;
-      if (ownerId && metadataOwnerId === ownerId) return true;
-      if (email && account?.email && account.email.toLowerCase() === String(email).toLowerCase()) return true;
-      return false;
-    });
-    if (match?.id) return match.id;
-    startingAfter = page.has_more && page.data.length ? page.data[page.data.length - 1].id : null;
-  } while (startingAfter);
-
-  return null;
-};
-
-const toConnectStatus = (account) => ({
-  onboardingComplete: Boolean(account?.details_submitted),
-  chargesEnabled: Boolean(account?.charges_enabled),
-  payoutsEnabled: Boolean(account?.payouts_enabled),
-  cardPaymentsAvailable: Boolean(account?.charges_enabled && account?.payouts_enabled),
-});
-
-const resolveOwnerConnectStatus = async (ownerId) => {
-  let owner = null;
-  let stripeColumnMissing = false;
-  try {
-    owner = await getUserStripeAccountId(ownerId);
-  } catch (error) {
-    if (isMissingStripeColumnError(error)) {
-      stripeColumnMissing = true;
-      owner = await getUserBasicProfile(ownerId);
-    } else {
-      throw error;
-    }
-  }
-
-  if (!owner) {
-    return {
-      ownerId,
-      stripeAccountId: null,
-      onboardingComplete: false,
-      chargesEnabled: false,
-      payoutsEnabled: false,
-      cardPaymentsAvailable: false,
-    };
-  }
-
-  let stripeAccountId = owner?.stripe_account_id || null;
-  if (!stripeAccountId) {
-    stripeAccountId = await findStripeAccountIdForOwner({ ownerId, email: owner.email });
-  }
-
-  if (!stripeAccountId) {
-    return {
-      ownerId,
-      stripeAccountId: null,
-      onboardingComplete: false,
-      chargesEnabled: false,
-      payoutsEnabled: false,
-      cardPaymentsAvailable: false,
-      stripeColumnMissing,
-    };
-  }
-
-  if (!stripeColumnMissing && !owner?.stripe_account_id) {
-    try {
-      await setUserStripeAccountId({ userId: ownerId, stripeAccountId });
-    } catch (_e) {
-      // non-blocking
-    }
-  }
-  const account = await getConnectedAccount(stripeAccountId);
-  return {
-    ownerId,
-    stripeAccountId,
-    ...toConnectStatus(account),
-    stripeColumnMissing,
-  };
-};
-
-const SERVICE_FEE_PERCENT = 0.1;
+import {
+  buildStripeAccountPrefill,
+  getOwnerProfileForConnect,
+  isMissingStripeColumn,
+  getStripeAccountIdForOwner,
+  persistOwnerStripeAccountId,
+  resolveOwnerConnectStatus,
+} from './connectService.js';
+import {
+  syncPaymentFailedIntent,
+  syncPaymentSucceededIntent,
+  syncTransferCreated,
+  syncTransferFailed,
+} from './escrowService.js';
 
 const notifyOwnerReservationCreated = async ({ reservation, paymentMethod }) => {
   const ownerId = reservation?.listing?.car?.ownerId;
@@ -244,27 +112,40 @@ export const createCardPaymentIntentHandler = async (req, res) => {
       }
     }
 
-    // Create Stripe PaymentIntent
-    const stripeAmount = Math.round(amount * 100); // Convert to cents
+    if (payment.paymentIntentId && ['pending', 'held_in_escrow'].includes(payment.status)) {
+      const existingIntent = stripe ? await stripe.paymentIntents.retrieve(payment.paymentIntentId) : null;
+      return res.status(200).json({
+        paymentId: payment.id,
+        paymentIntentId: payment.paymentIntentId,
+        clientSecret: existingIntent?.client_secret || null,
+        amount: existingIntent?.amount || Math.round(Number(payment.amount) * 100),
+        currency: existingIntent?.currency || currency,
+        status: existingIntent?.status || payment.status,
+        escrowStatus: payment.escrowStatus || payment.status,
+      });
+    }
+
+    // Create Stripe PaymentIntent on the platform account. Funds stay in escrow until handover confirmation.
+    const stripeAmount = Math.round(amount * 100);
     const metadata = {
       reservationId: String(reservationId),
       userId: String(userId),
       paymentId: String(payment.id),
+      ownerId: String(ownerId),
     };
 
-    const applicationFeeAmount = Math.round(stripeAmount * SERVICE_FEE_PERCENT);
-
-    const intent = await createPaymentIntentWithDestination({
+    const intent = await createPaymentIntent({
       amount: stripeAmount,
       currency: currency.toLowerCase(),
       metadata,
-      destinationAccountId: ownerConnectStatus.stripeAccountId,
-      applicationFeeAmount,
+      transferGroup: String(reservationId),
     });
 
-    // Update payment with Stripe intent ID
+    // Update payment with Stripe intent ID and keep it held in escrow.
     payment = await updatePaymentStatus(payment.id, 'pending', {
+      paymentIntentId: intent.id,
       stripePaymentIntentId: intent.id,
+      escrowStatus: 'pending',
     });
 
     return res.status(201).json({
@@ -274,6 +155,7 @@ export const createCardPaymentIntentHandler = async (req, res) => {
       amount: intent.amount,
       currency: intent.currency,
       status: intent.status,
+      escrowStatus: 'pending',
     });
   } catch (error) {
     console.error('Create payment intent error:', error);
@@ -290,11 +172,10 @@ export const createOwnerOnboardingLinkHandler = async (req, res) => {
     let existing = null;
     let stripeColumnMissing = false;
     try {
-      existing = await getUserStripeAccountId(ownerId);
+      existing = await getOwnerProfileForConnect(ownerId);
     } catch (error) {
-      if (isMissingStripeColumnError(error)) {
+      if (isMissingStripeColumn(error)) {
         stripeColumnMissing = true;
-        existing = await getUserBasicProfile(ownerId);
       } else {
         throw error;
       }
@@ -303,18 +184,22 @@ export const createOwnerOnboardingLinkHandler = async (req, res) => {
 
     let stripeAccountId = existing.stripe_account_id || null;
     if (!stripeAccountId) {
-      stripeAccountId = await findStripeAccountIdForOwner({ ownerId, email: existing.email });
+      stripeAccountId = await getStripeAccountIdForOwner({ ownerId, email: existing.email });
     }
 
     if (!stripeAccountId) {
       const account = await createConnectedAccount({
         email: existing.email,
         metadata: { platform_user_id: ownerId },
-        accountData: buildAccountPrefill(existing),
+        accountData: buildStripeAccountPrefill(existing),
       });
       stripeAccountId = account.id;
-      if (!stripeColumnMissing) {
-        await setUserStripeAccountId({ userId: ownerId, stripeAccountId });
+      try {
+        await persistOwnerStripeAccountId({ userId: ownerId, stripeAccountId });
+      } catch (persistError) {
+        if (!isMissingStripeColumn(persistError)) {
+          throw persistError;
+        }
       }
     }
 
@@ -500,35 +385,28 @@ export const handleStripeWebhook = async (req, res) => {
     switch (event.type) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object;
-        const { reservationId, paymentId } = paymentIntent.metadata || {};
+        const { reservationId, paymentId, ownerId } = paymentIntent.metadata || {};
 
         console.log('Payment succeeded:', {
           id: paymentIntent.id,
           reservationId,
           paymentId,
+          ownerId,
         });
 
-        if (paymentId) {
-          // Update payment status to paid
-          await updatePaymentStatus(paymentId, 'completed', {
-            paidAt: new Date().toISOString(),
-            transactionReference: paymentIntent.id,
-          });
-
-          // Update reservation status to confirmed
-          if (reservationId) {
-            const confirmedReservation = await updateReservationStatus(reservationId, 'confirmed');
-            try {
-              await createNotification({
-                userId: confirmedReservation.renterId,
-                type: 'payment_success',
-                title: 'Paiement réussi',
-                message: `Le paiement de votre réservation ${confirmedReservation.listing?.title || ''} a été effectué avec succès.`,
-                data: { reservationId: confirmedReservation.id },
-              });
-            } catch (notifyError) {
-              console.error('Failed to create payment success notification:', notifyError);
-            }
+        const syncResult = await syncPaymentSucceededIntent(paymentIntent);
+        if (syncResult?.payment?.id) {
+          const confirmedReservation = await getReservationById(reservationId);
+          try {
+            await createNotification({
+              userId: confirmedReservation.renterId,
+              type: 'payment_success',
+              title: 'Paiement sécurisé',
+              message: `Le paiement de votre réservation ${confirmedReservation.listing?.title || ''} est maintenant en escrow.`,
+              data: { reservationId: confirmedReservation.id, paymentId: syncResult.payment.id },
+            });
+          } catch (notifyError) {
+            console.error('Failed to create payment success notification:', notifyError);
           }
         }
         break;
@@ -545,12 +423,25 @@ export const handleStripeWebhook = async (req, res) => {
           last_payment_error: paymentIntent.last_payment_error?.message,
         });
 
+        await syncPaymentFailedIntent(paymentIntent);
         if (paymentId) {
-          // Update payment status to failed
           await updatePaymentStatus(paymentId, 'failed', {
             transactionReference: paymentIntent.id,
+            paymentIntentId: paymentIntent.id,
+            stripePaymentIntentId: paymentIntent.id,
+            escrowStatus: 'failed',
           });
         }
+        break;
+      }
+
+      case 'transfer.created': {
+        await syncTransferCreated(event.data.object);
+        break;
+      }
+
+      case 'transfer.failed': {
+        await syncTransferFailed(event.data.object);
         break;
       }
 
@@ -661,27 +552,19 @@ export const getPaymentStatusHandler = async (req, res) => {
       return res.status(404).json({ error: 'Payment not found' });
     }
 
-    // If the reservation is using card payment and the payment is still pending,
-    // verify the Stripe PaymentIntent status and sync it if completed or failed.
-    if (
-      payment.paymentMethod === 'card' &&
-      payment.status === 'pending' &&
-      payment.stripePaymentIntentId &&
-      stripe
-    ) {
+    // Sync Stripe state for card payments, including escrow and release status.
+    if (payment.paymentMethod === 'card' && payment.stripePaymentIntentId && stripe) {
       try {
         const intent = await stripe.paymentIntents.retrieve(payment.stripePaymentIntentId);
         if (intent?.status === 'succeeded') {
-          await updatePaymentStatus(payment.id, 'completed', {
-            paidAt: new Date().toISOString(),
-            transactionReference: payment.stripePaymentIntentId,
-          });
-
-          if (reservationId) {
-            await updateReservationStatus(reservationId, 'confirmed');
+          if (payment.status === 'pending') {
+            const syncResult = await syncPaymentSucceededIntent(intent);
+            if (syncResult?.payment?.id) {
+              payment = await getPaymentById(payment.id);
+            }
+          } else if (payment.status === 'held_in_escrow' || payment.escrowStatus === 'held_in_escrow') {
+            payment = await getPaymentById(payment.id);
           }
-
-          payment = await getPaymentById(payment.id);
         } else if (intent?.status === 'requires_payment_method' || intent?.status === 'requires_confirmation' || intent?.status === 'processing') {
           // Keep pending state. No action needed.
         } else if (
@@ -690,6 +573,9 @@ export const getPaymentStatusHandler = async (req, res) => {
         ) {
           await updatePaymentStatus(payment.id, 'failed', {
             transactionReference: payment.stripePaymentIntentId,
+            paymentIntentId: payment.stripePaymentIntentId,
+            stripePaymentIntentId: payment.stripePaymentIntentId,
+            escrowStatus: 'failed',
           });
           payment = await getPaymentById(payment.id);
         }
