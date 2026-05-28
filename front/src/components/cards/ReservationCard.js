@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -16,14 +16,27 @@ const formatDateRange = (from, to) => {
   }
 };
 
+const formatShortDate = (value) => {
+  try {
+    const date = new Date(value);
+    const opts = { day: '2-digit', month: '2-digit', year: '2-digit' };
+    return date.toLocaleDateString('fr-FR', opts);
+  } catch (e) {
+    return '';
+  }
+};
+
 const ReservationCard = ({
   reservation,
   targetRoute = 'ReservationDetails',
   onPress,
   showFinishPayment = false,
   onFinishPayment,
+  compact = false,
 }) => {
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
+  const tightLayout = width <= 380;
 
   const listing = reservation?.listing || {};
   const status = reservation?.status || '';
@@ -83,27 +96,27 @@ const ReservationCard = ({
   const badgeColor = statusColors[status] || '#6EC1FF';
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={handlePress}>
+    <TouchableOpacity style={[styles.card, compact && styles.compactCard, tightLayout && styles.tightCard]} activeOpacity={0.85} onPress={handlePress}>
       {/* Image */}
-      <View style={styles.imageWrapper}>
+      <View style={[styles.imageWrapper, compact && styles.compactImageWrapper, tightLayout && styles.tightImageWrapper]}>
         {imageUri ? (
           <Image 
             source={{ uri: imageUri }} 
-            style={styles.image}
+            style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage]}
             resizeMode="cover"
           />
         ) : (
-          <View style={[styles.image, styles.imagePlaceholder]}>
+          <View style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage, styles.imagePlaceholder]}>
             <Ionicons name="car-sport-outline" size={36} color="rgba(255,255,255,0.8)" />
           </View>
         )}
       </View>
 
       {/* Content Area */}
-      <View style={styles.contentWrapper}>
+      <View style={[styles.contentWrapper, tightLayout && styles.tightContentWrapper]}>
         {/* Top: Car Name */}
         <View style={styles.titleSection}>
-          <Text style={styles.carName}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
+          <Text style={styles.carName} numberOfLines={1}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
           {listing?.city && (
             <View style={styles.cityContainer}>
               <Ionicons name="location-outline" size={12} color="#8b91ba" />
@@ -113,9 +126,16 @@ const ReservationCard = ({
         </View>
 
         {/* Middle: Dates */}
-        <View style={styles.dateSection}>
+        <View style={[styles.dateSection, tightLayout && styles.tightDateSection]}>
           <Ionicons name="calendar-outline" size={14} color="#8b91ba" />
-          <Text style={styles.dateText} numberOfLines={1}>{formatDateRange(start, end)}</Text>
+          {tightLayout ? (
+            <View style={styles.stackedDateText}>
+              <Text style={[styles.dateText, styles.tightDateText]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatShortDate(start)} →</Text>
+              <Text style={[styles.dateText, styles.tightDateText]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatShortDate(end)}</Text>
+            </View>
+          ) : (
+            <Text style={styles.dateText} numberOfLines={1}>{formatDateRange(start, end)}</Text>
+          )}
         </View>
 
         {/* Bottom: Duration */}
@@ -126,16 +146,22 @@ const ReservationCard = ({
       </View>
 
       {/* Right Section: Status & Price */}
-      <View style={styles.rightSection}>
-        <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}> 
-          <Text style={styles.statusText}>{status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}</Text>
+      <View style={[styles.rightSection, compact && styles.compactRightSection, tightLayout && styles.tightRightSection]}>
+        <View style={[styles.statusBadge, tightLayout && styles.tightStatusBadge, { backgroundColor: badgeColor }]}> 
+          <Text style={[styles.statusText, tightLayout && styles.tightStatusText]} numberOfLines={1}>
+            {status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}
+          </Text>
         </View>
         {showFinishPayment && (
-          <TouchableOpacity style={styles.finishPaymentButton} onPress={handleFinishPaymentPress}>
-            <Text style={styles.finishPaymentButtonText}>Finish payment</Text>
+          <TouchableOpacity style={[styles.finishPaymentButton, tightLayout && styles.tightFinishPaymentButton]} onPress={handleFinishPaymentPress}>
+            <Text style={[styles.finishPaymentButtonText, tightLayout && styles.tightFinishPaymentButtonText]} numberOfLines={1}>
+              Finish payment
+            </Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.price}>{formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}</Text>
+        <Text style={[styles.price, compact && styles.compactPrice, tightLayout && styles.tightPrice]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          {formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -155,15 +181,37 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'space-between',
   },
+  compactCard: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+  },
+  tightCard: {
+    paddingVertical: 11,
+    paddingHorizontal: 6,
+  },
   imageWrapper: {
     position: 'relative',
     marginRight: 14,
+  },
+  compactImageWrapper: {
+    marginRight: 10,
+  },
+  tightImageWrapper: {
+    marginRight: 7,
   },
   image: {
     width: 120,
     height: 95,
     borderRadius: 12,
     backgroundColor: '#1a1d2e',
+  },
+  compactImage: {
+    width: 132,
+    height: 104,
+  },
+  tightImage: {
+    width: 104,
+    height: 92,
   },
   imagePlaceholder: {
     justifyContent: 'center',
@@ -178,15 +226,28 @@ const styles = StyleSheet.create({
     marginBottom: 35,
     alignSelf: 'flex-end',
   },
+  tightStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    marginBottom: 22,
+    maxWidth: 82,
+  },
   statusText: {
     color: '#fff',
     fontSize: 11,
     fontWeight: '700',
   },
+  tightStatusText: {
+    fontSize: 9,
+  },
   contentWrapper: {
     flex: 1,
     justifyContent: 'space-between',
     paddingRight: 8,
+    minWidth: 0,
+  },
+  tightContentWrapper: {
+    paddingRight: 4,
   },
   titleSection: {
     marginBottom: 6,
@@ -214,12 +275,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flexWrap: 'nowrap',
   },
+  tightDateSection: {
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  stackedDateText: {
+    flex: 1,
+    marginLeft: 6,
+    minWidth: 0,
+  },
   dateText: {
     color: '#8b91ba',
     fontSize: 12,
     marginLeft: 6,
     fontWeight: '500',
     flexShrink: 1,
+  },
+  tightDateText: {
+    marginLeft: 0,
+    fontSize: 12,
   },
   durationSection: {
     flexDirection: 'row',
@@ -237,11 +311,27 @@ const styles = StyleSheet.create({
     minWidth: 95,
     marginLeft: 10,
   },
+  compactRightSection: {
+    minWidth: 74,
+    marginLeft: 6,
+  },
+  tightRightSection: {
+    minWidth: 58,
+    marginLeft: 4,
+    flexShrink: 0,
+  },
   price: {
     color: '#0b63ff',
     fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.3,
+  },
+  compactPrice: {
+    fontSize: 16,
+    letterSpacing: 0,
+  },
+  tightPrice: {
+    fontSize: 13,
   },
   finishPaymentButton: {
     backgroundColor: '#0b63ff',
@@ -250,10 +340,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
+  tightFinishPaymentButton: {
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    maxWidth: 82,
+  },
   finishPaymentButtonText: {
     color: '#fff',
     fontSize: 11,
     fontWeight: '700',
+  },
+  tightFinishPaymentButtonText: {
+    fontSize: 9,
   },
 });
 
