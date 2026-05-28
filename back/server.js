@@ -1,6 +1,10 @@
-import 'dotenv/config';
-import app from './app.js';
-import { initSocket } from './src/socket/index.js';
+import dotenv from 'dotenv';
+
+// Load env from back/.env even when starting from repo root.
+dotenv.config({ path: new URL('./.env', import.meta.url) });
+
+const { default: app } = await import('./app.js');
+const { initSocket } = await import('./src/socket/index.js');
 
 const PORT = process.env.PORT || 3000;
 

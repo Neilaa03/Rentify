@@ -10,6 +10,7 @@ import ListingDetailsScreen from './src/screens/client/ListingDetailsScreen';
 import ProfileScreen from './src/screens/client/ProfileScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
+import VerifyEmailScreen from './src/screens/auth/VerifyEmailScreen';
 import OwnerDashboardScreen from './src/screens/owner/DashboardScreen';
 import OwnerListingsScreen from './src/screens/owner/ListingsScreen';
 import OwnerListingFormScreen from './src/screens/owner/ListingFormScreen';
@@ -78,6 +79,7 @@ export default function App() {
             <Stack.Screen name="Landing" component={LandingScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />

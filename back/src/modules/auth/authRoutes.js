@@ -1,12 +1,23 @@
 import express from 'express';
-import { register, login, me } from './authController.js';
+import { register, login, me, verifyEmail, resendVerification } from './authController.js';
 import { authenticateToken, requireRoles } from '../../middleware/auth.js';
 import { getUserById } from './authModel.js';
+import { rateLimit } from '../../middleware/rateLimit.js';
 
 const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
+router.get('/verify-email', verifyEmail);
+router.post(
+    '/resend-verification',
+    rateLimit({
+        windowMs: 10 * 60 * 1000,
+        max: 3,
+        keyFn: (req) => `${req.ip || 'unknown'}:${String(req.body?.email || '').toLowerCase()}`,
+    }),
+    resendVerification
+);
 router.get('/me', authenticateToken, me);
 
 // Protected route: Only logged-in users can see their data

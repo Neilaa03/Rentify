@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
+import { Ionicons } from '@expo/vector-icons';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({
         email: '',
@@ -130,6 +132,12 @@ const LoginScreen = ({ navigation }) => {
                 // BACKEND ERROR:
                 console.log("Login failed:", data?.error);
                 const message = data?.error || "We couldn't log you in. Please try again.";
+                if (data?.error === 'EMAIL_NOT_VERIFIED') {
+                    navigation.navigate('VerifyEmail', { email: trimmedEmail });
+                    Alert.alert('Verify your email', 'Please verify your email address before logging in.');
+                    setErrors({ email: '', password: '', form: 'Please verify your email first.' });
+                    return;
+                }
                 const lower = String(message).toLowerCase();
                 const mentionsEmail = lower.includes('email');
                 const mentionsPassword = lower.includes('password');
@@ -203,8 +211,20 @@ const LoginScreen = ({ navigation }) => {
                                 clearError('password');
                                 clearError('form');
                             }}
-                            secureTextEntry
+                            secureTextEntry={!showPassword}
                         />
+                        <TouchableOpacity
+                            onPress={() => setShowPassword((v) => !v)}
+                            style={styles.eyeButton}
+                            accessibilityRole="button"
+                            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                            <Ionicons
+                                name={showPassword ? 'eye-off' : 'eye'}
+                                size={20}
+                                color="rgba(255,255,255,0.8)"
+                            />
+                        </TouchableOpacity>
                         {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                     </View>
 
@@ -254,9 +274,19 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.16)',
         borderRadius: 12,
         padding: 16,
+        paddingRight: 46,
         color: '#fff',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.3)'
+    },
+    eyeButton: {
+        position: 'absolute',
+        right: 14,
+        top: 38,
+        height: 36,
+        width: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     inputFilled: {
         backgroundColor: 'rgba(230, 215, 255, 0.26)',
