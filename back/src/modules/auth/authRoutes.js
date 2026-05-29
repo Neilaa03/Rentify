@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, me, updateMe, verifyEmail, resendVerification, forgotPassword, resetPasswordRedirect, resetPassword } from './authController.js';
+import { register, login, googleAuth, me, updateMe, verifyEmail, resendVerification, forgotPassword, resetPasswordRedirect, resetPassword } from './authController.js';
 import { authenticateToken, requireRoles } from '../../middleware/auth.js';
 import { getUserById } from './authModel.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
@@ -8,6 +8,15 @@ const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
+router.post(
+    '/google',
+    rateLimit({
+        windowMs: 10 * 60 * 1000,
+        max: 10,
+        keyFn: (req) => `${req.ip || 'unknown'}:google`,
+    }),
+    googleAuth
+);
 router.get('/verify-email', verifyEmail);
 router.post(
     '/forgot-password',

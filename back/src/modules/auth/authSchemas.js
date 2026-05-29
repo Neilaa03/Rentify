@@ -40,3 +40,7 @@ export const resetPasswordSchema = z.object({
     password: z.string().min(8),
     confirmPassword: z.string().min(8),
 }).refine((data) => data.password === data.confirmPassword);
+
+export const googleAuthSchema = z.object({
+    idToken: z.string().min(1),
+});

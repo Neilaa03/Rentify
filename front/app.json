@@ -37,7 +37,8 @@
           "merchantIdentifier": "merchant.com.rentify",
           "enableGooglePay": true
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

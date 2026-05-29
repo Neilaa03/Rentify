@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     StyleSheet,
     View,
@@ -19,6 +19,11 @@ import AuthHeader from '../../components/auth/AuthHeader';
 import AuthInputField from '../../components/auth/AuthInputField';
 import AuthGradientButton from '../../components/auth/AuthGradientButton';
 import { isTablet, moderateScale, rf } from '../../utils/responsive';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({ navigation }) => {
     const tabletLayout = isTablet();
@@ -26,15 +31,98 @@ const LoginScreen = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [errors, setErrors] = useState({
         email: '',
         password: '',
         form: '',
     });
 
+    const googleClientId = useMemo(
+        () => process?.env?.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+        []
+    );
+
+    const redirectUri = useMemo(
+        () => AuthSession.makeRedirectUri({ scheme: 'rentify', useProxy: true }),
+        []
+    );
+
+    const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
+        // For Expo Go + AuthSession proxy, Expo expects an "expoClientId".
+        // Using the same web client id works for many setups; native builds can provide android/ios ids too.
+        expoClientId: googleClientId,
+        webClientId: googleClientId,
+        androidClientId: process?.env?.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || undefined,
+        iosClientId: process?.env?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || undefined,
+        redirectUri,
+    });
+
     const clearError = (key) => {
         if (!errors[key]) return;
         setErrors((prev) => ({ ...prev, [key]: '' }));
+    };
+
+    const handleAuthSuccess = async (data) => {
+        if (data?.token) {
+            await storage.setItemAsync('userToken', data.token);
+        }
+
+        const userParams = { token: data?.token, user: data?.user };
+        const isOwner = data?.user?.role === 'owner';
+        const isAdmin = data?.user?.role === 'admin';
+
+        try {
+            if (data?.token) {
+                const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
+                    headers: { Authorization: `Bearer ${data.token}` },
+                });
+                const meJson = meRes.ok ? await meRes.json() : null;
+                const rawUser = meJson?.user || data.user || null;
+
+                if (rawUser) {
+                    const normalized = {
+                        id: rawUser.id,
+                        email: rawUser.email,
+                        firstName: rawUser.firstName || rawUser.first_name || '',
+                        lastName: rawUser.lastName || rawUser.last_name || '',
+                        phone: rawUser.phone || '',
+                        role: rawUser.role,
+                        isVerified: rawUser.isVerified ?? rawUser.is_verified,
+                        isActive: rawUser.isActive ?? rawUser.is_active,
+                    };
+
+                    await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+                }
+            }
+        } catch {
+            // Non-blocking.
+        }
+
+        if (isAdmin) {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'AdminDashboard', params: userParams }],
+            });
+        } else if (isOwner) {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'OwnerDashboard', params: userParams }],
+            });
+        } else {
+            navigation.reset({
+                index: 0,
+                routes: [
+                    {
+                        name: 'ClientApp',
+                        params: {
+                            screen: 'HomeTab',
+                            params: userParams,
+                        },
+                    },
+                ],
+            });
+        }
     };
 
     const handleLogin = async () => {
@@ -67,65 +155,7 @@ const LoginScreen = ({ navigation }) => {
             const data = await response.json();
 
             if (response.ok) {
-                if (data.token) {
-                    await storage.setItemAsync('userToken', data.token);
-                }
-
-                const userParams = { token: data?.token, user: data?.user };
-                const isOwner = data?.user?.role === 'owner';
-                const isAdmin = data?.user?.role === 'admin';
-
-                try {
-                    if (data.token) {
-                        const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
-                            headers: { Authorization: `Bearer ${data.token}` },
-                        });
-                        const meJson = meRes.ok ? await meRes.json() : null;
-                        const rawUser = meJson?.user || data.user || null;
-
-                        if (rawUser) {
-                            const normalized = {
-                                id: rawUser.id,
-                                email: rawUser.email,
-                                firstName: rawUser.firstName || rawUser.first_name || '',
-                                lastName: rawUser.lastName || rawUser.last_name || '',
-                                phone: rawUser.phone || '',
-                                role: rawUser.role,
-                                isVerified: rawUser.isVerified ?? rawUser.is_verified,
-                                isActive: rawUser.isActive ?? rawUser.is_active,
-                            };
-
-                            await storage.setItemAsync('userProfile', JSON.stringify(normalized));
-                        }
-                    }
-                } catch {
-                    // Non-blocking.
-                }
-
-                if (isAdmin) {
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'AdminDashboard', params: userParams }],
-                    });
-                } else if (isOwner) {
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'OwnerDashboard', params: userParams }],
-                    });
-                } else {
-                    navigation.reset({
-                        index: 0,
-                        routes: [
-                            {
-                                name: 'ClientApp',
-                                params: {
-                                    screen: 'HomeTab',
-                                    params: userParams,
-                                },
-                            },
-                        ],
-                    });
-                }
+                await handleAuthSuccess(data);
             } else {
                 const message = data?.error || "We couldn't log you in. Please try again.";
 
@@ -162,6 +192,52 @@ const LoginScreen = ({ navigation }) => {
             setLoading(false);
         }
     };
+
+    const handleGoogleLogin = async () => {
+        if (!googleClientId) {
+            setErrors({ email: '', password: '', form: 'Missing Google Client ID (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).' });
+            return;
+        }
+        try {
+            setErrors({ email: '', password: '', form: '' });
+            await googlePromptAsync({ useProxy: true });
+        } catch (e) {
+            setErrors({ email: '', password: '', form: 'Google sign-in failed to start.' });
+        }
+    };
+
+    useEffect(() => {
+        const run = async () => {
+            if (googleResponse?.type !== 'success') return;
+            const idToken = googleResponse?.params?.id_token;
+            if (!idToken) {
+                setErrors({ email: '', password: '', form: 'Google sign-in failed.' });
+                return;
+            }
+
+            setGoogleLoading(true);
+            setErrors({ email: '', password: '', form: '' });
+            try {
+                const res = await fetch(API_ENDPOINTS.AUTH.GOOGLE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    await handleAuthSuccess(data);
+                } else {
+                    const detail = data?.message ? ` (${data.message})` : '';
+                    setErrors({ email: '', password: '', form: `${data?.error || 'Google sign-in failed.'}${detail}` });
+                }
+            } catch (e) {
+                setErrors({ email: '', password: '', form: "We couldn't reach the server. Please try again." });
+            } finally {
+                setGoogleLoading(false);
+            }
+        };
+        run();
+    }, [googleResponse]);
 
     return (
         <View style={styles.container}>
@@ -257,6 +333,17 @@ const LoginScreen = ({ navigation }) => {
                                     {!!errors.form && <Text style={styles.formErrorText}>{errors.form}</Text>}
 
                                     <AuthGradientButton label="Login" onPress={handleLogin} disabled={loading} />
+
+                                    <TouchableOpacity
+                                        style={[styles.googleButton, (!googleRequest || googleLoading) ? styles.googleButtonDisabled : null]}
+                                        onPress={handleGoogleLogin}
+                                        disabled={!googleRequest || googleLoading}
+                                    >
+                                        <Ionicons name="logo-google" size={18} color="#fff" />
+                                        <Text style={styles.googleButtonText}>
+                                            {googleLoading ? 'Signing in…' : 'Continue with Google'}
+                                        </Text>
+                                    </TouchableOpacity>
                                 </View>
 
                                 <View style={styles.footer}>
@@ -350,6 +437,26 @@ const styles = StyleSheet.create({
     },
     footerText: { color: '#aaa' },
     linkText: { color: COLORS.secondary, fontWeight: 'bold' },
+    googleButton: {
+        marginTop: moderateScale(12),
+        height: moderateScale(48),
+        borderRadius: moderateScale(12),
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.22)',
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    googleButtonDisabled: {
+        opacity: 0.6,
+    },
+    googleButtonText: {
+        marginLeft: moderateScale(10),
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: rf(14, 12, 16),
+    },
 });
 
 export default LoginScreen;

@@ -1,4 +1,4 @@
-import { registerSchema, loginSchema, updateMeSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema } from './authSchemas.js';
+import { registerSchema, loginSchema, updateMeSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, googleAuthSchema } from './authSchemas.js';
 import {
     createUser,
     getUserByEmail,
@@ -10,11 +10,14 @@ import {
     verifyPasswordResetToken,
     clearPasswordResetToken,
     updateUserPasswordHash,
+    getUserByGoogleSub,
+    linkGoogleToUser,
 } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../../services/mailer.js';
+import { OAuth2Client } from 'google-auth-library';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const APP_BASE_URL = process.env.APP_BASE_URL || '';
@@ -24,6 +27,8 @@ const DEV_HOST = String(process.env.DEV_HOST || '').trim();
 const DEV_EXPO_PORT = Number(process.env.DEV_EXPO_PORT || 8081);
 const EMAIL_VERIFICATION_TTL_MINUTES = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES || 60 * 24);
 const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30);
+const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID || undefined);
 
 const hashToken = (token) =>
     crypto.createHash('sha256').update(token).digest('hex');
@@ -198,6 +203,10 @@ export const login = async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        if (!user.password_hash) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
         const passwordMatch = await bcrypt.compare(password, user.password_hash);
         if (!passwordMatch) {
             console.log('Password mismatch for user:', email);
@@ -225,6 +234,94 @@ export const login = async (req, res) => {
 
     } catch (err) {
         console.error('Login error:', err);
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const googleAuth = async (req, res) => {
+    try {
+        if (!GOOGLE_CLIENT_ID) {
+            return res.status(500).json({ error: 'Server configuration error' });
+        }
+
+        const { idToken } = googleAuthSchema.parse(req.body);
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload() || {};
+        const googleSub = String(payload.sub || '').trim();
+        const email = String(payload.email || '').trim().toLowerCase();
+
+        if (!googleSub || !email) {
+            return res.status(400).json({ error: 'Invalid Google token' });
+        }
+
+        let user = await getUserByGoogleSub(googleSub);
+        if (!user) {
+            const existing = await getUserByEmail(email);
+            if (existing) {
+                await linkGoogleToUser({ userId: existing.id, googleSub });
+                user = (await getUserById(existing.id)) || existing;
+            } else {
+                const firstName = String(payload.given_name || '').trim() || String(payload.name || '').trim().split(' ')[0] || '';
+                const lastName = String(payload.family_name || '').trim() || '';
+                const emailVerifiedAt = new Date().toISOString();
+                // Some DB schemas require password_hash NOT NULL. Generate a random one so the account
+                // is effectively Google-first unless you later implement "set password".
+                const randomPassword = crypto.randomBytes(32).toString('hex');
+                const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+                user = await createUser({
+                    email,
+                    password: passwordHash,
+                    firstName,
+                    lastName,
+                    phone: '',
+                    role: 'client',
+                    isVerified: true,
+                    emailVerifiedAt,
+                    googleSub,
+                    authProvider: 'google',
+                });
+            }
+        }
+
+        const token = jwt.sign(
+            { id: user.id, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        const profile = (await getUserById(user.id)) || user;
+        const { password_hash, ...userWithoutPassword } = profile;
+        return res.json({ user: userWithoutPassword, token });
+    } catch (err) {
+        // Help debugging in dev without leaking tokens.
+        try {
+            console.error('[googleAuth] failed:', err?.message || err);
+        } catch {
+            // ignore
+        }
+
+        const rawMessage = String(err?.message || '');
+        const lower = rawMessage.toLowerCase();
+
+        // Common Google auth failures: bad token, expired token, or wrong audience/client id.
+        if (lower.includes('wrong recipient') || lower.includes('audience')) {
+            return res.status(401).json({ error: 'GOOGLE_CLIENT_ID_MISMATCH' });
+        }
+        if (lower.includes('invalid token') || lower.includes('jwt') || lower.includes('token')) {
+            return res.status(401).json({ error: 'GOOGLE_TOKEN_INVALID' });
+        }
+
+        // In dev, return the underlying message to unblock debugging.
+        if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+            return res.status(400).json({ error: 'GOOGLE_AUTH_FAILED', message: rawMessage });
+        }
+
         const f = formatAppError(err);
         return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }
