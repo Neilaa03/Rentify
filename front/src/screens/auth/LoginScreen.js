@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ImageBackground, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+    StyleSheet,
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    ImageBackground,
+    ScrollView,
+    KeyboardAvoidingView,
+    Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import storage from '../../utils/storage';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -13,6 +24,7 @@ const LoginScreen = ({ navigation }) => {
     const tabletLayout = isTablet();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({
         email: '',
@@ -26,29 +38,21 @@ const LoginScreen = ({ navigation }) => {
     };
 
     const handleLogin = async () => {
-        setLoading(true);
-        console.log("Login button pressed");
-
         const nextErrors = { email: '', password: '', form: '' };
         const trimmedEmail = email.trim();
 
-        // 1. Basic validation
-        if (!trimmedEmail) nextErrors.email = "Please enter your email.";
-        if (!password) nextErrors.password = "Please enter your password.";
+        if (!trimmedEmail) nextErrors.email = 'Please enter your email.';
+        if (!password) nextErrors.password = 'Please enter your password.';
 
         if (nextErrors.email || nextErrors.password) {
             setErrors(nextErrors);
             return;
         }
 
+        setLoading(true);
         setErrors({ email: '', password: '', form: '' });
 
-        console.log("Email:", trimmedEmail);
-        console.log("API Endpoint:", API_ENDPOINTS.AUTH.LOGIN);
-
         try {
-            // 2. Send POST request to backend
-            console.log("Sending fetch request...");
             const response = await fetch(API_ENDPOINTS.AUTH.LOGIN, {
                 method: 'POST',
                 headers: {
@@ -56,30 +60,21 @@ const LoginScreen = ({ navigation }) => {
                 },
                 body: JSON.stringify({
                     email: trimmedEmail,
-                    password: password,
+                    password,
                 }),
             });
 
-            console.log("Response status:", response.status);
-            console.log("Response ok:", response.ok);
-
             const data = await response.json();
-            console.log("Response data:", data);
 
             if (response.ok) {
-                // SUCCESS: data contains your user info and JWT token
-                console.log("Login successful!", data);
-                // Save token to SecureStore
                 if (data.token) {
                     await storage.setItemAsync('userToken', data.token);
-                    console.log('Token saved to storage');
                 }
 
                 const userParams = { token: data?.token, user: data?.user };
                 const isOwner = data?.user?.role === 'owner';
                 const isAdmin = data?.user?.role === 'admin';
-                    
-                // Always refresh profile from backend so we have full name + phone reliably
+
                 try {
                     if (data.token) {
                         const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
@@ -87,6 +82,7 @@ const LoginScreen = ({ navigation }) => {
                         });
                         const meJson = meRes.ok ? await meRes.json() : null;
                         const rawUser = meJson?.user || data.user || null;
+
                         if (rawUser) {
                             const normalized = {
                                 id: rawUser.id,
@@ -98,12 +94,14 @@ const LoginScreen = ({ navigation }) => {
                                 isVerified: rawUser.isVerified ?? rawUser.is_verified,
                                 isActive: rawUser.isActive ?? rawUser.is_active,
                             };
+
                             await storage.setItemAsync('userProfile', JSON.stringify(normalized));
                         }
                     }
-                } catch (e) {
-                    // Non-blocking
+                } catch {
+                    // Non-blocking.
                 }
+
                 if (isAdmin) {
                     navigation.reset({
                         index: 0,
@@ -114,7 +112,6 @@ const LoginScreen = ({ navigation }) => {
                         index: 0,
                         routes: [{ name: 'OwnerDashboard', params: userParams }],
                     });
-
                 } else {
                     navigation.reset({
                         index: 0,
@@ -129,29 +126,41 @@ const LoginScreen = ({ navigation }) => {
                         ],
                     });
                 }
-            
             } else {
-                // BACKEND ERROR:
-                console.log("Login failed:", data?.error);
                 const message = data?.error || "We couldn't log you in. Please try again.";
+
+                if (data?.error === 'EMAIL_NOT_VERIFIED') {
+                    navigation.navigate('VerifyEmail', { email: trimmedEmail });
+                    setErrors({
+                        email: '',
+                        password: '',
+                        form: 'Please verify your email first.',
+                    });
+                    return;
+                }
+
                 const lower = String(message).toLowerCase();
                 const mentionsEmail = lower.includes('email');
                 const mentionsPassword = lower.includes('password');
-                if (mentionsEmail && !mentionsPassword) setErrors({ email: message, password: '', form: '' });
-                else if (mentionsPassword && !mentionsEmail) setErrors({ email: '', password: message, form: '' });
-                else setErrors({ email: '', password: '', form: "Invalid email or password." });
+
+                if (mentionsEmail && !mentionsPassword) {
+                    setErrors({ email: message, password: '', form: '' });
+                } else if (mentionsPassword && !mentionsEmail) {
+                    setErrors({ email: '', password: message, form: '' });
+                } else {
+                    setErrors({ email: '', password: '', form: 'Invalid email or password.' });
+                }
             }
         } catch (error) {
-            // NETWORK ERROR
-            console.error("Fetch error:", error);
+            console.error('Fetch error:', error);
             setErrors({
                 email: '',
                 password: '',
                 form: "We couldn't reach the server. Please try again.",
             });
-        }finally {
-   setLoading(false);
-}
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -203,21 +212,45 @@ const LoginScreen = ({ navigation }) => {
                                         autoCapitalize="none"
                                     />
 
-                                    <AuthInputField
-                                        label="Password"
-                                        error={errors.password}
-                                        inputStyle={[password ? styles.inputFilled : null]}
-                                        placeholder="••••••••"
-                                        value={password}
-                                        onChangeText={(text) => {
-                                            setPassword(text);
-                                            clearError('password');
-                                            clearError('form');
-                                        }}
-                                        secureTextEntry
-                                    />
+                                    <View style={styles.inputContainer}>
+                                        <Text style={styles.label}>Password</Text>
+                                        <View>
+                                            <TextInput
+                                                style={[
+                                                    styles.input,
+                                                    password ? styles.inputFilled : null,
+                                                    errors.password ? styles.inputError : null,
+                                                ]}
+                                                placeholder="••••••••"
+                                                placeholderTextColor="rgba(255,255,255,0.6)"
+                                                value={password}
+                                                onChangeText={(text) => {
+                                                    setPassword(text);
+                                                    clearError('password');
+                                                    clearError('form');
+                                                }}
+                                                secureTextEntry={!showPassword}
+                                            />
+                                            <TouchableOpacity
+                                                onPress={() => setShowPassword((v) => !v)}
+                                                style={styles.eyeButton}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                                            >
+                                                <Ionicons
+                                                    name={showPassword ? 'eye-off' : 'eye'}
+                                                    size={20}
+                                                    color="rgba(255,255,255,0.8)"
+                                                />
+                                            </TouchableOpacity>
+                                        </View>
+                                        {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                                    </View>
 
-                                    <TouchableOpacity style={styles.forgotPassword}>
+                                    <TouchableOpacity
+                                        style={styles.forgotPassword}
+                                        onPress={() => navigation.navigate('ForgotPassword', { email: email.trim() })}
+                                    >
                                         <Text style={styles.forgotText}>Forgot Password?</Text>
                                     </TouchableOpacity>
 
@@ -258,9 +291,47 @@ const styles = StyleSheet.create({
     },
     content: {},
     form: { width: '100%' },
+    inputContainer: {
+        marginBottom: moderateScale(18),
+    },
+    label: {
+        color: '#fff',
+        marginBottom: moderateScale(8),
+        fontSize: rf(14, 12, 16),
+        fontWeight: '500',
+    },
+    input: {
+        backgroundColor: 'rgba(255,255,255,0.16)',
+        borderRadius: moderateScale(12),
+        paddingHorizontal: moderateScale(14),
+        paddingVertical: moderateScale(13),
+        paddingRight: moderateScale(46),
+        color: '#fff',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
+        fontSize: rf(15, 13, 18),
+    },
+    eyeButton: {
+        position: 'absolute',
+        right: moderateScale(12),
+        top: moderateScale(10),
+        height: moderateScale(36),
+        width: moderateScale(36),
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     inputFilled: {
         backgroundColor: 'rgba(230, 215, 255, 0.26)',
         borderColor: 'rgba(166, 110, 255, 0.35)',
+    },
+    inputError: {
+        borderColor: 'rgba(255, 92, 92, 0.9)',
+    },
+    errorText: {
+        marginTop: moderateScale(8),
+        color: 'rgba(255, 92, 92, 0.95)',
+        fontSize: rf(12, 11, 14),
+        lineHeight: rf(16, 14, 20),
     },
     formErrorText: {
         marginBottom: moderateScale(14),
@@ -278,7 +349,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
     },
     footerText: { color: '#aaa' },
-    linkText: { color: COLORS.secondary, fontWeight: 'bold' }
+    linkText: { color: COLORS.secondary, fontWeight: 'bold' },
 });
 
 export default LoginScreen;

@@ -26,3 +26,17 @@ export const updateMeSchema = z
   .refine((data) => data.email !== undefined || data.phone !== undefined, {
     message: 'At least one field is required',
   });
+export const resendVerificationSchema = z.object({
+    email: z.string().email(),
+});
+
+export const forgotPasswordSchema = z.object({
+    email: z.string().email(),
+});
+
+export const resetPasswordSchema = z.object({
+    email: z.string().email(),
+    token: z.string().min(1),
+    password: z.string().min(8),
+    confirmPassword: z.string().min(8),
+}).refine((data) => data.password === data.confirmPassword);
