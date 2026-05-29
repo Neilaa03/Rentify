@@ -5,7 +5,7 @@ dotenv.config({ path: new URL('./.env', import.meta.url) });
 
 const { default: app } = await import('./app.js');
 const { initSocket } = await import('./src/socket/index.js');
-
+const { startEscrowAutoReleaseScheduler } = await import('./src/services/escrowService.js');
 const PORT = process.env.PORT || 3000;
 
 const server = app.listen(PORT, '0.0.0.0', () => {
@@ -14,6 +14,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 
 // Initialize Socket.IO for real-time features
 initSocket(server);
+startEscrowAutoReleaseScheduler();
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {

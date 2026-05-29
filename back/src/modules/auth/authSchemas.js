@@ -18,6 +18,14 @@ export const loginSchema = z.object({
     password: z.string(),
 });
 
+export const updateMeSchema = z
+  .object({
+    email: z.string().email().optional(),
+    phone: z.string().min(5).max(30).optional(),
+  })
+  .refine((data) => data.email !== undefined || data.phone !== undefined, {
+    message: 'At least one field is required',
+  });
 export const resendVerificationSchema = z.object({
     email: z.string().email(),
 });

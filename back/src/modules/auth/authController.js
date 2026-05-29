@@ -1,8 +1,9 @@
-import { registerSchema, loginSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema } from './authSchemas.js';
+import { registerSchema, loginSchema, updateMeSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema } from './authSchemas.js';
 import {
     createUser,
     getUserByEmail,
     getUserById,
+    updateUserById,
     setEmailVerificationToken,
     verifyEmailByToken,
     setPasswordResetToken,
@@ -242,6 +243,19 @@ export const me = async (req, res) => {
         }
 
         res.json({ user });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+export const updateMe = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        const payload = updateMeSchema.parse(req.body);
+        const updated = await updateUserById(userId, payload);
+        res.json({ user: updated });
     } catch (err) {
         res.status(400).json({ error: err.message });
     }

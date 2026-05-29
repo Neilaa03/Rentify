@@ -146,7 +146,10 @@ CREATE TABLE public.payments (
   reservation_id uuid NOT NULL,
   amount numeric NOT NULL,
   payment_method character varying DEFAULT 'card'::character varying CHECK (payment_method::text = ANY (ARRAY['card'::character varying, 'cash'::character varying]::text[])),
+  payment_intent_id text,
+  stripe_transfer_id text,
   transaction_reference text,
+  escrow_status USER-DEFINED DEFAULT 'pending'::payment_status,
   status USER-DEFINED DEFAULT 'pending'::payment_status,
   paid_at timestamp without time zone,
   created_at timestamp without time zone DEFAULT now(),
@@ -155,6 +158,25 @@ CREATE TABLE public.payments (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT payments_pkey PRIMARY KEY (id),
   CONSTRAINT payments_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.reservations(id)
+);
+CREATE TABLE public.escrow_transactions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  reservation_id uuid NOT NULL,
+  payment_intent_id text NOT NULL,
+  stripe_transfer_id text,
+  client_id uuid NOT NULL,
+  owner_id uuid NOT NULL,
+  amount numeric NOT NULL,
+  status USER-DEFINED DEFAULT 'held_in_escrow'::payment_status,
+  held_at timestamp without time zone DEFAULT now(),
+  released_at timestamp without time zone,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT escrow_transactions_pkey PRIMARY KEY (id),
+  CONSTRAINT escrow_transactions_reservation_id_key UNIQUE (reservation_id),
+  CONSTRAINT escrow_transactions_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.reservations(id),
+  CONSTRAINT escrow_transactions_client_id_fkey FOREIGN KEY (client_id) REFERENCES public.users(id),
+  CONSTRAINT escrow_transactions_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.pickup (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -222,10 +244,25 @@ CREATE TABLE public.users (
   is_active boolean DEFAULT true,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
+  stripe_account_id text,
   CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.user_balances (
+  user_id uuid NOT NULL,
+  pending_balance numeric DEFAULT 0,
+  available_balance numeric DEFAULT 0,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT user_balances_pkey PRIMARY KEY (user_id),
+  CONSTRAINT user_balances_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
 );
 
 -- Indexes (for fast lookup by reservation and pickup state)
 CREATE INDEX IF NOT EXISTS idx_pickup_reservation_id ON public.pickup (reservation_id);
 CREATE INDEX IF NOT EXISTS idx_pickup_status ON public.pickup (status);
 CREATE INDEX IF NOT EXISTS idx_pickup_verified_at ON public.pickup (pickup_verified_at);
+CREATE INDEX IF NOT EXISTS idx_user_balances_user_id ON public.user_balances (user_id);
+CREATE INDEX IF NOT EXISTS idx_escrow_transactions_reservation_id ON public.escrow_transactions (reservation_id);
+CREATE INDEX IF NOT EXISTS idx_escrow_transactions_payment_intent_id ON public.escrow_transactions (payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_escrow_transactions_owner_id ON public.escrow_transactions (owner_id);
