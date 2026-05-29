@@ -27,8 +27,16 @@ const DEV_HOST = String(process.env.DEV_HOST || '').trim();
 const DEV_EXPO_PORT = Number(process.env.DEV_EXPO_PORT || 8081);
 const EMAIL_VERIFICATION_TTL_MINUTES = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES || 60 * 24);
 const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30);
-const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID || undefined);
+const GOOGLE_CLIENT_IDS = [
+    String(process.env.GOOGLE_CLIENT_ID || '').trim(),
+    String(process.env.GOOGLE_ANDROID_CLIENT_ID || '').trim(),
+    String(process.env.GOOGLE_IOS_CLIENT_ID || '').trim(),
+    ...String(process.env.GOOGLE_CLIENT_IDS || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+].filter(Boolean);
+const googleClient = new OAuth2Client();
 
 const hashToken = (token) =>
     crypto.createHash('sha256').update(token).digest('hex');
@@ -241,14 +249,14 @@ export const login = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
     try {
-        if (!GOOGLE_CLIENT_ID) {
+        if (GOOGLE_CLIENT_IDS.length === 0) {
             return res.status(500).json({ error: 'Server configuration error' });
         }
 
         const { idToken } = googleAuthSchema.parse(req.body);
         const ticket = await googleClient.verifyIdToken({
             idToken,
-            audience: GOOGLE_CLIENT_ID,
+            audience: GOOGLE_CLIENT_IDS,
         });
 
         const payload = ticket.getPayload() || {};

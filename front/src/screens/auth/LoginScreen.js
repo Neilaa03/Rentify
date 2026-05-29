@@ -21,7 +21,7 @@ import AuthGradientButton from '../../components/auth/AuthGradientButton';
 import { isTablet, moderateScale, rf } from '../../utils/responsive';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import * as Google from 'expo-auth-session/providers/google';
+import Constants from 'expo-constants';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,25 +38,44 @@ const LoginScreen = ({ navigation }) => {
         form: '',
     });
 
-    const googleClientId = useMemo(
-        () => process?.env?.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
-        []
-    );
+    const useProxy = useMemo(() => {
+        const ownership = Constants?.appOwnership;
+        return ownership === 'expo' || ownership === 'guest';
+    }, []);
 
-    const redirectUri = useMemo(
-        () => AuthSession.makeRedirectUri({ scheme: 'rentify', useProxy: true }),
-        []
-    );
+    const googleClientId = useMemo(() => {
+        const webClientId = process?.env?.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
+        const androidClientId = process?.env?.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '';
+        const iosClientId = process?.env?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
 
-    const [googleRequest, googleResponse, googlePromptAsync] = Google.useIdTokenAuthRequest({
-        // For Expo Go + AuthSession proxy, Expo expects an "expoClientId".
-        // Using the same web client id works for many setups; native builds can provide android/ios ids too.
-        expoClientId: googleClientId,
-        webClientId: googleClientId,
-        androidClientId: process?.env?.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || undefined,
-        iosClientId: process?.env?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || undefined,
-        redirectUri,
-    });
+        if (Platform.OS === 'android' && !useProxy) return androidClientId || webClientId;
+        if (Platform.OS === 'ios' && !useProxy) return iosClientId || webClientId;
+        return webClientId;
+    }, [useProxy]);
+
+    const redirectUri = useMemo(() => {
+        return AuthSession.makeRedirectUri({ scheme: 'rentify', useProxy });
+    }, [useProxy]);
+
+    useEffect(() => {
+        console.log('[GoogleAuth] appOwnership:', Constants?.appOwnership);
+        console.log('[GoogleAuth] useProxy:', useProxy);
+        console.log('[GoogleAuth] redirectUri:', redirectUri);
+    }, [redirectUri, useProxy]);
+
+    const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
+    const [googleRequest, googleResponse, googlePromptAsync] = AuthSession.useAuthRequest(
+        {
+            clientId: googleClientId,
+            redirectUri,
+            responseType: AuthSession.ResponseType.IdToken,
+            scopes: ['openid', 'profile', 'email'],
+            extraParams: {
+                prompt: 'select_account',
+            },
+        },
+        discovery
+    );
 
     const clearError = (key) => {
         if (!errors[key]) return;
@@ -195,12 +214,12 @@ const LoginScreen = ({ navigation }) => {
 
     const handleGoogleLogin = async () => {
         if (!googleClientId) {
-            setErrors({ email: '', password: '', form: 'Missing Google Client ID (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID).' });
+            setErrors({ email: '', password: '', form: 'Missing Google Client ID. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID (and for builds, also ANDROID/IOS client IDs).' });
             return;
         }
         try {
             setErrors({ email: '', password: '', form: '' });
-            await googlePromptAsync({ useProxy: true });
+            await googlePromptAsync({ useProxy });
         } catch (e) {
             setErrors({ email: '', password: '', form: 'Google sign-in failed to start.' });
         }
