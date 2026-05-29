@@ -13,6 +13,8 @@ const RegisterScreen = ({ navigation }) => {
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [selectedRole, setSelectedRole] = useState(null);
     const [errors, setErrors] = useState({
         firstName: '',
@@ -58,7 +60,7 @@ const RegisterScreen = ({ navigation }) => {
         if (!password) nextErrors.password = "Please create a password.";
         if (!confirmPassword) nextErrors.confirmPassword = "Please confirm your password.";
 
-        if (password && password.length < 6) nextErrors.password = "Use at least 6 characters.";
+        if (password && password.length < 8) nextErrors.password = "Use at least 8 characters.";
         if (password && confirmPassword && password !== confirmPassword) {
             nextErrors.confirmPassword = "Passwords don't match.";
         }
@@ -111,10 +113,9 @@ const RegisterScreen = ({ navigation }) => {
             if (response.ok) {
                 // SUCCESS
                 console.log("Registration successful!", data);
-                // alert("Registration successful! Redirecting to login...");
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'ClientApp' }],
+                    routes: [{ name: 'VerifyEmail', params: { email: trimmedEmail } }],
                 });
             } else {
                 // BACKEND ERROR
@@ -295,8 +296,20 @@ const RegisterScreen = ({ navigation }) => {
                                         clearError('password');
                                         clearError('form');
                                     }}
-                                    secureTextEntry
+                                    secureTextEntry={!showPassword}
                                 />
+                                <TouchableOpacity
+                                    onPress={() => setShowPassword((v) => !v)}
+                                    style={styles.eyeButton}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                    <Ionicons
+                                        name={showPassword ? 'eye-off' : 'eye'}
+                                        size={20}
+                                        color="rgba(255,255,255,0.8)"
+                                    />
+                                </TouchableOpacity>
                                 {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                             </View>
 
@@ -312,8 +325,20 @@ const RegisterScreen = ({ navigation }) => {
                                         clearError('confirmPassword');
                                         clearError('form');
                                     }}
-                                    secureTextEntry
+                                    secureTextEntry={!showConfirmPassword}
                                 />
+                                <TouchableOpacity
+                                    onPress={() => setShowConfirmPassword((v) => !v)}
+                                    style={styles.eyeButton}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
+                                >
+                                    <Ionicons
+                                        name={showConfirmPassword ? 'eye-off' : 'eye'}
+                                        size={20}
+                                        color="rgba(255,255,255,0.8)"
+                                    />
+                                </TouchableOpacity>
                                 {!!errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
                                 {!!errors.form && <Text style={styles.errorText}>{errors.form}</Text>}
                             </View>
@@ -392,9 +417,19 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.16)',
         borderRadius: 12,
         padding: 16,
+        paddingRight: 46,
         color: '#fff',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.3)'
+    },
+    eyeButton: {
+        position: 'absolute',
+        right: 14,
+        top: 38,
+        height: 36,
+        width: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     inputError: {
         borderColor: 'rgba(255, 92, 92, 0.9)',
