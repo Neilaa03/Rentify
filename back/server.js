@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import app from './app.js';
 import { initSocket } from './src/socket/index.js';
-import { startEscrowAutoReleaseScheduler } from './src/modules/payments/escrowScheduler.js';
+import { startEscrowAutoReleaseScheduler } from './src/modules/escrow/escrowScheduler.js';
 
 const PORT = process.env.PORT || 3000;
 

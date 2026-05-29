@@ -105,9 +105,21 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
 
-    stripe_account_id text,
+    stripe_account_id text
+);
+
+-- =========================================================
+-- USER BALANCES
+-- =========================================================
+
+CREATE TABLE user_balances (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+
     pending_balance NUMERIC(10,2) DEFAULT 0,
-    available_balance NUMERIC(10,2) DEFAULT 0
+    available_balance NUMERIC(10,2) DEFAULT 0,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- =========================================================
@@ -476,6 +488,7 @@ CREATE TABLE messages (
 -- =========================================================
 
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_user_balances_user_id ON user_balances(user_id);
 
 CREATE INDEX idx_cars_owner_id ON cars(owner_id);
 

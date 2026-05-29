@@ -57,8 +57,36 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const [paymentInfo, setPaymentInfo] = useState(null); // stores payment response data
   const [reservationState, setReservationState] = useState(reservationFromParams || null);
   const [ownerConnectStatus, setOwnerConnectStatus] = useState(null);
+  const [justCompletedCardPayment, setJustCompletedCardPayment] = useState(false);
 
   const reservation = reservationState || reservationFromParams;
+
+  const getReservationDetailsTarget = () => {
+    const parent = navigation.getParent?.();
+    const nextListing = listingFromApi || listingFromParams || reservation?.listing || null;
+    const nextReservation = reservationState || reservationFromParams || reservation || null;
+    return { parent, nextListing, nextReservation };
+  };
+
+  const goToReservationDetailsFromReservations = () => {
+    const { parent, nextListing, nextReservation } = getReservationDetailsTarget();
+
+    if (parent?.navigate) {
+      parent.navigate('ReservationsTab', {
+        screen: 'ReservationDetailsFromReservations',
+        params: {
+          reservation: nextReservation,
+          listing: nextListing,
+        },
+      });
+      return;
+    }
+
+    navigation.navigate('ReservationDetailsFromReservations', {
+      reservation: nextReservation,
+      listing: nextListing,
+    });
+  };
 
   const goToReservations = () => {
     const parent = navigation.getParent?.();
@@ -212,12 +240,17 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     isReservationActive &&
     (paymentStatus === null || paymentStatus === 'failed');
 
-  const showActionBar = reservation?.status === 'reserved';
+  const isCardEscrowActive =
+    paymentMethod === 'card' &&
+    ['held_in_escrow', 'released', 'disputed'].includes(paymentStatus);
+  const hideCancelOnThisScreen = justCompletedCardPayment || isCardEscrowActive;
+
+  const showActionBar = reservation?.status === 'reserved' && !hideCancelOnThisScreen;
   const showPayButton =
     reservation?.status === 'reserved' &&
     (paymentStatus === null || paymentStatus === 'failed' || canResumePendingCardPayment);
 
-  const showConfirmHandoverButton = paymentStatus === 'held_in_escrow';
+  const showConfirmHandoverButton = paymentStatus === 'held_in_escrow' && !justCompletedCardPayment;
 
   const isCardEnabledForOwner = Boolean(ownerConnectStatus?.cardPaymentsAvailable);
   const disabledCardReason = isCardEnabledForOwner
@@ -619,6 +652,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       const paymentResult = await waitForPaymentConfirmation(token);
       if (paymentResult.success) {
         setPaymentStatus('held_in_escrow');
+        setJustCompletedCardPayment(true);
         Alert.alert(
           'Paiement sécurisé',
           'Votre paiement est maintenant sécurisé en escrow. Vous pourrez confirmer la remise du véhicule une fois la voiture reçue.',
@@ -1030,6 +1064,18 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
             amount={safeTotalPrice}
             paymentMethod={paymentMethod}
           />
+        )}
+
+        {justCompletedCardPayment && paymentStatus === 'held_in_escrow' && (
+          <View style={styles.escrowInfoCard}>
+            <Text style={styles.escrowInfoTitle}>Paiement confirmé</Text>
+            <Text style={styles.escrowInfoText}>
+              Votre paiement est sécurisé en escrow. Rendez-vous dans <Text style={styles.escrowInfoStrong}>Mes réservations</Text> pour confirmer la remise du véhicule une fois la voiture reçue.
+            </Text>
+            <TouchableOpacity onPress={goToReservationDetailsFromReservations} activeOpacity={0.85} style={styles.escrowInfoButton}>
+              <Text style={styles.escrowInfoButtonText}>Voir ma réservation</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {showConfirmHandoverButton && (
@@ -1520,6 +1566,40 @@ const styles = StyleSheet.create({
     color: '#0d1227',
     fontSize: 13,
     fontWeight: '800',
+  },
+  escrowInfoCard: {
+    backgroundColor: 'rgba(35, 212, 159, 0.10)',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(35, 212, 159, 0.22)',
+  },
+  escrowInfoTitle: {
+    color: '#f6f8ff',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  escrowInfoText: {
+    color: '#c9d2ff',
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  escrowInfoStrong: {
+    color: '#ffffff',
+    fontWeight: '800',
+  },
+  escrowInfoButton: {
+    backgroundColor: '#23d49f',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  escrowInfoButtonText: {
+    color: '#0d1227',
+    fontWeight: '900',
   },
   actionButtonsSection: {
     marginBottom: 24,

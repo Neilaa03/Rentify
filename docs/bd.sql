@@ -245,15 +245,24 @@ CREATE TABLE public.users (
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   stripe_account_id text,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.user_balances (
+  user_id uuid NOT NULL,
   pending_balance numeric DEFAULT 0,
   available_balance numeric DEFAULT 0,
-  CONSTRAINT users_pkey PRIMARY KEY (id)
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT user_balances_pkey PRIMARY KEY (user_id),
+  CONSTRAINT user_balances_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE
 );
 
 -- Indexes (for fast lookup by reservation and pickup state)
 CREATE INDEX IF NOT EXISTS idx_pickup_reservation_id ON public.pickup (reservation_id);
 CREATE INDEX IF NOT EXISTS idx_pickup_status ON public.pickup (status);
 CREATE INDEX IF NOT EXISTS idx_pickup_verified_at ON public.pickup (pickup_verified_at);
+CREATE INDEX IF NOT EXISTS idx_user_balances_user_id ON public.user_balances (user_id);
 CREATE INDEX IF NOT EXISTS idx_escrow_transactions_reservation_id ON public.escrow_transactions (reservation_id);
 CREATE INDEX IF NOT EXISTS idx_escrow_transactions_payment_intent_id ON public.escrow_transactions (payment_intent_id);
 CREATE INDEX IF NOT EXISTS idx_escrow_transactions_owner_id ON public.escrow_transactions (owner_id);

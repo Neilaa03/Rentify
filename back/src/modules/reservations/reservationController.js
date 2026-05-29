@@ -1,6 +1,6 @@
 import * as model from './reservationModel.js';
 import { createNotification } from '../notifications/notificationModel.js';
-import { disputeEscrowForReservation, releaseEscrowForReservation, resolveDisputedEscrowForReservation } from '../payments/escrowService.js';
+import { disputeEscrowForReservation, releaseEscrowForReservation, resolveDisputedEscrowForReservation } from '../escrow/escrowService.js';
 import {
     createReservationSchema,
     updateStatusSchema,

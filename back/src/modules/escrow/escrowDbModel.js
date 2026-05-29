@@ -1,9 +1,8 @@
 import { supabase } from '../../config/supabase.js';
+import { adjustUserBalance, getUserBalance } from '../payments/balanceModel.js';
 
 const PAYMENTS_TABLE = 'payments';
 const ESCROW_TABLE = 'escrow_transactions';
-const USERS_TABLE = 'users';
-
 const toNumber = (value) => Number(value || 0);
 
 const toPaymentDto = (row) => ({
@@ -211,38 +210,19 @@ export const upsertEscrowTransactionByReservationId = async (payload) => {
 };
 
 export const getOwnerBalances = async (ownerId) => {
-  const { data, error } = await supabase
-    .from(USERS_TABLE)
-    .select('id, pending_balance, available_balance')
-    .eq('id', ownerId)
-    .maybeSingle();
-
-  if (error) throw error;
+  const balance = await getUserBalance(ownerId);
   return {
     ownerId,
-    pendingBalance: toNumber(data?.pending_balance),
-    availableBalance: toNumber(data?.available_balance),
+    pendingBalance: balance.pendingBalance,
+    availableBalance: balance.availableBalance,
   };
 };
 
 export const adjustOwnerBalances = async ({ ownerId, pendingDelta = 0, availableDelta = 0 }) => {
-  const balances = await getOwnerBalances(ownerId);
-  const payload = {
-    pending_balance: Number((balances.pendingBalance + pendingDelta).toFixed(2)),
-    available_balance: Number((balances.availableBalance + availableDelta).toFixed(2)),
-  };
-
-  const { data, error } = await supabase
-    .from(USERS_TABLE)
-    .update(payload)
-    .eq('id', ownerId)
-    .select('id, pending_balance, available_balance')
-    .single();
-
-  if (error || !data) throw error || new Error('Failed to update owner balances');
+  const data = await adjustUserBalance({ userId: ownerId, pendingDelta, availableDelta });
   return {
-    ownerId: data.id,
-    pendingBalance: toNumber(data.pending_balance),
-    availableBalance: toNumber(data.available_balance),
+    ownerId: data.userId,
+    pendingBalance: data.pendingBalance,
+    availableBalance: data.availableBalance,
   };
 };

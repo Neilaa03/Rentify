@@ -28,7 +28,7 @@ import {
   syncPaymentSucceededIntent,
   syncTransferCreated,
   syncTransferFailed,
-} from './escrowService.js';
+} from '../escrow/escrowService.js';
 
 const notifyOwnerReservationCreated = async ({ reservation, paymentMethod }) => {
   const ownerId = reservation?.listing?.car?.ownerId;

@@ -1,6 +1,6 @@
 import { getReservationById } from '../reservations/reservationModel.js';
-import { getOwnerProfileForConnect } from './connectService.js';
-import { createStripeTransfer } from './transferService.js';
+import { resolveOwnerConnectStatus } from '../payments/connectService.js';
+import { createStripeTransfer } from '../payments/transferService.js';
 import {
   adjustOwnerBalances,
   createEscrowTransaction,
@@ -12,7 +12,7 @@ import {
   updatePaymentStatus,
   upsertEscrowTransactionByReservationId,
 } from './escrowDbModel.js';
-import { stripe } from './paymentModel.js';
+import { stripe } from '../payments/paymentModel.js';
 import { supabase } from '../../config/supabase.js';
 
 const ESCROW_STATUSES = new Set(['held_in_escrow', 'disputed', 'released']);
@@ -141,8 +141,8 @@ export const releaseEscrowForReservation = async ({ reservationId, actorUserId, 
     throw error;
   }
 
-  const owner = await getOwnerProfileForConnect(escrow.ownerId);
-  if (!owner?.stripeAccountId) {
+  const ownerConnectStatus = await resolveOwnerConnectStatus(escrow.ownerId);
+  if (!ownerConnectStatus?.stripeAccountId) {
     const error = new Error('Owner Stripe connected account is missing.');
     error.statusCode = 400;
     throw error;
@@ -166,7 +166,7 @@ export const releaseEscrowForReservation = async ({ reservationId, actorUserId, 
     transfer = await createStripeTransfer({
       amount: transferAmount,
       currency: 'eur',
-      destinationAccountId: owner.stripeAccountId,
+      destinationAccountId: ownerConnectStatus.stripeAccountId,
       metadata: transferMetadata,
       transferGroup: String(reservationId),
       idempotencyKey: `escrow-release-${reservationId}`,

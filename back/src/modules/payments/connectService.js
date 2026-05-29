@@ -1,4 +1,5 @@
 import { supabase } from '../../config/supabase.js';
+import { getUserBalance } from './balanceModel.js';
 import { stripe } from './paymentModel.js';
 
 const USERS_TABLE = 'users';
@@ -7,7 +8,7 @@ const MISSING_STRIPE_COLUMN_CODE = '42703';
 const getUserStripeAccountId = async (userId) => {
   const { data, error } = await supabase
     .from(USERS_TABLE)
-    .select('id, email, first_name, last_name, phone, stripe_account_id, pending_balance, available_balance')
+    .select('id, email, first_name, last_name, phone, stripe_account_id')
     .eq('id', userId)
     .maybeSingle();
 
@@ -21,7 +22,7 @@ const setUserStripeAccountId = async ({ userId, stripeAccountId }) => {
     .from(USERS_TABLE)
     .update({ stripe_account_id: stripeAccountId })
     .eq('id', userId)
-    .select('id, email, first_name, last_name, phone, stripe_account_id, pending_balance, available_balance')
+    .select('id, email, first_name, last_name, phone, stripe_account_id')
     .single();
 
   if (error || !data) throw error || new Error('Failed to persist stripe account id');
@@ -31,7 +32,7 @@ const setUserStripeAccountId = async ({ userId, stripeAccountId }) => {
 const getUserBasicProfile = async (userId) => {
   const { data, error } = await supabase
     .from(USERS_TABLE)
-    .select('id, email, first_name, last_name, phone, pending_balance, available_balance')
+    .select('id, email, first_name, last_name, phone')
     .eq('id', userId)
     .maybeSingle();
   if (error) throw error;
@@ -85,8 +86,6 @@ const toConnectStatus = (account) => ({
   cardPaymentsAvailable: Boolean(account?.charges_enabled && account?.payouts_enabled),
 });
 
-const normalizeBalance = (value) => Number(value || 0);
-
 export const resolveOwnerConnectStatus = async (ownerId) => {
   let owner = null;
   let stripeColumnMissing = false;
@@ -120,6 +119,7 @@ export const resolveOwnerConnectStatus = async (ownerId) => {
   }
 
   if (!stripeAccountId) {
+    const balance = await getUserBalance(ownerId);
     return {
       ownerId,
       stripeAccountId: null,
@@ -127,8 +127,8 @@ export const resolveOwnerConnectStatus = async (ownerId) => {
       chargesEnabled: false,
       payoutsEnabled: false,
       cardPaymentsAvailable: false,
-      pendingBalance: normalizeBalance(owner?.pending_balance),
-      availableBalance: normalizeBalance(owner?.available_balance),
+      pendingBalance: balance.pendingBalance,
+      availableBalance: balance.availableBalance,
       stripeColumnMissing,
     };
   }
@@ -142,12 +142,13 @@ export const resolveOwnerConnectStatus = async (ownerId) => {
   }
 
   const account = await stripe.accounts.retrieve(stripeAccountId);
+  const balance = await getUserBalance(ownerId);
   return {
     ownerId,
     stripeAccountId,
     ...toConnectStatus(account),
-    pendingBalance: normalizeBalance(owner?.pending_balance),
-    availableBalance: normalizeBalance(owner?.available_balance),
+    pendingBalance: balance.pendingBalance,
+    availableBalance: balance.availableBalance,
     stripeColumnMissing,
   };
 };
