@@ -15,9 +15,11 @@ import OwnerListingsScreen from './src/screens/owner/ListingsScreen';
 import OwnerListingFormScreen from './src/screens/owner/ListingFormScreen';
 import OwnerCarFormScreen from './src/screens/owner/CarFormScreen';
 import OwnerCarsScreen from './src/screens/owner/CarsScreen';
+import OwnerCarReviewsScreen from './src/screens/owner/CarReviewsScreen';
 import OwnerReservationsScreen from './src/screens/owner/ReservationsScreen';
 import OwnerReservationDetailsScreen from './src/screens/owner/ReservationDetailsScreen';
-import NotificationsScreen from './src/screens/notificationsScreen';
+import UnreadNotificationsScreen from './src/screens/notifications/UnreadNotificationsScreen';
+import NotificationsHistoryScreen from './src/screens/notifications/NotificationsHistoryScreen';
 import HandoverVerifyScreen from './src/screens/handover/HandoverVerifyScreen';
 import HandoverCodeScreen from './src/screens/handover/HandoverCodeScreen';
 import { ClientNavigation } from './src/components/navigation/ClientNavigation';
@@ -82,11 +84,13 @@ export default function App() {
             <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
             <Stack.Screen name="OwnerCars" component={OwnerCarsScreen} />
             <Stack.Screen name="OwnerCarForm" component={OwnerCarFormScreen} />
+            <Stack.Screen name="OwnerCarReviews" component={OwnerCarReviewsScreen} />
             <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
             <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
             <Stack.Screen name="OwnerReservations" component={OwnerReservationsScreen} />
             <Stack.Screen name="OwnerReservationDetails" component={OwnerReservationDetailsScreen} />
-            <Stack.Screen name="NotificationScreen" component={NotificationsScreen} />
+            <Stack.Screen name="NotificationScreen" component={UnreadNotificationsScreen} />
+            <Stack.Screen name="NotificationsHistory" component={NotificationsHistoryScreen} />
             <Stack.Screen name="OwnerPickupVerify" component={HandoverVerifyScreen} />
             <Stack.Screen name="OwnerReturnCode" component={HandoverCodeScreen} />
             <Stack.Screen name="Inbox" component={InboxScreen} />
