@@ -206,7 +206,12 @@ const OwnerReservationsScreen = ({ navigation, route }) => {
               </View>
             ) : (
               filteredReservations.map((reservation) => (
-                <ReservationCard key={reservation.id} reservation={reservation} onPress={handleReservationPress} />
+                <ReservationCard
+                  key={reservation.id}
+                  reservation={reservation}
+                  onPress={handleReservationPress}
+                  compact
+                />
               ))
             )}
             <View style={{ height: 20 }} />

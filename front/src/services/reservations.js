@@ -49,6 +49,21 @@ export const confirmReservationPayment = async ({ token, reservationId }) => {
   });
 };
 
+export const confirmReservationHandover = async ({ token, reservationId }) => {
+  return fetchJson(`/api/reservations/${reservationId}/confirm-handover`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+};
+
+export const disputeReservationHandover = async ({ token, reservationId, reason }) => {
+  return fetchJson(`/api/reservations/${reservationId}/dispute`, {
+    method: 'POST',
+    headers: authHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ reason }),
+  });
+};
+
 export const getListingReservations = async ({ token, listingId }) => {
   return fetchJson(`/api/reservations/listing/${listingId}`, {
     method: 'GET',
@@ -70,4 +85,3 @@ export const updateReservationStatus = async ({ token, reservationId, payload })
     body: JSON.stringify(payload || {}),
   });
 };
-

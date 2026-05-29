@@ -1,18 +1,34 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ImageBackground, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+    StyleSheet,
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    ImageBackground,
+    ScrollView,
+    KeyboardAvoidingView,
+    Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import AuthHeader from '../../components/auth/AuthHeader';
+import AuthInputField from '../../components/auth/AuthInputField';
+import AuthGradientButton from '../../components/auth/AuthGradientButton';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
+import { isTablet, moderateScale, rf } from '../../utils/responsive';
 
 const RegisterScreen = ({ navigation }) => {
+    const tabletLayout = isTablet();
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [selectedRole, setSelectedRole] = useState(null);
     const [errors, setErrors] = useState({
         firstName: '',
@@ -31,8 +47,6 @@ const RegisterScreen = ({ navigation }) => {
     };
 
     const handleRegister = async () => {
-        console.log("Register button pressed");
-
         const nextErrors = {
             firstName: '',
             lastName: '',
@@ -49,22 +63,19 @@ const RegisterScreen = ({ navigation }) => {
         const trimmedEmail = email.trim();
         const trimmedPhone = phone.trim();
 
-        // 1. Basic validation
-        if (!trimmedFirstName) nextErrors.firstName = "Please enter your first name.";
-        if (!trimmedLastName) nextErrors.lastName = "Please enter your last name.";
-        if (!trimmedEmail) nextErrors.email = "Please enter your email.";
-        if (!trimmedPhone) nextErrors.phone = "Please enter your phone number.";
-        if (!selectedRole) nextErrors.role = "Please select a role.";
-        if (!password) nextErrors.password = "Please create a password.";
-        if (!confirmPassword) nextErrors.confirmPassword = "Please confirm your password.";
-
-        if (password && password.length < 6) nextErrors.password = "Use at least 6 characters.";
+        if (!trimmedFirstName) nextErrors.firstName = 'Please enter your first name.';
+        if (!trimmedLastName) nextErrors.lastName = 'Please enter your last name.';
+        if (!trimmedEmail) nextErrors.email = 'Please enter your email.';
+        if (!trimmedPhone) nextErrors.phone = 'Please enter your phone number.';
+        if (!selectedRole) nextErrors.role = 'Please select a role.';
+        if (!password) nextErrors.password = 'Please create a password.';
+        if (!confirmPassword) nextErrors.confirmPassword = 'Please confirm your password.';
+        if (password && password.length < 8) nextErrors.password = 'Use at least 8 characters.';
         if (password && confirmPassword && password !== confirmPassword) {
             nextErrors.confirmPassword = "Passwords don't match.";
         }
 
-        const hasErrors = Object.values(nextErrors).some(Boolean);
-        if (hasErrors) {
+        if (Object.values(nextErrors).some(Boolean)) {
             setErrors(nextErrors);
             return;
         }
@@ -80,12 +91,7 @@ const RegisterScreen = ({ navigation }) => {
             form: '',
         });
 
-        console.log("Email:", trimmedEmail);
-        console.log("API Endpoint:", API_ENDPOINTS.AUTH.REGISTER);
-
         try {
-            // 2. Send POST request to backend
-            console.log("Sending fetch request...");
             const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
                 method: 'POST',
                 headers: {
@@ -96,39 +102,31 @@ const RegisterScreen = ({ navigation }) => {
                     lastName: trimmedLastName,
                     email: trimmedEmail,
                     phone: trimmedPhone,
-                    password: password,
-                    confirmPassword: confirmPassword,
+                    password,
+                    confirmPassword,
                     role: selectedRole,
                 }),
             });
 
-            console.log("Response status:", response.status);
-            console.log("Response ok:", response.ok);
-
             const data = await response.json();
-            console.log("Response data:", data);
 
             if (response.ok) {
-                // SUCCESS
-                console.log("Registration successful!", data);
-                // alert("Registration successful! Redirecting to login...");
                 navigation.reset({
                     index: 0,
-                    routes: [{ name: 'ClientApp' }],
+                    routes: [{ name: 'VerifyEmail', params: { email: trimmedEmail } }],
                 });
-            } else {
-                // BACKEND ERROR
-                console.log("Registration failed:", data.error);
-                const message = data?.error || "We couldn't create your account. Please try again.";
-                const lower = String(message).toLowerCase();
-                if (lower.includes('email')) setErrors((prev) => ({ ...prev, email: message }));
-                else if (lower.includes('phone')) setErrors((prev) => ({ ...prev, phone: message }));
-                else if (lower.includes('password')) setErrors((prev) => ({ ...prev, password: message }));
-                else setErrors((prev) => ({ ...prev, form: message }));
+                return;
             }
+
+            const message = data?.error || "We couldn't create your account. Please try again.";
+            const lower = String(message).toLowerCase();
+
+            if (lower.includes('email')) setErrors((prev) => ({ ...prev, email: message }));
+            else if (lower.includes('phone')) setErrors((prev) => ({ ...prev, phone: message }));
+            else if (lower.includes('password')) setErrors((prev) => ({ ...prev, password: message }));
+            else setErrors((prev) => ({ ...prev, form: message }));
         } catch (error) {
-            // NETWORK ERROR
-            console.error("Fetch error:", error);
+            console.error('Fetch error:', error);
             setErrors((prev) => ({
                 ...prev,
                 form: "We couldn't reach the server. Please try again.",
@@ -139,7 +137,7 @@ const RegisterScreen = ({ navigation }) => {
     const roles = [
         { id: 'client', label: 'Client', icon: 'person' },
         { id: 'owner', label: 'Vehicle Owner', icon: 'car' },
-        { id: 'company', label: 'Company', icon: 'business' },
+        { id: 'companyManager', label: 'Company', icon: 'business' },
     ];
 
     return (
@@ -155,188 +153,220 @@ const RegisterScreen = ({ navigation }) => {
                         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                         keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
                     >
-                    <ScrollView
-                        showsVerticalScrollIndicator={false}
-                        style={styles.scrollView}
-                        contentContainerStyle={styles.scrollContent}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        <TouchableOpacity 
-                            style={styles.backButton}
-                            onPress={() => navigation.goBack()}
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            style={styles.scrollView}
+                            contentContainerStyle={styles.scrollContent}
+                            keyboardShouldPersistTaps="handled"
                         >
-                            <Ionicons name="arrow-back" size={28} color="#fff" />
-                        </TouchableOpacity>
+                            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                                <Ionicons name="arrow-back" size={28} color="#fff" />
+                            </TouchableOpacity>
 
-                        <View style={styles.header}>
-                            <Text style={styles.title}>Create Account</Text>
-                            <Text style={styles.subtitle}>Join Rentify and start your journey</Text>
-                        </View>
-
-                        <View style={styles.form}>
-                            <View style={styles.nameRow}>
-                                <View style={[styles.inputContainer, styles.halfInput, styles.halfInputLeft]}>
-                                    <Text style={styles.label}>First Name</Text>
-                                    <TextInput 
-                                        style={[styles.input, errors.firstName ? styles.inputError : null]}
-                                        placeholder="John"
-                                        placeholderTextColor="rgba(255,255,255,0.6)"
-                                        value={firstName}
-                                        onChangeText={(text) => {
-                                            setFirstName(text);
-                                            clearError('firstName');
-                                            clearError('form');
-                                        }}
-                                        autoCapitalize="words"
-                                    />
-                                    {!!errors.firstName && <Text style={styles.errorText}>{errors.firstName}</Text>}
-                                </View>
-
-                                <View style={[styles.inputContainer, styles.halfInput, styles.halfInputRight]}>
-                                    <Text style={styles.label}>Last Name</Text>
-                                    <TextInput 
-                                        style={[styles.input, errors.lastName ? styles.inputError : null]}
-                                        placeholder="Doe"
-                                        placeholderTextColor="rgba(255,255,255,0.6)"
-                                        value={lastName}
-                                        onChangeText={(text) => {
-                                            setLastName(text);
-                                            clearError('lastName');
-                                            clearError('form');
-                                        }}
-                                        autoCapitalize="words"
-                                    />
-                                    {!!errors.lastName && <Text style={styles.errorText}>{errors.lastName}</Text>}
-                                </View>
-                            </View>
-
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Email Address</Text>
-                                <TextInput 
-                                    style={[styles.input, errors.email ? styles.inputError : null]}
-                                    placeholder="example@mail.com"
-                                    placeholderTextColor="rgba(255,255,255,0.6)"
-                                    value={email}
-                                    onChangeText={(text) => {
-                                        setEmail(text);
-                                        clearError('email');
-                                        clearError('form');
-                                    }}
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
+                            <View style={styles.header}>
+                                <AuthHeader
+                                    title="Create Account"
+                                    subtitle="Join Rentify and start your journey"
                                 />
-                                {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
                             </View>
 
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Phone Number</Text>
-                                <TextInput 
-                                    style={[styles.input, errors.phone ? styles.inputError : null]}
-                                    placeholder="+1 (555) 000-0000"
-                                    placeholderTextColor="rgba(255,255,255,0.6)"
-                                    value={phone}
-                                    onChangeText={(text) => {
-                                        setPhone(text);
-                                        clearError('phone');
-                                        clearError('form');
-                                    }}
-                                    keyboardType="phone-pad"
-                                />
-                                {!!errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-                            </View>
-
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Select Your Role</Text>
-                                <View style={styles.rolesContainer}>
-                                    {roles.map((role) => (
-                                        <TouchableOpacity
-                                            key={role.id}
-                                            style={[
-                                                styles.roleButton,
-                                                selectedRole === role.id && styles.roleButtonActive
-                                            ]}
-                                            onPress={() => {
-                                                setSelectedRole(role.id);
-                                                clearError('role');
+                            <View
+                                style={[
+                                    styles.form,
+                                    {
+                                        maxWidth: tabletLayout ? 620 : '100%',
+                                        alignSelf: 'center',
+                                    },
+                                ]}
+                            >
+                                <View style={styles.nameRow}>
+                                    <View style={[styles.inputContainer, styles.halfInput, styles.halfInputLeft]}>
+                                        <AuthInputField
+                                            label="First Name"
+                                            error={errors.firstName}
+                                            placeholder="John"
+                                            value={firstName}
+                                            onChangeText={(text) => {
+                                                setFirstName(text);
+                                                clearError('firstName');
                                                 clearError('form');
                                             }}
-                                        >
-                                            <View style={[
-                                                styles.roleIconContainer,
-                                                selectedRole === role.id && styles.roleIconContainerActive
-                                            ]}>
-                                                <Ionicons
-                                                    name={role.icon}
-                                                    size={32}
-                                                    color={selectedRole === role.id ? '#fff' : 'rgba(255,255,255,0.75)'}
-                                                />
-                                            </View>
-                                            <Text style={[
-                                                styles.roleLabel,
-                                                selectedRole === role.id && styles.roleLabelActive
-                                            ]}>
-                                                {role.label}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
+                                            autoCapitalize="words"
+                                        />
+                                    </View>
+
+                                    <View style={[styles.inputContainer, styles.halfInput, styles.halfInputRight]}>
+                                        <AuthInputField
+                                            label="Last Name"
+                                            error={errors.lastName}
+                                            placeholder="Doe"
+                                            value={lastName}
+                                            onChangeText={(text) => {
+                                                setLastName(text);
+                                                clearError('lastName');
+                                                clearError('form');
+                                            }}
+                                            autoCapitalize="words"
+                                        />
+                                    </View>
                                 </View>
-                                {!!errors.role && <Text style={styles.errorText}>{errors.role}</Text>}
+
+                                <View style={styles.inputContainer}>
+                                    <AuthInputField
+                                        label="Email Address"
+                                        error={errors.email}
+                                        placeholder="example@mail.com"
+                                        value={email}
+                                        onChangeText={(text) => {
+                                            setEmail(text);
+                                            clearError('email');
+                                            clearError('form');
+                                        }}
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                    />
+                                </View>
+
+                                <View style={styles.inputContainer}>
+                                    <AuthInputField
+                                        label="Phone Number"
+                                        error={errors.phone}
+                                        placeholder="+1 (555) 000-0000"
+                                        value={phone}
+                                        onChangeText={(text) => {
+                                            setPhone(text);
+                                            clearError('phone');
+                                            clearError('form');
+                                        }}
+                                        keyboardType="phone-pad"
+                                    />
+                                </View>
+
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>Select Your Role</Text>
+                                    <View style={styles.rolesContainer}>
+                                        {roles.map((role) => (
+                                            <TouchableOpacity
+                                                key={role.id}
+                                                style={[
+                                                    styles.roleButton,
+                                                    selectedRole === role.id && styles.roleButtonActive,
+                                                ]}
+                                                onPress={() => {
+                                                    setSelectedRole(role.id);
+                                                    clearError('role');
+                                                    clearError('form');
+                                                }}
+                                            >
+                                                <View
+                                                    style={[
+                                                        styles.roleIconContainer,
+                                                        selectedRole === role.id && styles.roleIconContainerActive,
+                                                    ]}
+                                                >
+                                                    <Ionicons
+                                                        name={role.icon}
+                                                        size={moderateScale(26)}
+                                                        color={selectedRole === role.id ? '#fff' : 'rgba(255,255,255,0.75)'}
+                                                    />
+                                                </View>
+                                                <Text
+                                                    style={[
+                                                        styles.roleLabel,
+                                                        selectedRole === role.id && styles.roleLabelActive,
+                                                    ]}
+                                                >
+                                                    {role.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                    {!!errors.role && <Text style={styles.errorText}>{errors.role}</Text>}
+                                </View>
+
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>Password</Text>
+                                    <View>
+                                        <TextInput
+                                            style={[
+                                                styles.input,
+                                                errors.password ? styles.inputError : null,
+                                            ]}
+                                            placeholder="••••••••"
+                                            placeholderTextColor="rgba(255,255,255,0.6)"
+                                            value={password}
+                                            onChangeText={(text) => {
+                                                setPassword(text);
+                                                clearError('password');
+                                                clearError('form');
+                                            }}
+                                            secureTextEntry={!showPassword}
+                                        />
+                                        <TouchableOpacity
+                                            onPress={() => setShowPassword((v) => !v)}
+                                            style={styles.eyeButton}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                                        >
+                                            <Ionicons
+                                                name={showPassword ? 'eye-off' : 'eye'}
+                                                size={20}
+                                                color="rgba(255,255,255,0.8)"
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
+                                    {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                                </View>
+
+                                <View style={styles.inputContainer}>
+                                    <Text style={styles.label}>Confirm Password</Text>
+                                    <View>
+                                        <TextInput
+                                            style={[
+                                                styles.input,
+                                                errors.confirmPassword ? styles.inputError : null,
+                                            ]}
+                                            placeholder="••••••••"
+                                            placeholderTextColor="rgba(255,255,255,0.6)"
+                                            value={confirmPassword}
+                                            onChangeText={(text) => {
+                                                setConfirmPassword(text);
+                                                clearError('confirmPassword');
+                                                clearError('form');
+                                            }}
+                                            secureTextEntry={!showConfirmPassword}
+                                        />
+                                        <TouchableOpacity
+                                            onPress={() => setShowConfirmPassword((v) => !v)}
+                                            style={styles.eyeButton}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={
+                                                showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'
+                                            }
+                                        >
+                                            <Ionicons
+                                                name={showConfirmPassword ? 'eye-off' : 'eye'}
+                                                size={20}
+                                                color="rgba(255,255,255,0.8)"
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
+                                    {!!errors.confirmPassword && (
+                                        <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                                    )}
+                                    {!!errors.form && <Text style={styles.errorText}>{errors.form}</Text>}
+                                </View>
+
+                                <AuthGradientButton label="Create Account" onPress={handleRegister} />
                             </View>
 
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Password</Text>
-                                <TextInput 
-                                    style={[styles.input, errors.password ? styles.inputError : null]}
-                                    placeholder="••••••••"
-                                    placeholderTextColor="rgba(255,255,255,0.6)"
-                                    value={password}
-                                    onChangeText={(text) => {
-                                        setPassword(text);
-                                        clearError('password');
-                                        clearError('form');
-                                    }}
-                                    secureTextEntry
-                                />
-                                {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                            <View style={styles.footer}>
+                                <Text style={styles.footerText}>Already have an account? </Text>
+                                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                                    <Text style={styles.linkText}>Sign In</Text>
+                                </TouchableOpacity>
                             </View>
-
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Confirm Password</Text>
-                                <TextInput 
-                                    style={[styles.input, errors.confirmPassword ? styles.inputError : null]}
-                                    placeholder="••••••••"
-                                    placeholderTextColor="rgba(255,255,255,0.6)"
-                                    value={confirmPassword}
-                                    onChangeText={(text) => {
-                                        setConfirmPassword(text);
-                                        clearError('confirmPassword');
-                                        clearError('form');
-                                    }}
-                                    secureTextEntry
-                                />
-                                {!!errors.confirmPassword && <Text style={styles.errorText}>{errors.confirmPassword}</Text>}
-                                {!!errors.form && <Text style={styles.errorText}>{errors.form}</Text>}
-                            </View>
-
-                            <TouchableOpacity onPress={handleRegister}>
-                                <LinearGradient
-                                    colors={[COLORS.secondary, COLORS.primary]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.registerButton}
-                                >
-                                    <Text style={styles.buttonText}>Create Account</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.footer}>
-                            <Text style={styles.footerText}>Already have an account? </Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                                <Text style={styles.linkText}>Sign In</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </ScrollView>
+                        </ScrollView>
                     </KeyboardAvoidingView>
                 </SafeAreaView>
             </ImageBackground>
@@ -347,75 +377,99 @@ const RegisterScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { flex: 1 },
-    overlay: { 
-        flex: 1, 
-        paddingHorizontal: 24,
+    overlay: {
+        flex: 1,
+        paddingHorizontal: moderateScale(20),
         backgroundColor: 'rgba(0,0,0,0.3)',
     },
     keyboardAvoid: { flex: 1 },
     scrollView: {
         flex: 1,
-        paddingVertical: 20,
+        paddingVertical: moderateScale(18),
     },
     scrollContent: {
-        paddingBottom: 28,
+        flexGrow: 1,
+        paddingBottom: moderateScale(24),
     },
     backButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
+        width: moderateScale(46),
+        aspectRatio: 1,
+        borderRadius: moderateScale(12),
         backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: moderateScale(18),
     },
-    header: { marginBottom: 30 },
-    title: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
-    subtitle: { fontSize: 16, color: '#aaa', marginTop: 8 },
+    header: { marginBottom: moderateScale(4) },
     form: { width: '100%' },
     nameRow: {
         flexDirection: 'row',
         width: '100%',
+        flexWrap: 'wrap',
     },
     halfInput: {
-        flex: 1,
+        flexGrow: 1,
+        flexBasis: 160,
     },
     halfInputLeft: {
-        marginRight: 8,
+        marginRight: moderateScale(6),
     },
     halfInputRight: {
-        marginLeft: 8,
+        marginLeft: moderateScale(6),
     },
-    inputContainer: { marginBottom: 20 },
-    label: { color: '#fff', marginBottom: 8, fontSize: 14, fontWeight: '500' },
+    inputContainer: { marginBottom: moderateScale(2) },
+    label: {
+        color: '#fff',
+        marginBottom: moderateScale(8),
+        fontSize: rf(14, 12, 16),
+        fontWeight: '500',
+    },
     input: {
         backgroundColor: 'rgba(255,255,255,0.16)',
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: moderateScale(12),
+        paddingHorizontal: moderateScale(14),
+        paddingVertical: moderateScale(13),
+        paddingRight: moderateScale(46),
         color: '#fff',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)'
+        borderColor: 'rgba(255,255,255,0.3)',
+        fontSize: rf(15, 13, 18),
+    },
+    eyeButton: {
+        position: 'absolute',
+        right: moderateScale(12),
+        top: moderateScale(10),
+        height: moderateScale(36),
+        width: moderateScale(36),
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     inputError: {
         borderColor: 'rgba(255, 92, 92, 0.9)',
     },
     errorText: {
-        marginTop: 8,
+        marginTop: moderateScale(8),
         color: 'rgba(255, 92, 92, 0.95)',
-        fontSize: 12,
-        lineHeight: 16,
+        fontSize: rf(12, 11, 14),
+        lineHeight: rf(16, 14, 20),
     },
     rolesContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        marginBottom: moderateScale(8),
     },
     roleButton: {
-        flex: 1,
+        flexGrow: 1,
+        flexShrink: 1,
+        flexBasis: 0,
+        minWidth: moderateScale(78),
+        maxWidth: 180,
         alignItems: 'center',
-        paddingVertical: 16,
-        marginHorizontal: 6,
-        borderRadius: 12,
+        paddingVertical: moderateScale(12),
+        marginHorizontal: moderateScale(3),
+        marginBottom: moderateScale(8),
+        borderRadius: moderateScale(12),
         backgroundColor: 'rgba(255,255,255,0.16)',
         borderWidth: 2,
         borderColor: 'rgba(255,255,255,0.3)',
@@ -425,31 +479,35 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(166, 110, 255, 0.2)',
     },
     roleIconContainer: {
-        width: 56,
-        height: 56,
-        borderRadius: 12,
+        width: moderateScale(50),
+        aspectRatio: 1,
+        borderRadius: moderateScale(12),
         backgroundColor: 'rgba(255,255,255,0.12)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: moderateScale(8),
     },
     roleIconContainerActive: {
         backgroundColor: COLORS.primary,
     },
-    roleLabel: { 
+    roleLabel: {
         color: 'rgba(255,255,255,0.75)',
-        fontSize: 12, 
+        fontSize: rf(12, 11, 14),
         fontWeight: '500',
         textAlign: 'center',
     },
     roleLabelActive: {
         color: '#fff',
     },
-    registerButton: { height: 55, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-    buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30, marginBottom: 20 },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: moderateScale(28),
+        marginBottom: moderateScale(16),
+        flexWrap: 'wrap',
+    },
     footerText: { color: '#aaa' },
-    linkText: { color: COLORS.secondary, fontWeight: 'bold' }
+    linkText: { color: COLORS.secondary, fontWeight: 'bold' },
 });
 
 export default RegisterScreen;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, Platform, ScrollView, SectionList } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
+import * as Linking from 'expo-linking';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -10,14 +11,19 @@ import ListingDetailsScreen from './src/screens/client/ListingDetailsScreen';
 import ProfileScreen from './src/screens/client/ProfileScreen';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
+import VerifyEmailScreen from './src/screens/auth/VerifyEmailScreen';
+import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
 import OwnerDashboardScreen from './src/screens/owner/DashboardScreen';
 import OwnerListingsScreen from './src/screens/owner/ListingsScreen';
 import OwnerListingFormScreen from './src/screens/owner/ListingFormScreen';
 import OwnerCarFormScreen from './src/screens/owner/CarFormScreen';
 import OwnerCarsScreen from './src/screens/owner/CarsScreen';
+import OwnerCarReviewsScreen from './src/screens/owner/CarReviewsScreen';
 import OwnerReservationsScreen from './src/screens/owner/ReservationsScreen';
 import OwnerReservationDetailsScreen from './src/screens/owner/ReservationDetailsScreen';
-import NotificationsScreen from './src/screens/notificationsScreen';
+import UnreadNotificationsScreen from './src/screens/notifications/UnreadNotificationsScreen';
+import NotificationsHistoryScreen from './src/screens/notifications/NotificationsHistoryScreen';
 import HandoverVerifyScreen from './src/screens/handover/HandoverVerifyScreen';
 import HandoverCodeScreen from './src/screens/handover/HandoverCodeScreen';
 import { ClientNavigation } from './src/components/navigation/ClientNavigation';
@@ -63,10 +69,22 @@ const getNativeStripeProvider = () => {
 
 export default function App() {
   const NativeStripeProvider = getNativeStripeProvider();
+  const linking = {
+    prefixes: [Linking.createURL('/'), 'rentify://'],
+    config: {
+      screens: {
+        VerifyEmail: 'verify-email',
+        ResetPassword: 'reset-password',
+        Login: 'login',
+        Register: 'register',
+        Landing: '',
+      },
+    },
+  };
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NativeStripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-        <NavigationContainer>
+        <NavigationContainer linking={linking}>
           <Stack.Navigator
             screenOptions={{
               headerShown: false,
@@ -76,17 +94,22 @@ export default function App() {
             <Stack.Screen name="Landing" component={LandingScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />
             <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
             <Stack.Screen name="OwnerCars" component={OwnerCarsScreen} />
             <Stack.Screen name="OwnerCarForm" component={OwnerCarFormScreen} />
+            <Stack.Screen name="OwnerCarReviews" component={OwnerCarReviewsScreen} />
             <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
             <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
             <Stack.Screen name="OwnerReservations" component={OwnerReservationsScreen} />
             <Stack.Screen name="OwnerReservationDetails" component={OwnerReservationDetailsScreen} />
-            <Stack.Screen name="NotificationScreen" component={NotificationsScreen} />
+            <Stack.Screen name="NotificationScreen" component={UnreadNotificationsScreen} />
+            <Stack.Screen name="NotificationsHistory" component={NotificationsHistoryScreen} />
             <Stack.Screen name="OwnerPickupVerify" component={HandoverVerifyScreen} />
             <Stack.Screen name="OwnerReturnCode" component={HandoverCodeScreen} />
             <Stack.Screen name="Inbox" component={InboxScreen} />

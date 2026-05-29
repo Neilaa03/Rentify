@@ -12,7 +12,10 @@ const toPaymentDto = (row) => ({
     reservationId: row.reservation_id,
     amount: row.amount,
     paymentMethod: row.payment_method,
-    stripePaymentIntentId: row.transaction_reference,
+    paymentIntentId: row.payment_intent_id,
+    stripePaymentIntentId: row.payment_intent_id || row.transaction_reference,
+    stripeTransferId: row.stripe_transfer_id,
+    escrowStatus: row.escrow_status,
     transactionReference: row.transaction_reference,
     status: row.status,
     paidAt: row.paid_at,
@@ -26,8 +29,11 @@ const toPaymentTablePayload = (payload) => {
     if (payload.reservationId !== undefined) mapped.reservation_id = payload.reservationId;
     if (payload.amount !== undefined) mapped.amount = payload.amount;
     if (payload.paymentMethod !== undefined) mapped.payment_method = payload.paymentMethod;
+    if (payload.paymentIntentId !== undefined) mapped.payment_intent_id = payload.paymentIntentId;
     if (payload.stripePaymentIntentId !== undefined) mapped.transaction_reference = payload.stripePaymentIntentId;
     if (payload.transactionReference !== undefined) mapped.transaction_reference = payload.transactionReference;
+    if (payload.stripeTransferId !== undefined) mapped.stripe_transfer_id = payload.stripeTransferId;
+    if (payload.escrowStatus !== undefined) mapped.escrow_status = payload.escrowStatus;
     if (payload.status !== undefined) mapped.status = payload.status;
     if (payload.paidAt !== undefined) mapped.paid_at = payload.paidAt;
 
@@ -85,7 +91,7 @@ export const getPaymentByStripeIntentId = async (stripePaymentIntentId) => {
     const { data, error } = await supabase
         .from(PAYMENTS_TABLE)
         .select('*')
-        .eq('transaction_reference', stripePaymentIntentId)
+        .or(`payment_intent_id.eq.${stripePaymentIntentId},transaction_reference.eq.${stripePaymentIntentId}`)
         .single();
 
     if (error || !data) return null;
