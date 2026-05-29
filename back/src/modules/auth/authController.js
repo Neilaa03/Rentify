@@ -1,15 +1,19 @@
-import { registerSchema, loginSchema, resendVerificationSchema } from './authSchemas.js';
+import { registerSchema, loginSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema } from './authSchemas.js';
 import {
     createUser,
     getUserByEmail,
     getUserById,
     setEmailVerificationToken,
     verifyEmailByToken,
+    setPasswordResetToken,
+    verifyPasswordResetToken,
+    clearPasswordResetToken,
+    updateUserPasswordHash,
 } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sendVerificationEmail } from '../../services/mailer.js';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../../services/mailer.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const APP_BASE_URL = process.env.APP_BASE_URL || '';
@@ -18,6 +22,7 @@ const APP_DEEP_LINK_BASE = process.env.APP_DEEP_LINK_BASE || '';
 const DEV_HOST = String(process.env.DEV_HOST || '').trim();
 const DEV_EXPO_PORT = Number(process.env.DEV_EXPO_PORT || 8081);
 const EMAIL_VERIFICATION_TTL_MINUTES = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES || 60 * 24);
+const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30);
 
 const hashToken = (token) =>
     crypto.createHash('sha256').update(token).digest('hex');
@@ -107,6 +112,21 @@ const buildVerifyUrl = ({ req, email, token }) => {
     }
 
     return `${base.replace(/\/$/, '')}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&redirect=1`;
+};
+
+const buildResetUrl = ({ req, email, token }) => {
+    const base = (
+        PUBLIC_BACKEND_BASE_URL ||
+        inferPublicBackendBaseUrlFromRequest(req) ||
+        inferPublicBackendBaseUrlFromDevHost() ||
+        ''
+    ).trim();
+
+    if (!base) {
+        throw new Error('Unable to determine public backend base URL (set PUBLIC_BACKEND_BASE_URL, or set DEV_HOST, or ensure Host header is present).');
+    }
+
+    return `${base.replace(/\/$/, '')}/api/auth/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&redirect=1`;
 };
 
 export const register = async (req, res) => {
@@ -260,6 +280,83 @@ export const verifyEmail = async (req, res) => {
         }
 
         return res.json({ message: 'Email verified', user: result.user });
+    } catch (err) {
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = forgotPasswordSchema.parse(req.body);
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+
+        const user = await getUserByEmail(normalizedEmail);
+        if (user) {
+            const token = crypto.randomBytes(32).toString('hex');
+            const tokenHash = hashToken(token);
+            const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000).toISOString();
+
+            await setPasswordResetToken({ userId: user.id, tokenHash, expiresAt });
+
+            const resetUrl = buildResetUrl({ req, email: user.email, token });
+            await sendPasswordResetEmail({ to: user.email, resetUrl });
+        }
+
+        // Always return generic response to avoid leaking which emails exist.
+        return res.json({ message: 'If this email exists, a password reset link has been sent' });
+    } catch (err) {
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const resetPasswordRedirect = async (req, res) => {
+    try {
+        const { email = '', token = '' } = req.query;
+        const redirect = String(req.query.redirect || '').toLowerCase() === '1' || String(req.query.redirect || '').toLowerCase() === 'true';
+
+        if (!email || !token) {
+            return res.status(400).json({ error: 'Missing email or token' });
+        }
+
+        if (redirect) {
+            const appDeepLinkBase = (APP_DEEP_LINK_BASE || inferAppDeepLinkBaseFromDevHost() || '').trim();
+            const appBaseUrl = (APP_BASE_URL || inferAppBaseUrlFromDevHost() || '').trim();
+
+            if (!appDeepLinkBase) {
+                if (!appBaseUrl) return res.status(500).json({ error: 'Server configuration error' });
+                const fallback = `${appBaseUrl.replace(/\/$/, '')}/?reset=1&email=${encodeURIComponent(String(email))}&token=${encodeURIComponent(String(token))}`;
+                return res.redirect(302, fallback);
+            }
+
+            const deepLink = `${appDeepLinkBase.replace(/\/$/, '')}/reset-password?email=${encodeURIComponent(String(email))}&token=${encodeURIComponent(String(token))}`;
+            return res.redirect(302, deepLink);
+        }
+
+        return res.json({ email: String(email), token: String(token) });
+    } catch (err) {
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const resetPassword = async (req, res) => {
+    try {
+        const { email, token, password } = resetPasswordSchema.parse(req.body);
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const tokenHash = hashToken(String(token));
+
+        const check = await verifyPasswordResetToken({ email: normalizedEmail, tokenHash });
+        if (!check.ok) {
+            return res.status(400).json({ error: 'RESET_FAILED', reason: check.reason });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        await updateUserPasswordHash({ userId: check.user.id, passwordHash });
+        await clearPasswordResetToken({ userId: check.user.id });
+
+        return res.json({ message: 'Password reset successful' });
     } catch (err) {
         const f = formatAppError(err);
         return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });

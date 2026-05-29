@@ -41,7 +41,7 @@ export const createUser = async (userData) => {
 export const getUserByEmail = async (email) => {
     const { data, error } = await supabase
         .from('users')
-        .select('id, email, password_hash, first_name, last_name, phone, role, is_active, is_verified, email_verified_at, email_verification_token_hash, email_verification_expires_at')
+        .select('id, email, password_hash, first_name, last_name, phone, role, is_active, is_verified, email_verified_at, email_verification_token_hash, email_verification_expires_at, password_reset_token_hash, password_reset_expires_at')
         .eq('email', email)
         .single();
 
@@ -114,4 +114,68 @@ export const verifyEmailByToken = async ({ email, tokenHash }) => {
 
     if (verifyError) throw verifyError;
     return { ok: true, user: verifiedUser };
+};
+
+export const setPasswordResetToken = async ({ userId, tokenHash, expiresAt }) => {
+    const { data, error } = await supabase
+        .from('users')
+        .update({
+            password_reset_token_hash: tokenHash,
+            password_reset_expires_at: expiresAt,
+        })
+        .eq('id', userId)
+        .select('id, email, password_reset_expires_at')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const verifyPasswordResetToken = async ({ email, tokenHash }) => {
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('id, email, password_reset_token_hash, password_reset_expires_at')
+        .eq('email', email)
+        .single();
+
+    if (error) return { ok: false, reason: 'NOT_FOUND' };
+    if (!user.password_reset_token_hash || !user.password_reset_expires_at) return { ok: false, reason: 'NO_TOKEN' };
+
+    const expiresAt = new Date(user.password_reset_expires_at);
+    if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() < Date.now()) {
+        return { ok: false, reason: 'EXPIRED' };
+    }
+
+    if (user.password_reset_token_hash !== tokenHash) {
+        return { ok: false, reason: 'INVALID_TOKEN' };
+    }
+
+    return { ok: true, user };
+};
+
+export const clearPasswordResetToken = async ({ userId }) => {
+    const { data, error } = await supabase
+        .from('users')
+        .update({
+            password_reset_token_hash: null,
+            password_reset_expires_at: null,
+        })
+        .eq('id', userId)
+        .select('id')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const updateUserPasswordHash = async ({ userId, passwordHash }) => {
+    const { data, error } = await supabase
+        .from('users')
+        .update({ password_hash: passwordHash })
+        .eq('id', userId)
+        .select('id, email')
+        .single();
+
+    if (error) throw error;
+    return data;
 };

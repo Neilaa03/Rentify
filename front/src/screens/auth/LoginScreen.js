@@ -227,7 +227,10 @@ const LoginScreen = ({ navigation }) => {
                         {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
                     </View>
 
-                    <TouchableOpacity style={styles.forgotPassword}>
+                    <TouchableOpacity
+                        style={styles.forgotPassword}
+                        onPress={() => navigation.navigate('ForgotPassword', { email: email.trim() })}
+                    >
                         <Text style={styles.forgotText}>Forgot Password?</Text>
                     </TouchableOpacity>
 

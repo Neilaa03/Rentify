@@ -7,6 +7,8 @@ export const API_ENDPOINTS = {
         ME: `${API_BASE_URL}/api/auth/me`,
         VERIFY_EMAIL: `${API_BASE_URL}/api/auth/verify-email`,
         RESEND_VERIFICATION: `${API_BASE_URL}/api/auth/resend-verification`,
+        FORGOT_PASSWORD: `${API_BASE_URL}/api/auth/forgot-password`,
+        RESET_PASSWORD: `${API_BASE_URL}/api/auth/reset-password`,
     },
     CARS: {
         LIST: `${API_BASE_URL}/api/cars`,
