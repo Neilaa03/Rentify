@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
@@ -25,12 +25,15 @@ const statusTone = (status) => {
   return styles.wait;
 };
 
+const isRejectedStatus = (status) => norm(status).includes('reject');
+
 const normalizeDocUrl = (url) => {
   if (!url) return '';
   let clean = String(url).trim();
   if (!clean.startsWith('http')) clean = `https://${clean.replace(/^\/+/, '')}`;
+  const withoutQuery = clean.split('?')[0];
   // Some PDF files are stored under /image/upload and fail in mobile browser.
-  if (clean.includes('res.cloudinary.com') && clean.toLowerCase().endsWith('.pdf') && clean.includes('/image/upload/')) {
+  if (clean.includes('res.cloudinary.com') && withoutQuery.toLowerCase().endsWith('.pdf') && clean.includes('/image/upload/')) {
     return clean.replace('/image/upload/', '/raw/upload/');
   }
   return clean;
@@ -143,14 +146,16 @@ export default function AdminCarsScreen({ navigation, route }) {
   const resolveDocs = (carId) => {
     const d = detailsByCar[carId];
     const docs = d?.documents || [];
-    return docs.map((doc, idx) => ({
+    return docs
+      .filter((doc) => !isRejectedStatus(doc.status))
+      .map((doc, idx) => ({
       id: doc.id || `${carId}-${idx}`,
       type: doc.document_type || doc.type || 'Document',
       status: doc.status || 'pending',
       url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
       uploadedAt: doc.created_at || doc.updated_at || '',
       ocrResult: doc.ocr_result || doc.ocrResult || null,
-    }));
+      }));
   };
 
   const reviewDocument = async (documentId, status) => {
@@ -175,6 +180,11 @@ export default function AdminCarsScreen({ navigation, route }) {
     let lastErr = null;
     for (const candidate of candidates) {
       try {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const opened = window.open(candidate, '_blank', 'noopener,noreferrer');
+          if (opened) return;
+        }
+
         const supported = await Linking.canOpenURL(candidate);
         if (!supported) continue;
         await Linking.openURL(candidate);
@@ -233,7 +243,8 @@ export default function AdminCarsScreen({ navigation, route }) {
               <Text style={styles.groupTitle}>{group.ownerName}</Text>
               {group.cars.map((car) => {
                 const loadedDetails = detailsByCar[car.id];
-                const docsCount = loadedDetails?.documents?.length;
+                const visibleDocs = resolveDocs(car.id);
+                const docsCount = visibleDocs.length;
                 return (
                   <View key={car.id} style={styles.docItem}>
                     <View style={styles.docLeft}>
@@ -241,7 +252,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.docTitle}>{car.displayName}</Text>
                         <Text style={styles.docOwner}>{car.registration_number || 'Immatriculation indisponible'}</Text>
-                        <Text style={styles.docMeta}>{docsCount !== undefined ? `${docsCount} document(s)` : 'Touchez pour charger les documents'}</Text>
+                        <Text style={styles.docMeta}>{loadedDetails ? `${docsCount} document(s)` : 'Touchez pour charger les documents'}</Text>
                       </View>
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 8 }}>
