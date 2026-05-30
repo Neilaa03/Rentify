@@ -56,7 +56,7 @@ const ProfileScreen = ({ navigation, route }) => {
   const [savingPersonalInfo, setSavingPersonalInfo] = useState(false);
   const [personalInfoError, setPersonalInfoError] = useState('');
 
-  const token = route?.params?.token;
+  const [token, setToken] = useState(route?.params?.token || '');
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
   const isGoogleOnly = String(profile?.auth_provider || profile?.authProvider || '').toLowerCase() === 'google';
   const fontSize = {
@@ -70,7 +70,26 @@ const ProfileScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!token) return;
+      let effectiveToken = token;
+      if (!effectiveToken) {
+        effectiveToken = (await storage.getItemAsync('userToken')) || '';
+        if (effectiveToken) setToken(effectiveToken);
+      }
+
+      // Show cached profile immediately (helps client tab where params are not forwarded).
+      if (!profile) {
+        const cached = await storage.getItemAsync('userProfile');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && typeof parsed === 'object') setProfile(parsed);
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      if (!effectiveToken) return;
 
       try {
         setLoading(true);
@@ -79,7 +98,7 @@ const ProfileScreen = ({ navigation, route }) => {
         const response = await fetch(API_ENDPOINTS.AUTH.ME, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${effectiveToken}`,
             'Content-Type': 'application/json',
           },
         });
@@ -89,7 +108,22 @@ const ProfileScreen = ({ navigation, route }) => {
           throw new Error(data?.error || 'Unable to load profile');
         }
 
-        setProfile(data?.user || null);
+        const next = data?.user || null;
+        setProfile(next);
+        if (next) {
+          const normalized = {
+            id: next.id,
+            email: next.email,
+            firstName: next.firstName || next.first_name || '',
+            lastName: next.lastName || next.last_name || '',
+            phone: next.phone || '',
+            role: next.role,
+            isVerified: next.isVerified ?? next.is_verified,
+            isActive: next.isActive ?? next.is_active,
+            authProvider: next.authProvider || next.auth_provider || '',
+          };
+          await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+        }
       } catch (err) {
         setError(err.message || 'Unable to load profile');
       } finally {
@@ -101,13 +135,13 @@ const ProfileScreen = ({ navigation, route }) => {
   }, [token]);
 
   const fullName = useMemo(() => {
-    const first = profile?.first_name || '';
-    const last = profile?.last_name || '';
+    const first = profile?.first_name || profile?.firstName || '';
+    const last = profile?.last_name || profile?.lastName || '';
     const value = `${first} ${last}`.trim();
     return value || 'Utilisateur';
   }, [profile]);
 
-  const initial = (profile?.first_name?.[0] || profile?.email?.[0] || 'U').toUpperCase();
+  const initial = (profile?.first_name?.[0] || profile?.firstName?.[0] || profile?.email?.[0] || 'U').toUpperCase();
 
   const openPersonalInfoEditor = () => {
     setEditEmail(profile?.email || '');
