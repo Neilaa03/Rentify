@@ -14,12 +14,16 @@ import {
     getUserAuthMetaById,
     getUserByGoogleSub,
     linkGoogleToUser,
+    updateUserProfilePicture,
 } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../../services/mailer.js';
 import { OAuth2Client } from 'google-auth-library';
+import cloudinary from '../../config/cloudinary.js';
+
+const allowedImageMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const APP_BASE_URL = process.env.APP_BASE_URL || '';
@@ -384,6 +388,51 @@ export const setPassword = async (req, res) => {
         await updateUserPasswordHashAndProvider({ userId, passwordHash, authProvider: nextProvider });
         return res.json({ message: 'PASSWORD_SET' });
     } catch (err) {
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const uploadProfilePicture = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        if (!allowedImageMimeTypes.includes(req.file.mimetype)) {
+            return res.status(400).json({ error: 'Invalid file type' });
+        }
+
+        const base64 = req.file.buffer.toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${base64}`;
+
+        const uploadResult = await cloudinary.uploader.upload(dataURI, {
+            folder: 'rentify/profile-pictures',
+        });
+
+        await updateUserProfilePicture({ userId, profilePicture: uploadResult.secure_url });
+        const user = await getUserById(userId);
+        return res.status(201).json({ user });
+    } catch (err) {
+        if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+            return res.status(400).json({ error: 'UPLOAD_PROFILE_PICTURE_FAILED', message: String(err?.message || err) });
+        }
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const removeProfilePicture = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        await updateUserProfilePicture({ userId, profilePicture: null });
+        const user = await getUserById(userId);
+        return res.json({ user });
+    } catch (err) {
+        if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+            return res.status(400).json({ error: 'REMOVE_PROFILE_PICTURE_FAILED', message: String(err?.message || err) });
+        }
         const f = formatAppError(err);
         return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }

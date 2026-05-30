@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
         GOOGLE: `${API_BASE_URL}/api/auth/google`,
         ME: `${API_BASE_URL}/api/auth/me`,
         SET_PASSWORD: `${API_BASE_URL}/api/auth/set-password`,
+        PROFILE_PICTURE: `${API_BASE_URL}/api/auth/me/profile-picture`,
         VERIFY_EMAIL: `${API_BASE_URL}/api/auth/verify-email`,
         RESEND_VERIFICATION: `${API_BASE_URL}/api/auth/resend-verification`,
         FORGOT_PASSWORD: `${API_BASE_URL}/api/auth/forgot-password`,

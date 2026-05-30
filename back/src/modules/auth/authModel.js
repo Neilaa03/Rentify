@@ -56,7 +56,7 @@ export const getUserByEmail = async (email) => {
 export const getUserById = async (id) => {
     const { data, error } = await supabase
         .from('users')
-        .select('id, email, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, email_verified_at, auth_provider, google_sub')
+        .select('id, email, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, email_verified_at, auth_provider, google_sub, profile_picture')
         .eq('id', id)
         .single();
 
@@ -86,7 +86,19 @@ export const updateUserById = async (id, payload) => {
         .from('users')
         .update(updatePayload)
         .eq('id', id)
-        .select('id, email, first_name, last_name, phone, role, is_verified, is_active, stripe_account_id, auth_provider')
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active, stripe_account_id, auth_provider, profile_picture')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const updateUserProfilePicture = async ({ userId, profilePicture }) => {
+    const { data, error } = await supabase
+        .from('users')
+        .update({ profile_picture: profilePicture })
+        .eq('id', userId)
+        .select('id, profile_picture')
         .single();
 
     if (error) throw error;
