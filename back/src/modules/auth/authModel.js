@@ -79,12 +79,14 @@ export const updateUserById = async (id, payload) => {
     const updatePayload = {};
     if (payload.email !== undefined) updatePayload.email = payload.email;
     if (payload.phone !== undefined) updatePayload.phone = payload.phone;
+    if (payload.firstName !== undefined) updatePayload.first_name = payload.firstName;
+    if (payload.lastName !== undefined) updatePayload.last_name = payload.lastName;
 
     const { data, error } = await supabase
         .from('users')
         .update(updatePayload)
         .eq('id', id)
-        .select('id, email, first_name, last_name, phone, role, is_verified, is_active, stripe_account_id')
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active, stripe_account_id, auth_provider')
         .single();
 
     if (error) throw error;

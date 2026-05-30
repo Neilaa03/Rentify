@@ -51,14 +51,18 @@ const ProfileScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [savingPersonalInfo, setSavingPersonalInfo] = useState(false);
   const [personalInfoError, setPersonalInfoError] = useState('');
+  const [didAutoOpenPersonalInfo, setDidAutoOpenPersonalInfo] = useState(false);
 
   const [token, setToken] = useState(route?.params?.token || '');
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
   const isGoogleOnly = String(profile?.auth_provider || profile?.authProvider || '').toLowerCase() === 'google';
+  const isGoogleConnected = ['google', 'hybrid'].includes(String(profile?.auth_provider || profile?.authProvider || '').toLowerCase());
   const fontSize = {
     title: profileFont(width, appFont(22, 24), 21, 20),
     profileName: profileFont(width, appFont(17), 16, 15),
@@ -144,11 +148,21 @@ const ProfileScreen = ({ navigation, route }) => {
   const initial = (profile?.first_name?.[0] || profile?.firstName?.[0] || profile?.email?.[0] || 'U').toUpperCase();
 
   const openPersonalInfoEditor = () => {
+    setEditFirstName(profile?.first_name || profile?.firstName || '');
+    setEditLastName(profile?.last_name || profile?.lastName || '');
     setEditEmail(profile?.email || '');
     setEditPhone(profile?.phone || '');
     setPersonalInfoError('');
     setIsEditingPersonalInfo(true);
   };
+
+  useEffect(() => {
+    if (didAutoOpenPersonalInfo) return;
+    if (!route?.params?.openPersonalInfo) return;
+    if (!profile) return;
+    setDidAutoOpenPersonalInfo(true);
+    openPersonalInfoEditor();
+  }, [didAutoOpenPersonalInfo, profile, route?.params?.openPersonalInfo]);
 
   const savePersonalInfo = async () => {
     if (!token) {
@@ -158,6 +172,16 @@ const ProfileScreen = ({ navigation, route }) => {
 
     const nextEmail = editEmail.trim();
     const nextPhone = editPhone.trim();
+    const nextFirstName = editFirstName.trim();
+    const nextLastName = editLastName.trim();
+    if (!nextFirstName) {
+      setPersonalInfoError('Prenom requis.');
+      return;
+    }
+    if (!nextLastName) {
+      setPersonalInfoError('Nom requis.');
+      return;
+    }
     if (!nextEmail) {
       setPersonalInfoError('Email requis.');
       return;
@@ -177,6 +201,8 @@ const ProfileScreen = ({ navigation, route }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          firstName: nextFirstName,
+          lastName: nextLastName,
           email: nextEmail,
           phone: nextPhone,
         }),
@@ -204,6 +230,7 @@ const ProfileScreen = ({ navigation, route }) => {
           role: updatedUser.role,
           isVerified: updatedUser.isVerified ?? updatedUser.is_verified,
           isActive: updatedUser.isActive ?? updatedUser.is_active,
+          authProvider: updatedUser.authProvider || updatedUser.auth_provider || '',
         };
         await storage.setItemAsync('userProfile', JSON.stringify(normalized));
       }
@@ -227,6 +254,7 @@ const ProfileScreen = ({ navigation, route }) => {
               <View style={styles.profileInfo}>
                 <Text style={[styles.profileName, { fontSize: fontSize.profileName }]} numberOfLines={1}>{fullName}</Text>
                 <Text style={[styles.profilePhone, { fontSize: fontSize.profilePhone }]} numberOfLines={1}>{profile?.phone || profile?.email || '-'}</Text>
+                {isGoogleConnected && <Text style={styles.googleBadge} numberOfLines={1}>Compte Google connecté</Text>}
                 {!!error && <Text style={styles.errorText}>{error}</Text>}
                 {loading && <Text style={styles.loadingText}>Chargement...</Text>}
               </View>
@@ -238,6 +266,24 @@ const ProfileScreen = ({ navigation, route }) => {
             {isEditingPersonalInfo && (
               <View style={styles.editCard}>
                 <Text style={styles.editTitle}>Informations personnelles</Text>
+                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Prenom</Text>
+                <TextInput
+                  style={[styles.input, { fontSize: fontSize.input }]}
+                  value={editFirstName}
+                  onChangeText={setEditFirstName}
+                  autoCapitalize="words"
+                  placeholder="Votre prenom"
+                  placeholderTextColor="#7d83b0"
+                />
+                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Nom</Text>
+                <TextInput
+                  style={[styles.input, { fontSize: fontSize.input }]}
+                  value={editLastName}
+                  onChangeText={setEditLastName}
+                  autoCapitalize="words"
+                  placeholder="Votre nom"
+                  placeholderTextColor="#7d83b0"
+                />
                 <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Email</Text>
                 <TextInput
                   style={[styles.input, { fontSize: fontSize.input }]}
@@ -355,6 +401,19 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1, marginLeft: 12 },
   profileName: { color: '#f2f4ff', fontWeight: '700', fontSize: appFont(17) },
   profilePhone: { color: '#9ca2cb', marginTop: 6, fontSize: appFont(14) },
+  googleBadge: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(108, 77, 255, 0.32)',
+    borderWidth: 1,
+    borderColor: 'rgba(143, 108, 255, 0.6)',
+    color: '#e8e4ff',
+    fontSize: appFont(12),
+    fontWeight: '700',
+  },
   loadingText: { color: '#b4b9dc', marginTop: 6, fontSize: appFont(13) },
   errorText: { color: '#ff7b89', marginTop: 6, fontSize: appFont(13) },
   editBtn: {

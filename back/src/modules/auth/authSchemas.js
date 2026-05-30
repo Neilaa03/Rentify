@@ -22,8 +22,10 @@ export const updateMeSchema = z
   .object({
     email: z.string().email().optional(),
     phone: z.string().min(5).max(30).optional(),
+    firstName: z.string().min(1).optional(),
+    lastName: z.string().min(1).optional(),
   })
-  .refine((data) => data.email !== undefined || data.phone !== undefined, {
+  .refine((data) => data.email !== undefined || data.phone !== undefined || data.firstName !== undefined || data.lastName !== undefined, {
     message: 'At least one field is required',
   });
 export const resendVerificationSchema = z.object({
