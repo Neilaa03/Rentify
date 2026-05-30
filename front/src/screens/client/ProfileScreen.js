@@ -263,7 +263,7 @@ const ProfileScreen = ({ navigation, route }) => {
 
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        setPersonalInfoError("Permission d'acceder aux photos refusee.");
+        setPersonalInfoError("Permission d'acceder aux photos refusée.");
         return;
       }
 
