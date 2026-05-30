@@ -1,4 +1,4 @@
-import { registerSchema, loginSchema, updateMeSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema } from './authSchemas.js';
+import { registerSchema, loginSchema, updateMeSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, googleAuthSchema, setPasswordSchema } from './authSchemas.js';
 import {
     createUser,
     getUserByEmail,
@@ -10,11 +10,20 @@ import {
     verifyPasswordResetToken,
     clearPasswordResetToken,
     updateUserPasswordHash,
+    updateUserPasswordHashAndProvider,
+    getUserAuthMetaById,
+    getUserByGoogleSub,
+    linkGoogleToUser,
+    updateUserProfilePicture,
 } from './authModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../../services/mailer.js';
+import { OAuth2Client } from 'google-auth-library';
+import cloudinary from '../../config/cloudinary.js';
+
+const allowedImageMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const APP_BASE_URL = process.env.APP_BASE_URL || '';
@@ -24,6 +33,16 @@ const DEV_HOST = String(process.env.DEV_HOST || '').trim();
 const DEV_EXPO_PORT = Number(process.env.DEV_EXPO_PORT || 8081);
 const EMAIL_VERIFICATION_TTL_MINUTES = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES || 60 * 24);
 const PASSWORD_RESET_TTL_MINUTES = Number(process.env.PASSWORD_RESET_TTL_MINUTES || 30);
+const GOOGLE_CLIENT_IDS = [
+    String(process.env.GOOGLE_CLIENT_ID || '').trim(),
+    String(process.env.GOOGLE_ANDROID_CLIENT_ID || '').trim(),
+    String(process.env.GOOGLE_IOS_CLIENT_ID || '').trim(),
+    ...String(process.env.GOOGLE_CLIENT_IDS || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+].filter(Boolean);
+const googleClient = new OAuth2Client();
 
 const hashToken = (token) =>
     crypto.createHash('sha256').update(token).digest('hex');
@@ -198,6 +217,10 @@ export const login = async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        if (!user.password_hash) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
         const passwordMatch = await bcrypt.compare(password, user.password_hash);
         if (!passwordMatch) {
             console.log('Password mismatch for user:', email);
@@ -225,6 +248,94 @@ export const login = async (req, res) => {
 
     } catch (err) {
         console.error('Login error:', err);
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const googleAuth = async (req, res) => {
+    try {
+        if (GOOGLE_CLIENT_IDS.length === 0) {
+            return res.status(500).json({ error: 'Server configuration error' });
+        }
+
+        const { idToken } = googleAuthSchema.parse(req.body);
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: GOOGLE_CLIENT_IDS,
+        });
+
+        const payload = ticket.getPayload() || {};
+        const googleSub = String(payload.sub || '').trim();
+        const email = String(payload.email || '').trim().toLowerCase();
+
+        if (!googleSub || !email) {
+            return res.status(400).json({ error: 'Invalid Google token' });
+        }
+
+        let user = await getUserByGoogleSub(googleSub);
+        if (!user) {
+            const existing = await getUserByEmail(email);
+            if (existing) {
+                await linkGoogleToUser({ userId: existing.id, googleSub });
+                user = (await getUserById(existing.id)) || existing;
+            } else {
+                const firstName = String(payload.given_name || '').trim() || String(payload.name || '').trim().split(' ')[0] || '';
+                const lastName = String(payload.family_name || '').trim() || '';
+                const emailVerifiedAt = new Date().toISOString();
+                // Some DB schemas require password_hash NOT NULL. Generate a random one so the account
+                // is effectively Google-first unless you later implement "set password".
+                const randomPassword = crypto.randomBytes(32).toString('hex');
+                const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+                user = await createUser({
+                    email,
+                    password: passwordHash,
+                    firstName,
+                    lastName,
+                    phone: '',
+                    role: 'client',
+                    isVerified: true,
+                    emailVerifiedAt,
+                    googleSub,
+                    authProvider: 'google',
+                });
+            }
+        }
+
+        const token = jwt.sign(
+            { id: user.id, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        const profile = (await getUserById(user.id)) || user;
+        const { password_hash, ...userWithoutPassword } = profile;
+        return res.json({ user: userWithoutPassword, token });
+    } catch (err) {
+        // Help debugging in dev without leaking tokens.
+        try {
+            console.error('[googleAuth] failed:', err?.message || err);
+        } catch {
+            // ignore
+        }
+
+        const rawMessage = String(err?.message || '');
+        const lower = rawMessage.toLowerCase();
+
+        // Common Google auth failures: bad token, expired token, or wrong audience/client id.
+        if (lower.includes('wrong recipient') || lower.includes('audience')) {
+            return res.status(401).json({ error: 'GOOGLE_CLIENT_ID_MISMATCH' });
+        }
+        if (lower.includes('invalid token') || lower.includes('jwt') || lower.includes('token')) {
+            return res.status(401).json({ error: 'GOOGLE_TOKEN_INVALID' });
+        }
+
+        // In dev, return the underlying message to unblock debugging.
+        if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+            return res.status(400).json({ error: 'GOOGLE_AUTH_FAILED', message: rawMessage });
+        }
+
         const f = formatAppError(err);
         return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }
@@ -258,6 +369,72 @@ export const updateMe = async (req, res) => {
         res.json({ user: updated });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    }
+};
+
+export const setPassword = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        const { password } = setPasswordSchema.parse(req.body);
+        const meta = await getUserAuthMetaById(userId);
+        if (!meta) return res.status(404).json({ error: 'User not found' });
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        const currentProvider = String(meta.auth_provider || '').trim().toLowerCase();
+        const nextProvider = currentProvider === 'google' ? 'hybrid' : (currentProvider || 'password');
+
+        await updateUserPasswordHashAndProvider({ userId, passwordHash, authProvider: nextProvider });
+        return res.json({ message: 'PASSWORD_SET' });
+    } catch (err) {
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const uploadProfilePicture = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+        if (!allowedImageMimeTypes.includes(req.file.mimetype)) {
+            return res.status(400).json({ error: 'Invalid file type' });
+        }
+
+        const base64 = req.file.buffer.toString('base64');
+        const dataURI = `data:${req.file.mimetype};base64,${base64}`;
+
+        const uploadResult = await cloudinary.uploader.upload(dataURI, {
+            folder: 'rentify/profile-pictures',
+        });
+
+        await updateUserProfilePicture({ userId, profilePicture: uploadResult.secure_url });
+        const user = await getUserById(userId);
+        return res.status(201).json({ user });
+    } catch (err) {
+        if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+            return res.status(400).json({ error: 'UPLOAD_PROFILE_PICTURE_FAILED', message: String(err?.message || err) });
+        }
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+    }
+};
+
+export const removeProfilePicture = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        await updateUserProfilePicture({ userId, profilePicture: null });
+        const user = await getUserById(userId);
+        return res.json({ user });
+    } catch (err) {
+        if (String(process.env.NODE_ENV || '').toLowerCase() !== 'production') {
+            return res.status(400).json({ error: 'REMOVE_PROFILE_PICTURE_FAILED', message: String(err?.message || err) });
+        }
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }
 };
 
