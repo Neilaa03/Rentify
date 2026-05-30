@@ -142,6 +142,7 @@ function ProfileTabStack() {
 // Client Navigation Component
 export function ClientNavigation() {
   const insets = useSafeAreaInsets();
+  const bottomOffset = 2;
 
   const defaultTabBarStyle = {
     backgroundColor: '#0f1228',
@@ -152,7 +153,7 @@ export function ClientNavigation() {
     paddingTop: 10,
     paddingBottom: 10,
     position: 'absolute',
-    bottom: 8 + (insets?.bottom || 0),
+    bottom: bottomOffset + (insets?.bottom || 0),
     left: 0,
     right: 0,
   };

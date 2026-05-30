@@ -9,13 +9,13 @@ import {
   View,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { fetchJson } from '../../services/api';
 import { deleteOwnerCar } from '../../services/owner';
 import CarCard from '../../components/cards/CarCard';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
+import AppBackground from '../../components/layout/AppBackground';
 
 const OwnerCarsScreen = ({ navigation, route }) => {
   const token = route?.params?.token;
@@ -127,18 +127,18 @@ const OwnerCarsScreen = ({ navigation, route }) => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <AppBackground>
         <ActivityIndicator
           size="large"
           color={COLORS.primary}
           style={styles.loader}
         />
-      </SafeAreaView>
+      </AppBackground>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <AppBackground>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mes voitures</Text>
         <TouchableOpacity
@@ -177,14 +177,14 @@ const OwnerCarsScreen = ({ navigation, route }) => {
         />
       )}
       <OwnerBottomNavigation navigation={navigation} route={route} active="cars" />
-    </SafeAreaView>
+    </AppBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',

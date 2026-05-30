@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -18,12 +17,16 @@ import { getOwnerDashboardData } from '../../services/owner';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import MessageIconButton from '../../components/messaging/MessageIconButton';
 import NotificationIconButton from '../../components/notifications/NotificationIconButton';
+import AppBackground from '../../components/layout/AppBackground';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
   blue: { color: '#4f8cff', bg: 'rgba(79,140,255,0.16)' },
   amber: { color: '#ffb347', bg: 'rgba(255,179,71,0.16)' },
 };
+
+const OWNER_CARD_BG = '#111329';
+const OWNER_CARD_BORDER = 'rgba(143, 150, 255, 0.14)';
 
 const StatCard = ({ icon, title, value }) => (
   <View style={styles.statCard}>
@@ -155,7 +158,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <AppBackground>
       <View style={styles.container}>
         <View style={styles.header}>
           <View>
@@ -282,15 +285,14 @@ const OwnerDashboardScreen = ({ navigation, route }) => {
         )}
       </View>
       <OwnerBottomNavigation navigation={navigation} route={route} active="dashboard" />
-    </SafeAreaView>
+    </AppBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0a0c24' },
   container: {
     flex: 1,
-    backgroundColor: '#0a0c24',
+    backgroundColor: 'transparent',
     paddingHorizontal: 16,
   },
   header: {
@@ -331,10 +333,10 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '48%',
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    backgroundColor: OWNER_CARD_BG,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.2)',
-    borderRadius: 16,
+    borderColor: OWNER_CARD_BORDER,
+    borderRadius: 22,
     padding: 10,
     minHeight: 82,
   },
@@ -352,11 +354,11 @@ const styles = StyleSheet.create({
   quickRow: { marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   quickCard: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 22,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.2)',
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    borderColor: OWNER_CARD_BORDER,
+    backgroundColor: OWNER_CARD_BG,
   },
   primaryQuickCard: {
     backgroundColor: COLORS.primary,
@@ -366,10 +368,10 @@ const styles = StyleSheet.create({
   quickSubtitle: { color: '#ced2f1', marginTop: 4 },
   connectCard: {
     marginTop: 12,
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.2)',
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    borderColor: OWNER_CARD_BORDER,
+    backgroundColor: OWNER_CARD_BG,
     padding: 14,
   },
   connectCardHeader: {
@@ -409,18 +411,18 @@ const styles = StyleSheet.create({
   sectionHeader: { marginTop: 18, marginBottom: 10 },
   sectionTitle: { color: '#fff', fontWeight: '700', fontSize: 30 / 1.6 },
   emptyCard: {
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.2)',
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    borderColor: OWNER_CARD_BORDER,
+    backgroundColor: OWNER_CARD_BG,
     padding: 16,
   },
   emptyText: { color: '#aab1dd' },
   activityCard: {
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    backgroundColor: OWNER_CARD_BG,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.2)',
-    borderRadius: 14,
+    borderColor: OWNER_CARD_BORDER,
+    borderRadius: 22,
     padding: 12,
     marginBottom: 10,
     flexDirection: 'row',
