@@ -115,8 +115,21 @@ export const getCarDetails = async (carId) => {
 
   const { data: owner } = await supabase.from('users').select('id,email,first_name,last_name,role,is_verified').eq('id', car.owner_id).single();
   const { data: company } = await supabase.from('company').select('*').eq('manager_id', car.owner_id).maybeSingle();
+  const documentIds = (docs || []).map((doc) => doc.id).filter(Boolean);
+  const { data: ocrResults } = documentIds.length
+    ? await supabase
+      .from('document_ocr_results')
+      .select('*')
+      .in('document_id', documentIds)
+    : { data: [] };
 
-  return { car, owner: owner || null, company: company || null, documents: docs || [], listings: listings || [] };
+  const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+  const documents = (docs || []).map((doc) => ({
+    ...doc,
+    ocr_result: ocrByDocumentId[doc.id] || null,
+  }));
+
+  return { car, owner: owner || null, company: company || null, documents, listings: listings || [] };
 };
 
 export const updateCarModeration = async (carId, payload) => {
@@ -205,8 +218,17 @@ export const getReservationDetails = async (reservationId) => {
   const { data: company } = car?.owner_id ? await supabase.from('company').select('*').eq('manager_id', car.owner_id).maybeSingle() : { data: null };
   const { data: ownerDocs } = car?.owner_id ? await supabase.from('documents').select('*').eq('user_id', car.owner_id).order('created_at', { ascending: false }) : { data: [] };
   const { data: carDocs } = car?.id ? await supabase.from('documents').select('*').eq('car_id', car.id).order('created_at', { ascending: false }) : { data: [] };
+  const ownerDocIds = (ownerDocs || []).map((doc) => doc.id).filter(Boolean);
+  const carDocIds = (carDocs || []).map((doc) => doc.id).filter(Boolean);
+  const allDocIds = [...new Set([...ownerDocIds, ...carDocIds])];
+  const { data: ocrResults } = allDocIds.length
+    ? await supabase.from('document_ocr_results').select('*').in('document_id', allDocIds)
+    : { data: [] };
+  const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+  const ownerDocuments = (ownerDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
+  const carDocuments = (carDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
 
-  return { reservation, listing: listing || null, renter: renter || null, car: car || null, owner: owner || null, company: company || null, payment: payment || null, pickup: pickup || null, ownerDocuments: ownerDocs || [], carDocuments: carDocs || [] };
+  return { reservation, listing: listing || null, renter: renter || null, car: car || null, owner: owner || null, company: company || null, payment: payment || null, pickup: pickup || null, ownerDocuments, carDocuments };
 };
 
 export const suspendReservation = async (reservationId, reason = 'Reservation suspended by admin review') => {

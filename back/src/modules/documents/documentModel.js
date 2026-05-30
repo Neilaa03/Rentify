@@ -78,7 +78,8 @@ export const updateDocument = async (id, updates) => {
     .select()
     .single();
 
-  if (error || !data) throw new Error('Update failed');
+  if (error) throw error;
+  if (!data) throw new Error('Update failed');
   return toDocumentDto(data);
 };
 

@@ -60,6 +60,7 @@ CREATE TYPE report_status AS ENUM (
 
 CREATE TYPE document_status AS ENUM (
     'pending',
+    'manual_review',
     'approved',
     'rejected'
 );
@@ -204,6 +205,25 @@ CREATE TABLE documents (
         (company_id IS NOT NULL)::int = 1
     )
 );
+
+CREATE TABLE IF NOT EXISTS document_ocr_results (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    document_id UUID NOT NULL UNIQUE
+        REFERENCES documents(id) ON DELETE CASCADE,
+
+    ocr_text TEXT,
+    extracted_full_name TEXT,
+    extracted_document_number TEXT,
+    extracted_expiration_date DATE,
+    confidence_score NUMERIC(5,2),
+    verification_status document_status NOT NULL DEFAULT 'manual_review',
+    verification_reason TEXT,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
 
 -- =========================================================
 -- CAR IMAGES
@@ -519,3 +539,25 @@ CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_messages_sender_id ON messages(sender_id);
 
 CREATE INDEX idx_messages_receiver_id ON messages(receiver_id);
+
+CREATE INDEX IF NOT EXISTS idx_document_ocr_results_document_id ON document_ocr_results(document_id);
+
+
+
+-- =========================================================
+-- TRIGGERS
+-- =========================================================
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_document_ocr_results_updated_at ON document_ocr_results;
+
+CREATE TRIGGER trg_document_ocr_results_updated_at
+BEFORE UPDATE ON document_ocr_results
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();

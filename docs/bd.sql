@@ -68,6 +68,22 @@ CREATE TABLE public.documents (
   CONSTRAINT documents_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id),
   CONSTRAINT documents_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
 );
+CREATE TABLE public.document_ocr_results (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  document_id uuid NOT NULL,
+  ocr_text text,
+  extracted_full_name text,
+  extracted_document_number text,
+  extracted_expiration_date date,
+  confidence_score numeric(5,2),
+  verification_status USER-DEFINED NOT NULL DEFAULT 'manual_review'::document_status,
+  verification_reason text,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT document_ocr_results_pkey PRIMARY KEY (id),
+  CONSTRAINT document_ocr_results_document_id_key UNIQUE (document_id),
+  CONSTRAINT document_ocr_results_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id)
+);
 CREATE TABLE public.facture (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   reservation_id uuid NOT NULL,
