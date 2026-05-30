@@ -1,4 +1,4 @@
-import { registerSchema, loginSchema, updateMeSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, googleAuthSchema } from './authSchemas.js';
+import { registerSchema, loginSchema, updateMeSchema, resendVerificationSchema, forgotPasswordSchema, resetPasswordSchema, googleAuthSchema, setPasswordSchema } from './authSchemas.js';
 import {
     createUser,
     getUserByEmail,
@@ -10,6 +10,8 @@ import {
     verifyPasswordResetToken,
     clearPasswordResetToken,
     updateUserPasswordHash,
+    updateUserPasswordHashAndProvider,
+    getUserAuthMetaById,
     getUserByGoogleSub,
     linkGoogleToUser,
 } from './authModel.js';
@@ -363,6 +365,27 @@ export const updateMe = async (req, res) => {
         res.json({ user: updated });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    }
+};
+
+export const setPassword = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+        const { password } = setPasswordSchema.parse(req.body);
+        const meta = await getUserAuthMetaById(userId);
+        if (!meta) return res.status(404).json({ error: 'User not found' });
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        const currentProvider = String(meta.auth_provider || '').trim().toLowerCase();
+        const nextProvider = currentProvider === 'google' ? 'hybrid' : (currentProvider || 'password');
+
+        await updateUserPasswordHashAndProvider({ userId, passwordHash, authProvider: nextProvider });
+        return res.json({ message: 'PASSWORD_SET' });
+    } catch (err) {
+        const f = formatAppError(err);
+        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
     }
 };
 

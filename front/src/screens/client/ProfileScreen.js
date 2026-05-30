@@ -58,6 +58,7 @@ const ProfileScreen = ({ navigation, route }) => {
 
   const token = route?.params?.token;
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
+  const isGoogleOnly = String(profile?.auth_provider || profile?.authProvider || '').toLowerCase() === 'google';
   const fontSize = {
     title: profileFont(width, appFont(22, 24), 21, 20),
     profileName: profileFont(width, appFont(17), 16, 15),
@@ -246,11 +247,13 @@ const ProfileScreen = ({ navigation, route }) => {
             <SectionCard
               items={[
                 { label: 'Informations personnelles', icon: 'person-outline' },
+                ...(isGoogleOnly ? [{ label: 'Definir un mot de passe', icon: 'key-outline' }] : []),
                 { label: 'Moyens de paiement', icon: 'card-outline' },
                 { label: 'Mes adresses', icon: 'location-outline' },
               ]}
               onItemPress={(item) => {
                 if (item.label === 'Informations personnelles') openPersonalInfoEditor();
+                if (item.label === 'Definir un mot de passe') navigation.navigate('SetPassword', { token });
               }}
             />
 

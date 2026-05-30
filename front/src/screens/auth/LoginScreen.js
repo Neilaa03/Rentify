@@ -53,15 +53,31 @@ const LoginScreen = ({ navigation }) => {
         return webClientId;
     }, [useProxy]);
 
+    const proxyProjectFullName = useMemo(() => {
+        const owner =
+            Constants?.expoConfig?.owner ||
+            Constants?.manifest2?.extra?.expoClient?.owner ||
+            process?.env?.EXPO_PUBLIC_EXPO_OWNER ||
+            process?.env?.EXPO_PUBLIC_EXPO_USERNAME ||
+            '';
+        const slug = Constants?.expoConfig?.slug || Constants?.manifest2?.extra?.expoClient?.slug || 'rentify';
+        return owner ? `@${owner}/${slug}` : '';
+    }, [useProxy]);
+
     const redirectUri = useMemo(() => {
-        return AuthSession.makeRedirectUri({ scheme: 'rentify', useProxy });
+        // Expo Go cannot receive a browser redirect to `exp://` from Google OAuth directly.
+        // We must use the Expo AuthSession proxy. In that flow, the *returnUrl* is the deep link,
+        // while the *OAuth redirect_uri* is `https://auth.expo.io/@owner/slug`.
+        if (useProxy) return AuthSession.getDefaultReturnUrl();
+        return AuthSession.makeRedirectUri({ scheme: 'rentify' });
     }, [useProxy]);
 
     useEffect(() => {
         console.log('[GoogleAuth] appOwnership:', Constants?.appOwnership);
         console.log('[GoogleAuth] useProxy:', useProxy);
         console.log('[GoogleAuth] redirectUri:', redirectUri);
-    }, [redirectUri, useProxy]);
+        if (useProxy) console.log('[GoogleAuth] proxyProjectFullName:', proxyProjectFullName || '(missing)');
+    }, [redirectUri, useProxy, proxyProjectFullName]);
 
     const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
     const [googleRequest, googleResponse, googlePromptAsync] = AuthSession.useAuthRequest(
@@ -90,6 +106,8 @@ const LoginScreen = ({ navigation }) => {
         const userParams = { token: data?.token, user: data?.user };
         const isOwner = data?.user?.role === 'owner';
         const isAdmin = data?.user?.role === 'admin';
+        const initialProvider = String(data?.user?.authProvider || data?.user?.auth_provider || '').toLowerCase();
+        const shouldOfferPasswordSetup = (provider) => String(provider || '').toLowerCase() === 'google';
 
         try {
             if (data?.token) {
@@ -109,13 +127,25 @@ const LoginScreen = ({ navigation }) => {
                         role: rawUser.role,
                         isVerified: rawUser.isVerified ?? rawUser.is_verified,
                         isActive: rawUser.isActive ?? rawUser.is_active,
+                        authProvider: rawUser.authProvider || rawUser.auth_provider || '',
                     };
 
                     await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+
+                    // If the account was created via Google-only sign-in, offer setting a password.
+                    if (shouldOfferPasswordSetup(normalized.authProvider || initialProvider)) {
+                        navigation.navigate('SetPassword', { token: data?.token, allowSkip: true });
+                        return;
+                    }
                 }
             }
         } catch {
             // Non-blocking.
+        }
+
+        if (shouldOfferPasswordSetup(initialProvider)) {
+            navigation.navigate('SetPassword', { token: data?.token, allowSkip: true });
+            return;
         }
 
         if (isAdmin) {
@@ -219,7 +249,75 @@ const LoginScreen = ({ navigation }) => {
         }
         try {
             setErrors({ email: '', password: '', form: '' });
-            await googlePromptAsync({ useProxy });
+            if (useProxy) {
+                if (!proxyProjectFullName) {
+                    setErrors({ email: '', password: '', form: 'Expo AuthSession proxy needs your project full name (@owner/slug). Set EXPO_PUBLIC_EXPO_OWNER to your Expo username and restart.' });
+                    return;
+                }
+                // Manual proxy flow for Expo Go:
+                // - Google must redirect to https://auth.expo.io/@owner/slug (web-allowed redirect)
+                // - Expo proxy then forwards back to the app deep link return URL (exp://...).
+                const proxyRedirectUrl = `https://auth.expo.io/${proxyProjectFullName}`;
+                const returnUrl = AuthSession.getDefaultReturnUrl();
+                if (!discovery?.authorizationEndpoint) {
+                    setErrors({ email: '', password: '', form: 'Google sign-in is not ready yet. Please try again.' });
+                    return;
+                }
+
+                const authUrl = `${discovery?.authorizationEndpoint}?` +
+                    new URLSearchParams({
+                        client_id: googleClientId,
+                        redirect_uri: proxyRedirectUrl,
+                        response_type: AuthSession.ResponseType.IdToken,
+                        scope: ['openid', 'profile', 'email'].join(' '),
+                        prompt: 'select_account',
+                        nonce: String(Date.now()),
+                    }).toString();
+
+                const startUrl = `${proxyRedirectUrl}/start?` +
+                    new URLSearchParams({ authUrl, returnUrl }).toString();
+
+                const result = await WebBrowser.openAuthSessionAsync(startUrl, returnUrl);
+                if (result.type !== 'success' || !result.url) return;
+
+                const extractParam = (url, key) => {
+                    try {
+                        const [, fragment = ''] = String(url).split('#');
+                        const [base, query = ''] = String(url).split('?');
+                        const params = new URLSearchParams(query);
+                        const fragParams = new URLSearchParams(fragment);
+                        return fragParams.get(key) || params.get(key) || '';
+                    } catch {
+                        return '';
+                    }
+                };
+                const idToken = extractParam(result.url, 'id_token');
+                if (!idToken) {
+                    setErrors({ email: '', password: '', form: 'Google sign-in failed.' });
+                    return;
+                }
+
+                // Mirror the hook-based flow by reusing the existing effect handler expectation.
+                // Trigger the same backend call directly here.
+                setGoogleLoading(true);
+                try {
+                    const res = await fetch(API_ENDPOINTS.AUTH.GOOGLE, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ idToken }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok) await handleAuthSuccess(data);
+                    else {
+                        const detail = data?.message ? ` (${data.message})` : '';
+                        setErrors({ email: '', password: '', form: `${data?.error || 'Google sign-in failed.'}${detail}` });
+                    }
+                } finally {
+                    setGoogleLoading(false);
+                }
+            } else {
+                await googlePromptAsync();
+            }
         } catch (e) {
             setErrors({ email: '', password: '', form: 'Google sign-in failed to start.' });
         }

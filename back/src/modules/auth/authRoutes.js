@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, googleAuth, me, updateMe, verifyEmail, resendVerification, forgotPassword, resetPasswordRedirect, resetPassword } from './authController.js';
+import { register, login, googleAuth, me, updateMe, setPassword, verifyEmail, resendVerification, forgotPassword, resetPasswordRedirect, resetPassword } from './authController.js';
 import { authenticateToken, requireRoles } from '../../middleware/auth.js';
 import { getUserById } from './authModel.js';
 import { rateLimit } from '../../middleware/rateLimit.js';
@@ -48,6 +48,7 @@ router.post(
 );
 router.get('/me', authenticateToken, me);
 router.patch('/me', authenticateToken, updateMe);
+router.post('/set-password', authenticateToken, setPassword);
 
 // Protected route: Only logged-in users can see their data
 router.get('/me', authenticateToken, async (req, res) => {

@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "Rentify",
+    "owner": "rentify-app",
     "slug": "rentify",
     "scheme": "rentify",
     "version": "1.0.0",

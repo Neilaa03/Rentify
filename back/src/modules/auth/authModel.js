@@ -56,7 +56,18 @@ export const getUserByEmail = async (email) => {
 export const getUserById = async (id) => {
     const { data, error } = await supabase
         .from('users')
-        .select('id, email, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, email_verified_at')
+        .select('id, email, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, email_verified_at, auth_provider, google_sub')
+        .eq('id', id)
+        .single();
+
+    if (error) return null;
+    return data;
+};
+
+export const getUserAuthMetaById = async (id) => {
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, email, auth_provider, google_sub')
         .eq('id', id)
         .single();
 
@@ -194,6 +205,21 @@ export const updateUserPasswordHash = async ({ userId, passwordHash }) => {
         .update({ password_hash: passwordHash })
         .eq('id', userId)
         .select('id, email')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const updateUserPasswordHashAndProvider = async ({ userId, passwordHash, authProvider }) => {
+    const updatePayload = { password_hash: passwordHash };
+    if (authProvider) updatePayload.auth_provider = authProvider;
+
+    const { data, error } = await supabase
+        .from('users')
+        .update(updatePayload)
+        .eq('id', userId)
+        .select('id, email, auth_provider')
         .single();
 
     if (error) throw error;
