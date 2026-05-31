@@ -12,6 +12,7 @@ export const documentTypes = [
 
 export const documentStatuses = [
   'pending',
+  'manual_review',
   'approved',
   'rejected',
 ];

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
+import * as ExpoLinking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -84,7 +85,10 @@ const VerifyEmailScreen = ({ navigation, route }) => {
       const res = await fetch(API_ENDPOINTS.AUTH.RESEND_VERIFICATION, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          redirectBase: Platform.OS !== 'web' ? ExpoLinking.createURL('/') : '',
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) setMessage(data?.message || 'Verification email sent.');

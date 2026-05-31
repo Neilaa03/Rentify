@@ -35,6 +35,10 @@ import AdminCarsScreen from './src/screens/admin/AdminCarsScreen';
 import AdminReservationsScreen from './src/screens/admin/AdminReservationsScreen';
 import AdminPaymentsScreen from './src/screens/admin/AdminPaymentsScreen';
 import AdminReportsScreen from './src/screens/admin/AdminReportsScreen';
+import AgencyDashboardScreen from './src/screens/agency/AgencyDashboardScreen';
+import AgencyVehiclesScreen from './src/screens/agency/AgencyVehiclesScreen';
+import AgencyRequestsScreen from './src/screens/agency/AgencyRequestsScreen';
+import AgencyProfileScreen from './src/screens/agency/AgencyProfileScreen';
 
 const Stack = createStackNavigator();
 const APP_BACKGROUND = '#0f1228';
@@ -77,6 +81,11 @@ export default function App() {
         ResetPassword: 'reset-password',
         Login: 'login',
         Register: 'register',
+        AgencyDashboard: 'agency/dashboard',
+        AgencyFleet: 'agency/fleet',
+        AgencyListings: 'agency/listings',
+        AgencyRequests: 'agency/requests',
+        AgencyProfile: 'agency/profile',
         Landing: '',
       },
     },
@@ -108,6 +117,11 @@ export default function App() {
             <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
             <Stack.Screen name="OwnerReservations" component={OwnerReservationsScreen} />
             <Stack.Screen name="OwnerReservationDetails" component={OwnerReservationDetailsScreen} />
+            <Stack.Screen name="AgencyDashboard" component={AgencyDashboardScreen} />
+            <Stack.Screen name="AgencyFleet" component={AgencyVehiclesScreen} initialParams={{ mode: 'fleet' }} />
+            <Stack.Screen name="AgencyListings" component={AgencyVehiclesScreen} initialParams={{ mode: 'listings' }} />
+            <Stack.Screen name="AgencyRequests" component={AgencyRequestsScreen} />
+            <Stack.Screen name="AgencyProfile" component={AgencyProfileScreen} />
             <Stack.Screen name="NotificationScreen" component={UnreadNotificationsScreen} />
             <Stack.Screen name="NotificationsHistory" component={NotificationsHistoryScreen} />
             <Stack.Screen name="OwnerPickupVerify" component={HandoverVerifyScreen} />

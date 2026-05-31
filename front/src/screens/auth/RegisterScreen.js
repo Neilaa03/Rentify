@@ -10,6 +10,7 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from 'react-native';
+import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AuthHeader from '../../components/auth/AuthHeader';
@@ -105,6 +106,7 @@ const RegisterScreen = ({ navigation }) => {
                     password,
                     confirmPassword,
                     role: selectedRole,
+                    redirectBase: Platform.OS !== 'web' ? Linking.createURL('/') : '',
                 }),
             });
 
@@ -137,7 +139,7 @@ const RegisterScreen = ({ navigation }) => {
     const roles = [
         { id: 'client', label: 'Client', icon: 'person' },
         { id: 'owner', label: 'Vehicle Owner', icon: 'car' },
-        { id: 'companyManager', label: 'Company', icon: 'business' },
+        { id: 'companyManager', label: 'Agency', icon: 'business' },
     ];
 
     return (

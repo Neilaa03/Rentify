@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { fetchJson } from './api';
 
 const REQUIRED_CAR_DOCS = ['carte_grise', 'insurance', 'technical_control'];
@@ -201,18 +202,27 @@ export const uploadCarDocument = async ({
   file,
 }) => {
   const formData = new FormData();
-  const isPdf = String(file?.type || '').toLowerCase() === 'application/pdf';
+  const safeUri = String(file?.uri || '');
+  const isPdf =
+    String(file?.type || '').toLowerCase() === 'application/pdf' ||
+    safeUri.toLowerCase().endsWith('.pdf');
   const safeName = (() => {
     const base = file?.name || `${documentType}.pdf`;
     if (!isPdf) return base;
     return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
   })();
+  const mimeType = file?.type || (isPdf ? 'application/pdf' : 'application/octet-stream');
 
-  formData.append('document', {
-    uri: file.uri,
-    name: safeName,
-    type: file.type,
-  });
+  if (Platform.OS === 'web') {
+    const blob = await fetch(safeUri).then((r) => r.blob());
+    formData.append('document', blob, safeName);
+  } else {
+    formData.append('document', {
+      uri: safeUri,
+      name: safeName,
+      type: mimeType,
+    });
+  }
 
   formData.append('carId', String(carId));
   formData.append('documentType', documentType);
@@ -234,11 +244,20 @@ export const uploadCarDocument = async ({
 
 export const uploadCarImage = async ({ token, carId, file, isPrimary }) => {
   const formData = new FormData();
-  formData.append('image', {
-    uri: file.uri,
-    name: file.name,
-    type: file.type,
-  });
+  const safeUri = String(file?.uri || '');
+  const safeName = file?.name || `car-image-${carId}.jpg`;
+  const mimeType = file?.type || 'image/jpeg';
+
+  if (Platform.OS === 'web') {
+    const blob = await fetch(safeUri).then((r) => r.blob());
+    formData.append('image', blob, safeName);
+  } else {
+    formData.append('image', {
+      uri: safeUri,
+      name: safeName,
+      type: mimeType,
+    });
+  }
   if (isPrimary !== undefined) {
     formData.append('isPrimary', String(isPrimary));
   }

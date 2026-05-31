@@ -73,6 +73,7 @@ const LoginScreen = ({ navigation }) => {
 
                 const userParams = { token: data?.token, user: data?.user };
                 const isOwner = data?.user?.role === 'owner';
+                const isAgencyOwner = data?.user?.role === 'companyManager';
                 const isAdmin = data?.user?.role === 'admin';
 
                 try {
@@ -106,6 +107,11 @@ const LoginScreen = ({ navigation }) => {
                     navigation.reset({
                         index: 0,
                         routes: [{ name: 'AdminDashboard', params: userParams }],
+                    });
+                } else if (isAgencyOwner) {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'AgencyDashboard', params: userParams }],
                     });
                 } else if (isOwner) {
                     navigation.reset({
