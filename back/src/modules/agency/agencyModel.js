@@ -1,4 +1,6 @@
 import { supabase } from '../../config/supabase.js';
+import { getDocumentOcrResultByDocumentId } from '../documents/documentOcrModel.js';
+import { hasApprovedDocument } from '../documents/documentModel.js';
 
 const COMPANY_TABLE = 'company';
 const CARS_TABLE = 'cars';
@@ -46,9 +48,11 @@ const statusToCard = (status) => {
 
 const docTypeLabel = (type) => ({
   business_registration: 'Registre de commerce',
+  nif: 'NIF / NIS',
   carte_grise: 'Carte grise',
   insurance: 'Assurance',
   technical_control: 'Contrôle technique',
+  professional_insurance: 'Assurance professionnelle',
 }[type] || type);
 
 const requestStatusToCard = (status) => {
@@ -94,7 +98,7 @@ const buildAgencyVerification = ({ company, companyDocs = [], carDocs = [] }) =>
   );
 
   const coreFilled = countFilledFields(company);
-  const docRatio = Math.min(1, docStats.verified / Math.max(1, REQUIRED_CAR_DOC_TYPES.length + 1));
+  const docRatio = Math.min(1, docStats.verified / Math.max(1, REQUIRED_CAR_DOC_TYPES.length + 3));
   const coreRatio = coreFilled / 6;
   const completionPercentage = Math.max(0, Math.min(100, Math.round((coreRatio * 60) + (docRatio * 40))));
 
@@ -132,8 +136,9 @@ const toAgencyDto = (company, verification = {}) => ({
 const toDocumentDto = (doc, car = null) => ({
   id: doc.id,
   companyId: doc.company_id,
+  userId: doc.user_id,
   carId: doc.car_id,
-  ownerLabel: doc.company_id ? 'Agence' : `${car?.brand || 'Véhicule'} ${car?.model || ''}`.trim(),
+  ownerLabel: doc.company_id ? 'Agence' : doc.user_id ? 'Gérant' : `${car?.brand || 'Véhicule'} ${car?.model || ''}`.trim(),
   documentType: doc.document_type,
   documentTypeLabel: docTypeLabel(doc.document_type),
   documentUrl: doc.document_url,
@@ -142,6 +147,13 @@ const toDocumentDto = (doc, car = null) => ({
   reviewedAt: doc.reviewed_at,
   createdAt: doc.created_at,
 });
+
+const attachOcrResults = async (documents = []) => Promise.all(
+  documents.map(async (doc) => ({
+    ...doc,
+    ocrResult: await getDocumentOcrResultByDocumentId(doc.id),
+  }))
+);
 
 const buildDocStats = (documents = []) => documents.reduce(
   (acc, doc) => {
@@ -153,6 +165,8 @@ const buildDocStats = (documents = []) => documents.reduce(
   },
   { verified: 0, pending: 0, rejected: 0 }
 );
+
+const hasRequiredCarDocuments = (docStats = {}) => Number(docStats.verified || 0) >= REQUIRED_CAR_DOC_TYPES.length;
 
 const getAgencyRecord = async (managerId) => {
   const { data, error } = await supabase
@@ -210,17 +224,20 @@ const getListingsByCarIds = async (carIds = []) => {
   return data || [];
 };
 
-const getDocumentsForAgency = async ({ agencyId, carIds = [] }) => {
-  const [companyDocsRes, carDocsRes] = await Promise.all([
+const getDocumentsForAgency = async ({ agencyId, managerId, carIds = [] }) => {
+  const [companyDocsRes, carDocsRes, managerDocsRes] = await Promise.all([
     supabase.from(DOCUMENTS_TABLE).select('*').eq('company_id', agencyId),
+    managerId ? supabase.from(DOCUMENTS_TABLE).select('*').eq('user_id', managerId) : Promise.resolve({ data: [], error: null }),
     carIds.length ? supabase.from(DOCUMENTS_TABLE).select('*').in('car_id', carIds) : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (companyDocsRes.error) throw companyDocsRes.error;
+  if (managerDocsRes.error) throw managerDocsRes.error;
   if (carDocsRes.error) throw carDocsRes.error;
 
   return {
     companyDocs: companyDocsRes.data || [],
+    managerDocs: managerDocsRes.data || [],
     carDocs: carDocsRes.data || [],
   };
 };
@@ -320,8 +337,9 @@ const buildVehicleRecords = ({ cars = [], listings = [], carDocs = [], reservati
     const averageRating = reviewRows.length
       ? reviewRows.reduce((sum, row) => sum + toNumber(row.rating), 0) / reviewRows.length
       : 0;
-    const vehicleStatus = (docStats.rejected > 0 || !listing?.is_active)
-      ? 'MAINTENANCE'
+    const docsReady = hasRequiredCarDocuments(docStats);
+    const vehicleStatus = !listing?.is_active || !docsReady
+      ? 'HIDDEN'
       : activeReservation
         ? 'RENTED'
         : 'AVAILABLE';
@@ -341,7 +359,8 @@ const buildVehicleRecords = ({ cars = [], listings = [], carDocs = [], reservati
       registrationNumber: car.registration_number,
       description: car.description,
       imageUrl: getPrimaryImage(car),
-      visibleByTenants: car.visible_by_tenants ?? true,
+      visibleByTenants: Boolean(listing?.is_active && docsReady),
+      canToggleVisibility: docsReady,
       status: vehicleStatus,
       documentStatus: docStats.rejected > 0 ? 'DOCS_REJECTED' : (docStats.verified >= REQUIRED_CAR_DOC_TYPES.length ? 'DOCS_OK' : 'DOCS_PENDING'),
       totalReservations: rentalCount,
@@ -373,8 +392,8 @@ const buildVehicleRecords = ({ cars = [], listings = [], carDocs = [], reservati
 
 export const getAgencyByManagerId = async (managerId) => {
   const company = await getAgencyRecord(managerId);
-  const { companyDocs, carDocs } = await getDocumentsForAgency({ agencyId: company.id, carIds: [] });
-  return toAgencyDto(company, buildAgencyVerification({ company, companyDocs, carDocs }));
+  const { companyDocs, managerDocs, carDocs } = await getDocumentsForAgency({ agencyId: company.id, managerId, carIds: [] });
+  return toAgencyDto(company, buildAgencyVerification({ company, companyDocs, carDocs: [...managerDocs, ...carDocs] }));
 };
 
 export const getAgencyDashboard = async (managerId) => {
@@ -383,7 +402,7 @@ export const getAgencyDashboard = async (managerId) => {
   const carIds = cars.map((car) => car.id);
   const listings = await getListingsByCarIds(carIds);
   const listingIds = listings.map((listing) => listing.id);
-  const { companyDocs, carDocs } = await getDocumentsForAgency({ agencyId: company.id, carIds });
+  const { companyDocs, managerDocs, carDocs } = await getDocumentsForAgency({ agencyId: company.id, managerId, carIds });
   const reservations = await getReservationsByListingIds(listingIds);
   const reservationIds = reservations.map((reservation) => reservation.id);
   const ratings = await getReservationRatings(reservationIds);
@@ -460,7 +479,7 @@ export const getAgencyDashboard = async (managerId) => {
     });
 
   return {
-    agency: toAgencyDto(company, buildAgencyVerification({ company, companyDocs, carDocs })),
+    agency: toAgencyDto(company, buildAgencyVerification({ company, companyDocs, carDocs: [...managerDocs, ...carDocs] })),
     counters: {
       totalVehicles,
       availableVehicles,
@@ -483,11 +502,11 @@ export const getAgencyDocuments = async (managerId) => {
   const company = await getAgencyRecord(managerId);
   const cars = await getCarsByManager(managerId);
   const carIds = cars.map((car) => car.id);
-  const { companyDocs, carDocs } = await getDocumentsForAgency({ agencyId: company.id, carIds });
+  const { companyDocs, managerDocs, carDocs } = await getDocumentsForAgency({ agencyId: company.id, managerId, carIds });
   const carMap = Object.fromEntries(cars.map((car) => [car.id, car]));
-  const documents = [...companyDocs, ...carDocs]
+  const documents = await attachOcrResults([...companyDocs, ...managerDocs, ...carDocs]
     .map((doc) => toDocumentDto(doc, carMap[doc.car_id] || null))
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()));
 
   const counters = documents.reduce(
     (acc, doc) => {
@@ -500,7 +519,7 @@ export const getAgencyDocuments = async (managerId) => {
   );
 
   return {
-    agency: toAgencyDto(company, buildAgencyVerification({ company, companyDocs, carDocs })),
+    agency: toAgencyDto(company, buildAgencyVerification({ company, companyDocs, carDocs: [...managerDocs, ...carDocs] })),
     counters,
     documents,
   };
@@ -553,7 +572,8 @@ export const getAgencyVehicles = async (managerId, filters = {}) => {
     counts: {
       available: vehicles.filter((vehicle) => vehicle.status === 'AVAILABLE').length,
       rented: vehicles.filter((vehicle) => vehicle.status === 'RENTED').length,
-      maintenance: vehicles.filter((vehicle) => vehicle.status === 'MAINTENANCE').length,
+      hidden: vehicles.filter((vehicle) => vehicle.status === 'HIDDEN').length,
+      maintenance: 0,
     },
     summary,
     total: items.length,
@@ -570,17 +590,57 @@ export const toggleAgencyVehicleVisibility = async (managerId, vehicleId) => {
   if (error || !car) throw error || new Error('Vehicle not found');
   if (car.owner_id !== managerId) throw new Error('Access denied for this vehicle');
 
+  const { data: listing, error: listingError } = await supabase
+    .from(LISTINGS_TABLE)
+    .select('id, is_active')
+    .eq('car_id', vehicleId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (listingError) throw listingError;
+
+  if (!listing) {
+    return {
+      id: car.id,
+      visibleByTenants: true,
+    };
+  }
+
+  const nextVisibility = !Boolean(listing.is_active);
+  if (nextVisibility) {
+    const hasIdentityCard = await hasApprovedDocument({
+      userId: managerId,
+      documentType: 'identity_card',
+    });
+    if (!hasIdentityCard) {
+      throw new Error('Upload and verify your identity card before publishing vehicles.');
+    }
+  }
+
+  const { data: docs, error: docsError } = await supabase
+    .from(DOCUMENTS_TABLE)
+    .select('document_type, status')
+    .eq('car_id', vehicleId);
+
+  if (docsError) throw docsError;
+
+  const docStats = buildDocStats(docs || []);
+  if (!hasRequiredCarDocuments(docStats)) {
+    throw new Error('Upload the required car documents before making this vehicle visible.');
+  }
+
   const { data: updated, error: updateError } = await supabase
-    .from(CARS_TABLE)
-    .update({ visible_by_tenants: !Boolean(car.visible_by_tenants) })
-    .eq('id', vehicleId)
-    .select('*')
+    .from(LISTINGS_TABLE)
+    .update({ is_active: !Boolean(listing.is_active) })
+    .eq('id', listing.id)
+    .select('id, is_active')
     .single();
 
   if (updateError || !updated) throw updateError || new Error('Visibility update failed');
   return {
-    id: updated.id,
-    visibleByTenants: Boolean(updated.visible_by_tenants),
+    id: car.id,
+    visibleByTenants: Boolean(updated.is_active),
   };
 };
 

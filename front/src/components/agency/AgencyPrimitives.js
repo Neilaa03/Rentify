@@ -19,12 +19,12 @@ export const AgencyCard = ({ children, style, danger = false }) => (
 
 export const SectionTitle = ({ kicker, title, subtitle, right }) => (
   <View style={styles.sectionHeader}>
-    <View>
+    <View style={styles.sectionTextBlock}>
       {kicker ? <Text style={styles.kicker}>{kicker}</Text> : null}
       <Text style={styles.sectionTitle}>{title}</Text>
       {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
     </View>
-    {right || null}
+    {right ? <View style={styles.sectionAction}>{right}</View> : null}
   </View>
 );
 
@@ -67,12 +67,13 @@ export const ProgressRow = ({ label, valueLabel, percent = 0, toneKey = 'purple'
   );
 };
 
-export const TogglePill = ({ value, onValueChange }) => (
+export const TogglePill = ({ value, onValueChange, disabled = false }) => (
   <View style={styles.toggleWrap}>
-    <Text style={styles.toggleLabel}>{value ? 'Visible' : 'Masqué'}</Text>
+    <Text style={[styles.toggleLabel, disabled && styles.toggleLabelDisabled]}>{disabled ? 'Docs manquants' : value ? 'Visible' : 'Masqué'}</Text>
     <Switch
       value={value}
       onValueChange={onValueChange}
+      disabled={disabled}
       trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(41,121,255,0.55)' }}
       thumbColor={value ? '#dce5ff' : '#8d96b8'}
     />
@@ -98,8 +99,12 @@ export const PillRow = ({ items, activeKey, onSelect }) => (
 
 export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {
   const rejected = item.documentStatus === 'DOCS_REJECTED';
-  const onlineTone = item.status === 'RENTED' ? 'amber' : item.status === 'MAINTENANCE' ? 'red' : 'green';
-  const statusLabel = item.status === 'RENTED' ? 'En location' : item.status === 'MAINTENANCE' ? 'Maintenance' : 'Disponible';
+  const onlineTone = item.status === 'RENTED' ? 'amber' : item.status === 'HIDDEN' ? 'amber' : 'green';
+  const statusLabel = item.status === 'RENTED'
+    ? 'En location'
+    : item.status === 'HIDDEN'
+      ? 'Non publié'
+      : 'Disponible';
   const docTone = item.documentStatus === 'DOCS_OK' ? 'green' : item.documentStatus === 'DOCS_REJECTED' ? 'red' : 'amber';
 
   return (
@@ -116,7 +121,11 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {
         <Badge
           label={statusLabel}
           toneKey={onlineTone}
-          icon={item.status === 'RENTED' ? 'time-outline' : item.status === 'MAINTENANCE' ? 'warning-outline' : 'checkmark-circle-outline'}
+          icon={item.status === 'RENTED'
+            ? 'time-outline'
+            : item.status === 'HIDDEN'
+              ? 'eye-off-outline'
+              : 'checkmark-circle-outline'}
         />
         <Badge
           label={item.documentStatus === 'DOCS_OK' ? 'Docs OK' : item.documentStatus === 'DOCS_REJECTED' ? 'Docs rejetés' : 'Docs en attente'}
@@ -155,7 +164,11 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {
         ) : null}
 
         <View style={styles.vehicleActions}>
-          <TogglePill value={Boolean(item.visibleByTenants)} onValueChange={() => onToggleVisibility(item)} />
+          <TogglePill
+            value={Boolean(item.visibleByTenants)}
+            onValueChange={() => onToggleVisibility(item)}
+            disabled={item.canToggleVisibility === false}
+          />
           <TouchableOpacity style={styles.editButton} onPress={() => onEdit(item)}>
             <Ionicons name="pencil-outline" size={16} color="#fff" />
             <Text style={styles.editButtonText}>Modifier</Text>
@@ -241,6 +254,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 14,
+    gap: 12,
+  },
+  sectionTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  sectionAction: {
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    maxWidth: '42%',
   },
   kicker: {
     color: '#7c83ab',
@@ -261,24 +285,29 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   badge: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   badgeText: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.2,
+    flexShrink: 1,
   },
   metricCard: {
     width: '48.4%',
     minHeight: 106,
     borderRadius: 18,
     padding: 14,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: '#0D0E15',
     borderWidth: 1,
     marginBottom: 10,
   },
@@ -341,6 +370,9 @@ const styles = StyleSheet.create({
     color: '#C4CCE8',
     fontWeight: '800',
     fontSize: 12,
+  },
+  toggleLabelDisabled: {
+    color: '#FFB347',
   },
   pillRow: {
     flexDirection: 'row',

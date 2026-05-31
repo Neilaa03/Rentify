@@ -19,7 +19,12 @@ import ReservationCard from '../../components/cards/ReservationCard';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import { getOwnerListings } from '../../services/owner';
 
-const OwnerReservationsScreen = ({ navigation, route }) => {
+const OwnerReservationsScreen = ({
+  navigation,
+  route,
+  BottomNavigationComponent = OwnerBottomNavigation,
+  title = 'Réservations',
+}) => {
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -162,7 +167,7 @@ const OwnerReservationsScreen = ({ navigation, route }) => {
             </View>
           </SafeAreaView>
         </ImageBackground>
-        <OwnerBottomNavigation navigation={navigation} route={route} active="reservations" />
+        <BottomNavigationComponent navigation={navigation} route={route} active="reservations" />
       </View>
     );
   }
@@ -172,7 +177,7 @@ const OwnerReservationsScreen = ({ navigation, route }) => {
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView style={[styles.overlay, { flex: 1 }]}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Réservations</Text>
+            <Text style={styles.headerTitle}>{title}</Text>
             <View style={{ width: 44 }} />
           </View>
 
@@ -219,7 +224,7 @@ const OwnerReservationsScreen = ({ navigation, route }) => {
         </SafeAreaView>
       </ImageBackground>
 
-      <OwnerBottomNavigation navigation={navigation} route={route} active="reservations" />
+      <BottomNavigationComponent navigation={navigation} route={route} active="reservations" />
     </View>
   );
 };

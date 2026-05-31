@@ -1,14 +1,14 @@
 import React from 'react';
-import OwnerReservationsScreen from '../owner/ReservationsScreen';
+import OwnerListingsScreen from '../owner/ListingsScreen';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 
-export default function AgencyRequestsScreen({ navigation, route }) {
+export default function AgencyListingsScreen({ navigation, route }) {
   return (
-    <OwnerReservationsScreen
+    <OwnerListingsScreen
       navigation={navigation}
       route={route}
       BottomNavigationComponent={AgencyBottomNavigation}
-      title="Réservations de l'agence"
+      title="Annonces de l'agence"
     />
   );
 }

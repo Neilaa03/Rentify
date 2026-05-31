@@ -26,7 +26,12 @@ const badgeByTone = {
   amber: { color: '#ffb347', backgroundColor: 'rgba(255,179,71,0.16)' },
 };
 
-const OwnerListingsScreen = ({ navigation, route }) => {
+const OwnerListingsScreen = ({
+  navigation,
+  route,
+  BottomNavigationComponent = OwnerBottomNavigation,
+  title = 'Mes annonces',
+}) => {
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -130,7 +135,7 @@ const OwnerListingsScreen = ({ navigation, route }) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Mes annonces</Text>
+          <Text style={styles.headerTitle}>{title}</Text>
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}
@@ -201,7 +206,7 @@ const OwnerListingsScreen = ({ navigation, route }) => {
           />
         )}
       </View>
-      <OwnerBottomNavigation navigation={navigation} route={route} active="listings" />
+      <BottomNavigationComponent navigation={navigation} route={route} active="listings" />
     </SafeAreaView>
   );
 };

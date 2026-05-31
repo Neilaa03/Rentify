@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { fetchJson } from './api';
 
 const authHeaders = (token, extra = {}) => ({
@@ -26,8 +27,8 @@ export const uploadAgencyDocument = async ({ token, documentType, file }) => {
 
   formData.append('documentType', documentType);
 
-  if (typeof window !== 'undefined' && file?.uri && file.uri.startsWith('data:')) {
-    const response = await fetch(file.uri);
+  if (Platform.OS === 'web') {
+    const response = await fetch(safeUri);
     const blob = await response.blob();
     formData.append('document', blob, safeName);
   } else {

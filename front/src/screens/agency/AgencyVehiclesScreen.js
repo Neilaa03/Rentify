@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ImageBackground, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, Badge, PillRow, SectionTitle, VehicleCard } from '../../components/agency/AgencyPrimitives';
 import { getAgencyVehicles, toggleAgencyVehicleVisibility } from '../../services/agency';
@@ -8,14 +9,7 @@ import { getAgencyVehicles, toggleAgencyVehicleVisibility } from '../../services
 const statusFilters = [
   { key: 'ALL', label: 'Tous' },
   { key: 'AVAILABLE', label: 'En ligne' },
-  { key: 'MAINTENANCE', label: 'Hors ligne' },
-];
-
-const sortFilters = [
-  { key: 'popular', label: 'Popularité' },
-  { key: 'price_asc', label: 'Prix ↑' },
-  { key: 'price_desc', label: 'Prix ↓' },
-  { key: 'rating', label: 'Note' },
+  { key: 'HIDDEN', label: 'Hors ligne' },
 ];
 
 const getSortValue = (item, sortKey) => {
@@ -90,6 +84,14 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
     navigation.navigate(routeName, params);
   };
 
+  const onAdd = () => {
+    if (mode === 'listings') {
+      navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' });
+      return;
+    }
+    navigation.navigate('OwnerCarForm', { token, user, mode: 'create_car' });
+  };
+
   return (
     <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
       <SafeAreaView style={styles.safeArea}>
@@ -98,7 +100,12 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
             kicker={mode === 'listings' ? 'LISTINGS' : 'FLEET'}
             title={mode === 'listings' ? 'Annonces de l’agence' : 'Flotte & véhicules'}
             subtitle="Gestion premium, visibilité publique et statuts des documents"
-            right={<Badge label={`${items.length} véhicules`} toneKey="blue" />}
+            right={(
+              <TouchableOpacity style={styles.addButton} onPress={onAdd}>
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={styles.addButtonText}>{mode === 'listings' ? 'Ajouter une annonce' : 'Ajouter un véhicule'}</Text>
+              </TouchableOpacity>
+            )}
           />
 
           {state.loading ? (
@@ -126,19 +133,20 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
                 activeKey={state.status}
                 onSelect={(status) => setState((prev) => ({ ...prev, status }))}
               />
-              <PillRow
-                items={sortFilters}
-                activeKey={state.sort}
-                onSelect={(sort) => setState((prev) => ({ ...prev, sort }))}
-              />
 
               <AgencyCard style={styles.countsCard}>
                 <View style={styles.countsRow}>
                   <Text style={styles.countText}>Disponibles: {Number(counters.available || 0)}</Text>
                   <Text style={styles.countText}>Loués: {Number(counters.rented || 0)}</Text>
-                  <Text style={styles.countText}>Maintenance: {Number(counters.maintenance || 0)}</Text>
+                  <Text style={styles.countText}>Non publiés: {Number(counters.hidden || 0)}</Text>
                 </View>
+                <Text style={styles.countHint}>Les véhicules sans documents obligatoires restent masqués jusqu'à validation.</Text>
               </AgencyCard>
+
+              <TouchableOpacity style={styles.primaryAction} onPress={onAdd}>
+                <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                <Text style={styles.primaryActionText}>{mode === 'listings' ? 'Créer une nouvelle annonce' : 'Créer un nouveau véhicule'}</Text>
+              </TouchableOpacity>
 
               {items.length ? items.map((item) => (
                 <VehicleCard
@@ -164,10 +172,40 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 102 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   error: { color: '#FF8FA3', marginBottom: 12, fontWeight: '700' },
-  metricsCard: { padding: 14, marginBottom: 12 },
-  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  metricsCard: { padding: 10, marginBottom: 12 },
+  badgesRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6, alignItems: 'center' },
   countsCard: { padding: 14, marginBottom: 12 },
   countsRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 },
   countText: { color: '#C9D0EB', fontWeight: '800', fontSize: 12 },
+  countHint: { color: '#8F97BD', fontSize: 11, marginTop: 8, lineHeight: 16 },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    maxWidth: 170,
+    backgroundColor: 'rgba(124,77,255,0.95)',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    flexShrink: 1,
+  },
+  primaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(41,121,255,0.95)',
+    paddingVertical: 14,
+    borderRadius: 18,
+    marginBottom: 12,
+  },
+  primaryActionText: { color: '#fff', fontWeight: '900', fontSize: 14 },
   empty: { color: '#A5AECF', fontStyle: 'italic', marginTop: 10, marginBottom: 20 },
 });

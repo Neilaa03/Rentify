@@ -76,13 +76,8 @@ export default function AgencyProfileScreen({ navigation, route }) {
               </View>
             </AgencyCard>
 
-            <AgencyCard style={styles.card}>
-              <SectionTitle kicker="DOSSIERS" title="Queue documentaire" subtitle="Les documents de l’agence et de la flotte" />
-              {state.documents.length ? state.documents.map((doc) => <DocumentRow key={doc.id} item={doc} />) : <Text style={styles.empty}>Aucun document disponible.</Text>}
-            </AgencyCard>
-
-            <TouchableOpacity style={styles.primaryAction} onPress={() => navigation.navigate('AgencyFleet', { token: route?.params?.token, user: route?.params?.user })}>
-              <Text style={styles.primaryActionText}>Gérer tous les documents</Text>
+            <TouchableOpacity style={styles.primaryAction} onPress={() => navigation.navigate('AgencyDocuments', { token: route?.params?.token, user: route?.params?.user })}>
+              <Text style={styles.primaryActionText}>Gérer mes documents</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.dangerAction} onPress={onLeave}>

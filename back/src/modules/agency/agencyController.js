@@ -6,9 +6,12 @@ import {
   getAgencyVehicles,
   toggleAgencyVehicleVisibility,
 } from './agencyModel.js';
+import { getDocuments } from '../documents/documentModel.js';
 import { uploadDocumentHandler } from '../documents/documentController.js';
 
 const zodErrors = (error) => error.issues.map((item) => item.message);
+const USER_DOCUMENT_TYPES = new Set(['identity_card', 'passport', 'driver_license']);
+const COMPANY_DOCUMENT_TYPES = new Set(['business_registration', 'nif', 'professional_insurance']);
 
 const sendError = (res, err) => {
   if (err.issues) {
@@ -38,9 +41,24 @@ export const getAgencyDocumentsHandler = async (req, res) => {
 export const uploadAgencyDocumentHandler = async (req, res) => {
   try {
     const agency = await getAgencyByManagerId(req.user.id);
+    const documentType = String(req.body?.documentType || '').trim();
+    const existingDocuments = await getDocuments({
+      ...(COMPANY_DOCUMENT_TYPES.has(documentType) ? { companyId: agency.id } : {}),
+      ...(USER_DOCUMENT_TYPES.has(documentType) ? { userId: req.user.id } : {}),
+      documentType,
+    });
+    const verifiedDocument = existingDocuments.find((document) => String(document.status || '').toLowerCase() === 'approved');
+
+    if (verifiedDocument) {
+      return res.status(409).json({
+        error: 'This document is already verified and cannot be replaced.',
+      });
+    }
+
     req.body = {
       ...req.body,
-      companyId: agency.id,
+      ...(COMPANY_DOCUMENT_TYPES.has(documentType) ? { companyId: agency.id } : {}),
+      ...(USER_DOCUMENT_TYPES.has(documentType) ? { userId: req.user.id } : {}),
     };
     return uploadDocumentHandler(req, res);
   } catch (err) {

@@ -8,6 +8,35 @@ const authHeaders = (token) => ({
   'Content-Type': 'application/json',
 });
 
+const buildMultipartDocument = async ({ file, documentType, ownerKey, ownerValue }) => {
+  const formData = new FormData();
+  const safeUri = String(file?.uri || '');
+  const isPdf =
+    String(file?.type || '').toLowerCase() === 'application/pdf' ||
+    safeUri.toLowerCase().endsWith('.pdf');
+  const safeName = (() => {
+    const base = file?.name || `${documentType}.pdf`;
+    if (!isPdf) return base;
+    return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
+  })();
+  const mimeType = file?.type || (isPdf ? 'application/pdf' : 'application/octet-stream');
+
+  if (Platform.OS === 'web') {
+    const blob = await fetch(safeUri).then((r) => r.blob());
+    formData.append('document', blob, safeName);
+  } else {
+    formData.append('document', {
+      uri: safeUri,
+      name: safeName,
+      type: mimeType,
+    });
+  }
+
+  formData.append(ownerKey, String(ownerValue));
+  formData.append('documentType', documentType);
+  return formData;
+};
+
 const getListingState = ({ isActive, docsByType }) => {
   if (isActive) return 'published';
 
@@ -201,31 +230,12 @@ export const uploadCarDocument = async ({
   documentType,
   file,
 }) => {
-  const formData = new FormData();
-  const safeUri = String(file?.uri || '');
-  const isPdf =
-    String(file?.type || '').toLowerCase() === 'application/pdf' ||
-    safeUri.toLowerCase().endsWith('.pdf');
-  const safeName = (() => {
-    const base = file?.name || `${documentType}.pdf`;
-    if (!isPdf) return base;
-    return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
-  })();
-  const mimeType = file?.type || (isPdf ? 'application/pdf' : 'application/octet-stream');
-
-  if (Platform.OS === 'web') {
-    const blob = await fetch(safeUri).then((r) => r.blob());
-    formData.append('document', blob, safeName);
-  } else {
-    formData.append('document', {
-      uri: safeUri,
-      name: safeName,
-      type: mimeType,
-    });
-  }
-
-  formData.append('carId', String(carId));
-  formData.append('documentType', documentType);
+  const formData = await buildMultipartDocument({
+    file,
+    documentType,
+    ownerKey: 'carId',
+    ownerValue: carId,
+  });
 
   console.log('Uploading document:', {
     carId,
@@ -239,6 +249,35 @@ export const uploadCarDocument = async ({
       Authorization: `Bearer ${token}`,
     },
     body: formData,
+  });
+};
+
+export const uploadUserDocument = async ({
+  token,
+  userId,
+  documentType,
+  file,
+}) => {
+  const formData = await buildMultipartDocument({
+    file,
+    documentType,
+    ownerKey: 'userId',
+    ownerValue: userId,
+  });
+
+  return fetchJson('/api/documents/upload', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+};
+
+export const getUserDocuments = async ({ token, userId, documentType }) => {
+  const params = new URLSearchParams();
+  if (userId) params.set('userId', userId);
+  if (documentType) params.set('documentType', documentType);
+  return fetchJson(`/api/documents?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 };
 

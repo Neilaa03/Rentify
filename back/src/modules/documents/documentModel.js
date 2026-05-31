@@ -46,6 +46,11 @@ export const getDocuments = async (filters = {}) => {
   return (data || []).map(toDocumentDto);
 };
 
+export const hasApprovedDocument = async (filters = {}) => {
+  const documents = await getDocuments(filters);
+  return documents.some((document) => String(document.status || '').toLowerCase() === 'approved');
+};
+
 export const getDocumentById = async (id) => {
   const { data, error } = await supabase
     .from(DOCUMENTS_TABLE)

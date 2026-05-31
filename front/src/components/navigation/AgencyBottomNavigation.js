@@ -8,7 +8,7 @@ const tabs = [
   { key: 'dashboard', label: 'Dashboard', icon: 'grid-outline', routeName: 'AgencyDashboard' },
   { key: 'fleet', label: 'Fleet', icon: 'car-outline', routeName: 'AgencyFleet' },
   { key: 'listings', label: 'Listes', icon: 'albums-outline', routeName: 'AgencyListings' },
-  { key: 'requests', label: 'Demandes', icon: 'calendar-outline', routeName: 'AgencyRequests' },
+  { key: 'reservations', label: 'Réservations', icon: 'calendar-outline', routeName: 'AgencyRequests' },
   { key: 'profile', label: 'Profil', icon: 'person-outline', routeName: 'AgencyProfile' },
 ];
 

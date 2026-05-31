@@ -38,6 +38,8 @@ const carDocuments = [
 
 const companyDocuments = [
   'business_registration',
+  'nif',
+  'professional_insurance',
 ];
 
 const ensurePdfExtension = (name = 'document') => {
@@ -119,15 +121,23 @@ export const getAllDocuments = async (req, res) => {
     const items = await getDocuments(parsedFilters);
 
     if (req.user?.role === 'admin') {
-      return res.json(items);
+      const enriched = await Promise.all(items.map(async (item) => ({
+        ...item,
+        ocrResult: await getDocumentOcrResultByDocumentId(item.id),
+      })));
+      return res.json(enriched);
     }
 
     const accessChecks = await Promise.all(
       items.map((item) => canManageDocumentPayload(req, item)),
     );
     const scopedItems = items.filter((_item, index) => accessChecks[index]);
+    const enriched = await Promise.all(scopedItems.map(async (item) => ({
+      ...item,
+      ocrResult: await getDocumentOcrResultByDocumentId(item.id),
+    })));
 
-    return res.json(scopedItems);
+    return res.json(enriched);
   } catch (err) {
     if (err.issues) {
       return res.status(400).json({ errors: zodErrors(err) });

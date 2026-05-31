@@ -8,6 +8,8 @@ export const documentTypes = [
   'insurance',
   'technical_control',
   'business_registration',
+  'nif',
+  'professional_insurance',
 ];
 
 export const documentStatuses = [

@@ -139,6 +139,12 @@ const styles = StyleSheet.create({
   progressTrack: { height: 10, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginTop: 4 },
   progressFill: { height: '100%', borderRadius: 999, backgroundColor: '#7C4DFF' },
   progressCaption: { color: '#A5AECF', marginTop: 8, fontSize: 12, fontWeight: '700' },
-  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 4 },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    backgroundColor: '#0D0E15',
+  },
   empty: { color: '#A5AECF', fontStyle: 'italic', paddingVertical: 10 },
 });
