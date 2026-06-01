@@ -5,7 +5,6 @@ import {
   getUnreadCountHandler,
   markNotificationAsReadHandler,
   markAllNotificationsHandler,
-  deleteNotificationHandler,
 } from './notificationController.js';
 
 const router = Router();
@@ -15,6 +14,5 @@ router.get('/', getNotificationsHandler);
 router.get('/unread-count', getUnreadCountHandler);
 router.patch('/read-all', markAllNotificationsHandler);
 router.patch('/:id/read', markNotificationAsReadHandler);
-router.delete('/:id', deleteNotificationHandler);
 
 export default router;

@@ -34,9 +34,6 @@ CREATE TYPE pickup_status AS ENUM (
 
 CREATE TYPE payment_status AS ENUM (
     'pending',
-    'held_in_escrow',
-    'released',
-    'disputed',
     'paid',
     'failed',
     'refunded',
@@ -101,22 +98,6 @@ CREATE TABLE users (
 
     is_verified BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
-
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-
-    stripe_account_id text
-);
-
--- =========================================================
--- USER BALANCES
--- =========================================================
-
-CREATE TABLE user_balances (
-    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-
-    pending_balance NUMERIC(10,2) DEFAULT 0,
-    available_balance NUMERIC(10,2) DEFAULT 0,
 
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -347,11 +328,9 @@ CREATE TABLE payments (
 
     payment_method VARCHAR(50) DEFAULT 'card', -- 'card' or 'cash'
 
-    payment_intent_id TEXT,
-    stripe_transfer_id TEXT,
+    transaction_reference TEXT,
 
     transaction_reference TEXT,
-    escrow_status payment_status DEFAULT 'pending',
 
     status payment_status DEFAULT 'pending',
 
@@ -360,33 +339,6 @@ CREATE TABLE payments (
     created_at TIMESTAMP DEFAULT NOW(),
 
     updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- =========================================================
--- ESCROW TRANSACTIONS
--- =========================================================
-
-CREATE TABLE escrow_transactions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-
-    reservation_id UUID NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
-    payment_intent_id TEXT NOT NULL,
-    stripe_transfer_id TEXT,
-
-    client_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-
-    amount NUMERIC(10,2) NOT NULL,
-
-    status payment_status DEFAULT 'held_in_escrow',
-
-    held_at TIMESTAMP DEFAULT NOW(),
-    released_at TIMESTAMP,
-
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-
-    UNIQUE (reservation_id)
 );
 
 -- =========================================================
@@ -488,7 +440,6 @@ CREATE TABLE messages (
 -- =========================================================
 
 CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_user_balances_user_id ON user_balances(user_id);
 
 CREATE INDEX idx_cars_owner_id ON cars(owner_id);
 
@@ -509,10 +460,6 @@ CREATE INDEX idx_reservations_listing_id ON reservations(listing_id);
 CREATE INDEX idx_reservations_renter_id ON reservations(renter_id);
 
 CREATE INDEX idx_payments_reservation_id ON payments(reservation_id);
-
-CREATE INDEX idx_escrow_transactions_reservation_id ON escrow_transactions(reservation_id);
-CREATE INDEX idx_escrow_transactions_payment_intent_id ON escrow_transactions(payment_intent_id);
-CREATE INDEX idx_escrow_transactions_owner_id ON escrow_transactions(owner_id);
 
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 

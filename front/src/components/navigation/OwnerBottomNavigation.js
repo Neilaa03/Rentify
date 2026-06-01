@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CommonActions } from '@react-navigation/native';
@@ -61,7 +61,8 @@ const OwnerBottomNavigation = ({ navigation, route, active }) => {
 
         return (
           <TouchableOpacity key={tab.key} style={styles.footerTab} onPress={tab.onPress}>
-            <Ionicons name={tab.icon} size={25} color={color} />
+            <Ionicons name={tab.icon} size={23} color={color} />
+            <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -79,11 +80,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: '#151738',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  footerTab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4 },
+  footerTab: { flex: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4 },
+  tabLabel: { color: '#8a90b8', fontSize: 10, marginTop: 4, fontWeight: '500' },
+  tabLabelActive: { color: '#8f6cff' },
 });
 
 export default OwnerBottomNavigation;

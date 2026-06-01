@@ -103,7 +103,6 @@ const OwnerCarsScreen = ({ navigation, route }) => {
       onPress={() => handleEditCar(item)}
       onEdit={() => handleEditCar(item)}
       onDelete={() => handleDeleteCar(item)}
-      onReviewsPress={() => navigation.navigate('OwnerCarReviews', { token, carId: item.id, car: item })}
     />
   );
 

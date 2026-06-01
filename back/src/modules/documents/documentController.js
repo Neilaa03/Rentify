@@ -35,12 +35,6 @@ const companyDocuments = [
   'business_registration',
 ];
 
-const ensurePdfExtension = (name = 'document') => {
-  const trimmed = String(name || 'document').trim();
-  if (trimmed.toLowerCase().endsWith('.pdf')) return trimmed;
-  return `${trimmed}.pdf`;
-};
-
 const zodErrors = (error) => error.issues.map((item) => item.message);
 const getUploadedFile = (req) =>
   req.files?.document?.[0] ||
@@ -219,20 +213,19 @@ export const uploadDocumentHandler = async (req, res) => {
     //   folder: 'rentify/documents',
     //   resource_type: resourceType,
     // });
-    const isPdf = uploadedFile.mimetype === 'application/pdf';
-    const fallbackName = isPdf ? 'document.pdf' : 'document';
-    const originalName = uploadedFile.originalname || fallbackName;
-    const normalizedOriginalName = isPdf ? ensurePdfExtension(originalName) : originalName;
-    const imagePublicId = normalizedOriginalName.replace(/\.[^/.]+$/, '');
-    const uploadPublicId = isPdf ? normalizedOriginalName : imagePublicId;
+    const originalName = uploadedFile.originalname || 'document.pdf';
+
+// remove extension for public_id
+    const fileNameWithoutExtension = originalName.replace(/\.[^/.]+$/, '');
 
     const uploadResult = await cloudinary.uploader.upload(dataURI, {
       folder: 'rentify/documents',
       resource_type: resourceType,
-      public_id: uploadPublicId,
-      use_filename: false,
-      unique_filename: true,
-      filename_override: normalizedOriginalName,
+
+      public_id: fileNameWithoutExtension,
+
+      use_filename: true,
+      unique_filename: false,
       type: 'upload',
     });
 

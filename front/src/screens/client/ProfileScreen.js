@@ -1,42 +1,25 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground, TextInput, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../../constants/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
-import storage from '../../utils/storage';
-import { appFont } from '../../utils/responsive';
 
-const profileFont = (width, regular, small, verySmall = small) => {
-  if (width <= 340) return verySmall;
-  if (width <= 380) return small;
-  return regular;
-};
-
-const SectionCard = ({ items, onItemPress }) => {
-  const { width } = useWindowDimensions();
-  const rowFontSize = profileFont(width, appFont(15), 14, 13);
-
-  return (
-    <View style={styles.sectionCard}>
-      {items.map((item, index) => (
-        <TouchableOpacity
-          key={item.label}
-          style={[styles.rowItem, index !== items.length - 1 && styles.rowItemBorder]}
-          onPress={() => onItemPress?.(item)}
-        >
-          <View style={styles.rowLeft}>
-            <View style={styles.iconWrap}>
-              <Ionicons name={item.icon} size={17} color="#8f6cff" />
-            </View>
-            <Text style={[styles.rowLabel, { fontSize: rowFontSize }]} numberOfLines={1}>{item.label}</Text>
+const SectionCard = ({ items }) => (
+  <View style={styles.sectionCard}>
+    {items.map((item, index) => (
+      <TouchableOpacity key={item.label} style={[styles.rowItem, index !== items.length - 1 && styles.rowItemBorder]}>
+        <View style={styles.rowLeft}>
+          <View style={styles.iconWrap}>
+            <Ionicons name={item.icon} size={17} color="#8f6cff" />
           </View>
-          <Ionicons name="chevron-forward" size={16} color="#7d83b0" />
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-};
+          <Text style={styles.rowLabel}>{item.label}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#7d83b0" />
+      </TouchableOpacity>
+    ))}
+  </View>
+);
 
 const StatCard = ({ value, label }) => (
   <View style={styles.statCard}>
@@ -46,26 +29,12 @@ const StatCard = ({ value, label }) => (
 );
 
 const ProfileScreen = ({ navigation, route }) => {
-  const { width } = useWindowDimensions();
   const [profile, setProfile] = useState(route?.params?.user || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false);
-  const [editEmail, setEditEmail] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  const [savingPersonalInfo, setSavingPersonalInfo] = useState(false);
-  const [personalInfoError, setPersonalInfoError] = useState('');
 
   const token = route?.params?.token;
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
-  const fontSize = {
-    title: profileFont(width, appFont(22, 24), 21, 20),
-    profileName: profileFont(width, appFont(17), 16, 15),
-    profilePhone: profileFont(width, appFont(14), 13, 12.5),
-    editText: profileFont(width, appFont(13), 12, 11.5),
-    input: profileFont(width, appFont(14), 13, 12.5),
-    logout: profileFont(width, appFont(15), 14, 13),
-  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -108,133 +77,25 @@ const ProfileScreen = ({ navigation, route }) => {
 
   const initial = (profile?.first_name?.[0] || profile?.email?.[0] || 'U').toUpperCase();
 
-  const openPersonalInfoEditor = () => {
-    setEditEmail(profile?.email || '');
-    setEditPhone(profile?.phone || '');
-    setPersonalInfoError('');
-    setIsEditingPersonalInfo(true);
-  };
-
-  const savePersonalInfo = async () => {
-    if (!token) {
-      setPersonalInfoError('Session invalide, reconnectez-vous.');
-      return;
-    }
-
-    const nextEmail = editEmail.trim();
-    const nextPhone = editPhone.trim();
-    if (!nextEmail) {
-      setPersonalInfoError('Email requis.');
-      return;
-    }
-    if (!nextPhone) {
-      setPersonalInfoError('Telephone requis.');
-      return;
-    }
-
-    try {
-      setSavingPersonalInfo(true);
-      setPersonalInfoError('');
-      const response = await fetch(API_ENDPOINTS.AUTH.ME, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: nextEmail,
-          phone: nextPhone,
-        }),
-      });
-
-      const raw = await response.text();
-      let data = null;
-      try {
-        data = raw ? JSON.parse(raw) : null;
-      } catch (_e) {
-        const preview = String(raw || '').slice(0, 120);
-        throw new Error(`Reponse serveur invalide (non-JSON): ${preview}`);
-      }
-      if (!response.ok) throw new Error(data?.error || 'Impossible de mettre a jour le profil');
-
-      const updatedUser = data?.user || null;
-      setProfile(updatedUser);
-      if (updatedUser) {
-        const normalized = {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          firstName: updatedUser.firstName || updatedUser.first_name || '',
-          lastName: updatedUser.lastName || updatedUser.last_name || '',
-          phone: updatedUser.phone || '',
-          role: updatedUser.role,
-          isVerified: updatedUser.isVerified ?? updatedUser.is_verified,
-          isActive: updatedUser.isActive ?? updatedUser.is_active,
-        };
-        await storage.setItemAsync('userProfile', JSON.stringify(normalized));
-      }
-      setIsEditingPersonalInfo(false);
-    } catch (err) {
-      setPersonalInfoError(err.message || 'Erreur lors de la mise a jour');
-    } finally {
-      setSavingPersonalInfo(false);
-    }
-  };
-
   return (
     <View style={styles.container}>
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView style={styles.overlay}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <Text style={[styles.title, { fontSize: fontSize.title }]}>Profil</Text>
+            <Text style={styles.title}>Profil</Text>
 
             <View style={styles.profileCard}>
               <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
               <View style={styles.profileInfo}>
-                <Text style={[styles.profileName, { fontSize: fontSize.profileName }]} numberOfLines={1}>{fullName}</Text>
-                <Text style={[styles.profilePhone, { fontSize: fontSize.profilePhone }]} numberOfLines={1}>{profile?.phone || profile?.email || '-'}</Text>
+                <Text style={styles.profileName}>{fullName}</Text>
+                <Text style={styles.profilePhone}>{profile?.phone || profile?.email || '-'}</Text>
                 {!!error && <Text style={styles.errorText}>{error}</Text>}
                 {loading && <Text style={styles.loadingText}>Chargement...</Text>}
               </View>
-              <TouchableOpacity style={styles.editBtn} onPress={openPersonalInfoEditor}>
+              <TouchableOpacity style={styles.editBtn}>
                 <Ionicons name="pencil-outline" size={16} color="#d6dbff" />
               </TouchableOpacity>
             </View>
-
-            {isEditingPersonalInfo && (
-              <View style={styles.editCard}>
-                <Text style={styles.editTitle}>Informations personnelles</Text>
-                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Email</Text>
-                <TextInput
-                  style={[styles.input, { fontSize: fontSize.input }]}
-                  value={editEmail}
-                  onChangeText={setEditEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  placeholder="example@mail.com"
-                  placeholderTextColor="#7d83b0"
-                />
-                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Telephone</Text>
-                <TextInput
-                  style={[styles.input, { fontSize: fontSize.input }]}
-                  value={editPhone}
-                  onChangeText={setEditPhone}
-                  keyboardType="phone-pad"
-                  placeholder="+213..."
-                  placeholderTextColor="#7d83b0"
-                />
-                {!!personalInfoError && <Text style={styles.errorText}>{personalInfoError}</Text>}
-                <View style={styles.editActions}>
-                  <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditingPersonalInfo(false)}>
-                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>Annuler</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveBtn} onPress={savePersonalInfo} disabled={savingPersonalInfo}>
-                    <Text style={[styles.saveBtnText, { fontSize: fontSize.editText }]} numberOfLines={1}>
-                      {savingPersonalInfo ? 'Enregistrement...' : 'Enregistrer'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
 
             <View style={styles.statsRow}>
               <StatCard value="3" label="Locations" />
@@ -249,9 +110,6 @@ const ProfileScreen = ({ navigation, route }) => {
                 { label: 'Moyens de paiement', icon: 'card-outline' },
                 { label: 'Mes adresses', icon: 'location-outline' },
               ]}
-              onItemPress={(item) => {
-                if (item.label === 'Informations personnelles') openPersonalInfoEditor();
-              }}
             />
 
             <Text style={styles.sectionTitle}>PREFERENCES</Text>
@@ -261,7 +119,6 @@ const ProfileScreen = ({ navigation, route }) => {
                 { label: 'Confidentialite & Securite', icon: 'shield-checkmark-outline' },
                 { label: 'Langue', icon: 'globe-outline' },
               ]}
-              onItemPress={() => {}}
             />
 
             <Text style={styles.sectionTitle}>AIDE & SUPPORT</Text>
@@ -271,7 +128,6 @@ const ProfileScreen = ({ navigation, route }) => {
                 { label: "Evaluer l'application", icon: 'star-outline' },
                 { label: 'A propos de Rentify', icon: 'information-circle-outline' },
               ]}
-              onItemPress={() => {}}
             />
 
             <TouchableOpacity
@@ -279,7 +135,7 @@ const ProfileScreen = ({ navigation, route }) => {
               onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })}
             >
               <Ionicons name="log-out-outline" size={18} color="#ff4f5e" />
-              <Text style={[styles.logoutText, { fontSize: fontSize.logout }]}>Se deconnecter</Text>
+              <Text style={styles.logoutText}>Se deconnecter</Text>
             </TouchableOpacity>
 
             <Text style={styles.version}>Rentify v1.0.0</Text>
@@ -296,7 +152,7 @@ const styles = StyleSheet.create({
   background: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(5, 6, 22, 0.72)' },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 96 },
-  title: { fontSize: appFont(22, 24), color: '#f2f4ff', fontWeight: '700', marginTop: 10, marginBottom: 14 },
+  title: { fontSize: 40 / 2, color: '#f2f4ff', fontWeight: '700', marginTop: 10, marginBottom: 14 },
   profileCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -314,12 +170,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#5b73ff',
   },
-  avatarText: { color: '#fff', fontWeight: '700', fontSize: appFont(17) },
+  avatarText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   profileInfo: { flex: 1, marginLeft: 12 },
-  profileName: { color: '#f2f4ff', fontWeight: '700', fontSize: appFont(17) },
-  profilePhone: { color: '#9ca2cb', marginTop: 6, fontSize: appFont(14) },
-  loadingText: { color: '#b4b9dc', marginTop: 6, fontSize: appFont(13) },
-  errorText: { color: '#ff7b89', marginTop: 6, fontSize: appFont(13) },
+  profileName: { color: '#f2f4ff', fontWeight: '700', fontSize: 15 },
+  profilePhone: { color: '#9ca2cb', marginTop: 6, fontSize: 12 },
+  loadingText: { color: '#b4b9dc', marginTop: 6, fontSize: 12 },
+  errorText: { color: '#ff7b89', marginTop: 6, fontSize: 12 },
   editBtn: {
     width: 34,
     height: 34,
@@ -328,42 +184,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(31, 35, 67, 0.9)',
   },
-  editCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(145, 152, 229, 0.2)',
-    backgroundColor: 'rgba(23, 26, 54, 0.92)',
-    padding: 14,
-    marginTop: 10,
-  },
-  editTitle: { color: '#f2f4ff', fontSize: appFont(15), fontWeight: '700', marginBottom: 10 },
-  inputLabel: { color: '#9da4cd', fontSize: appFont(13), marginBottom: 6, marginTop: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: 'rgba(145, 152, 229, 0.3)',
-    backgroundColor: 'rgba(12, 15, 37, 0.9)',
-    color: '#eef1ff',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: appFont(14),
-  },
-  editActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12, gap: 10 },
-  cancelBtn: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(145, 152, 229, 0.4)',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  cancelBtnText: { color: '#c5caef', fontWeight: '600', fontSize: appFont(13) },
-  saveBtn: {
-    borderRadius: 10,
-    backgroundColor: '#8f6cff',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: appFont(13) },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 18 },
   statCard: {
     width: '31.5%',
@@ -374,11 +194,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  statValue: { color: '#8f6cff', fontSize: appFont(18), fontWeight: '700' },
-  statLabel: { color: '#9da4cd', marginTop: 6, fontSize: appFont(13) },
+  statValue: { color: '#8f6cff', fontSize: 32 / 2, fontWeight: '700' },
+  statLabel: { color: '#9da4cd', marginTop: 6, fontSize: 12 },
   sectionTitle: {
     color: '#8b90b7',
-    fontSize: appFont(12),
+    fontSize: 20 / 2,
     fontWeight: '700',
     letterSpacing: 1,
     marginBottom: 8,
@@ -400,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rowItemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(145, 152, 229, 0.16)' },
-  rowLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', minWidth: 0 },
+  rowLeft: { flexDirection: 'row', alignItems: 'center' },
   iconWrap: {
     width: 34,
     height: 34,
@@ -410,7 +230,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(56, 45, 120, 0.55)',
     marginRight: 10,
   },
-  rowLabel: { color: '#eef1ff', fontSize: appFont(15), fontWeight: '500', flexShrink: 1 },
+  rowLabel: { color: '#eef1ff', fontSize: 15 / 1.95, fontWeight: '500' },
   logoutButton: {
     height: 50,
     borderRadius: 14,
@@ -423,8 +243,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  logoutText: { color: '#ff4f5e', fontSize: appFont(15), fontWeight: '700' },
-  version: { textAlign: 'center', color: '#7f84ae', fontSize: appFont(12), marginTop: 14, marginBottom: 8 },
+  logoutText: { color: '#ff4f5e', fontSize: 16 / 1.95, fontWeight: '700' },
+  version: { textAlign: 'center', color: '#7f84ae', fontSize: 12, marginTop: 14, marginBottom: 8 },
 });
 
 export default ProfileScreen;

@@ -9,7 +9,6 @@ import {
   Alert,
   ImageBackground,
   Platform,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
@@ -21,8 +20,6 @@ import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
 import PaymentMethodSelector from '../../components/payment/PaymentMethodSelector';
 import PaymentStatusDisplay from '../../components/payment/PaymentStatusDisplay';
-import ReviewCard from '../../components/reviews/ReviewCard';
-import ReviewForm from '../../components/reviews/ReviewForm';
 
 const useStripeSafe = () => {
   if (Platform.OS === 'web') {
@@ -59,41 +56,8 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const [paymentStatus, setPaymentStatus] = useState(null); // null | 'pending' | 'completed' | 'failed' | 'pending_cash'
   const [paymentInfo, setPaymentInfo] = useState(null); // stores payment response data
   const [reservationState, setReservationState] = useState(reservationFromParams || null);
-  const [ownerConnectStatus, setOwnerConnectStatus] = useState(null);
-  const [justCompletedCardPayment, setJustCompletedCardPayment] = useState(false);
-  const [reviewLoading, setReviewLoading] = useState(false);
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [reviews, setReviews] = useState([]);
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   const reservation = reservationState || reservationFromParams;
-
-  const getReservationDetailsTarget = () => {
-    const parent = navigation.getParent?.();
-    const nextListing = listingFromApi || listingFromParams || reservation?.listing || null;
-    const nextReservation = reservationState || reservationFromParams || reservation || null;
-    return { parent, nextListing, nextReservation };
-  };
-
-  const goToReservationDetailsFromReservations = () => {
-    const { parent, nextListing, nextReservation } = getReservationDetailsTarget();
-
-    if (parent?.navigate) {
-      parent.navigate('ReservationsTab', {
-        screen: 'ReservationDetailsFromReservations',
-        params: {
-          reservation: nextReservation,
-          listing: nextListing,
-        },
-      });
-      return;
-    }
-
-    navigation.navigate('ReservationDetailsFromReservations', {
-      reservation: nextReservation,
-      listing: nextListing,
-    });
-  };
 
   const goToReservations = () => {
     const parent = navigation.getParent?.();
@@ -200,9 +164,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       setPaymentInfo(payment);
       if (
         payment?.status === 'completed' || 
-        payment?.status === 'released' ||
-        payment?.status === 'held_in_escrow' ||
-        payment?.status === 'disputed' ||
         payment?.status === 'failed' || 
         payment?.status === 'pending_cash' || 
         payment?.status === 'pending' ||
@@ -247,22 +208,10 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     isReservationActive &&
     (paymentStatus === null || paymentStatus === 'failed');
 
-  const isCardEscrowActive =
-    paymentMethod === 'card' &&
-    ['held_in_escrow', 'released', 'disputed'].includes(paymentStatus);
-  const hideCancelOnThisScreen = justCompletedCardPayment || isCardEscrowActive;
-
-  const showActionBar = reservation?.status === 'reserved' && !hideCancelOnThisScreen;
+  const showActionBar = reservation?.status === 'reserved';
   const showPayButton =
     reservation?.status === 'reserved' &&
     (paymentStatus === null || paymentStatus === 'failed' || canResumePendingCardPayment);
-
-  const showConfirmHandoverButton = paymentStatus === 'held_in_escrow' && !justCompletedCardPayment;
-
-  const isCardEnabledForOwner = Boolean(ownerConnectStatus?.cardPaymentsAvailable);
-  const disabledCardReason = isCardEnabledForOwner
-    ? ''
-    : 'Paiement carte indisponible: le proprietaire n\'a pas encore configure ses paiements Stripe.';
 
   const paymentButtonLabel = canResumePendingCardPayment
     ? 'Finish payment'
@@ -429,8 +378,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
         setPaymentInfo(payment);
         if (payment?.status === 'completed' || payment?.status === 'failed' || payment?.status === 'pending_cash' || payment?.status === 'pending') {
           setPaymentStatus(payment.status);
-        } else if (payment?.status === 'held_in_escrow' || payment?.status === 'released' || payment?.status === 'disputed') {
-          setPaymentStatus(payment.status);
         } else {
           setPaymentStatus(null);
         }
@@ -444,43 +391,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       cancelled = true;
     };
   }, [reservation?.id, reservation?.status]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadOwnerConnectStatus = async () => {
-      const ownerId = reservation?.listing?.car?.ownerId;
-      if (!ownerId) return;
-
-      try {
-        const token = await storage.getItemAsync('userToken');
-        if (!token) return;
-
-        const response = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_STATUS(ownerId), {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) return;
-        const status = await response.json();
-        if (cancelled) return;
-
-        setOwnerConnectStatus(status || null);
-        if (!status?.cardPaymentsAvailable && paymentMethod === 'card') {
-          setPaymentMethod('cash');
-        }
-      } catch (_error) {
-        // Keep UI usable with cash even if connect status fetch fails.
-      }
-    };
-
-    loadOwnerConnectStatus();
-    return () => {
-      cancelled = true;
-    };
-  }, [reservation?.listing?.car?.ownerId, paymentMethod]);
 
   useEffect(() => {
     if (!resumeCardPayment) return;
@@ -579,7 +489,10 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
 
       console.log('Polling payment:', payment);
 
-      if (payment?.status === 'held_in_escrow' || payment?.status === 'released') {
+      if (
+        payment?.status === 'completed' ||
+        payment?.status === 'paid'
+      ) {
         return {
           success: true,
         };
@@ -657,16 +570,17 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
       setPaymentStatus('processing');
 
       const paymentResult = await waitForPaymentConfirmation(token);
+      const goBackToPrevious = () => navigation.navigate('ReservationsTab', { screen: 'ReservationDetails', params: { reservationId: reservation.id } });
+
       if (paymentResult.success) {
-        setPaymentStatus('held_in_escrow');
-        setJustCompletedCardPayment(true);
+        setPaymentStatus('completed');
         Alert.alert(
-          'Paiement sécurisé',
-          'Votre paiement est maintenant sécurisé en escrow. Vous pourrez confirmer la remise du véhicule une fois la voiture reçue.',
+          'Paiement réussi',
+          'Votre paiement a été traité avec succès. Votre réservation est confirmée!',
           [
             {
               text: 'OK',
-              onPress: () => refreshPaymentStatus(token),
+              onPress: () => goBackToPrevious(),
             },
           ]
         );
@@ -735,65 +649,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleConfirmHandover = async () => {
-    try {
-      const token = await storage.getItemAsync('userToken');
-      if (!token) {
-        Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
-        return;
-      }
-
-      const response = await fetch(API_ENDPOINTS.RESERVATIONS.CONFIRM_HANDOVER(reservation.id), {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Impossible de confirmer la remise');
-      }
-
-      setPaymentStatus('released');
-      setPaymentInfo((prev) => ({ ...(prev || {}), status: 'released' }));
-      Alert.alert('Succès', 'La remise du véhicule a été confirmée et les fonds ont été libérés.');
-    } catch (error) {
-      Alert.alert('Erreur', error.message || 'Impossible de confirmer la remise');
-    }
-  };
-
-  const handleDisputeHandover = async () => {
-    try {
-      const token = await storage.getItemAsync('userToken');
-      if (!token) {
-        Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
-        return;
-      }
-
-      const response = await fetch(API_ENDPOINTS.RESERVATIONS.DISPUTE(reservation.id), {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reason: 'client_reported_issue' }),
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Impossible de déclarer un litige');
-      }
-
-      setPaymentStatus('disputed');
-      setPaymentInfo((prev) => ({ ...(prev || {}), status: 'disputed' }));
-      Alert.alert('Litige enregistré', 'Le paiement reste bloqué jusqu’à la résolution.');
-    } catch (error) {
-      Alert.alert('Erreur', error.message || 'Impossible de créer le litige');
-    }
-  };
-
   const formatPrice = (value) => value.toLocaleString('fr-FR');
   const formatDate = (date) => new Date(date).toLocaleDateString('fr-FR');
 
@@ -818,81 +673,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
   const safeTotalPrice = useMemo(
     () => rentalSubtotal + deliveryFee + serviceFee,
     [rentalSubtotal, deliveryFee, serviceFee]
-  );
-
-  const canLeaveReview = reservation?.status === 'finished';
-  const canAddAnotherReview = canLeaveReview && (Array.isArray(reviews) ? reviews.length : 0) < 5;
-
-  const fetchReview = useCallback(async () => {
-    if (!reservation?.id) return;
-    try {
-      setReviewLoading(true);
-      const token = await storage.getItemAsync('userToken');
-      if (!token) return;
-
-      const res = await fetch(API_ENDPOINTS.REVIEWS.RESERVATION_GET(reservation.id), {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Erreur lors du chargement de l’avis');
-      }
-      const json = await res.json();
-      setReviews(Array.isArray(json) ? json : json ? [json] : []);
-    } catch (e) {
-      console.error('fetchReview error:', e);
-    } finally {
-      setReviewLoading(false);
-    }
-  }, [reservation?.id]);
-
-  const submitReview = useCallback(
-    async ({ rating, comment }) => {
-      if (!reservation?.id) return;
-      try {
-        setReviewSubmitting(true);
-        const token = await storage.getItemAsync('userToken');
-        if (!token) {
-          Alert.alert('Erreur', 'Veuillez vous reconnecter');
-          return;
-        }
-
-        const res = await fetch(API_ENDPOINTS.REVIEWS.RESERVATION_CREATE(reservation.id), {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ rating, comment }),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || 'Erreur lors de l’envoi de l’avis');
-        }
-
-        const json = await res.json();
-        setReviews((prev) => [json, ...(Array.isArray(prev) ? prev : [])].filter(Boolean));
-        setReviewModalOpen(false);
-        Alert.alert('Merci !', 'Votre avis a été envoyé.');
-      } catch (e) {
-        console.error('submitReview error:', e);
-        Alert.alert('Erreur', e.message || 'Une erreur est survenue');
-      } finally {
-        setReviewSubmitting(false);
-      }
-    },
-    [reservation?.id]
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchReview();
-    }, [fetchReview])
   );
 
   return (
@@ -1148,111 +928,12 @@ const ReservationDetailsScreen = ({ navigation, route }) => {
           />
         )}
 
-        {justCompletedCardPayment && paymentStatus === 'held_in_escrow' && (
-          <View style={styles.escrowInfoCard}>
-            <Text style={styles.escrowInfoTitle}>Paiement confirmé</Text>
-            <Text style={styles.escrowInfoText}>
-              Votre paiement est sécurisé en escrow. Rendez-vous dans <Text style={styles.escrowInfoStrong}>Mes réservations</Text> pour confirmer la remise du véhicule une fois la voiture reçue.
-            </Text>
-            <TouchableOpacity onPress={goToReservationDetailsFromReservations} activeOpacity={0.85} style={styles.escrowInfoButton}>
-              <Text style={styles.escrowInfoButtonText}>Voir ma réservation</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {showConfirmHandoverButton && (
-          <View style={styles.escrowActionCard}>
-            <Text style={styles.escrowActionTitle}>Paiement sécurisé en escrow</Text>
-            <Text style={styles.escrowActionText}>
-              Confirmez seulement quand vous avez bien reçu le véhicule. Les fonds seront alors transférés au propriétaire.
-            </Text>
-            <View style={styles.escrowActionRow}>
-              <TouchableOpacity onPress={handleDisputeHandover} activeOpacity={0.85} style={styles.escrowGhostButton}>
-                <Text style={styles.escrowGhostButtonText}>Signaler un litige</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmHandover} activeOpacity={0.85} style={styles.escrowPrimaryButton}>
-                <Text style={styles.escrowPrimaryButtonText}>Confirmer car reçu</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
         {/* Payment Method Selector */}
         {showPaymentMethodSelector && (
           <PaymentMethodSelector
             selectedMethod={paymentMethod}
             onMethodSelect={setPaymentMethod}
-            isCardEnabled={isCardEnabledForOwner}
-            disabledCardReason={disabledCardReason}
           />
-        )}
-
-        {/* Review Section (finished reservations) */}
-        {canLeaveReview && reservation?.status !== 'cancelled' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Avis</Text>
-            {reviewLoading ? (
-              <View style={styles.reviewLoadingRow}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.reviewLoadingText}>Chargement…</Text>
-              </View>
-            ) : Array.isArray(reviews) && reviews.length ? (
-              <View style={{ marginTop: 6 }}>
-                {reviews.map((r) => (
-                  <ReviewCard key={r.id} review={r} />
-                ))}
-              </View>
-            ) : null}
-
-            {!reviewLoading && canAddAnotherReview ? (
-              <>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => setReviewModalOpen(true)}
-                  style={styles.reviewButtonWrap}
-                >
-                  <LinearGradient
-                    colors={[COLORS.secondary, COLORS.primary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.reviewButton}
-                  >
-                    <Ionicons name="chatbox-ellipses-outline" size={18} color="#fff" />
-                    <Text style={styles.reviewButtonText}>Donner mon avis</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-                <Text style={styles.reviewLimitHint}>
-                  {5 - (Array.isArray(reviews) ? reviews.length : 0)} avis restant(s).
-                </Text>
-
-                <Modal
-                  visible={reviewModalOpen}
-                  transparent
-                  animationType="fade"
-                  onRequestClose={() => setReviewModalOpen(false)}
-                >
-                  <View style={styles.reviewModalBackdrop}>
-                    <View style={styles.reviewModalCard}>
-                      <View style={styles.reviewModalHeader}>
-                        <Text style={styles.reviewModalTitle}>Votre avis</Text>
-                        <TouchableOpacity
-                          onPress={() => setReviewModalOpen(false)}
-                          activeOpacity={0.8}
-                          style={styles.reviewModalClose}
-                          disabled={reviewSubmitting}
-                        >
-                          <Ionicons name="close" size={22} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                      <ReviewForm submitting={reviewSubmitting} onSubmit={submitReview} />
-                    </View>
-                  </View>
-                </Modal>
-              </>
-            ) : !reviewLoading && canLeaveReview && !canAddAnotherReview ? (
-              <Text style={styles.reviewLimitReachedText}>Limite atteinte (5 avis).</Text>
-            ) : null}
-          </View>
         )}
 
       {/* Terms & Conditions */}
@@ -1650,81 +1331,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(143, 108, 255, 0.1)',
   },
-  reviewLoadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  reviewLoadingText: {
-    color: '#8e95bf',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  reviewNotReadyText: {
-    color: '#8e95bf',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  reviewLimitHint: {
-    marginTop: 8,
-    color: '#8e95bf',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  reviewLimitReachedText: {
-    color: '#8e95bf',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  reviewButtonWrap: {
-    marginTop: 4,
-  },
-  reviewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  reviewButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-  reviewModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    padding: 16,
-    justifyContent: 'center',
-  },
-  reviewModalCard: {
-    borderRadius: 16,
-    backgroundColor: '#0f1228',
-    borderWidth: 1,
-    borderColor: 'rgba(148, 156, 233, 0.2)',
-    padding: 14,
-  },
-  reviewModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  reviewModalTitle: {
-    color: '#f6f8ff',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  reviewModalClose: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: 'rgba(148, 156, 233, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   termsCheckbox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1739,92 +1345,6 @@ const styles = StyleSheet.create({
   termsLink: {
     color: '#a566ff',
     fontWeight: '600',
-  },
-  escrowActionCard: {
-    backgroundColor: 'rgba(79, 140, 255, 0.12)',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(79, 140, 255, 0.22)',
-  },
-  escrowActionTitle: {
-    color: '#f6f8ff',
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  escrowActionText: {
-    color: '#c9d2ff',
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 14,
-  },
-  escrowActionRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  escrowGhostButton: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(246,248,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  escrowGhostButtonText: {
-    color: '#f6f8ff',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  escrowPrimaryButton: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#23d49f',
-  },
-  escrowPrimaryButtonText: {
-    color: '#0d1227',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  escrowInfoCard: {
-    backgroundColor: 'rgba(35, 212, 159, 0.10)',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(35, 212, 159, 0.22)',
-  },
-  escrowInfoTitle: {
-    color: '#f6f8ff',
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  escrowInfoText: {
-    color: '#c9d2ff',
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 12,
-  },
-  escrowInfoStrong: {
-    color: '#ffffff',
-    fontWeight: '800',
-  },
-  escrowInfoButton: {
-    backgroundColor: '#23d49f',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  escrowInfoButtonText: {
-    color: '#0d1227',
-    fontWeight: '900',
   },
   actionButtonsSection: {
     marginBottom: 24,

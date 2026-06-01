@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
-import { appFont } from '../../utils/responsive';
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/540x280';
 
@@ -12,7 +11,7 @@ const toImageUrl = (img) => {
   return img.imageUrl || img.image_url || img.url || null;
 };
 
-const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {
+const CarCard = ({ car, onPress, onEdit, onDelete }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const scrollRef = useRef(null);
@@ -95,16 +94,6 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>En ligne</Text>
         </View>
-
-        {typeof onReviewsPress === 'function' ? (
-          <TouchableOpacity
-            style={styles.reviewsBadge}
-            activeOpacity={0.85}
-            onPress={onReviewsPress}
-          >
-            <Ionicons name="chatbubbles-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-        ) : null}
       </View>
 
       <View style={styles.body}>
@@ -199,21 +188,8 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: '#fff',
-    fontSize: appFont(12),
+    fontSize: 12,
     fontWeight: '700',
-  },
-  reviewsBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(15, 18, 40, 0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
   body: {
     padding: 16,
@@ -230,17 +206,17 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#fff',
-    fontSize: appFont(17),
+    fontSize: 17,
     fontWeight: '700',
     marginBottom: 6,
   },
   subtitle: {
     color: '#c3c8e1',
-    fontSize: appFont(13),
+    fontSize: 13,
   },
   priceText: {
     color: COLORS.primary,
-    fontSize: appFont(15),
+    fontSize: 15,
     fontWeight: '700',
   },
   detailsRow: {
@@ -255,7 +231,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     color: '#a7adcf',
-    fontSize: appFont(12),
+    fontSize: 12,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -274,7 +250,7 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     color: '#fff',
-    fontSize: appFont(14),
+    fontSize: 14,
     fontWeight: '700',
   },
   deleteButton: {
@@ -290,7 +266,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: '#ff5a5a',
-    fontSize: appFont(14),
+    fontSize: 14,
     fontWeight: '700',
   },
 });

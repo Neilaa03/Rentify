@@ -9,7 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 
-const PaymentMethodSelector = ({ selectedMethod, onMethodSelect, isCardEnabled = true, disabledCardReason = '' }) => {
+const PaymentMethodSelector = ({ selectedMethod, onMethodSelect }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Choisissez votre méthode de paiement</Text>
@@ -19,12 +19,8 @@ const PaymentMethodSelector = ({ selectedMethod, onMethodSelect, isCardEnabled =
         style={[
           styles.methodCard,
           selectedMethod === 'card' && styles.methodCardActive,
-          !isCardEnabled && styles.methodCardDisabled,
         ]}
-        onPress={() => {
-          if (isCardEnabled) onMethodSelect('card');
-        }}
-        disabled={!isCardEnabled}
+        onPress={() => onMethodSelect('card')}
       >
         <View style={styles.methodHeader}>
           <View style={styles.methodIconContainer}>
@@ -44,9 +40,7 @@ const PaymentMethodSelector = ({ selectedMethod, onMethodSelect, isCardEnabled =
               Carte bancaire
             </Text>
             <Text style={styles.methodDescription}>
-              {isCardEnabled
-                ? 'Paiement immédiat par Stripe'
-                : disabledCardReason || 'Paiement carte indisponible pour cette annonce'}
+              Paiement immédiat par Stripe
             </Text>
           </View>
           <View
@@ -55,7 +49,7 @@ const PaymentMethodSelector = ({ selectedMethod, onMethodSelect, isCardEnabled =
               selectedMethod === 'card' && styles.radioActive,
             ]}
           >
-            {selectedMethod === 'card' && isCardEnabled && (
+            {selectedMethod === 'card' && (
               <View style={styles.radioDot} />
             )}
           </View>
@@ -148,9 +142,6 @@ const styles = StyleSheet.create({
   methodCardActive: {
     borderColor: COLORS.primary,
     backgroundColor: `rgba(${parseInt(COLORS.primary.slice(1, 3), 16)}, ${parseInt(COLORS.primary.slice(3, 5), 16)}, ${parseInt(COLORS.primary.slice(5, 7), 16)}, 0.1)`,
-  },
-  methodCardDisabled: {
-    opacity: 0.55,
   },
   methodHeader: {
     flexDirection: 'row',

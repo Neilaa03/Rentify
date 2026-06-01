@@ -29,7 +29,6 @@ import {
 } from '../../utils/reservationUtils';
 
 const ReservationDatePickerScreen = ({ navigation, route }) => {
-  const DELIVERY_ADDRESS_REGEX = /^\d+\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*\s+\d{4,5}\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*$/u;
   const { listing: initialListing, reservation: reservationFromParams, isEditing } = route.params;
   const [listing, setListing] = useState(initialListing);
   const [startDate, setStartDate] = useState(null);
@@ -44,11 +43,11 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   // Fetch full listing details and reserved dates
   useEffect(() => {
     fetchListingDetails();
-  }, [initialListing.id, reservationFromParams?.id]);
+  }, []);
 
   // When editing an existing reservation, preload the current dates as the initial draft selection.
   useEffect(() => {
-    if (!reservationFromParams) return;
+    if (!isEditing || !reservationFromParams) return;
     const existingStart =
       reservationFromParams.startDate ||
       reservationFromParams.start_date ||
@@ -61,16 +60,6 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       null;
     if (existingStart) setStartDate(existingStart);
     if (existingEnd) setEndDate(existingEnd);
-    setPickupMethod(
-      reservationFromParams?.pickup?.pickupMethod ||
-      reservationFromParams?.pickup?.pickup_method ||
-      'owner_place'
-    );
-    setDeliveryAddress(
-      reservationFromParams?.pickup?.pickupAddress ||
-      reservationFromParams?.pickup?.pickup_address ||
-      ''
-    );
     if (existingStart && existingEnd) calculatePrice(existingStart, existingEnd);
   }, [isEditing, reservationFromParams]);
 
@@ -278,16 +267,8 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (pickupMethod === 'renter_delivery' && !deliveryAddress.trim()) {
+    if (!isEditing && pickupMethod === 'renter_delivery' && !deliveryAddress.trim()) {
       Alert.alert('Adresse requise', 'Veuillez saisir votre adresse de livraison');
-      return;
-    }
-
-    if (pickupMethod === 'renter_delivery' && !DELIVERY_ADDRESS_REGEX.test(deliveryAddress.trim())) {
-      Alert.alert(
-        'Adresse invalide',
-        'Le format attendu est: "12 Rue Exemple 16000 Alger".'
-      );
       return;
     }
 
@@ -298,7 +279,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
         return;
       }
-      const isEditFlow = !!reservationFromParams?.id;
+      const isEditFlow = !!isEditing && !!reservationFromParams?.id;
       const response = await fetch(
         isEditFlow
           ? API_ENDPOINTS.RESERVATIONS.UPDATE_DETAILS(reservationFromParams.id)
@@ -311,12 +292,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           },
           body: JSON.stringify(
             isEditFlow
-              ? {
-                  startDate,
-                  endDate,
-                  pickupMethod,
-                  pickupAddress: pickupMethod === 'renter_delivery' ? deliveryAddress.trim() : undefined,
-                }
+              ? { startDate, endDate }
               : {
                   listingId: listing.id,
                   startDate,
@@ -331,12 +307,6 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Keep the current date picker route in sync with the latest reservation state.
-        navigation.setParams?.({
-          reservation: data,
-          isEditing: true,
-        });
-
         if (isEditFlow) {
           goToReservationDetails(data);
           return;
@@ -464,7 +434,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           />
         </View>
 
-        {listing ? (
+        {!isEditing ? (
           <View style={styles.pickupSection}>
             <Text style={styles.pickupTitle}>Récupération</Text>
             <View style={styles.pickupRow}>
@@ -520,7 +490,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
                 <TextInput
                   style={styles.deliveryInput}
                   value={deliveryAddress}
-                  onChangeText={(value) => setDeliveryAddress(value)}
+                  onChangeText={setDeliveryAddress}
                   placeholder="Ex: Rue..., Ville..."
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   multiline
@@ -595,7 +565,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.reserveButtonText}>{reservationFromParams?.id ? 'Confirmer' : 'Réserver'}</Text>
+              <Text style={styles.reserveButtonText}>{isEditing ? 'Confirmer' : 'Réserver'}</Text>
             )}
           </LinearGradient>
         </TouchableOpacity>
