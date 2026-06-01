@@ -3,15 +3,17 @@ import { supabase } from '../../config/supabase.js';
 export const createUser = async (userData) => {
     const {
         email,
-        password,
-        firstName,
-        lastName,
-        phone,
-        role,
+        password = null,
+        firstName = '',
+        lastName = '',
+        phone = '',
+        role = 'client',
         isVerified,
         emailVerifiedAt = null,
         emailVerificationTokenHash = null,
         emailVerificationExpiresAt = null,
+        googleSub = null,
+        authProvider = null,
     } = userData;
 
     const { data, error } = await supabase
@@ -28,6 +30,8 @@ export const createUser = async (userData) => {
             email_verified_at: emailVerifiedAt,
             email_verification_token_hash: emailVerificationTokenHash,
             email_verification_expires_at: emailVerificationExpiresAt,
+            google_sub: googleSub,
+            auth_provider: authProvider,
             is_active: true
         }
         ])
@@ -41,7 +45,7 @@ export const createUser = async (userData) => {
 export const getUserByEmail = async (email) => {
     const { data, error } = await supabase
         .from('users')
-        .select('id, email, password_hash, first_name, last_name, phone, role, is_active, is_verified,stripe_account_id, email_verified_at, email_verification_token_hash, email_verification_expires_at, password_reset_token_hash, password_reset_expires_at')
+        .select('id, email, password_hash, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, email_verified_at, email_verification_token_hash, email_verification_expires_at, password_reset_token_hash, password_reset_expires_at, google_sub, auth_provider')
         .eq('email', email)
         .single();
 
@@ -52,7 +56,18 @@ export const getUserByEmail = async (email) => {
 export const getUserById = async (id) => {
     const { data, error } = await supabase
         .from('users')
-        .select('id, email, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, email_verified_at')
+        .select('id, email, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, email_verified_at, auth_provider, google_sub, profile_picture')
+        .eq('id', id)
+        .single();
+
+    if (error) return null;
+    return data;
+};
+
+export const getUserAuthMetaById = async (id) => {
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, email, auth_provider, google_sub')
         .eq('id', id)
         .single();
 
@@ -64,12 +79,26 @@ export const updateUserById = async (id, payload) => {
     const updatePayload = {};
     if (payload.email !== undefined) updatePayload.email = payload.email;
     if (payload.phone !== undefined) updatePayload.phone = payload.phone;
+    if (payload.firstName !== undefined) updatePayload.first_name = payload.firstName;
+    if (payload.lastName !== undefined) updatePayload.last_name = payload.lastName;
 
     const { data, error } = await supabase
         .from('users')
         .update(updatePayload)
         .eq('id', id)
-        .select('id, email, first_name, last_name, phone, role, is_verified, is_active, stripe_account_id')
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active, stripe_account_id, auth_provider, profile_picture')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const updateUserProfilePicture = async ({ userId, profilePicture }) => {
+    const { data, error } = await supabase
+        .from('users')
+        .update({ profile_picture: profilePicture })
+        .eq('id', userId)
+        .select('id, profile_picture')
         .single();
 
     if (error) throw error;
@@ -190,6 +219,47 @@ export const updateUserPasswordHash = async ({ userId, passwordHash }) => {
         .update({ password_hash: passwordHash })
         .eq('id', userId)
         .select('id, email')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const updateUserPasswordHashAndProvider = async ({ userId, passwordHash, authProvider }) => {
+    const updatePayload = { password_hash: passwordHash };
+    if (authProvider) updatePayload.auth_provider = authProvider;
+
+    const { data, error } = await supabase
+        .from('users')
+        .update(updatePayload)
+        .eq('id', userId)
+        .select('id, email, auth_provider')
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+export const getUserByGoogleSub = async (googleSub) => {
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name, phone, role, is_active, is_verified, stripe_account_id, email_verified_at, google_sub, auth_provider')
+        .eq('google_sub', googleSub)
+        .single();
+
+    if (error) return null;
+    return data;
+};
+
+export const linkGoogleToUser = async ({ userId, googleSub }) => {
+    const { data, error } = await supabase
+        .from('users')
+        .update({
+            google_sub: googleSub,
+            auth_provider: 'hybrid',
+        })
+        .eq('id', userId)
+        .select('id, email, google_sub, auth_provider')
         .single();
 
     if (error) throw error;

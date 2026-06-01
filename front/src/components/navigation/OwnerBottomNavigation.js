@@ -1,11 +1,10 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CommonActions } from '@react-navigation/native';
 
 const OwnerBottomNavigation = ({ navigation, route, active }) => {
-  const insets = useSafeAreaInsets();
+  const bottomOffset = 2;
   const params = route?.params || {};
   const baseParams = { ...params };
   delete baseParams.listing;
@@ -54,7 +53,7 @@ const OwnerBottomNavigation = ({ navigation, route, active }) => {
   ];
 
   return (
-    <View style={[styles.footer, { bottom: 8 + (insets?.bottom || 0) }]}>
+    <View style={[styles.footer, { bottom: bottomOffset }]}>
       {tabs.map((tab) => {
         const isActive = active === tab.key;
         const color = isActive ? '#8f6cff' : '#8a90b8';

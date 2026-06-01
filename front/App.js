@@ -14,6 +14,7 @@ import RegisterScreen from './src/screens/auth/RegisterScreen';
 import VerifyEmailScreen from './src/screens/auth/VerifyEmailScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from './src/screens/auth/ResetPasswordScreen';
+import SetPasswordScreen from './src/screens/auth/SetPasswordScreen';
 import OwnerDashboardScreen from './src/screens/owner/DashboardScreen';
 import OwnerListingsScreen from './src/screens/owner/ListingsScreen';
 import OwnerListingFormScreen from './src/screens/owner/ListingFormScreen';
@@ -109,6 +110,7 @@ export default function App() {
             <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
             <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+            <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
             <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />

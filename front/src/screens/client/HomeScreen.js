@@ -8,6 +8,7 @@ import MessageIconButton from '../../components/messaging/MessageIconButton';
 import NotificationIconButton from '../../components/notifications/NotificationIconButton';
 import { getListings } from '../../services/listings';
 import { useFavorites } from '../../contexts/FavoritesContext';
+import storage from '../../utils/storage';
 
 const HomeScreen = ({ navigation, route }) => {
     const [activeTab, setActiveTab] = useState('Accueil');
@@ -18,6 +19,8 @@ const HomeScreen = ({ navigation, route }) => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
     const { isFavorite, toggleFavorite } = useFavorites();
+    const [showPhoneReminder, setShowPhoneReminder] = useState(false);
+    const [phoneReminderDismissedThisSession, setPhoneReminderDismissedThisSession] = useState(false);
 
     const filterOptions = [
         'Tous',
@@ -46,6 +49,48 @@ const HomeScreen = ({ navigation, route }) => {
     useEffect(() => {
         loadListings();
     }, []);
+
+    const hydratePhoneReminder = async () => {
+            const cached = await storage.getItemAsync('userProfile');
+            if (!cached) return;
+            try {
+                const profile = JSON.parse(cached);
+                const phone = String(profile?.phone || '').trim();
+                const provider = String(profile?.authProvider || profile?.auth_provider || '').toLowerCase();
+                const isGoogleConnected = provider === 'google' || provider === 'hybrid';
+
+                if (phone || !isGoogleConnected) {
+                    setShowPhoneReminder(false);
+                    return;
+                }
+
+                setShowPhoneReminder(!phoneReminderDismissedThisSession);
+            } catch {
+                // ignore
+            }
+    };
+
+    useEffect(() => {
+        hydratePhoneReminder();
+        const unsub = navigation?.addListener?.('focus', hydratePhoneReminder);
+        return () => {
+            if (typeof unsub === 'function') unsub();
+        };
+    }, [navigation]);
+
+    const goToPhoneInProfile = () => {
+        const parent = navigation?.getParent?.();
+        if (parent?.navigate) {
+            parent.navigate('ProfileTab', { screen: 'Profile', params: { openPersonalInfo: true } });
+            return;
+        }
+        navigation.navigate('Profile', { openPersonalInfo: true });
+    };
+
+    const dismissPhoneReminder = async () => {
+        setShowPhoneReminder(false);
+        setPhoneReminderDismissedThisSession(true);
+    };
 
     const filteredListings = useMemo(() => listings
         .filter((listing) => {
@@ -101,6 +146,29 @@ const HomeScreen = ({ navigation, route }) => {
                                 style={styles.searchInput}
                             />
                         </View>
+
+                        {showPhoneReminder && (
+                            <View style={styles.reminderCard}>
+                                <View style={styles.reminderTopRow}>
+                                    <View style={styles.reminderLeft}>
+                                        <View style={styles.reminderIcon}>
+                                            <Ionicons name="call-outline" size={16} color="#fff" />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.reminderTitle}>Ajoute ton numero</Text>
+                                            <Text style={styles.reminderSubtitle}>Pour faciliter les reservations et le contact.</Text>
+                                        </View>
+                                    </View>
+                                    <TouchableOpacity onPress={dismissPhoneReminder} style={styles.reminderDismiss} accessibilityRole="button">
+                                        <Ionicons name="close" size={16} color="#cdd3ff" />
+                                    </TouchableOpacity>
+                                </View>
+                                <TouchableOpacity onPress={goToPhoneInProfile} style={styles.reminderAction} activeOpacity={0.85}>
+                                    <Text style={styles.reminderActionText}>Definir mon numero</Text>
+                                    <Ionicons name="chevron-forward" size={16} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                         <View style={styles.actionsRow}>
                             <View style={styles.actionBlock}>
@@ -371,6 +439,42 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '700',
     },
+    reminderCard: {
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(145, 152, 229, 0.22)',
+        backgroundColor: 'rgba(23, 26, 54, 0.9)',
+        padding: 12,
+        marginBottom: 12,
+    },
+    reminderTopRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+    reminderLeft: { flexDirection: 'row', gap: 10, flex: 1, paddingRight: 10 },
+    reminderIcon: {
+        width: 34,
+        height: 34,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(108, 77, 255, 0.55)',
+        borderWidth: 1,
+        borderColor: 'rgba(143, 108, 255, 0.7)',
+    },
+    reminderDismiss: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+    reminderTitle: { color: '#f4f6ff', fontWeight: '800', fontSize: 13, marginBottom: 2 },
+    reminderSubtitle: { color: '#9aa3cf', fontSize: 12, lineHeight: 16 },
+    reminderAction: {
+        marginTop: 10,
+        height: 40,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: 'rgba(108, 77, 255, 0.35)',
+        borderWidth: 1,
+        borderColor: 'rgba(143, 108, 255, 0.65)',
+    },
+    reminderActionText: { color: '#fff', fontWeight: '800', fontSize: 12 },
 });
 
 export default HomeScreen;

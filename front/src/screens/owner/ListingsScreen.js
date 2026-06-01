@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
   deleteOwnerListing,
@@ -19,6 +18,7 @@ import {
 } from '../../services/owner';
 import { fetchJson } from '../../services/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
+import AppBackground from '../../components/layout/AppBackground';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -129,7 +129,7 @@ const OwnerListingsScreen = ({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <AppBackground>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
@@ -207,13 +207,12 @@ const OwnerListingsScreen = ({
         )}
       </View>
       <BottomNavigationComponent navigation={navigation} route={route} active="listings" />
-    </SafeAreaView>
+    </AppBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0a0c24' },
-  container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#0a0c24' },
+  container: { flex: 1, paddingHorizontal: 16, backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -234,10 +233,10 @@ const styles = StyleSheet.create({
   errorText: { color: '#ff8a9e', marginBottom: 8 },
   emptyText: { color: '#aab1dd', marginTop: 20 },
   card: {
-    borderRadius: 14,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.2)',
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    borderColor: 'rgba(143, 150, 255, 0.14)',
+    backgroundColor: '#111329',
     overflow: 'hidden',
     marginBottom: 10,
   },

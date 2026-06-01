@@ -359,7 +359,9 @@ const RegisterScreen = ({ navigation }) => {
                                     {!!errors.form && <Text style={styles.errorText}>{errors.form}</Text>}
                                 </View>
 
-                                <AuthGradientButton label="Create Account" onPress={handleRegister} />
+                                <View style={styles.registerButtonContainer}>
+                                    <AuthGradientButton label="Create Account" onPress={handleRegister} />
+                                </View>
                             </View>
 
                             <View style={styles.footer}>
@@ -460,6 +462,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         flexWrap: 'wrap',
         marginBottom: moderateScale(8),
+    },
+    registerButtonContainer: {
+        marginTop: moderateScale(18),
     },
     roleButton: {
         flexGrow: 1,

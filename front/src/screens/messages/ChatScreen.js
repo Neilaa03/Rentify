@@ -29,6 +29,7 @@ const getNativeSaveModules = () => {
 import { getCurrentUserProfile } from '../../services/authSession';
 import { getThread, markThreadRead, sendMessage, uploadChatImage } from '../../services/messages';
 import { getSocket } from '../../services/socketClient';
+import { buildApiUrl } from '../../services/api';
 
 const displayNameFor = (user) => {
   const first = (user?.firstName || user?.first_name || '').trim();
@@ -102,6 +103,21 @@ const initialsFor = (user) => {
   const a = first ? first[0] : '?';
   const b = last ? last[0] : '';
   return (a + b).toUpperCase();
+};
+
+const avatarUriFor = (user) => {
+  const raw =
+    user?.profilePicture ||
+    user?.profile_picture ||
+    user?.avatar ||
+    user?.avatarUrl ||
+    user?.photoUrl ||
+    '';
+  const uri = String(raw || '').trim();
+  if (!uri) return null;
+  if (/^https?:\/\//i.test(uri)) return uri;
+  const path = uri.startsWith('/') ? uri : `/${uri}`;
+  return buildApiUrl(path);
 };
 
 const ChatScreen = ({ navigation, route }) => {
@@ -451,6 +467,7 @@ const ChatScreen = ({ navigation, route }) => {
   }, []);
 
   const title = useMemo(() => displayNameFor(otherUser), [otherUser]);
+  const avatarUri = useMemo(() => avatarUriFor(otherUser), [otherUser]);
 
   const lastOutgoingId = useMemo(() => {
     if (!me?.id) return null;
@@ -572,7 +589,11 @@ const ChatScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <View style={styles.headerLeft}>
           <View style={styles.headerAvatar}>
-            <Text style={styles.headerAvatarText}>{initialsFor(otherUser)}</Text>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.headerAvatarImage} />
+            ) : (
+              <Text style={styles.headerAvatarText}>{initialsFor(otherUser)}</Text>
+            )}
           </View>
           <View style={styles.headerTitleWrap}>
             <Text style={styles.headerTitle} numberOfLines={1}>
@@ -738,7 +759,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    overflow: 'hidden',
   },
+  headerAvatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   headerAvatarText: { color: '#d6dbff', fontWeight: '900', fontSize: 12 },
   headerTitleWrap: { flex: 1 },
   headerTitle: { color: '#f2f4ff', fontSize: 15, fontWeight: '900' },

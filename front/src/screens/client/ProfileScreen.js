@@ -11,6 +11,9 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  Image,
+  Modal,
+  Pressable,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +23,7 @@ import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNaviga
 import storage from '../../utils/storage';
 import { appFont } from '../../utils/responsive';
 import { deleteDocument, getUserDocuments, uploadUserDocument } from '../../services/owner';
+import * as ImagePicker from 'expo-image-picker';
 
 const profileFont = (width, regular, small, verySmall = small) => {
   if (width <= 340) return verySmall;
@@ -86,6 +90,8 @@ const ProfileScreen = ({ navigation, route }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isEditingPersonalInfo, setIsEditingPersonalInfo] = useState(false);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [savingPersonalInfo, setSavingPersonalInfo] = useState(false);
@@ -95,9 +101,17 @@ const ProfileScreen = ({ navigation, route }) => {
   const [identityBusy, setIdentityBusy] = useState(false);
   const [identityAlertShown, setIdentityAlertShown] = useState(false);
   const [identityError, setIdentityError] = useState('');
+  const [didAutoOpenPersonalInfo, setDidAutoOpenPersonalInfo] = useState(false);
+  const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [localProfilePictureUri, setLocalProfilePictureUri] = useState('');
 
-  const token = route?.params?.token;
+  const [token, setToken] = useState(route?.params?.token || '');
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
+  const isGoogleOnly = String(profile?.auth_provider || profile?.authProvider || '').toLowerCase() === 'google';
+  const isGoogleConnected = ['google', 'hybrid'].includes(String(profile?.auth_provider || profile?.authProvider || '').toLowerCase());
+  const profilePicture = localProfilePictureUri || profile?.profile_picture || profile?.profilePicture || '';
   const fontSize = {
     title: profileFont(width, appFont(22, 24), 21, 20),
     profileName: profileFont(width, appFont(17), 16, 15),
@@ -109,7 +123,26 @@ const ProfileScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!token) return;
+      let effectiveToken = token;
+      if (!effectiveToken) {
+        effectiveToken = (await storage.getItemAsync('userToken')) || '';
+        if (effectiveToken) setToken(effectiveToken);
+      }
+
+      // Show cached profile immediately (helps client tab where params are not forwarded).
+      if (!profile) {
+        const cached = await storage.getItemAsync('userProfile');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && typeof parsed === 'object') setProfile(parsed);
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      if (!effectiveToken) return;
 
       try {
         setLoading(true);
@@ -118,7 +151,7 @@ const ProfileScreen = ({ navigation, route }) => {
         const response = await fetch(API_ENDPOINTS.AUTH.ME, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${effectiveToken}`,
             'Content-Type': 'application/json',
           },
         });
@@ -128,7 +161,23 @@ const ProfileScreen = ({ navigation, route }) => {
           throw new Error(data?.error || 'Unable to load profile');
         }
 
-        setProfile(data?.user || null);
+        const next = data?.user || null;
+        setProfile(next);
+        if (next) {
+          const normalized = {
+            id: next.id,
+            email: next.email,
+            firstName: next.firstName || next.first_name || '',
+            lastName: next.lastName || next.last_name || '',
+            phone: next.phone || '',
+            role: next.role,
+            isVerified: next.isVerified ?? next.is_verified,
+            isActive: next.isActive ?? next.is_active,
+            authProvider: next.authProvider || next.auth_provider || '',
+            profilePicture: next.profilePicture || next.profile_picture || '',
+          };
+          await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+        }
       } catch (err) {
         setError(err.message || 'Unable to load profile');
       } finally {
@@ -164,13 +213,13 @@ const ProfileScreen = ({ navigation, route }) => {
   }, [loadIdentityDocument]);
 
   const fullName = useMemo(() => {
-    const first = profile?.first_name || '';
-    const last = profile?.last_name || '';
+    const first = profile?.first_name || profile?.firstName || '';
+    const last = profile?.last_name || profile?.lastName || '';
     const value = `${first} ${last}`.trim();
     return value || 'Utilisateur';
   }, [profile]);
 
-  const initial = (profile?.first_name?.[0] || profile?.email?.[0] || 'U').toUpperCase();
+  const initial = (profile?.first_name?.[0] || profile?.firstName?.[0] || profile?.email?.[0] || 'U').toUpperCase();
   const identityStatus = getIdentityStatusMeta(identityDocument?.status);
   const identityReason = identityDocument?.ocrResult?.verificationReason || '';
   const identityVerified = String(identityDocument?.status || '').toLowerCase() === 'approved';
@@ -187,11 +236,21 @@ const ProfileScreen = ({ navigation, route }) => {
   }, [identityAlertShown, identityLoading, identityVerified, isOwner, loading]);
 
   const openPersonalInfoEditor = () => {
+    setEditFirstName(profile?.first_name || profile?.firstName || '');
+    setEditLastName(profile?.last_name || profile?.lastName || '');
     setEditEmail(profile?.email || '');
     setEditPhone(profile?.phone || '');
     setPersonalInfoError('');
     setIsEditingPersonalInfo(true);
   };
+
+  useEffect(() => {
+    if (didAutoOpenPersonalInfo) return;
+    if (!route?.params?.openPersonalInfo) return;
+    if (!profile) return;
+    setDidAutoOpenPersonalInfo(true);
+    openPersonalInfoEditor();
+  }, [didAutoOpenPersonalInfo, profile, route?.params?.openPersonalInfo]);
 
   const savePersonalInfo = async () => {
     if (!token) {
@@ -201,6 +260,16 @@ const ProfileScreen = ({ navigation, route }) => {
 
     const nextEmail = editEmail.trim();
     const nextPhone = editPhone.trim();
+    const nextFirstName = editFirstName.trim();
+    const nextLastName = editLastName.trim();
+    if (!nextFirstName) {
+      setPersonalInfoError('Prenom requis.');
+      return;
+    }
+    if (!nextLastName) {
+      setPersonalInfoError('Nom requis.');
+      return;
+    }
     if (!nextEmail) {
       setPersonalInfoError('Email requis.');
       return;
@@ -220,6 +289,8 @@ const ProfileScreen = ({ navigation, route }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          firstName: nextFirstName,
+          lastName: nextLastName,
           email: nextEmail,
           phone: nextPhone,
         }),
@@ -247,6 +318,8 @@ const ProfileScreen = ({ navigation, route }) => {
           role: updatedUser.role,
           isVerified: updatedUser.isVerified ?? updatedUser.is_verified,
           isActive: updatedUser.isActive ?? updatedUser.is_active,
+          authProvider: updatedUser.authProvider || updatedUser.auth_provider || '',
+          profilePicture: updatedUser.profilePicture || updatedUser.profile_picture || '',
         };
         await storage.setItemAsync('userProfile', JSON.stringify(normalized));
       }
@@ -326,6 +399,124 @@ const ProfileScreen = ({ navigation, route }) => {
       setIdentityBusy(false);
     }
   }, [identityDocument?.id, token]);
+  const pickAndUploadProfilePicture = async () => {
+    const effectiveToken = token || (await storage.getItemAsync('userToken')) || '';
+    if (!effectiveToken) {
+      setPersonalInfoError('Session invalide, reconnectez-vous.');
+      return;
+    }
+
+    try {
+      setPhotoLoading(true);
+      setPersonalInfoError('');
+
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setPersonalInfoError("Permission d'acceder aux photos refusée.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (result.canceled) return;
+
+      const asset = result.assets?.[0];
+      const uri = asset?.uri;
+      if (!uri) return;
+      // Show preview immediately, then replace with Cloudinary URL on success.
+      setLocalProfilePictureUri(uri);
+
+      const filename = uri.split('/').pop() || `profile_${Date.now()}.jpg`;
+      const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
+      const type = ext === 'png' ? 'image/png' : (ext === 'webp' ? 'image/webp' : 'image/jpeg');
+
+      const form = new FormData();
+      form.append('image', { uri, name: filename, type });
+
+      const response = await fetch(API_ENDPOINTS.AUTH.PROFILE_PICTURE, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${effectiveToken}` },
+        body: form,
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || 'Upload echoue');
+
+      const nextUser = data?.user || null;
+      if (nextUser) {
+        setLocalProfilePictureUri('');
+        setProfile(nextUser);
+        const normalized = {
+          id: nextUser.id,
+          email: nextUser.email,
+          firstName: nextUser.firstName || nextUser.first_name || '',
+          lastName: nextUser.lastName || nextUser.last_name || '',
+          phone: nextUser.phone || '',
+          role: nextUser.role,
+          isVerified: nextUser.isVerified ?? nextUser.is_verified,
+          isActive: nextUser.isActive ?? nextUser.is_active,
+          authProvider: nextUser.authProvider || nextUser.auth_provider || '',
+          profilePicture: nextUser.profilePicture || nextUser.profile_picture || '',
+        };
+        await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+      }
+    } catch (err) {
+      setLocalProfilePictureUri('');
+      setPersonalInfoError(err.message || 'Upload echoue');
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
+  const removeProfilePicture = async () => {
+    const effectiveToken = token || (await storage.getItemAsync('userToken')) || '';
+    if (!effectiveToken) {
+      setPersonalInfoError('Session invalide, reconnectez-vous.');
+      return;
+    }
+    try {
+      setPhotoLoading(true);
+      setPersonalInfoError('');
+      const response = await fetch(API_ENDPOINTS.AUTH.PROFILE_PICTURE, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${effectiveToken}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || 'Suppression echouee');
+
+      const nextUser = data?.user || null;
+      if (nextUser) {
+        setLocalProfilePictureUri('');
+        setProfile(nextUser);
+        const normalized = {
+          id: nextUser.id,
+          email: nextUser.email,
+          firstName: nextUser.firstName || nextUser.first_name || '',
+          lastName: nextUser.lastName || nextUser.last_name || '',
+          phone: nextUser.phone || '',
+          role: nextUser.role,
+          isVerified: nextUser.isVerified ?? nextUser.is_verified,
+          isActive: nextUser.isActive ?? nextUser.is_active,
+          authProvider: nextUser.authProvider || nextUser.auth_provider || '',
+          profilePicture: nextUser.profilePicture || nextUser.profile_picture || '',
+        };
+        await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+      }
+    } catch (err) {
+      setPersonalInfoError(err.message || 'Suppression echouee');
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
+  const openPhotoSheet = () => {
+    setPersonalInfoError('');
+    setPhotoSheetVisible(true);
+  };
 
   return (
     <View style={styles.container}>
@@ -335,10 +526,29 @@ const ProfileScreen = ({ navigation, route }) => {
             <Text style={[styles.title, { fontSize: fontSize.title }]}>Profil</Text>
 
             <View style={styles.profileCard}>
-              <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
+              <TouchableOpacity
+                style={styles.avatar}
+                onPress={() => {
+                  if (profilePicture) openPhotoSheet();
+                  else pickAndUploadProfilePicture();
+                }}
+                disabled={photoLoading}
+                activeOpacity={0.85}
+              >
+                {profilePicture ? (
+                  <Image source={{ uri: profilePicture }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{initial}</Text>
+                )}
+                <View style={styles.avatarEditPill}>
+                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                </View>
+              </TouchableOpacity>
               <View style={styles.profileInfo}>
                 <Text style={[styles.profileName, { fontSize: fontSize.profileName }]} numberOfLines={1}>{fullName}</Text>
                 <Text style={[styles.profilePhone, { fontSize: fontSize.profilePhone }]} numberOfLines={1}>{profile?.phone || profile?.email || '-'}</Text>
+                {isGoogleConnected && <Text style={styles.googleBadge} numberOfLines={1}>Compte Google connecté</Text>}
+                {!!personalInfoError && <Text style={styles.errorText}>{personalInfoError}</Text>}
                 {!!error && <Text style={styles.errorText}>{error}</Text>}
                 {loading && <Text style={styles.loadingText}>Chargement...</Text>}
               </View>
@@ -347,9 +557,80 @@ const ProfileScreen = ({ navigation, route }) => {
               </TouchableOpacity>
             </View>
 
+            <Modal visible={photoSheetVisible} transparent animationType="fade" onRequestClose={() => setPhotoSheetVisible(false)}>
+              <Pressable style={styles.modalBackdrop} onPress={() => setPhotoSheetVisible(false)} />
+              <View style={styles.sheet}>
+                <Text style={styles.sheetTitle}>Photo de profil</Text>
+                <TouchableOpacity
+                  style={styles.sheetRow}
+                  onPress={() => {
+                    setPhotoSheetVisible(false);
+                    setTimeout(() => setPhotoViewerVisible(true), 120);
+                  }}
+                  disabled={!profilePicture}
+                >
+                  <Ionicons name="eye-outline" size={18} color={profilePicture ? '#d6dbff' : '#6c739e'} />
+                  <Text style={[styles.sheetRowText, !profilePicture && styles.sheetRowTextDisabled]}>Voir</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.sheetRow}
+                  onPress={async () => {
+                    setPhotoSheetVisible(false);
+                    await pickAndUploadProfilePicture();
+                  }}
+                  disabled={photoLoading}
+                >
+                  <Ionicons name="image-outline" size={18} color="#d6dbff" />
+                  <Text style={styles.sheetRowText}>Remplacer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.sheetRow}
+                  onPress={async () => {
+                    setPhotoSheetVisible(false);
+                    await removeProfilePicture();
+                  }}
+                  disabled={!profilePicture || photoLoading}
+                >
+                  <Ionicons name="trash-outline" size={18} color={profilePicture ? '#ff7b89' : '#6c739e'} />
+                  <Text style={[styles.sheetRowText, { color: profilePicture ? '#ff7b89' : '#6c739e' }]}>Supprimer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.sheetRow, { marginTop: 6 }]} onPress={() => setPhotoSheetVisible(false)}>
+                  <Ionicons name="close" size={18} color="#d6dbff" />
+                  <Text style={styles.sheetRowText}>Annuler</Text>
+                </TouchableOpacity>
+              </View>
+            </Modal>
+
+            <Modal visible={photoViewerVisible} transparent animationType="fade" onRequestClose={() => setPhotoViewerVisible(false)}>
+              <View style={styles.viewerBackdrop}>
+                <TouchableOpacity style={styles.viewerClose} onPress={() => setPhotoViewerVisible(false)}>
+                  <Ionicons name="close" size={22} color="#fff" />
+                </TouchableOpacity>
+                {!!profilePicture && <Image source={{ uri: profilePicture }} style={styles.viewerImage} />}
+              </View>
+            </Modal>
+
             {isEditingPersonalInfo && (
               <View style={styles.editCard}>
                 <Text style={styles.editTitle}>Informations personnelles</Text>
+                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Prenom</Text>
+                <TextInput
+                  style={[styles.input, { fontSize: fontSize.input }]}
+                  value={editFirstName}
+                  onChangeText={setEditFirstName}
+                  autoCapitalize="words"
+                  placeholder="Votre prenom"
+                  placeholderTextColor="#7d83b0"
+                />
+                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Nom</Text>
+                <TextInput
+                  style={[styles.input, { fontSize: fontSize.input }]}
+                  value={editLastName}
+                  onChangeText={setEditLastName}
+                  autoCapitalize="words"
+                  placeholder="Votre nom"
+                  placeholderTextColor="#7d83b0"
+                />
                 <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Email</Text>
                 <TextInput
                   style={[styles.input, { fontSize: fontSize.input }]}
@@ -450,11 +731,13 @@ const ProfileScreen = ({ navigation, route }) => {
             <SectionCard
               items={[
                 { label: 'Informations personnelles', icon: 'person-outline' },
+                ...(isGoogleOnly ? [{ label: 'Definir un mot de passe', icon: 'key-outline' }] : []),
                 { label: 'Moyens de paiement', icon: 'card-outline' },
                 { label: 'Mes adresses', icon: 'location-outline' },
               ]}
               onItemPress={(item) => {
                 if (item.label === 'Informations personnelles') openPersonalInfoEditor();
+                if (item.label === 'Definir un mot de passe') navigation.navigate('SetPassword', { token });
               }}
             />
 
@@ -511,17 +794,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
+    width: 78,
+    height: 78,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#5b73ff',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  avatarEditPill: {
+    position: 'absolute',
+    right: 6,
+    bottom: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(108, 77, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.85)',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
   avatarText: { color: '#fff', fontWeight: '700', fontSize: appFont(17) },
   profileInfo: { flex: 1, marginLeft: 12 },
   profileName: { color: '#f2f4ff', fontWeight: '700', fontSize: appFont(17) },
   profilePhone: { color: '#9ca2cb', marginTop: 6, fontSize: appFont(14) },
+  googleBadge: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(108, 77, 255, 0.32)',
+    borderWidth: 1,
+    borderColor: 'rgba(143, 108, 255, 0.6)',
+    color: '#e8e4ff',
+    fontSize: appFont(12),
+    fontWeight: '700',
+  },
   loadingText: { color: '#b4b9dc', marginTop: 6, fontSize: appFont(13) },
   errorText: { color: '#ff7b89', marginTop: 6, fontSize: appFont(13) },
   editBtn: {
@@ -603,6 +921,36 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  sheet: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.22)',
+    backgroundColor: 'rgba(23, 26, 54, 0.98)',
+    padding: 12,
+  },
+  sheetTitle: { color: '#f2f4ff', fontSize: appFont(15), fontWeight: '800', marginBottom: 8 },
+  sheetRow: {
+    height: 44,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(12, 15, 37, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.18)',
+    marginTop: 8,
+  },
+  sheetRowText: { color: '#eef1ff', fontSize: appFont(13), fontWeight: '700' },
+  sheetRowTextDisabled: { color: '#6c739e' },
+  viewerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', alignItems: 'center', justifyContent: 'center' },
+  viewerClose: { position: 'absolute', top: 52, right: 18, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  viewerImage: { width: '92%', height: '70%', resizeMode: 'contain', borderRadius: 12 },
   rowItemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(145, 152, 229, 0.16)' },
   rowLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', minWidth: 0 },
   iconWrap: {
