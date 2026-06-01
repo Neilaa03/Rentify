@@ -25,6 +25,8 @@ const statusTone = (status) => {
   return styles.wait;
 };
 
+const isRejectedDocument = (status) => norm(status).includes('reject');
+
 const normalizeDocUrl = (url) => {
   if (!url) return '';
   let clean = String(url).trim();
@@ -143,14 +145,16 @@ export default function AdminCarsScreen({ navigation, route }) {
   const resolveDocs = (carId) => {
     const d = detailsByCar[carId];
     const docs = d?.documents || [];
-    return docs.map((doc, idx) => ({
-      id: doc.id || `${carId}-${idx}`,
-      type: doc.document_type || doc.type || 'Document',
-      status: doc.status || 'pending',
-      url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
-      uploadedAt: doc.created_at || doc.updated_at || '',
-      ocrResult: doc.ocr_result || doc.ocrResult || null,
-    }));
+    return docs
+      .filter((doc) => !isRejectedDocument(doc.status))
+      .map((doc, idx) => ({
+        id: doc.id || `${carId}-${idx}`,
+        type: doc.document_type || doc.type || 'Document',
+        status: doc.status || 'pending',
+        url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
+        uploadedAt: doc.created_at || doc.updated_at || '',
+        ocrResult: doc.ocr_result || doc.ocrResult || null,
+      }));
   };
 
   const reviewDocument = async (documentId, status) => {
@@ -158,6 +162,26 @@ export default function AdminCarsScreen({ navigation, route }) {
 
     try {
       await adminApi.updateDocument(documentId, { status });
+      setDetailsByCar((prev) => {
+        const current = prev[selectedCar.id];
+        if (!current?.documents) return prev;
+
+        const nextDocuments = status === 'rejected'
+          ? current.documents.filter((doc) => String(doc.id) !== String(documentId))
+          : current.documents.map((doc) => (
+            String(doc.id) === String(documentId)
+              ? { ...doc, status }
+              : doc
+          ));
+
+        return {
+          ...prev,
+          [selectedCar.id]: {
+            ...current,
+            documents: nextDocuments,
+          },
+        };
+      });
       await refreshCarDetails(selectedCar.id);
       await load();
     } catch (e) {
@@ -203,37 +227,42 @@ export default function AdminCarsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Documents</Text>
+        <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
+          <Text style={styles.title}>Documents</Text>
 
-        <View style={styles.statsRow}>
-          <TopStat value={stats.pending} label="En attente" tone="amber" />
-          <TopStat value={stats.verified} label="Verifies" tone="green" />
-          <TopStat value={stats.rejected} label="Rejetes" tone="red" />
-        </View>
+          <View style={styles.statsRow}>
+            <TopStat value={stats.pending} label="En attente" tone="amber" icon="time-outline" />
+            <TopStat value={stats.verified} label="Verifies" tone="green" icon="checkmark-circle-outline" />
+            <TopStat value={stats.rejected} label="Rejetes" tone="red" icon="close-circle-outline" />
+          </View>
 
-        <View style={styles.searchWrap}>
-          <Ionicons name="search-outline" size={16} color="#8a91bf" />
-          <TextInput value={search} onChangeText={setSearch} placeholder="Type, proprietaire..." placeholderTextColor="#7078ab" style={styles.searchInput} />
-        </View>
+          <View style={styles.searchWrap}>
+            <Ionicons name="search-outline" size={16} color="#8a91bf" />
+            <TextInput value={search} onChangeText={setSearch} placeholder="Type, proprietaire..." placeholderTextColor="#7078ab" style={styles.searchInput} />
+          </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow}>
-          {tabs.map((tab) => (
-            <TouchableOpacity key={tab} style={[styles.filterChip, activeTab === tab && styles.filterChipActive]} onPress={() => setActiveTab(tab)}>
-              <Text style={[styles.filterText, activeTab === tab && styles.filterTextActive]}>{tab}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filtersRow}
+            contentContainerStyle={styles.filtersRowContent}
+          >
+            {tabs.map((tab) => (
+              <TouchableOpacity key={tab} style={[styles.filterChip, activeTab === tab && styles.filterChipActive]} onPress={() => setActiveTab(tab)}>
+                <Text style={[styles.filterText, activeTab === tab && styles.filterTextActive]}>{tab}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-        <Text style={styles.countText}>{visibleDocCount} vehicules a verifier</Text>
+          <Text style={styles.countText}>{visibleDocCount} vehicules a verifier</Text>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           {grouped.map((group) => (
             <View key={group.ownerName} style={styles.groupCard}>
               <Text style={styles.groupTitle}>{group.ownerName}</Text>
               {group.cars.map((car) => {
                 const loadedDetails = detailsByCar[car.id];
-                const docsCount = loadedDetails?.documents?.length;
+                const docsCount = loadedDetails ? resolveDocs(car.id).length : undefined;
                 return (
                   <View key={car.id} style={styles.docItem}>
                     <View style={styles.docLeft}>
@@ -335,13 +364,16 @@ export default function AdminCarsScreen({ navigation, route }) {
   );
 }
 
-function TopStat({ value, label, tone }) {
+function TopStat({ value, label, tone, icon }) {
   const bg = tone === 'green' ? 'rgba(0,208,132,0.14)' : tone === 'red' ? 'rgba(255,77,109,0.14)' : 'rgba(255,176,32,0.14)';
   const border = tone === 'green' ? '#0f7f5d' : tone === 'red' ? '#923249' : '#8b641a';
   const color = tone === 'green' ? '#00d084' : tone === 'red' ? '#ff4d6d' : '#ffb020';
   return (
     <View style={[styles.topCard, { backgroundColor: bg, borderColor: border }]}> 
-      <Text style={[styles.topValue, { color }]}>{value}</Text>
+      <View style={styles.topStatRow}>
+        <Ionicons name={icon || 'ellipse'} size={14} color={color} />
+        <Text style={[styles.topValue, { color }]}>{value}</Text>
+      </View>
       <Text style={[styles.topLabel, { color }]}>{label}</Text>
     </View>
   );
@@ -350,20 +382,24 @@ function TopStat({ value, label, tone }) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#070a1f' },
   container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#070a1f' },
+  pageScroll: { flex: 1 },
+  pageContent: { paddingBottom: 92 },
   title: { color: '#f2f4ff', fontSize: 36, fontWeight: '800', marginTop: 10, marginBottom: 14 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  topCard: { width: '32%', borderWidth: 1, borderRadius: 12, paddingVertical: 9, alignItems: 'center' },
-  topValue: { fontSize: 22, fontWeight: '800' },
-  topLabel: { fontSize: 12, marginTop: 2 },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, marginTop: 12 },
+  topCard: { width: '31%', borderWidth: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center' },
+  topStatRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  topValue: { fontSize: 20, fontWeight: '800' },
+  topLabel: { fontSize: 11, marginTop: 2 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7, minHeight: 42, marginTop: 12 },
   searchInput: { flex: 1, color: '#dce1ff' },
-  filtersRow: { marginTop: 12, marginBottom: 8, maxHeight: 42 },
+  filtersRow: { marginTop: 12, marginBottom: 12 },
+  filtersRowContent: { paddingVertical: 6, paddingRight: 8 },
   filterChip: { backgroundColor: '#171d44', borderRadius: 99, borderWidth: 1, borderColor: '#2d3360', paddingHorizontal: 14, height: 34, justifyContent: 'center', marginRight: 8 },
   filterChipActive: { backgroundColor: '#8f7dff', borderColor: '#8f7dff' },
   filterText: { color: '#9299c8', fontWeight: '700' },
   filterTextActive: { color: '#fff' },
   countText: { color: '#7d84b1', marginTop: 2, marginBottom: 8 },
-  content: { paddingBottom: 92 },
+  content: { paddingTop: 0 },
   groupCard: { backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2b315c', borderRadius: 15, padding: 12, marginBottom: 10 },
   groupTitle: { color: '#9da7e0', fontWeight: '800', marginBottom: 8 },
   docItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#2b315c', borderRadius: 12, padding: 10, marginBottom: 8, backgroundColor: '#0b1030' },

@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   kicker: { color: '#8f7dff', fontSize: appFont(12), letterSpacing: 1.1, fontWeight: '700' },
   title: { color: '#fff', fontSize: appFont(28, 30), fontWeight: '800', marginTop: 6 },
   card: { borderRadius: 14, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, padding: 12, marginBottom: 10 },
-  input: { borderRadius: 12, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, paddingHorizontal: 12, paddingVertical: 10, color: '#fff', marginBottom: 10 },
+  input: { borderRadius: 12, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, paddingHorizontal: 12, minHeight: 32, color: '#fff', marginBottom: 5 },
   btn: { borderRadius: 10, backgroundColor: ADMIN_COLORS.accent, paddingHorizontal: 12, paddingVertical: 9, alignSelf: 'flex-start', marginRight: 8 },
   btnGhost: { backgroundColor: 'rgba(255,255,255,0.08)' },
   btnDanger: { backgroundColor: 'rgba(255,127,144,0.25)' },

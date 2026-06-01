@@ -50,30 +50,30 @@ export default function AdminUsersScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Comptes utilisateurs</Text>
+        <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
+          <Text style={styles.title}>Comptes utilisateurs</Text>
 
-        <View style={styles.searchWrap}>
-          <Ionicons name="search-outline" size={16} color="#8a91bf" />
-          <TextInput value={search} onChangeText={setSearch} placeholder="Rechercher..." placeholderTextColor="#7078ab" style={styles.searchInput} />
-        </View>
+          <View style={styles.searchWrap}>
+            <Ionicons name="search-outline" size={16} color="#8a91bf" />
+            <TextInput value={search} onChangeText={setSearch} placeholder="Rechercher..." placeholderTextColor="#7078ab" style={styles.searchInput} />
+          </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          persistentScrollbar={false}
-          style={styles.filtersRow}
-          contentContainerStyle={styles.filtersRowContent}
-        >
-          {FILTERS.map((f) => (
-            <TouchableOpacity key={f.key} style={[styles.filterChip, active === f.key && styles.filterChipActive]} onPress={() => setActive(f.key)}>
-              <Text style={[styles.filterText, active === f.key && styles.filterTextActive]}>{f.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            persistentScrollbar={false}
+            style={styles.filtersRow}
+            contentContainerStyle={styles.filtersRowContent}
+          >
+            {FILTERS.map((f) => (
+              <TouchableOpacity key={f.key} style={[styles.filterChip, active === f.key && styles.filterChipActive]} onPress={() => setActive(f.key)}>
+                <Text style={[styles.filterText, active === f.key && styles.filterTextActive]}>{f.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-        <Text style={styles.countText}>{list.length} comptes</Text>
+          <Text style={styles.countText}>{list.length} comptes</Text>
 
-        <ScrollView style={styles.listContainer} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           {list.map((u) => {
             const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
@@ -108,18 +108,19 @@ export default function AdminUsersScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#070a1f' },
   container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#070a1f' },
+  pageScroll: { flex: 1 },
+  pageContent: { paddingBottom: 92 },
   title: { color: '#f2f4ff', fontSize: 36, fontWeight: '800', marginTop: 10, marginBottom: 14 },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 10 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 7, minHeight: 42 },
   searchInput: { flex: 1, color: '#dce1ff' },
-  filtersRow: { marginTop: 10, marginBottom: 18, maxHeight: 42, scrollbarWidth: 'thin' },
-  filtersRowContent: { paddingBottom: 30, paddingRight: 8 },
+  filtersRow: { marginTop: 10, marginBottom: 14, scrollbarWidth: 'thin' },
+  filtersRowContent: { paddingVertical: 6, paddingRight: 8 },
   filterChip: { backgroundColor: '#171d44', borderRadius: 99, borderWidth: 1, borderColor: '#2d3360', paddingHorizontal: 14, height: 34, justifyContent: 'center', marginRight: 8 },
   filterChipActive: { backgroundColor: '#8f7dff', borderColor: '#8f7dff' },
   filterText: { color: '#9299c8', fontWeight: '700' },
   filterTextActive: { color: '#fff' },
   countText: { color: '#7d84b1', marginTop: 2, marginBottom: 8 },
-  listContainer: { marginTop: 8 },
-  content: { paddingTop: 0, paddingBottom: 92 },
+  content: { paddingTop: 0 },
   userCard: { backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2b315c', borderRadius: 15, padding: 12, marginBottom: 10 },
   userHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   initials: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#8f9dff', justifyContent: 'center', alignItems: 'center' },
