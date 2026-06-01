@@ -65,6 +65,8 @@ const ProfileScreen = ({ navigation, route }) => {
   const [localProfilePictureUri, setLocalProfilePictureUri] = useState('');
   const [ownerStats, setOwnerStats] = useState({ cars: 0, listings: 0, reservations: 0 });
   const [ownerStatsLoading, setOwnerStatsLoading] = useState(false);
+  const [clientStats, setClientStats] = useState({ favorites: 0, reservations: 0, reviews: 0 });
+  const [clientStatsLoading, setClientStatsLoading] = useState(false);
 
   const [token, setToken] = useState(route?.params?.token || '');
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
@@ -179,6 +181,40 @@ const ProfileScreen = ({ navigation, route }) => {
     };
 
     fetchOwnerStats();
+  }, [isOwner, token]);
+
+  useEffect(() => {
+    const fetchClientStats = async () => {
+      if (isOwner) return;
+      if (!token) return;
+
+      try {
+        setClientStatsLoading(true);
+        const response = await fetch(API_ENDPOINTS.PROFILE.ME_CLIENT_STATS, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data?.error || 'Unable to load stats');
+
+        const stats = data?.stats || {};
+        setClientStats({
+          favorites: Number(stats.favorites || 0) || 0,
+          reservations: Number(stats.reservations || 0) || 0,
+          reviews: Number(stats.reviews || 0) || 0,
+        });
+      } catch (_err) {
+        // keep defaults
+      } finally {
+        setClientStatsLoading(false);
+      }
+    };
+
+    fetchClientStats();
   }, [isOwner, token]);
 
   const fullName = useMemo(() => {
@@ -560,9 +596,9 @@ const ProfileScreen = ({ navigation, route }) => {
                 </>
               ) : (
                 <>
-                  <StatCard value="3" label="Locations" />
-                  <StatCard value="1" label="Avis" />
-                  <StatCard value="5" label="Favoris" />
+                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.favorites)} label="Favoris" />
+                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.reservations)} label="Reservations" />
+                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.reviews)} label="Avis" />
                 </>
               )}
             </View>

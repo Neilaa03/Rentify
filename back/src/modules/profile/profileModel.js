@@ -28,3 +28,22 @@ export const getOwnerProfileStats = async ({ ownerId }) => {
   };
 };
 
+export const getClientProfileStats = async ({ userId }) => {
+  if (!userId) throw new Error('userId required');
+
+  const [favoritesRes, reservationsRes, reviewsRes] = await Promise.all([
+    supabase
+      .from('favorites')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_active', true),
+    supabase.from('reservations').select('id', { count: 'exact', head: true }).eq('renter_id', userId),
+    supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('reviewer_id', userId),
+  ]);
+
+  return {
+    favorites: countOrZero(favoritesRes),
+    reservations: countOrZero(reservationsRes),
+    reviews: countOrZero(reviewsRes),
+  };
+};

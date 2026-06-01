@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
     },
     PROFILE: {
         ME_STATS: `${API_BASE_URL}/api/profile/me/stats`,
+        ME_CLIENT_STATS: `${API_BASE_URL}/api/profile/me/client-stats`,
     },
     CARS: {
         LIST: `${API_BASE_URL}/api/cars`,

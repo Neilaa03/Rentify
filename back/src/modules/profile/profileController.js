@@ -1,4 +1,4 @@
-import { getOwnerProfileStats } from './profileModel.js';
+import { getClientProfileStats, getOwnerProfileStats } from './profileModel.js';
 
 export const getMeStats = async (req, res) => {
   try {
@@ -12,3 +12,14 @@ export const getMeStats = async (req, res) => {
   }
 };
 
+export const getMeClientStats = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const stats = await getClientProfileStats({ userId });
+    return res.json({ stats });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Unable to load stats' });
+  }
+};
