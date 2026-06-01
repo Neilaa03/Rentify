@@ -22,6 +22,15 @@ export const API_ENDPOINTS = {
         LIST: `${API_BASE_URL}/api/listings`,
         GET: (id) => `${API_BASE_URL}/api/listings/${id}`,
     },
+    AGENCY: {
+        DASHBOARD: `${API_BASE_URL}/api/agency/dashboard`,
+        DOCUMENTS: `${API_BASE_URL}/api/agency/documents`,
+        DOCUMENT_UPLOAD: `${API_BASE_URL}/api/agency/documents/upload`,
+        VEHICLES: `${API_BASE_URL}/api/agency/vehicles`,
+        VEHICLE_VISIBILITY: (id) => `${API_BASE_URL}/api/agency/vehicles/${id}/visibility`,
+        REQUESTS: `${API_BASE_URL}/api/agency/requests`,
+        PROFILE: `${API_BASE_URL}/api/agency/profile`,
+    },
     RESERVATIONS: {
         CREATE: `${API_BASE_URL}/api/reservations`,
         GET_USER: `${API_BASE_URL}/api/reservations/me`,

@@ -117,7 +117,33 @@ const inferAppDeepLinkBaseFromDevHost = () => {
     return `exp://${DEV_HOST}:${DEV_EXPO_PORT}/--`;
 };
 
-const buildVerifyUrl = ({ req, email, token }) => {
+const normalizeAppDeepLinkBase = (value) => {
+    const base = String(value || '').trim();
+    if (!base) return '';
+
+    // Accept Expo Go dev URLs and custom app schemes.
+    if (
+        base.startsWith('exp://') ||
+        base.startsWith('exps://') ||
+        base.startsWith('rentify://')
+    ) {
+        return base;
+    }
+
+    return '';
+};
+
+const resolveAppDeepLinkBase = ({ overrideBase = '' } = {}) => {
+    const normalizedOverride = normalizeAppDeepLinkBase(overrideBase);
+    if (normalizedOverride) return normalizedOverride;
+
+    const configuredBase = normalizeAppDeepLinkBase(APP_DEEP_LINK_BASE);
+    if (configuredBase) return configuredBase;
+
+    return inferAppDeepLinkBaseFromDevHost();
+};
+
+const buildVerifyUrl = ({ req, email, token, redirectBase = '' }) => {
     // Prefer sending users to the backend verify endpoint (works on mobile + web),
     // which can then redirect into the app via deep link.
     const base = (
@@ -131,10 +157,11 @@ const buildVerifyUrl = ({ req, email, token }) => {
         throw new Error('Unable to determine public backend base URL (set PUBLIC_BACKEND_BASE_URL, or set DEV_HOST, or ensure Host header is present).');
     }
 
-    return `${base.replace(/\/$/, '')}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&redirect=1`;
+    const redirectQuery = redirectBase ? `&appRedirectBase=${encodeURIComponent(redirectBase)}` : '';
+    return `${base.replace(/\/$/, '')}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&redirect=1${redirectQuery}`;
 };
 
-const buildResetUrl = ({ req, email, token }) => {
+const buildResetUrl = ({ req, email, token, redirectBase = '' }) => {
     const base = (
         PUBLIC_BACKEND_BASE_URL ||
         inferPublicBackendBaseUrlFromRequest(req) ||
@@ -146,7 +173,8 @@ const buildResetUrl = ({ req, email, token }) => {
         throw new Error('Unable to determine public backend base URL (set PUBLIC_BACKEND_BASE_URL, or set DEV_HOST, or ensure Host header is present).');
     }
 
-    return `${base.replace(/\/$/, '')}/api/auth/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&redirect=1`;
+    const redirectQuery = redirectBase ? `&appRedirectBase=${encodeURIComponent(redirectBase)}` : '';
+    return `${base.replace(/\/$/, '')}/api/auth/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&redirect=1${redirectQuery}`;
 };
 
 export const register = async (req, res) => {
@@ -175,7 +203,12 @@ export const register = async (req, res) => {
                 expiresAt,
             });
 
-            const verifyUrl = buildVerifyUrl({ req, email: existing.email, token });
+        const verifyUrl = buildVerifyUrl({
+            req,
+            email: existing.email,
+            token,
+            redirectBase: validatedData.redirectBase,
+        });
             await sendVerificationEmail({ to: existing.email, verifyUrl });
 
             return res.status(201).json({
@@ -192,7 +225,12 @@ export const register = async (req, res) => {
             emailVerificationExpiresAt: expiresAt,
         });
 
-        const verifyUrl = buildVerifyUrl({ req, email: newUser.email, token });
+        const verifyUrl = buildVerifyUrl({
+            req,
+            email: newUser.email,
+            token,
+            redirectBase: validatedData.redirectBase,
+        });
         await sendVerificationEmail({ to: newUser.email, verifyUrl });
 
         res.status(201).json({
@@ -441,6 +479,7 @@ export const removeProfilePicture = async (req, res) => {
 export const verifyEmail = async (req, res) => {
     try {
         const { email = '', token = '' } = req.query;
+        const appRedirectBase = String(req.query.appRedirectBase || '').trim();
         const redirect = String(req.query.redirect || '').toLowerCase() === '1' || String(req.query.redirect || '').toLowerCase() === 'true';
         if (!email || !token) {
             return res.status(400).json({ error: 'Missing email or token' });
@@ -450,7 +489,7 @@ export const verifyEmail = async (req, res) => {
         const result = await verifyEmailByToken({ email: String(email), tokenHash });
 
         if (redirect) {
-            const appDeepLinkBase = (APP_DEEP_LINK_BASE || inferAppDeepLinkBaseFromDevHost() || '').trim();
+            const appDeepLinkBase = resolveAppDeepLinkBase({ overrideBase: appRedirectBase });
             const appBaseUrl = (APP_BASE_URL || inferAppBaseUrlFromDevHost() || '').trim();
 
             if (!appDeepLinkBase) {
@@ -505,6 +544,7 @@ export const forgotPassword = async (req, res) => {
 export const resetPasswordRedirect = async (req, res) => {
     try {
         const { email = '', token = '' } = req.query;
+        const appRedirectBase = String(req.query.appRedirectBase || '').trim();
         const redirect = String(req.query.redirect || '').toLowerCase() === '1' || String(req.query.redirect || '').toLowerCase() === 'true';
 
         if (!email || !token) {
@@ -512,7 +552,7 @@ export const resetPasswordRedirect = async (req, res) => {
         }
 
         if (redirect) {
-            const appDeepLinkBase = (APP_DEEP_LINK_BASE || inferAppDeepLinkBaseFromDevHost() || '').trim();
+            const appDeepLinkBase = resolveAppDeepLinkBase({ overrideBase: appRedirectBase });
             const appBaseUrl = (APP_BASE_URL || inferAppBaseUrlFromDevHost() || '').trim();
 
             if (!appDeepLinkBase) {
@@ -556,7 +596,7 @@ export const resetPassword = async (req, res) => {
 
 export const resendVerification = async (req, res) => {
     try {
-        const { email } = resendVerificationSchema.parse(req.body);
+        const { email, redirectBase } = resendVerificationSchema.parse(req.body);
 
         const user = await getUserByEmail(email);
         // Avoid leaking whether an account exists.
@@ -578,7 +618,12 @@ export const resendVerification = async (req, res) => {
             expiresAt,
         });
 
-        const verifyUrl = buildVerifyUrl({ req, email: user.email, token });
+        const verifyUrl = buildVerifyUrl({
+            req,
+            email: user.email,
+            token,
+            redirectBase,
+        });
         await sendVerificationEmail({ to: user.email, verifyUrl });
 
         return res.json({ message: 'Verification email sent' });

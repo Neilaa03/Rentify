@@ -8,6 +8,10 @@ import {
   updateDocument,
   deleteDocument,
 } from './documentModel.js';
+import {
+  getDocumentOcrResultByDocumentId,
+  upsertDocumentOcrResult,
+} from './documentOcrModel.js';
 
 import {
   createDocumentSchema,
@@ -17,6 +21,7 @@ import {
   uploadDocumentBodySchema,
 } from './documentSchema.js';
 import { getCarById } from '../cars/carModel.js';
+import { verifyDocumentImage } from './documentVerificationService.js';
 
 // categorize document types 
 const userDocuments = [
@@ -33,12 +38,46 @@ const carDocuments = [
 
 const companyDocuments = [
   'business_registration',
+  'nif',
+  'professional_insurance',
 ];
 
 const ensurePdfExtension = (name = 'document') => {
   const trimmed = String(name || 'document').trim();
   if (trimmed.toLowerCase().endsWith('.pdf')) return trimmed;
   return `${trimmed}.pdf`;
+};
+
+const allowedMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+]);
+
+const inferMimeTypeFromName = (name = '') => {
+  const lower = String(name || '').trim().toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  return '';
+};
+
+const normalizeUploadedMimeType = (file) => {
+  const explicit = String(file?.mimetype || '').toLowerCase();
+  if (allowedMimeTypes.has(explicit)) return explicit;
+
+  const inferredFromName = inferMimeTypeFromName(file?.originalname);
+  if (inferredFromName) return inferredFromName;
+
+  return explicit || 'application/octet-stream';
+};
+
+const getCloudinaryOcrUrl = (uploadUrl, mimeType) => {
+  if (mimeType !== 'application/pdf') return uploadUrl;
+  if (!uploadUrl) return uploadUrl;
+  return uploadUrl.replace(/\.pdf(\?.*)?$/i, '.jpg$1');
 };
 
 const zodErrors = (error) => error.issues.map((item) => item.message);
@@ -78,6 +117,24 @@ const canManageDocumentPayload = async (req, { userId, carId, companyId }) => {
   return false;
 };
 
+const getCurrentIsoTimestamp = () => new Date().toISOString();
+
+const buildDocumentReviewUpdate = (status) => ({
+  status,
+  reviewedAt: getCurrentIsoTimestamp(),
+});
+
+const buildOcrRecordPayload = (documentId, verificationResult) => ({
+  documentId,
+  status: verificationResult.status,
+  ocrText: verificationResult.extractedText,
+  extractedFullName: verificationResult.extractedFullName,
+  extractedDocumentNumber: verificationResult.extractedDocumentNumber,
+  extractedExpirationDate: verificationResult.extractedExpirationDate,
+  confidenceScore: verificationResult.confidenceScore,
+  verificationReason: verificationResult.verificationReason,
+});
+
 export const getAllDocuments = async (req, res) => {
   try {
     const parsedFilters = documentFiltersSchema.parse({
@@ -90,15 +147,23 @@ export const getAllDocuments = async (req, res) => {
     const items = await getDocuments(parsedFilters);
 
     if (req.user?.role === 'admin') {
-      return res.json(items);
+      const enriched = await Promise.all(items.map(async (item) => ({
+        ...item,
+        ocrResult: await getDocumentOcrResultByDocumentId(item.id),
+      })));
+      return res.json(enriched);
     }
 
     const accessChecks = await Promise.all(
       items.map((item) => canManageDocumentPayload(req, item)),
     );
     const scopedItems = items.filter((_item, index) => accessChecks[index]);
+    const enriched = await Promise.all(scopedItems.map(async (item) => ({
+      ...item,
+      ocrResult: await getDocumentOcrResultByDocumentId(item.id),
+    })));
 
-    return res.json(scopedItems);
+    return res.json(enriched);
   } catch (err) {
     if (err.issues) {
       return res.status(400).json({ errors: zodErrors(err) });
@@ -115,7 +180,11 @@ export const getDocument = async (req, res) => {
     if (!allowed) {
       return res.status(403).json({ error: 'Access denied for this document' });
     }
-    res.json(item);
+    const ocrResult = await getDocumentOcrResultByDocumentId(item.id);
+    res.json({
+      ...item,
+      ocrResult,
+    });
   } catch (err) {
     if (err.issues) {
       return res.status(400).json({ errors: zodErrors(err) });
@@ -143,6 +212,7 @@ export const createDocumentHandler = async (req, res) => {
 
 export const uploadDocumentHandler = async (req, res) => {
   try {
+    console.log('uploadDocumentHandler - req.body:', req.body);
     const parsedData = uploadDocumentBodySchema.parse(req.body);
     const {
       userId,
@@ -151,23 +221,22 @@ export const uploadDocumentHandler = async (req, res) => {
       documentType,
     } = parsedData;
 
+    console.log('Parsed data:', { userId, carId, companyId, documentType });
+
     const uploadedFile = getUploadedFile(req);
 
     if (!uploadedFile) {
+      console.log('No file uploaded');
       return res.status(400).json({
         error: 'No file uploaded',
       });
     }
 
-    // validate file mime type
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/webp',
-      'application/pdf',
-    ];
+    const mimeType = normalizeUploadedMimeType(uploadedFile);
+    console.log('MIME type:', mimeType);
 
-    if (!allowedMimeTypes.includes(uploadedFile.mimetype)) {
+    if (!allowedMimeTypes.has(mimeType)) {
+      console.log('Invalid MIME type');
       return res.status(400).json({
         error: 'Invalid file type',
       });
@@ -178,6 +247,7 @@ export const uploadDocumentHandler = async (req, res) => {
     // USER DOCUMENTS
     if (userDocuments.includes(documentType)) {
       if (!userId) {
+        console.log('userId required for user documents');
         return res.status(400).json({
           error: 'userId is required for user documents',
         });
@@ -211,15 +281,15 @@ export const uploadDocumentHandler = async (req, res) => {
     // upload to cloudinary
     const base64 = uploadedFile.buffer.toString('base64');
 
-    const dataURI = `data:${uploadedFile.mimetype};base64,${base64}`;
+    const dataURI = `data:${mimeType};base64,${base64}`;
 
-    const resourceType = uploadedFile.mimetype === 'application/pdf' ? 'raw' : 'image';
+    const resourceType = 'image';
 
     // const uploadResult = await cloudinary.uploader.upload(dataURI, {
     //   folder: 'rentify/documents',
     //   resource_type: resourceType,
     // });
-    const isPdf = uploadedFile.mimetype === 'application/pdf';
+    const isPdf = mimeType === 'application/pdf';
     const fallbackName = isPdf ? 'document.pdf' : 'document';
     const originalName = uploadedFile.originalname || fallbackName;
     const normalizedOriginalName = isPdf ? ensurePdfExtension(originalName) : originalName;
@@ -245,8 +315,56 @@ export const uploadDocumentHandler = async (req, res) => {
       documentUrl: uploadResult.secure_url,
     });
 
+    let verificationResult = {
+      status: 'manual_review',
+      extractedText: '',
+      extractedFullName: null,
+      extractedDocumentNumber: null,
+      extractedExpirationDate: null,
+      confidenceScore: 0,
+      verificationReason: 'OCR is not available for this file type.',
+    };
+
+    try {
+      const ocrUrl = getCloudinaryOcrUrl(uploadResult.secure_url, mimeType);
+      verificationResult = await verifyDocumentImage(ocrUrl);
+    } catch (ocrError) {
+      verificationResult = {
+        status: 'manual_review',
+        extractedText: '',
+        extractedFullName: null,
+        extractedDocumentNumber: null,
+        extractedExpirationDate: null,
+        confidenceScore: 0,
+        verificationReason: `OCR processing failed: ${ocrError.message}`,
+      };
+    }
+
+    let ocrResult = null;
+    let documentStatus = verificationResult.status;
+
+    try {
+      ocrResult = await upsertDocumentOcrResult(
+        buildOcrRecordPayload(createdDocument.id, verificationResult),
+      );
+    } catch (ocrWriteError) {
+      console.error('Document OCR write error:', ocrWriteError);
+      documentStatus = 'manual_review';
+    }
+
+    let finalDocument = createdDocument;
+    try {
+      finalDocument = await updateDocument(
+        createdDocument.id,
+        buildDocumentReviewUpdate(documentStatus),
+      );
+    } catch (documentUpdateError) {
+      console.error('Document status update error:', documentUpdateError);
+    }
+
     return res.status(201).json({
-      ...createdDocument,
+      ...finalDocument,
+      ocrResult,
       publicId: uploadResult.public_id,
     });
   } catch (error) {
@@ -272,7 +390,13 @@ export const updateDocumentHandler = async (req, res) => {
       return res.status(403).json({ error: 'Access denied for this document' });
     }
     const payload = updateDocumentSchema.parse(req.body);
-    const item = await updateDocument(id, payload);
+    const isReviewStatus = ['approved', 'rejected', 'manual_review'].includes(payload.status);
+    const reviewPayload = {
+      ...payload,
+      ...(isReviewStatus && !payload.reviewedAt ? { reviewedAt: getCurrentIsoTimestamp() } : {}),
+      ...(req.user?.id && isReviewStatus && !payload.reviewedBy ? { reviewedBy: req.user.id } : {}),
+    };
+    const item = await updateDocument(id, reviewPayload);
     res.json(item);
   } catch (err) {
     if (err.issues) {

@@ -1,11 +1,28 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground, TextInput, useWindowDimensions, Image, Modal, Pressable } from 'react-native';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import {
+  Alert,
+  ActivityIndicator,
+  ImageBackground,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+  Image,
+  Modal,
+  Pressable,
+} from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../../constants/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import storage from '../../utils/storage';
 import { appFont } from '../../utils/responsive';
+import { deleteDocument, getUserDocuments, uploadUserDocument } from '../../services/owner';
 import * as ImagePicker from 'expo-image-picker';
 
 const profileFont = (width, regular, small, verySmall = small) => {
@@ -46,6 +63,27 @@ const StatCard = ({ value, label }) => (
   </View>
 );
 
+const identityMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+
+const inferIdentityMimeType = (file) => {
+  const explicit = String(file?.mimeType || '').toLowerCase();
+  if (identityMimeTypes.includes(explicit)) return explicit;
+  const name = String(file?.name || '').toLowerCase();
+  if (name.endsWith('.pdf')) return 'application/pdf';
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
+};
+
+const getIdentityStatusMeta = (status) => {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'approved') return { label: 'Vérifié', tone: '#21d4a7', bg: 'rgba(33,212,167,0.12)' };
+  if (normalized === 'rejected') return { label: 'Rejeté', tone: '#ff6b6b', bg: 'rgba(255,107,107,0.12)' };
+  if (normalized === 'manual_review') return { label: 'En vérification', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
+  if (normalized === 'pending') return { label: 'En attente', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
+  return { label: 'Manquant', tone: '#9ca2cb', bg: 'rgba(255,255,255,0.05)' };
+};
+
 const ProfileScreen = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const [profile, setProfile] = useState(route?.params?.user || null);
@@ -58,6 +96,11 @@ const ProfileScreen = ({ navigation, route }) => {
   const [editPhone, setEditPhone] = useState('');
   const [savingPersonalInfo, setSavingPersonalInfo] = useState(false);
   const [personalInfoError, setPersonalInfoError] = useState('');
+  const [identityDocument, setIdentityDocument] = useState(null);
+  const [identityLoading, setIdentityLoading] = useState(false);
+  const [identityBusy, setIdentityBusy] = useState(false);
+  const [identityAlertShown, setIdentityAlertShown] = useState(false);
+  const [identityError, setIdentityError] = useState('');
   const [didAutoOpenPersonalInfo, setDidAutoOpenPersonalInfo] = useState(false);
   const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
@@ -145,6 +188,30 @@ const ProfileScreen = ({ navigation, route }) => {
     fetchProfile();
   }, [token]);
 
+  const loadIdentityDocument = useCallback(async () => {
+    if (!token || !isOwner || !profile?.id) return;
+
+    try {
+      setIdentityLoading(true);
+      setIdentityError('');
+      const docs = await getUserDocuments({
+        token,
+        userId: profile.id,
+        documentType: 'identity_card',
+      });
+      const identity = (Array.isArray(docs) ? docs : []).find((doc) => doc.documentType === 'identity_card') || null;
+      setIdentityDocument(identity);
+    } catch (err) {
+      setIdentityError(err.message || 'Impossible de charger la carte d’identité');
+    } finally {
+      setIdentityLoading(false);
+    }
+  }, [isOwner, profile?.id, token]);
+
+  useEffect(() => {
+    loadIdentityDocument();
+  }, [loadIdentityDocument]);
+
   const fullName = useMemo(() => {
     const first = profile?.first_name || profile?.firstName || '';
     const last = profile?.last_name || profile?.lastName || '';
@@ -153,6 +220,20 @@ const ProfileScreen = ({ navigation, route }) => {
   }, [profile]);
 
   const initial = (profile?.first_name?.[0] || profile?.firstName?.[0] || profile?.email?.[0] || 'U').toUpperCase();
+  const identityStatus = getIdentityStatusMeta(identityDocument?.status);
+  const identityReason = identityDocument?.ocrResult?.verificationReason || '';
+  const identityVerified = String(identityDocument?.status || '').toLowerCase() === 'approved';
+
+  useEffect(() => {
+    if (!isOwner || loading || identityLoading || identityAlertShown) return;
+    if (identityVerified) return;
+
+    Alert.alert(
+      'Carte d’identité requise',
+      'Vous devez téléverser et faire valider votre carte d’identité pour publier un véhicule ou une annonce.'
+    );
+    setIdentityAlertShown(true);
+  }, [identityAlertShown, identityLoading, identityVerified, isOwner, loading]);
 
   const openPersonalInfoEditor = () => {
     setEditFirstName(profile?.first_name || profile?.firstName || '');
@@ -250,6 +331,74 @@ const ProfileScreen = ({ navigation, route }) => {
     }
   };
 
+  const openIdentityDocument = useCallback(async () => {
+    const url = identityDocument?.documentUrl;
+    if (!url) return;
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('Erreur', error.message || 'Impossible d’ouvrir le document');
+    }
+  }, [identityDocument?.documentUrl]);
+
+  const pickIdentityDocument = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: identityMimeTypes,
+        copyToCacheDirectory: true,
+      });
+
+      if (result?.canceled) return;
+
+      const asset = Array.isArray(result?.assets) ? result.assets[0] : result;
+      const uri = asset?.uri;
+      const mimeType = inferIdentityMimeType(asset);
+      const name = asset?.name || `identity_card${mimeType === 'application/pdf' ? '.pdf' : mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg'}`;
+
+      if (!uri) return;
+
+      if (!identityMimeTypes.includes(mimeType)) {
+        Alert.alert('Format non autorisé', 'Choisissez un fichier PDF ou une image (JPG, PNG, WEBP).');
+        return;
+      }
+
+      setIdentityBusy(true);
+      const uploaded = await uploadUserDocument({
+        token,
+        userId: profile?.id,
+        documentType: 'identity_card',
+        file: {
+          uri,
+          name,
+          type: mimeType,
+          file: asset?.file || null,
+        },
+      });
+      setIdentityDocument(uploaded);
+      setIdentityAlertShown(false);
+      if ((uploaded?.status || '').toLowerCase() === 'rejected' && uploaded?.ocrResult?.verificationReason) {
+        Alert.alert('Document rejeté', uploaded.ocrResult.verificationReason);
+      }
+    } catch (error) {
+      Alert.alert('Erreur', error.message || 'Impossible de téléverser la carte d’identité');
+    } finally {
+      setIdentityBusy(false);
+    }
+  }, [profile?.id, token]);
+
+  const deleteIdentityDocument = useCallback(async () => {
+    if (!identityDocument?.id) return;
+    try {
+      setIdentityBusy(true);
+      await deleteDocument({ token, documentId: identityDocument.id });
+      setIdentityDocument(null);
+      setIdentityAlertShown(false);
+    } catch (error) {
+      Alert.alert('Erreur', error.message || 'Suppression impossible');
+    } finally {
+      setIdentityBusy(false);
+    }
+  }, [identityDocument?.id, token]);
   const pickAndUploadProfilePicture = async () => {
     const effectiveToken = token || (await storage.getItemAsync('userToken')) || '';
     if (!effectiveToken) {
@@ -521,6 +670,63 @@ const ProfileScreen = ({ navigation, route }) => {
               <StatCard value="5" label="Favoris" />
             </View>
 
+            {isOwner ? (
+              <View style={styles.identityCard}>
+                <View style={styles.identityHeader}>
+                  <View style={styles.identityIcon}>
+                    <Ionicons name="id-card-outline" size={20} color="#8f6cff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.identityTitle}>Carte d'identité</Text>
+                    <Text style={styles.identitySubtitle}>Obligatoire pour publier un véhicule ou une annonce</Text>
+                  </View>
+                  <View style={[styles.identityBadge, { backgroundColor: identityStatus.bg }]}>
+                    <Text style={[styles.identityBadgeText, { color: identityStatus.tone }]}>{identityStatus.label}</Text>
+                  </View>
+                </View>
+
+                {!!identityError && <Text style={styles.identityError}>{identityError}</Text>}
+                {identityLoading ? (
+                  <View style={styles.identityLoader}>
+                    <ActivityIndicator size="small" color="#8f6cff" />
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.identityName} numberOfLines={1}>
+                      {identityDocument?.documentUrl ? identityDocument.documentUrl.split('/').pop() : 'Aucun document soumis'}
+                    </Text>
+                    <Text style={styles.identityHint}>
+                      {identityVerified
+                        ? 'Votre carte est approuvée. Vous pouvez publier.'
+                        : identityDocument?.status === 'rejected'
+                          ? 'Votre carte est rejetée. Téléversez une nouvelle version.'
+                          : 'Vous ne pouvez pas publier tant que la carte n’est pas validée.'}
+                    </Text>
+                    {identityReason ? <Text style={styles.identityReason}>{identityReason}</Text> : null}
+
+                    <View style={styles.identityActions}>
+                      <TouchableOpacity style={styles.identityActionBtn} onPress={identityDocument?.documentUrl ? openIdentityDocument : pickIdentityDocument} disabled={identityBusy}>
+                        <Ionicons name="eye-outline" size={16} color="#dce2ff" />
+                        <Text style={styles.identityActionText}>Voir</Text>
+                      </TouchableOpacity>
+                      {!identityVerified ? (
+                        <TouchableOpacity style={[styles.identityActionBtn, styles.identityPrimaryBtn]} onPress={pickIdentityDocument} disabled={identityBusy}>
+                          <Ionicons name={identityDocument?.documentUrl ? 'create-outline' : 'cloud-upload-outline'} size={16} color="#fff" />
+                          <Text style={styles.identityActionPrimaryText}>{identityDocument?.documentUrl ? 'Remplacer' : 'Téléverser'}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      {identityDocument?.id ? (
+                        <TouchableOpacity style={styles.identityActionBtn} onPress={deleteIdentityDocument} disabled={identityBusy}>
+                          <Ionicons name="trash-outline" size={16} color="#ff7b89" />
+                          <Text style={styles.identityActionDangerText}>Supprimer</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  </>
+                )}
+              </View>
+            ) : null}
+
             <Text style={styles.sectionTitle}>MON COMPTE</Text>
             <SectionCard
               items={[
@@ -771,6 +977,56 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: '#ff4f5e', fontSize: appFont(15), fontWeight: '700' },
   version: { textAlign: 'center', color: '#7f84ae', fontSize: appFont(12), marginTop: 14, marginBottom: 8 },
+  identityCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.2)',
+    backgroundColor: 'rgba(23, 26, 54, 0.92)',
+    padding: 14,
+    marginBottom: 14,
+  },
+  identityHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  identityIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(143,108,255,0.12)',
+  },
+  identityTitle: { color: '#f2f4ff', fontSize: appFont(15), fontWeight: '700' },
+  identitySubtitle: { color: '#9da4cd', marginTop: 3, fontSize: appFont(12), lineHeight: 17 },
+  identityBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginLeft: 8,
+  },
+  identityBadgeText: { fontSize: appFont(11), fontWeight: '800' },
+  identityError: { color: '#ff7b89', marginTop: 10, fontSize: appFont(12) },
+  identityLoader: { paddingVertical: 14, alignItems: 'center' },
+  identityName: { color: '#eef1ff', marginTop: 12, fontSize: appFont(13), fontWeight: '700' },
+  identityHint: { color: '#9da4cd', marginTop: 6, fontSize: appFont(12), lineHeight: 17 },
+  identityReason: { color: '#ffb347', marginTop: 6, fontSize: appFont(12), lineHeight: 17 },
+  identityActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  identityActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.18)',
+  },
+  identityPrimaryBtn: {
+    backgroundColor: '#8f6cff',
+    borderColor: 'rgba(143,108,255,0.5)',
+  },
+  identityActionText: { color: '#dce2ff', fontSize: appFont(12), fontWeight: '700' },
+  identityActionPrimaryText: { color: '#fff', fontSize: appFont(12), fontWeight: '700' },
+  identityActionDangerText: { color: '#ff7b89', fontSize: appFont(12), fontWeight: '700' },
 });
 
 export default ProfileScreen;

@@ -6,6 +6,7 @@ import {
   deleteListing,
 } from './listingModel.js';
 import { getCarById } from '../cars/carModel.js';
+import { hasApprovedDocument } from '../documents/documentModel.js';
 import {
   createListingSchema,
   updateListingSchema,
@@ -70,6 +71,17 @@ export const createListingHandler = async (req, res) => {
     if (req.user.role !== 'admin' && car.ownerId !== req.user.id) {
       return res.status(403).json({ error: 'You can only create listings for your own cars' });
     }
+    if (req.user.role !== 'admin' && payload.isActive === true) {
+      const hasIdentityCard = await hasApprovedDocument({
+        userId: req.user.id,
+        documentType: 'identity_card',
+      });
+      if (!hasIdentityCard) {
+        return res.status(403).json({
+          error: 'Upload and verify your identity card before publishing listings.',
+        });
+      }
+    }
     const item = await createListing(payload);
     res.status(201).json(item);
   } catch (err) {
@@ -90,6 +102,17 @@ export const updateListingHandler = async (req, res) => {
     }
 
     const payload = updateListingSchema.parse(req.body);
+    if (req.user.role !== 'admin' && payload.isActive === true) {
+      const hasIdentityCard = await hasApprovedDocument({
+        userId: req.user.id,
+        documentType: 'identity_card',
+      });
+      if (!hasIdentityCard) {
+        return res.status(403).json({
+          error: 'Upload and verify your identity card before publishing listings.',
+        });
+      }
+    }
     if (payload.carId && req.user.role !== 'admin') {
       const targetCar = await getCarById(payload.carId);
       if (targetCar.ownerId !== req.user.id) {
