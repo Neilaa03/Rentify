@@ -6,7 +6,6 @@ import { Image } from 'react-native';
 import {
   Alert,
   Linking,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -80,35 +79,6 @@ const buildRangeMarks = (startDate, endDate) => {
   }
 
   return marks;
-};
-
-const getNativeDocumentModules = () => {
-  if (Platform.OS === 'web') return { FileSystem: null, FileSystemLegacy: null, Sharing: null };
-  try {
-    const FileSystem = require('expo-file-system');
-    const FileSystemLegacy = require('expo-file-system/legacy');
-    const Sharing = require('expo-sharing');
-    return { FileSystem, FileSystemLegacy, Sharing };
-  } catch (_error) {
-    return { FileSystem: null, FileSystemLegacy: null, Sharing: null };
-  }
-};
-
-const guessDocumentFilename = ({ url, type }) => {
-  const safeType = String(type || 'document').toLowerCase();
-  const fallback = `${safeType}_${Date.now()}.pdf`;
-  if (!url) return fallback;
-
-  try {
-    const withoutQuery = String(url).split('?')[0];
-    const parts = withoutQuery.split('/').filter(Boolean);
-    const lastPart = decodeURIComponent(parts[parts.length - 1] || '');
-    if (!lastPart) return fallback;
-    if (lastPart.toLowerCase().endsWith('.pdf')) return lastPart;
-    return `${lastPart}.pdf`;
-  } catch (_e) {
-    return fallback;
-  }
 };
 
 const OwnerCarFormScreen = ({ navigation, route }) => {
@@ -222,27 +192,25 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       (typeof document?.uri === 'string' && document.uri.trim()) ||
       '';
 
-    if (!candidateUrl) {
-      await pickDocument(type);
-      return;
-    }
-
-    const isRemoteUrl = /^https?:\/\//i.test(candidateUrl);
-    if (!isRemoteUrl) {
+    if (candidateUrl) {
       try {
         await Linking.openURL(candidateUrl);
-      } catch (_error) {
-        Alert.alert('Erreur', 'Impossible d’ouvrir ce document local.');
+        return;
+      } catch (error) {
+        console.warn('Unable to open document directly, trying fallback', error);
+        try {
+          const fallbackViewerUrl = `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(candidateUrl)}`;
+          await Linking.openURL(fallbackViewerUrl);
+          return;
+        } catch (fallbackError) {
+          console.warn('Fallback open failed', fallbackError);
+          Alert.alert('Erreur', 'Impossible d’ouvrir le document.');
+          return;
+        }
       }
-      return;
     }
 
-    try {
-      await Linking.openURL(candidateUrl);
-    } catch (error) {
-      console.warn('Document open failed', error);
-      Alert.alert('Erreur', 'Impossible d’ouvrir ce document.');
-    }
+    await pickDocument(type);
   };
 
   const handleDocumentDelete = async (type) => {
@@ -767,17 +735,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><Ionicons name="chevron-back" size={22} color="#fff" /></TouchableOpacity>
           <Text style={styles.headerTitle}>{isCreateCarAndListing ? 'Publier un véhicule' : isCreateCar ? 'Ajouter un véhicule' : isCreateListingOnly ? 'Nouvelle annonce' : isEditCar ? 'Modifier le véhicule' : 'Modifier annonce'}</Text>
-          {isEditCar && car?.id ? (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('OwnerCarReviews', { token, carId: car.id, car })}
-              style={styles.iconBtn}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="chatbubbles-outline" size={20} color="#fff" />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.iconBtn} />
-          )}
+          <View style={styles.iconBtn} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>

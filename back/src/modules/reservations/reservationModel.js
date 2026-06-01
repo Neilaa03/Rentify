@@ -423,7 +423,6 @@ export const updateReservationDetails = async (id, updates) => {
     // Use existing dates if not provided in updates
     const startDate = updates.startDate ? new Date(updates.startDate) : new Date(existingReservation.start_date);
     const endDate = updates.endDate ? new Date(updates.endDate) : new Date(existingReservation.end_date);
-    const requestedPickupMethod = updates.pickupMethod || null;
 
     // Check for date conflicts (exclude current reservation)
     if (updates.startDate || updates.endDate) {
@@ -443,15 +442,12 @@ export const updateReservationDetails = async (id, updates) => {
     // Fetch pickup details (delivery fee snapshot)
     const { data: pickupRows, error: pickupFetchError } = await supabase
         .from(PICKUP_TABLE)
-        .select('delivery_fee, pickup_method, pickup_address')
+        .select('delivery_fee')
         .eq('reservation_id', id)
         .limit(1);
 
     if (pickupFetchError) throw pickupFetchError;
-    const currentPickupRow = pickupRows && pickupRows[0] ? pickupRows[0] : null;
-    const currentPickupMethod = currentPickupRow?.pickup_method || 'owner_place';
-    const currentPickupAddress = currentPickupRow?.pickup_address || null;
-    const deliveryFeeApplied = Number(currentPickupRow?.delivery_fee || 0);
+    const deliveryFeeApplied = Number((pickupRows && pickupRows[0] && pickupRows[0].delivery_fee) || 0);
 
     // Fetch listing to recalculate base price
     const { data: listingData, error: listingError } = await supabase
@@ -486,28 +482,7 @@ export const updateReservationDetails = async (id, updates) => {
     // Apply daily pricing for remaining days
     totalPrice += remainingDays * listingData.price_per_day;
 
-    const nextPickupMethod = requestedPickupMethod || currentPickupMethod;
-    let nextPickupAddress = currentPickupAddress;
-    let nextDeliveryFee = deliveryFeeApplied;
-
-    if (requestedPickupMethod) {
-        if (requestedPickupMethod === 'renter_delivery') {
-            const requestedAddress = updates.pickupAddress?.trim?.() || updates.pickupAddress || null;
-            if (!requestedAddress) {
-                throw new Error('pickupAddress is required when pickupMethod is renter_delivery');
-            }
-            nextPickupAddress = requestedAddress;
-            nextDeliveryFee = Number(listingData.delivery_fee || 0);
-            if (nextDeliveryFee <= 0) {
-                throw new Error('This listing does not support delivery');
-            }
-        } else {
-            nextPickupAddress = listingData.pickup_address || null;
-            nextDeliveryFee = 0;
-        }
-    }
-
-    totalPrice += nextDeliveryFee;
+    totalPrice += deliveryFeeApplied;
 
     // Prepare update payload
     const updatePayload = {
@@ -524,17 +499,6 @@ export const updateReservationDetails = async (id, updates) => {
         .single();
 
     if (error || !data) throw new Error('Failed to update reservation');
-
-    const { error: pickupUpdateError } = await supabase
-        .from(PICKUP_TABLE)
-        .update({
-            pickup_method: nextPickupMethod,
-            pickup_address: nextPickupAddress,
-            delivery_fee: nextDeliveryFee,
-        })
-        .eq('reservation_id', id);
-    if (pickupUpdateError) throw pickupUpdateError;
-
     const { data: full, error: fullError } = await supabase
         .from(RESERVATIONS_TABLE)
         .select(

@@ -63,18 +63,18 @@ export default function AdminDashboardScreen({ navigation, route }) {
             <StatCard icon="flag-outline" value={counters.reportsOpen} label="Signalements" sub="en cours" tone="red" />
           </View>
 
-          {/* <Text style={styles.sectionTitle}>Actions rapides</Text>
+          <Text style={styles.sectionTitle}>Actions rapides</Text>
           <View style={styles.grid}>
             {quickActions.map((item) => (
               <TouchableOpacity key={item.key} style={styles.quickCard} onPress={() => navigation.navigate(item.to, route?.params || {})}>
                 <View style={[styles.iconChip, { backgroundColor: `${toneColor[item.tone]}22` }]}>
-                  <Ionicons name={item.icon} size={14} color={toneColor[item.tone]} />
+                  <Ionicons name={item.icon} size={16} color={toneColor[item.tone]} />
                 </View>
-                <Text style={styles.quickLabel} numberOfLines={1}>{item.title}</Text>
                 <Text style={[styles.quickValue, { color: toneColor[item.tone] }]}>{item.value}</Text>
+                <Text style={styles.quickLabel}>{item.title}</Text>
               </TouchableOpacity>
             ))}
-          </View> */}
+          </View>
 
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Resume de la plateforme</Text>
@@ -136,9 +136,9 @@ const styles = StyleSheet.create({
   statLabel: { color: '#9ea5ce', fontSize: 13, marginTop: 4 },
   statSub: { fontSize: 12, marginTop: 4, fontWeight: '700' },
   sectionTitle: { color: '#f1f2ff', fontSize: 28, fontWeight: '700', marginTop: 8, marginBottom: 8 },
-  quickCard: { width: '48.5%', backgroundColor: '#0e1232', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  quickValue: { fontSize: 14, fontWeight: '800' },
-  quickLabel: { color: '#c2c8ea', fontSize: 12, fontWeight: '600', flex: 1 },
+  quickCard: { width: '48.5%', backgroundColor: '#0e1232', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, padding: 12, marginBottom: 10 },
+  quickValue: { fontSize: 31, fontWeight: '800', marginTop: 10 },
+  quickLabel: { color: '#8d94c2', marginTop: 4 },
   summaryCard: { backgroundColor: '#10163a', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, padding: 14, marginTop: 6 },
   summaryTitle: { color: '#f2f4ff', fontSize: 20, fontWeight: '700', marginBottom: 10 },
   summaryLineWrap: { marginBottom: 8 },

@@ -16,8 +16,7 @@ import HandoverVerifyScreen from '../../screens/handover/HandoverVerifyScreen';
 import ReservationsScreen from '../../screens/reservations/ReservationsScreen';
 import ProfileScreen from '../../screens/client/ProfileScreen';
 import InboxScreen from '../../screens/messages/InboxScreen';
-import UnreadNotificationsScreen from '../../screens/notifications/UnreadNotificationsScreen';
-import NotificationsHistoryScreen from '../../screens/notifications/NotificationsHistoryScreen';
+import NotificationsScreen from '../../screens/notificationsScreen';
 import ChatScreen from '../../screens/messages/ChatScreen';
 import { FavoritesProvider } from '../../contexts/FavoritesContext';
 
@@ -49,12 +48,7 @@ function HomeTabStack() {
       />
       <Stack.Screen
         name="NotificationScreen"
-        component={UnreadNotificationsScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-      <Stack.Screen
-        name="NotificationsHistory"
-        component={NotificationsHistoryScreen}
+        component={NotificationsScreen}
         options={{ tabBarStyle: { display: 'none' } }}
       />
        <Stack.Screen
@@ -148,9 +142,8 @@ export function ClientNavigation() {
     borderTopWidth: 0,
     marginHorizontal: 16,
     borderRadius: 18,
-    height: 58,
-    paddingTop: 10,
-    paddingBottom: 10,
+    height: 65,
+    paddingVertical: 12,
     position: 'absolute',
     bottom: 8 + (insets?.bottom || 0),
     left: 0,
@@ -178,8 +171,12 @@ export function ClientNavigation() {
           },
           tabBarActiveTintColor: COLORS.primary,
           tabBarInactiveTintColor: '#8a90b8',
-          tabBarShowLabel: false,
           tabBarStyle: defaultTabBarStyle,
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+            marginTop: 4,
+          },
         })}
       >
       <Tab.Screen 
@@ -204,7 +201,7 @@ export function ClientNavigation() {
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'Home';
-          return { tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+          return { tabBarLabel: 'Accueil', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
         }}
       />
       <Tab.Screen 
@@ -229,7 +226,7 @@ export function ClientNavigation() {
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route);
           const hide = routeName && routeName !== 'Favorites';
-          return {tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+          return { tabBarLabel: 'Favoris', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
         }}
       />
       <Tab.Screen 

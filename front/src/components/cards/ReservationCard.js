@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -9,27 +9,11 @@ const formatDateRange = (from, to) => {
   try {
     const f = new Date(from);
     const t = new Date(to);
-    const opts = { year: '2-digit', month: 'short', day: 'numeric' };
+    const opts = { year: 'numeric', month: 'short', day: 'numeric' };
     return `${f.toLocaleDateString('en-US', opts)} → ${t.toLocaleDateString('en-US', opts)}`;
   } catch (e) {
     return '';
   }
-};
-
-const formatSingleDate = (value) => {
-  try {
-    const date = new Date(value);
-    const opts = { year: '2-digit', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', opts);
-  } catch (e) {
-    return '';
-  }
-};
-
-const adaptFont = (width, regular, small, verySmall) => {
-  if (width <= 340) return verySmall;
-  if (width <= 380) return small;
-  return regular;
 };
 
 const ReservationCard = ({
@@ -38,20 +22,8 @@ const ReservationCard = ({
   onPress,
   showFinishPayment = false,
   onFinishPayment,
-  compact = false,
 }) => {
   const navigation = useNavigation();
-  const { width } = useWindowDimensions();
-  const tightLayout = width <= 380;
-  const fontSize = {
-    carName: adaptFont(width, 17, 15.5, 14.5),
-    city: adaptFont(width, 12, 11.5, 10.5),
-    date: adaptFont(width, 14, 12, 11.2),
-    duration: adaptFont(width, 14, 12.5, 11.5),
-    status: adaptFont(width, 11, 10.5, 9.5),
-    price: adaptFont(width, compact ? 18 : 22, compact ? 14.5 : 14, compact ? 13.5 : 12.5),
-    finishPayment: adaptFont(width, 11, 10.5, 9.5),
-  };
 
   const listing = reservation?.listing || {};
   const status = reservation?.status || '';
@@ -111,72 +83,59 @@ const ReservationCard = ({
   const badgeColor = statusColors[status] || '#6EC1FF';
 
   return (
-    <TouchableOpacity style={[styles.card, compact && styles.compactCard, tightLayout && styles.tightCard]} activeOpacity={0.85} onPress={handlePress}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={handlePress}>
       {/* Image */}
-      <View style={[styles.imageWrapper, compact && styles.compactImageWrapper, tightLayout && styles.tightImageWrapper]}>
+      <View style={styles.imageWrapper}>
         {imageUri ? (
           <Image 
             source={{ uri: imageUri }} 
-            style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage]}
+            style={styles.image}
             resizeMode="cover"
           />
         ) : (
-          <View style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage, styles.imagePlaceholder]}>
+          <View style={[styles.image, styles.imagePlaceholder]}>
             <Ionicons name="car-sport-outline" size={36} color="rgba(255,255,255,0.8)" />
           </View>
         )}
       </View>
 
       {/* Content Area */}
-      <View style={[styles.contentWrapper, tightLayout && styles.tightContentWrapper]}>
+      <View style={styles.contentWrapper}>
         {/* Top: Car Name */}
         <View style={styles.titleSection}>
-          <Text style={[styles.carName, { fontSize: fontSize.carName }]} numberOfLines={1}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
+          <Text style={styles.carName}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
           {listing?.city && (
             <View style={styles.cityContainer}>
               <Ionicons name="location-outline" size={12} color="#8b91ba" />
-              <Text style={[styles.cityText, { fontSize: fontSize.city }]}>{listing.city}</Text>
+              <Text style={styles.cityText}>{listing.city}</Text>
             </View>
           )}
         </View>
 
         {/* Middle: Dates */}
-        <View style={[styles.dateSection, tightLayout && styles.tightDateSection]}>
+        <View style={styles.dateSection}>
           <Ionicons name="calendar-outline" size={14} color="#8b91ba" />
-          {tightLayout ? (
-            <View style={styles.stackedDateText}>
-              <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(start)} →</Text>
-              <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(end)}</Text>
-            </View>
-          ) : (
-            <Text style={[styles.dateText, { fontSize: fontSize.date }]} numberOfLines={1}>{formatDateRange(start, end)}</Text>
-          )}
+          <Text style={styles.dateText} numberOfLines={1}>{formatDateRange(start, end)}</Text>
         </View>
 
         {/* Bottom: Duration */}
         <View style={styles.durationSection}>
           <Ionicons name="time-outline" size={14} color="#8b91ba" />
-          <Text style={[styles.durationText, { fontSize: fontSize.duration }]}>{days ? `${days} days` : '—'}</Text>
+          <Text style={styles.durationText}>{days ? `${days} days` : '—'}</Text>
         </View>
       </View>
 
       {/* Right Section: Status & Price */}
-      <View style={[styles.rightSection, compact && styles.compactRightSection, tightLayout && styles.tightRightSection]}>
-        <View style={[styles.statusBadge, tightLayout && styles.tightStatusBadge, { backgroundColor: badgeColor }]}> 
-          <Text style={[styles.statusText, { fontSize: fontSize.status }]} numberOfLines={1}>
-            {status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}
-          </Text>
+      <View style={styles.rightSection}>
+        <View style={[styles.statusBadge, { backgroundColor: badgeColor }]}> 
+          <Text style={styles.statusText}>{status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}</Text>
         </View>
         {showFinishPayment && (
-          <TouchableOpacity style={[styles.finishPaymentButton, tightLayout && styles.tightFinishPaymentButton]} onPress={handleFinishPaymentPress}>
-            <Text style={[styles.finishPaymentButtonText, { fontSize: fontSize.finishPayment }]} numberOfLines={1}>
-              Finish payment
-            </Text>
+          <TouchableOpacity style={styles.finishPaymentButton} onPress={handleFinishPaymentPress}>
+            <Text style={styles.finishPaymentButtonText}>Finish payment</Text>
           </TouchableOpacity>
         )}
-        <Text style={[styles.price, compact && styles.compactPrice, { fontSize: fontSize.price }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-          {formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}
-        </Text>
+        <Text style={styles.price}>{formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -196,37 +155,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'space-between',
   },
-  compactCard: {
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-  },
-  tightCard: {
-    paddingVertical: 11,
-    paddingHorizontal: 6,
-  },
   imageWrapper: {
     position: 'relative',
     marginRight: 14,
-  },
-  compactImageWrapper: {
-    marginRight: 10,
-  },
-  tightImageWrapper: {
-    marginRight: 7,
   },
   image: {
     width: 120,
     height: 95,
     borderRadius: 12,
     backgroundColor: '#1a1d2e',
-  },
-  compactImage: {
-    width: 132,
-    height: 104,
-  },
-  tightImage: {
-    width: 104,
-    height: 92,
   },
   imagePlaceholder: {
     justifyContent: 'center',
@@ -241,30 +178,22 @@ const styles = StyleSheet.create({
     marginBottom: 35,
     alignSelf: 'flex-end',
   },
-  tightStatusBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    marginBottom: 22,
-    maxWidth: 82,
-  },
   statusText: {
     color: '#fff',
+    fontSize: 11,
     fontWeight: '700',
   },
   contentWrapper: {
     flex: 1,
     justifyContent: 'space-between',
     paddingRight: 8,
-    minWidth: 0,
-  },
-  tightContentWrapper: {
-    paddingRight: 4,
   },
   titleSection: {
     marginBottom: 6,
   },
   carName: {
     color: '#F5F7FF',
+    fontSize: 16,
     fontWeight: '700',
     maxWidth: '90%',
   },
@@ -276,6 +205,7 @@ const styles = StyleSheet.create({
   },
   cityText: {
     color: '#8b91ba',
+    fontSize: 12,
     fontWeight: '400',
   },
   dateSection: {
@@ -284,23 +214,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flexWrap: 'nowrap',
   },
-  tightDateSection: {
-    alignItems: 'flex-start',
-    marginBottom: 6,
-  },
-  stackedDateText: {
-    flex: 1,
-    marginLeft: 6,
-    minWidth: 0,
-  },
   dateText: {
     color: '#8b91ba',
+    fontSize: 12,
     marginLeft: 6,
     fontWeight: '500',
     flexShrink: 1,
-  },
-  tightDateText: {
-    marginLeft: 0,
   },
   durationSection: {
     flexDirection: 'row',
@@ -308,6 +227,7 @@ const styles = StyleSheet.create({
   },
   durationText: {
     color: '#8b91ba',
+    fontSize: 13,
     marginLeft: 6,
     fontWeight: '500',
   },
@@ -317,22 +237,11 @@ const styles = StyleSheet.create({
     minWidth: 95,
     marginLeft: 10,
   },
-  compactRightSection: {
-    minWidth: 74,
-    marginLeft: 6,
-  },
-  tightRightSection: {
-    minWidth: 58,
-    marginLeft: 4,
-    flexShrink: 0,
-  },
   price: {
     color: '#0b63ff',
+    fontSize: 22,
     fontWeight: '800',
     letterSpacing: -0.3,
-  },
-  compactPrice: {
-    letterSpacing: 0,
   },
   finishPaymentButton: {
     backgroundColor: '#0b63ff',
@@ -341,13 +250,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
-  tightFinishPaymentButton: {
-    paddingHorizontal: 6,
-    paddingVertical: 5,
-    maxWidth: 82,
-  },
   finishPaymentButtonText: {
     color: '#fff',
+    fontSize: 11,
     fontWeight: '700',
   },
 });

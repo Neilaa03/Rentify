@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CommonActions } from '@react-navigation/native';
@@ -33,7 +33,8 @@ const AdminBottomNavigation = ({ navigation, route, active }) => {
 
         return (
           <TouchableOpacity key={tab.key} style={styles.footerTab} onPress={() => resetTo(tab.to)}>
-            <Ionicons name={tab.icon} size={25} color={color} />
+            <Ionicons name={tab.icon} size={22} color={color} />
+            <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -51,11 +52,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: '#151738',
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  footerTab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 2 },
+  footerTab: { flex: 1, alignItems: 'center', paddingVertical: 4, paddingHorizontal: 2 },
+  tabLabel: { color: '#8a90b8', fontSize: 9, marginTop: 4, fontWeight: '500' },
+  tabLabelActive: { color: '#8f6cff' },
 });
 
 export default AdminBottomNavigation;

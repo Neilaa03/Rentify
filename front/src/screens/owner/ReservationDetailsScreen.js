@@ -507,42 +507,6 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          {paymentInfo?.paymentMethod === 'card' ? (
-            <View style={styles.escrowStatusCard}>
-              <View style={styles.escrowStatusHeader}>
-                <Ionicons
-                  name={
-                    paymentInfo?.status === 'released'
-                      ? 'checkmark-done-circle'
-                      : paymentInfo?.status === 'disputed'
-                      ? 'alert-circle'
-                      : 'shield-checkmark'
-                  }
-                  size={20}
-                  color={
-                    paymentInfo?.status === 'released'
-                      ? '#21d4a7'
-                      : paymentInfo?.status === 'disputed'
-                      ? '#ffb347'
-                      : '#4f8cff'
-                  }
-                />
-                <Text style={styles.escrowStatusTitle}>Escrow carte</Text>
-              </View>
-              <Text style={styles.escrowStatusText}>
-                {paymentInfo?.status === 'held_in_escrow'
-                  ? 'Les fonds sont bloqués en attendant la confirmation du client.'
-                  : paymentInfo?.status === 'released'
-                  ? 'Les fonds ont été transférés au compte Stripe connecté du propriétaire.'
-                  : paymentInfo?.status === 'disputed'
-                  ? 'Le paiement est bloqué dans un litige en attente de résolution.'
-                  : paymentInfo?.status === 'pending'
-                  ? 'Le paiement carte est en cours de validation Stripe.'
-                  : 'Statut de paiement carte indisponible.'}
-              </Text>
-            </View>
-          ) : null}
-
           {paymentInfo?.paymentMethod === 'cash' && (
             <View style={styles.cashPaymentAlert}>
               <View style={styles.cashPaymentAlertContent}>
@@ -880,30 +844,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(165, 102, 255, 0.2)',
-  },
-  escrowStatusCard: {
-    marginTop: 16,
-    backgroundColor: 'rgba(79, 140, 255, 0.12)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(79, 140, 255, 0.2)',
-  },
-  escrowStatusHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  escrowStatusTitle: {
-    color: '#f6f8ff',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  escrowStatusText: {
-    color: '#c9d2ff',
-    fontSize: 12,
-    lineHeight: 18,
   },
   priceRow: {
     flexDirection: 'row',

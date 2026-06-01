@@ -10,9 +10,6 @@ import {
     updateReservationDetailsHandler,
     cancelReservationHandler,
     confirmPaymentHandler,
-    confirmHandoverHandler,
-    disputeHandoverHandler,
-    resolveEscrowDisputeHandler,
     getListingReservations,
     updateReservationStatusHandler,
     getAllReservations,
@@ -51,15 +48,6 @@ router.delete('/:id/cancel', verifyClient, cancelReservationHandler);
 
 // Patch: Confirm payment (update status from 'reserved' to 'confirmed')
 router.patch('/:id/confirm-payment', verifyClient, confirmPaymentHandler);
-
-// Post: Client confirms car handover and releases escrow
-router.post('/:id/confirm-handover', verifyClient, confirmHandoverHandler);
-
-// Post: Client disputes the handover and locks escrow
-router.post('/:id/dispute', verifyClient, disputeHandoverHandler);
-
-// Post: Admin resolves a dispute
-router.post('/:id/dispute/resolve', verifyAdmin, resolveEscrowDisputeHandler);
 
 // Patch: Update reservation dates (only if status is 'reserved')
 router.patch('/:id/details', verifyClient, updateReservationDetailsHandler);

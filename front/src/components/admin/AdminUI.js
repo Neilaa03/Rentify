@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { appFont } from '../../utils/responsive';
 
 export const ADMIN_COLORS = {
   bg: '#0a0c24',
@@ -63,20 +62,20 @@ export const Row = ({ title, subtitle, right }) => (
 
 const styles = StyleSheet.create({
   header: { marginTop: 6, marginBottom: 14 },
-  kicker: { color: '#8f7dff', fontSize: appFont(12), letterSpacing: 1.1, fontWeight: '700' },
-  title: { color: '#fff', fontSize: appFont(28, 30), fontWeight: '800', marginTop: 6 },
+  kicker: { color: '#8f7dff', fontSize: 12, letterSpacing: 1.1, fontWeight: '700' },
+  title: { color: '#fff', fontSize: 28, fontWeight: '800', marginTop: 6 },
   card: { borderRadius: 14, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, padding: 12, marginBottom: 10 },
   input: { borderRadius: 12, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, paddingHorizontal: 12, paddingVertical: 10, color: '#fff', marginBottom: 10 },
   btn: { borderRadius: 10, backgroundColor: ADMIN_COLORS.accent, paddingHorizontal: 12, paddingVertical: 9, alignSelf: 'flex-start', marginRight: 8 },
   btnGhost: { backgroundColor: 'rgba(255,255,255,0.08)' },
   btnDanger: { backgroundColor: 'rgba(255,127,144,0.25)' },
-  btnText: { color: '#fff', fontWeight: '700', fontSize: appFont(12) },
+  btnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   badge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
-  badgeText: { textTransform: 'capitalize', fontWeight: '700', fontSize: appFont(12) },
+  badgeText: { textTransform: 'capitalize', fontWeight: '700', fontSize: 12 },
   statCard: { width: '48%', borderRadius: 14, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, padding: 10, marginBottom: 10 },
-  statValue: { color: '#fff', fontSize: appFont(21, 23), fontWeight: '800' },
-  statLabel: { color: '#bfc5e6', marginTop: 3, fontSize: appFont(12) },
+  statValue: { color: '#fff', fontSize: 21, fontWeight: '800' },
+  statLabel: { color: '#bfc5e6', marginTop: 3, fontSize: 12 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: 'rgba(146,151,214,0.14)', paddingVertical: 10 },
-  rowTitle: { color: '#fff', fontWeight: '700', fontSize: appFont(14) },
-  rowSubtitle: { color: '#9ea4cf', marginTop: 2, fontSize: appFont(12) },
+  rowTitle: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  rowSubtitle: { color: '#9ea4cf', marginTop: 2, fontSize: 12 },
 });

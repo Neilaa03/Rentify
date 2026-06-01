@@ -201,16 +201,10 @@ export const uploadCarDocument = async ({
   file,
 }) => {
   const formData = new FormData();
-  const isPdf = String(file?.type || '').toLowerCase() === 'application/pdf';
-  const safeName = (() => {
-    const base = file?.name || `${documentType}.pdf`;
-    if (!isPdf) return base;
-    return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
-  })();
 
   formData.append('document', {
     uri: file.uri,
-    name: safeName,
+    name: file.name,
     type: file.type,
   });
 
