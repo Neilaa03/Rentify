@@ -3,11 +3,11 @@ import { Image, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-n
 import { Ionicons } from '@expo/vector-icons';
 
 const toneMap = {
-  blue: { fg: '#5ea1ff', bg: 'rgba(41,121,255,0.14)', border: 'rgba(41,121,255,0.35)' },
-  purple: { fg: '#a78bff', bg: 'rgba(124,77,255,0.14)', border: 'rgba(124,77,255,0.35)' },
-  green: { fg: '#00E676', bg: 'rgba(0,230,118,0.14)', border: 'rgba(0,230,118,0.32)' },
-  amber: { fg: '#FF9100', bg: 'rgba(255,145,0,0.14)', border: 'rgba(255,145,0,0.34)' },
-  red: { fg: '#FF1744', bg: 'rgba(255,23,68,0.14)', border: 'rgba(255,23,68,0.34)' },
+  blue: { fg: '#4f8cff', bg: 'rgba(79,140,255,0.14)', border: 'rgba(79,140,255,0.35)' },
+  purple: { fg: '#8f7dff', bg: 'rgba(143,125,255,0.14)', border: 'rgba(143,125,255,0.35)' },
+  green: { fg: '#21d4a7', bg: 'rgba(33,212,167,0.14)', border: 'rgba(33,212,167,0.32)' },
+  amber: { fg: '#ffb347', bg: 'rgba(255,179,71,0.14)', border: 'rgba(255,179,71,0.34)' },
+  red: { fg: '#EB5757', bg: 'rgba(235,87,87,0.14)', border: 'rgba(235,87,87,0.34)' },
   neutral: { fg: '#cdd4ff', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.10)' },
 };
 
@@ -28,12 +28,12 @@ export const SectionTitle = ({ kicker, title, subtitle, right }) => (
   </View>
 );
 
-export const Badge = ({ label, toneKey = 'neutral', icon, style, textStyle }) => {
+export const Badge = ({ label, toneKey = 'neutral', icon, style, textStyle, fullWidth = false }) => {
   const c = tone(toneKey);
   return (
-    <View style={[styles.badge, { backgroundColor: c.bg, borderColor: c.border }, style]}>
+    <View style={[styles.badge, fullWidth && styles.badgeFullWidth, { backgroundColor: c.bg, borderColor: c.border }, style]}>
       {icon ? <Ionicons name={icon} size={12} color={c.fg} style={{ marginRight: 6 }} /> : null}
-      <Text style={[styles.badgeText, { color: c.fg }, textStyle]}>{label}</Text>
+      <Text numberOfLines={1} style={[styles.badgeText, { color: c.fg }, textStyle]}>{label}</Text>
     </View>
   );
 };
@@ -42,10 +42,12 @@ export const MetricCard = ({ label, value, icon, toneKey = 'purple', subtitle })
   const c = tone(toneKey);
   return (
     <View style={[styles.metricCard, { borderColor: c.border }]}>
-      <View style={[styles.metricIcon, { backgroundColor: c.bg }]}>
-        <Ionicons name={icon} size={16} color={c.fg} />
+      <View style={styles.metricTopRow}>
+        <View style={[styles.metricIcon, { backgroundColor: c.bg }]}>
+          <Ionicons name={icon} size={15} color={c.fg} />
+        </View>
+        <Text style={styles.metricValue}>{value}</Text>
       </View>
-      <Text style={styles.metricValue}>{value}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
       {subtitle ? <Text style={[styles.metricSubtitle, { color: c.fg }]}>{subtitle}</Text> : null}
     </View>
@@ -237,7 +239,7 @@ export const CompanyMetaItem = ({ label, value }) => (
 const styles = StyleSheet.create({
   card: {
     borderRadius: 22,
-    backgroundColor: 'rgba(14,15,26,0.90)',
+    backgroundColor: 'rgba(21,23,58,0.9)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000',
@@ -246,8 +248,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
   },
   cardDanger: {
-    borderColor: 'rgba(255,23,68,0.55)',
-    shadowColor: '#ff1744',
+    borderColor: 'rgba(235,87,87,0.55)',
+    shadowColor: '#EB5757',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -267,27 +269,28 @@ const styles = StyleSheet.create({
     maxWidth: '42%',
   },
   kicker: {
-    color: '#7c83ab',
+    color: '#8E95BF',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1.4,
     marginBottom: 4,
   },
   sectionTitle: {
-    color: '#F5F7FF',
+    color: '#F6F8FF',
     fontSize: 22,
     fontWeight: '800',
   },
   sectionSubtitle: {
-    color: '#96A0C8',
+    color: '#8E95BF',
     marginTop: 4,
     fontSize: 13,
     lineHeight: 18,
   },
   badge: {
-    flexGrow: 1,
     flexShrink: 1,
-    flexBasis: 0,
+    flexGrow: 0,
+    flexBasis: 'auto',
+    minWidth: 120,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 999,
@@ -296,6 +299,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  badgeFullWidth: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
   badgeText: {
     fontSize: 11,
     fontWeight: '800',
@@ -303,31 +310,38 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   metricCard: {
-    width: '48.4%',
-    minHeight: 106,
+    width: '47.2%',
+    minHeight: 88,
     borderRadius: 18,
-    padding: 14,
-    backgroundColor: '#0D0E15',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(29, 16, 52, 0.96)',
     borderWidth: 1,
-    marginBottom: 10,
+    marginBottom: 8,
+  },
+  metricTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 28,
   },
   metricIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 11,
+    width: 28,
+    height: 28,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   metricValue: {
     color: '#fff',
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: '900',
-    marginTop: 12,
+    flexShrink: 1,
   },
   metricLabel: {
     color: '#97A0C7',
     fontSize: 12,
-    marginTop: 3,
+    marginTop: 8,
     fontWeight: '700',
   },
   metricSubtitle: {
@@ -404,8 +418,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(13,14,21,0.96)',
+    borderColor: 'rgba(143,125,255,0.20)',
+    backgroundColor: 'rgba(29,16,52,0.96)',
     marginBottom: 14,
   },
   vehicleCardRejected: {
@@ -414,7 +428,7 @@ const styles = StyleSheet.create({
   vehicleImage: {
     width: '100%',
     height: 188,
-    backgroundColor: '#151827',
+    backgroundColor: '#2b1749',
   },
   vehicleImageFallback: {
     alignItems: 'center',

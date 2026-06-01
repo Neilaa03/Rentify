@@ -93,13 +93,14 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
   };
 
   return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
+    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
       <SafeAreaView style={styles.safeArea}>
+        <View style={styles.overlay}>
         <View style={styles.page}>
           <SectionTitle
             kicker={mode === 'listings' ? 'LISTINGS' : 'FLEET'}
             title={mode === 'listings' ? 'Annonces de l’agence' : 'Flotte & véhicules'}
-            subtitle="Gestion premium, visibilité publique et statuts des documents"
+            subtitle="Gestion, visibilité publique et statuts"
             right={(
               <TouchableOpacity style={styles.addButton} onPress={onAdd}>
                 <Ionicons name="add" size={16} color="#fff" />
@@ -120,14 +121,6 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
             >
               {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
 
-              <AgencyCard style={styles.metricsCard}>
-                <View style={styles.badgesRow}>
-                  <Badge label={`👁 ${Number(totalViews).toLocaleString('fr-FR')} vues totales`} toneKey="purple" />
-                  <Badge label={`📅 ${Number(totalReservations).toLocaleString('fr-FR')} réservations`} toneKey="blue" />
-                  <Badge label={`⭐ ${averageRating ? averageRating.toFixed(1) : '0.0'} moy.`} toneKey="green" />
-                </View>
-              </AgencyCard>
-
               <PillRow
                 items={statusFilters}
                 activeKey={state.status}
@@ -143,11 +136,6 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
                 <Text style={styles.countHint}>Les véhicules sans documents obligatoires restent masqués jusqu'à validation.</Text>
               </AgencyCard>
 
-              <TouchableOpacity style={styles.primaryAction} onPress={onAdd}>
-                <Ionicons name="add-circle-outline" size={18} color="#fff" />
-                <Text style={styles.primaryActionText}>{mode === 'listings' ? 'Créer une nouvelle annonce' : 'Créer un nouveau véhicule'}</Text>
-              </TouchableOpacity>
-
               {items.length ? items.map((item) => (
                 <VehicleCard
                   key={item.id}
@@ -159,6 +147,7 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
             </ScrollView>
           )}
         </View>
+        </View>
         <AgencyBottomNavigation navigation={navigation} route={route} active={mode === 'listings' ? 'listings' : 'fleet'} />
       </SafeAreaView>
     </ImageBackground>
@@ -166,8 +155,9 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: '#0D0E15' },
+  background: { flex: 1, backgroundColor: '#0a0c24' },
   safeArea: { flex: 1 },
+  overlay: { flex: 1, backgroundColor: 'rgba(2,3,14,0.58)' },
   page: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
   content: { paddingBottom: 102 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },

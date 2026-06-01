@@ -108,9 +108,6 @@ const RequirementCard = ({ item, status, fileLabel, doc, busy = false, onPress, 
 
   return (
     <TouchableOpacity style={styles.requirementCard} activeOpacity={0.86} onPress={onPress}>
-      <View style={styles.requirementIcon}>
-        <Ionicons name={item.icon} size={18} color="#AAB3D6" />
-      </View>
 
       <View style={styles.requirementBody}>
         <View style={styles.requirementTopRow}>
@@ -358,8 +355,9 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
   }, [load, token]);
 
   return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
+    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
       <SafeAreaView style={styles.safeArea}>
+        <View style={styles.overlay}>
         <View style={styles.page}>
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('AgencyProfile', { token, user })}>
@@ -383,14 +381,6 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
               contentContainerStyle={styles.content}
             >
               {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
-
-              <AgencyCard style={styles.summaryCard}>
-                <View style={styles.summaryRow}>
-                  <Badge label={`✅ ${Number(counters.verified || 0)} vérifiés`} toneKey="green" />
-                  <Badge label={`⏳ ${Number(counters.pending || 0)} en attente`} toneKey="amber" />
-                  <Badge label={`⛔ ${Number(counters.rejected || 0)} rejetés`} toneKey="red" />
-                </View>
-              </AgencyCard>
 
               <SectionTitle
                 title="Dossiers obligatoires"
@@ -421,6 +411,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
             </ScrollView>
           )}
         </View>
+        </View>
         <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
       </SafeAreaView>
     </ImageBackground>
@@ -428,8 +419,9 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: '#0D0E15' },
+  background: { flex: 1, backgroundColor: '#0a0c24' },
   safeArea: { flex: 1 },
+  overlay: { flex: 1, backgroundColor: 'rgba(2,3,14,0.58)' },
   page: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
   content: { paddingBottom: 102 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
