@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, Linking, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ImageBackground, Linking, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -355,20 +355,13 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
   }, [load, token]);
 
   return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.overlay}>
-        <View style={styles.page}>
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('AgencyProfile', { token, user })}>
-              <Ionicons name="chevron-back" size={20} color="#fff" />
-            </TouchableOpacity>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.kicker}>DOCUMENTS</Text>
-              <Text style={styles.title}>Documents de l’agence</Text>
-              <Text style={styles.subtitle}>Suivi des documents de l’entreprise</Text>
-            </View>
-          </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="#0a0c24" />
+      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+          <View style={styles.overlay}>
+          <View style={styles.page}>
+          <View style={styles.headerSpacer} />
 
           {state.loading ? (
             <View style={styles.centered}>
@@ -380,6 +373,17 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.content}
             >
+              <View style={styles.header}>
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('AgencyProfile', { token, user })}>
+                  <Ionicons name="chevron-back" size={20} color="#fff" />
+                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.kicker}>DOCUMENTS</Text>
+                  <Text style={styles.title}>Documents de l’agence</Text>
+                  <Text style={styles.subtitle}>Suivi des documents de l’entreprise</Text>
+                </View>
+              </View>
+
               {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
 
               <SectionTitle
@@ -410,20 +414,23 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
               </View>
             </ScrollView>
           )}
-        </View>
-        </View>
-        <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
-      </SafeAreaView>
-    </ImageBackground>
+          </View>
+          </View>
+          <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0a0c24' },
   background: { flex: 1, backgroundColor: '#0a0c24' },
   safeArea: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(2,3,14,0.58)' },
   page: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
   content: { paddingBottom: 102 },
+  headerSpacer: { height: 8 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16 },
   backButton: {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput, ActivityIndicator } from 'react-native';
+import { Alert, ImageBackground, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
@@ -79,29 +79,33 @@ export default function AgencyProfileScreen({ navigation, route }) {
   );
 
   return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.overlay}>
-        <View style={styles.page}>
-          <View style={styles.headerWithAction}>
-            <View style={{ flex: 1 }}>
-              <SectionTitle
-                kicker="AGENCE"
-                title="Profil & vérification"
-                subtitle="Informations légales, documents et gestion"
-              />
-            </View>
-            {!isEditing && (
-              <TouchableOpacity 
-                style={styles.editIconButton}
-                onPress={() => setIsEditing(true)}
-              >
-                <Ionicons name="create-outline" size={20} color="#8f7dff" />
-              </TouchableOpacity>
-            )}
-          </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="#0a0c24" />
+      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+          <View style={styles.overlay}>
+          <View style={styles.page}>
+          <View style={styles.headerSpacer} />
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+            <View style={styles.headerWithAction}>
+              <View style={{ flex: 1 }}>
+                <SectionTitle
+                  kicker="AGENCE"
+                  title="Profil & vérification"
+                  subtitle="Informations légales, documents et gestion"
+                />
+              </View>
+              {!isEditing && (
+                <TouchableOpacity 
+                  style={styles.editIconButton}
+                  onPress={() => setIsEditing(true)}
+                >
+                  <Ionicons name="create-outline" size={20} color="#8f7dff" />
+                </TouchableOpacity>
+              )}
+            </View>
+
             {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
             {state.loading ? (
               <View style={styles.centered}>
@@ -203,19 +207,22 @@ export default function AgencyProfileScreen({ navigation, route }) {
               </>
             )}
           </ScrollView>
-        </View>
-        </View>
-        <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
-      </SafeAreaView>
-    </ImageBackground>
+          </View>
+          </View>
+          <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0a0c24' },
   background: { flex: 1, backgroundColor: '#0a0c24' },
   safeArea: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(2,3,14,0.58)' },
   page: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
+  headerSpacer: { height: 8 },
   headerWithAction: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 10 },
   editIconButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(143,125,255,0.1)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(143,125,255,0.2)' },
   content: { paddingBottom: 102 },

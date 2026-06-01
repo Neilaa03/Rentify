@@ -6,6 +6,7 @@ import {
   Image,
   ImageBackground,
   RefreshControl,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -128,26 +129,13 @@ export default function AgencyListingsScreen({ navigation, route }) {
   };
 
   return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.overlay}>
-        <View style={styles.page}>
-          <View style={styles.header}>
-            <SectionTitle
-              kicker="LISTINGS"
-              title="Annonces de l'agence"
-              subtitle="Gestion, publication et visibilité"
-              right={(
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}
-                >
-                  <Ionicons name="add" size={16} color="#fff" />
-                  <Text style={styles.addButtonText}>Ajouter</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="#0a0c24" />
+      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+          <View style={styles.overlay}>
+          <View style={styles.page}>
+          <View style={styles.headerSpacer} />
 
           {isLoading ? (
             <View style={styles.centered}>
@@ -160,7 +148,25 @@ export default function AgencyListingsScreen({ navigation, route }) {
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#A78BFF" />}
               contentContainerStyle={styles.content}
               showsVerticalScrollIndicator={false}
-              ListHeaderComponent={error ? <Text style={styles.error}>{error}</Text> : null}
+              ListHeaderComponent={(
+                <>
+                  <SectionTitle
+                    kicker="LISTINGS"
+                    title="Annonces de l'agence"
+                    subtitle="Gestion, publication et visibilité"
+                    right={(
+                      <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}
+                      >
+                        <Ionicons name="add" size={16} color="#fff" />
+                        <Text style={styles.addButtonText}>Ajouter</Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                  {error ? <Text style={styles.error}>{error}</Text> : null}
+                </>
+              )}
               ListEmptyComponent={<Text style={styles.empty}>Aucune annonce.</Text>}
               renderItem={({ item }) => {
                 const badgeStyle = badgeByTone[item.stateTone] || badgeByTone.amber;
@@ -213,19 +219,22 @@ export default function AgencyListingsScreen({ navigation, route }) {
               }}
             />
           )}
-        </View>
-        </View>
-        <AgencyBottomNavigation navigation={navigation} route={route} active="listings" />
-      </SafeAreaView>
-    </ImageBackground>
+          </View>
+          </View>
+          <AgencyBottomNavigation navigation={navigation} route={route} active="listings" />
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0a0c24' },
   background: { flex: 1, backgroundColor: '#0a0c24' },
   safeArea: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(2,3,14,0.58)' },
   page: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
+  headerSpacer: { height: 8 },
   header: { marginBottom: 10 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { paddingBottom: 102 },

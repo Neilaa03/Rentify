@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(29, 16, 52, 0.96)',
+    backgroundColor: 'rgba(21,23,58,0.9)',
     borderWidth: 1,
     marginBottom: 8,
   },
@@ -418,8 +418,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(143,125,255,0.20)',
-    backgroundColor: 'rgba(29,16,52,0.96)',
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(21,23,58,0.9)',
     marginBottom: 14,
   },
   vehicleCardRejected: {
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
   vehicleImage: {
     width: '100%',
     height: 188,
-    backgroundColor: '#2b1749',
+    backgroundColor: '#151827',
   },
   vehicleImageFallback: {
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ImageBackground, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
@@ -93,21 +93,13 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
   };
 
   return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.overlay}>
-        <View style={styles.page}>
-          <SectionTitle
-            kicker={mode === 'listings' ? 'LISTINGS' : 'FLEET'}
-            title={mode === 'listings' ? 'Annonces de l’agence' : 'Flotte & véhicules'}
-            subtitle="Gestion, visibilité publique et statuts"
-            right={(
-              <TouchableOpacity style={styles.addButton} onPress={onAdd}>
-                <Ionicons name="add" size={16} color="#fff" />
-                <Text style={styles.addButtonText}>{mode === 'listings' ? 'Ajouter une annonce' : 'Ajouter un véhicule'}</Text>
-              </TouchableOpacity>
-            )}
-          />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="#0a0c24" />
+      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+          <View style={styles.overlay}>
+          <View style={styles.page}>
+          <View style={styles.headerSpacer} />
 
           {state.loading ? (
             <View style={styles.centered}>
@@ -119,6 +111,18 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.content}
             >
+              <SectionTitle
+                kicker={mode === 'listings' ? 'LISTINGS' : 'FLEET'}
+                title={mode === 'listings' ? 'Annonces de l’agence' : 'Flotte & véhicules'}
+                subtitle="Gestion, visibilité publique et statuts"
+                right={(
+                  <TouchableOpacity style={styles.addButton} onPress={onAdd}>
+                    <Ionicons name="add" size={16} color="#fff" />
+                    <Text style={styles.addButtonText}>{mode === 'listings' ? 'Ajouter une annonce' : 'Ajouter un véhicule'}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+
               {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
 
               <PillRow
@@ -146,20 +150,23 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
               )) : <Text style={styles.empty}>Aucun véhicule trouvé.</Text>}
             </ScrollView>
           )}
-        </View>
-        </View>
-        <AgencyBottomNavigation navigation={navigation} route={route} active={mode === 'listings' ? 'listings' : 'fleet'} />
-      </SafeAreaView>
-    </ImageBackground>
+          </View>
+          </View>
+          <AgencyBottomNavigation navigation={navigation} route={route} active={mode === 'listings' ? 'listings' : 'fleet'} />
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#0a0c24' },
   background: { flex: 1, backgroundColor: '#0a0c24' },
   safeArea: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(2,3,14,0.58)' },
   page: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
   content: { paddingBottom: 102 },
+  headerSpacer: { height: 8 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   error: { color: '#FF8FA3', marginBottom: 12, fontWeight: '700' },
   metricsCard: { padding: 10, marginBottom: 12 },

@@ -49,10 +49,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: 'rgba(29,16,52,0.96)',
+    backgroundColor: 'rgb(21, 23, 58)',
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(143,125,255,0.22)',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   footerTab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4 },
 });

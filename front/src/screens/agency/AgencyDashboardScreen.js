@@ -113,33 +113,26 @@ export default function AgencyDashboardScreen({ navigation, route }) {
                 <View style={styles.statsRow}>
                   <View style={styles.statItem}>
                     <View style={styles.statIcon}>
-                      <Ionicons name="eye-outline" size={20} color="#8f7dff" />
+                      <Ionicons name="eye-outline" size={16} color="#8f7dff" />
                     </View>
                     <Text style={styles.statValue}>{totalViews.toLocaleString('fr-FR')}</Text>
                     <Text style={styles.statLabel}>VUES</Text>
                   </View>
                   <View style={styles.statItem}>
                     <View style={styles.statIcon}>
-                      <Ionicons name="calendar-outline" size={20} color="#21d4a7" />
+                      <Ionicons name="calendar-outline" size={16} color="#21d4a7" />
                     </View>
                     <Text style={[styles.statValue, { color: '#21d4a7' }]}>{totalReservations.toLocaleString('fr-FR')}</Text>
                     <Text style={styles.statLabel}>RÉSERVATIONS</Text>
                   </View>
                   <View style={styles.statItem}>
                     <View style={styles.statIcon}>
-                      <Ionicons name="star-outline" size={20} color="#ffb347" />
+                      <Ionicons name="star-outline" size={16} color="#ffb347" />
                     </View>
                     <Text style={[styles.statValue, { color: '#ffb347' }]}>{averageRating}</Text>
                     <Text style={styles.statLabel}>ÉVALUATION</Text>
                   </View>
                 </View>
-              </AgencyCard>
-
-              <AgencyCard style={styles.card}>
-                <SectionTitle kicker="MENSUEL" title="Suivi analytique" subtitle="Occupation, satisfaction et acceptation des demandes" />
-                <ProgressRow label="Taux d'occupation" valueLabel={`${Number(metrics.occupancyRate || 0)}%`} percent={Number(metrics.occupancyRate || 0)} toneKey="purple" />
-                <ProgressRow label="Satisfaction clients" valueLabel={`${Number(metrics.clientSatisfaction || 0).toFixed(1)}/5`} percent={Math.min(100, Number(metrics.clientSatisfaction || 0) * 20)} toneKey="green" />
-                <ProgressRow label="Demandes acceptées" valueLabel={`${Number(metrics.acceptanceRate || 0)}%`} percent={Number(metrics.acceptanceRate || 0)} toneKey="blue" />
               </AgencyCard>
 
               <AgencyCard style={styles.card}>
@@ -189,7 +182,7 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: -36 },
   statItem: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(143,125,255,0.1)', borderWidth: 1, borderColor: 'rgba(143,125,255,0.2)' },
   statIcon: { marginBottom: 6 },
-  statValue: { color: '#8f7dff', fontSize: 18, fontWeight: '900', marginBottom: 2 },
+  statValue: { color: '#8f7dff', fontSize: 14, fontWeight: '900', marginBottom: 2 },
   statLabel: { color: '#8E95BF', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   empty: { color: '#A5AECF', fontStyle: 'italic', paddingVertical: 10 },
 });
