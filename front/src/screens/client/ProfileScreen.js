@@ -279,10 +279,10 @@ const ProfileScreen = ({ navigation, route }) => {
 
       const asset = Array.isArray(result?.assets) ? result.assets[0] : result;
       const uri = asset?.uri;
-      const name = asset?.name;
       const mimeType = inferIdentityMimeType(asset);
+      const name = asset?.name || `identity_card${mimeType === 'application/pdf' ? '.pdf' : mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg'}`;
 
-      if (!uri || !name) return;
+      if (!uri) return;
 
       if (!identityMimeTypes.includes(mimeType)) {
         Alert.alert('Format non autorisé', 'Choisissez un fichier PDF ou une image (JPG, PNG, WEBP).');
@@ -298,6 +298,7 @@ const ProfileScreen = ({ navigation, route }) => {
           uri,
           name,
           type: mimeType,
+          file: asset?.file || null,
         },
       });
       setIdentityDocument(uploaded);

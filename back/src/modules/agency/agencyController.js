@@ -40,16 +40,20 @@ export const getAgencyDocumentsHandler = async (req, res) => {
 
 export const uploadAgencyDocumentHandler = async (req, res) => {
   try {
+    console.log('uploadAgencyDocumentHandler - req.body:', req.body);
     const agency = await getAgencyByManagerId(req.user.id);
     const documentType = String(req.body?.documentType || '').trim();
+    console.log('Document type:', documentType, 'Agency:', agency?.id);
     const existingDocuments = await getDocuments({
       ...(COMPANY_DOCUMENT_TYPES.has(documentType) ? { companyId: agency.id } : {}),
       ...(USER_DOCUMENT_TYPES.has(documentType) ? { userId: req.user.id } : {}),
       documentType,
     });
+    console.log('Existing documents:', existingDocuments.length);
     const verifiedDocument = existingDocuments.find((document) => String(document.status || '').toLowerCase() === 'approved');
 
     if (verifiedDocument) {
+      console.log('Document already verified, returning 409');
       return res.status(409).json({
         error: 'This document is already verified and cannot be replaced.',
       });
@@ -60,8 +64,10 @@ export const uploadAgencyDocumentHandler = async (req, res) => {
       ...(COMPANY_DOCUMENT_TYPES.has(documentType) ? { companyId: agency.id } : {}),
       ...(USER_DOCUMENT_TYPES.has(documentType) ? { userId: req.user.id } : {}),
     };
+    console.log('Final req.body for upload:', req.body);
     return uploadDocumentHandler(req, res);
   } catch (err) {
+    console.error('uploadAgencyDocumentHandler error:', err);
     return sendError(res, err);
   }
 };

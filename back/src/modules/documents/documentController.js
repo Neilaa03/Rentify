@@ -48,6 +48,32 @@ const ensurePdfExtension = (name = 'document') => {
   return `${trimmed}.pdf`;
 };
 
+const allowedMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+]);
+
+const inferMimeTypeFromName = (name = '') => {
+  const lower = String(name || '').trim().toLowerCase();
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  return '';
+};
+
+const normalizeUploadedMimeType = (file) => {
+  const explicit = String(file?.mimetype || '').toLowerCase();
+  if (allowedMimeTypes.has(explicit)) return explicit;
+
+  const inferredFromName = inferMimeTypeFromName(file?.originalname);
+  if (inferredFromName) return inferredFromName;
+
+  return explicit || 'application/octet-stream';
+};
+
 const getCloudinaryOcrUrl = (uploadUrl, mimeType) => {
   if (mimeType !== 'application/pdf') return uploadUrl;
   if (!uploadUrl) return uploadUrl;
@@ -186,6 +212,7 @@ export const createDocumentHandler = async (req, res) => {
 
 export const uploadDocumentHandler = async (req, res) => {
   try {
+    console.log('uploadDocumentHandler - req.body:', req.body);
     const parsedData = uploadDocumentBodySchema.parse(req.body);
     const {
       userId,
@@ -194,23 +221,22 @@ export const uploadDocumentHandler = async (req, res) => {
       documentType,
     } = parsedData;
 
+    console.log('Parsed data:', { userId, carId, companyId, documentType });
+
     const uploadedFile = getUploadedFile(req);
 
     if (!uploadedFile) {
+      console.log('No file uploaded');
       return res.status(400).json({
         error: 'No file uploaded',
       });
     }
 
-    // validate file mime type
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/webp',
-      'application/pdf',
-    ];
+    const mimeType = normalizeUploadedMimeType(uploadedFile);
+    console.log('MIME type:', mimeType);
 
-    if (!allowedMimeTypes.includes(uploadedFile.mimetype)) {
+    if (!allowedMimeTypes.has(mimeType)) {
+      console.log('Invalid MIME type');
       return res.status(400).json({
         error: 'Invalid file type',
       });
@@ -221,6 +247,7 @@ export const uploadDocumentHandler = async (req, res) => {
     // USER DOCUMENTS
     if (userDocuments.includes(documentType)) {
       if (!userId) {
+        console.log('userId required for user documents');
         return res.status(400).json({
           error: 'userId is required for user documents',
         });
@@ -254,7 +281,7 @@ export const uploadDocumentHandler = async (req, res) => {
     // upload to cloudinary
     const base64 = uploadedFile.buffer.toString('base64');
 
-    const dataURI = `data:${uploadedFile.mimetype};base64,${base64}`;
+    const dataURI = `data:${mimeType};base64,${base64}`;
 
     const resourceType = 'image';
 
@@ -262,7 +289,7 @@ export const uploadDocumentHandler = async (req, res) => {
     //   folder: 'rentify/documents',
     //   resource_type: resourceType,
     // });
-    const isPdf = uploadedFile.mimetype === 'application/pdf';
+    const isPdf = mimeType === 'application/pdf';
     const fallbackName = isPdf ? 'document.pdf' : 'document';
     const originalName = uploadedFile.originalname || fallbackName;
     const normalizedOriginalName = isPdf ? ensurePdfExtension(originalName) : originalName;
@@ -299,7 +326,7 @@ export const uploadDocumentHandler = async (req, res) => {
     };
 
     try {
-      const ocrUrl = getCloudinaryOcrUrl(uploadResult.secure_url, uploadedFile.mimetype);
+      const ocrUrl = getCloudinaryOcrUrl(uploadResult.secure_url, mimeType);
       verificationResult = await verifyDocumentImage(ocrUrl);
     } catch (ocrError) {
       verificationResult = {
