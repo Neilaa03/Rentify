@@ -164,6 +164,7 @@ export function ClientNavigation() {
         screenOptions={({ route }) => ({
           headerShown: false,
           sceneContainerStyle: { backgroundColor: APP_BACKGROUND },
+          tabBarHideOnKeyboard: false,
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;
             if (route.name === 'HomeTab') {

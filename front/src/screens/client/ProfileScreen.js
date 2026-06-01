@@ -63,6 +63,8 @@ const ProfileScreen = ({ navigation, route }) => {
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [localProfilePictureUri, setLocalProfilePictureUri] = useState('');
+  const [ownerStats, setOwnerStats] = useState({ cars: 0, listings: 0, reservations: 0 });
+  const [ownerStatsLoading, setOwnerStatsLoading] = useState(false);
 
   const [token, setToken] = useState(route?.params?.token || '');
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
@@ -144,6 +146,40 @@ const ProfileScreen = ({ navigation, route }) => {
 
     fetchProfile();
   }, [token]);
+
+  useEffect(() => {
+    const fetchOwnerStats = async () => {
+      if (!isOwner) return;
+      if (!token) return;
+
+      try {
+        setOwnerStatsLoading(true);
+        const response = await fetch(API_ENDPOINTS.PROFILE.ME_STATS, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data?.error || 'Unable to load stats');
+
+        const stats = data?.stats || {};
+        setOwnerStats({
+          cars: Number(stats.cars || 0) || 0,
+          listings: Number(stats.listings || 0) || 0,
+          reservations: Number(stats.reservations || 0) || 0,
+        });
+      } catch (_err) {
+        // keep defaults
+      } finally {
+        setOwnerStatsLoading(false);
+      }
+    };
+
+    fetchOwnerStats();
+  }, [isOwner, token]);
 
   const fullName = useMemo(() => {
     const first = profile?.first_name || profile?.firstName || '';
@@ -372,7 +408,7 @@ const ProfileScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
-        <SafeAreaView style={styles.overlay}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.overlay}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             <Text style={[styles.title, { fontSize: fontSize.title }]}>Profil</Text>
 
@@ -516,9 +552,19 @@ const ProfileScreen = ({ navigation, route }) => {
             )}
 
             <View style={styles.statsRow}>
-              <StatCard value="3" label="Locations" />
-              <StatCard value="1" label="Avis" />
-              <StatCard value="5" label="Favoris" />
+              {isOwner ? (
+                <>
+                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.cars)} label="Cars" />
+                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.listings)} label="Listings" />
+                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.reservations)} label="Reservations" />
+                </>
+              ) : (
+                <>
+                  <StatCard value="3" label="Locations" />
+                  <StatCard value="1" label="Avis" />
+                  <StatCard value="5" label="Favoris" />
+                </>
+              )}
             </View>
 
             <Text style={styles.sectionTitle}>MON COMPTE</Text>
