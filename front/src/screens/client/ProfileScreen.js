@@ -14,6 +14,41 @@ const profileFont = (width, regular, small, verySmall = small) => {
   return regular;
 };
 
+const runtimeEnv = typeof process !== 'undefined' ? process.env || {} : {};
+const COMPANY_SUPPORT_EMAIL = runtimeEnv.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@rentify.dz';
+const COMPANY_SUPPORT_PHONE = runtimeEnv.EXPO_PUBLIC_SUPPORT_PHONE || '+213 555 00 00 00';
+const PLAY_STORE_REVIEW_URL = runtimeEnv.EXPO_PUBLIC_PLAY_STORE_REVIEW_URL || '';
+
+const InfoLine = ({ icon, title, text }) => (
+  <View style={styles.infoLine}>
+    <View style={styles.infoLineIcon}>
+      <Ionicons name={icon} size={17} color="#8f6cff" />
+    </View>
+    <View style={styles.infoLineBody}>
+      <Text style={styles.infoLineTitle}>{title}</Text>
+      <Text style={styles.infoLineText}>{text}</Text>
+    </View>
+  </View>
+);
+
+const SettingsModal = ({ visible, title, onClose, children }) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <View style={styles.pageModalBackdrop}>
+      <View style={styles.pageModal}>
+        <View style={styles.pageModalHeader}>
+          <Text style={styles.pageModalTitle}>{title}</Text>
+          <TouchableOpacity style={styles.pageModalClose} onPress={onClose}>
+            <Ionicons name="close" size={20} color="#eef1ff" />
+          </TouchableOpacity>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageModalContent}>
+          {children}
+        </ScrollView>
+      </View>
+    </View>
+  </Modal>
+);
+
 const SectionCard = ({ items, onItemPress }) => {
   const { width } = useWindowDimensions();
   const rowFontSize = profileFont(width, appFont(15), 14, 13);
@@ -76,6 +111,9 @@ const ProfileScreen = ({ navigation, route }) => {
   const [ownerStatsLoading, setOwnerStatsLoading] = useState(false);
   const [clientStats, setClientStats] = useState({ favorites: 0, reservations: 0, reviews: 0 });
   const [clientStatsLoading, setClientStatsLoading] = useState(false);
+  const [activeInfoPage, setActiveInfoPage] = useState(null);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [ratingComment, setRatingComment] = useState('');
 
   const [token, setToken] = useState(route?.params?.token || '');
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
@@ -568,6 +606,30 @@ const ProfileScreen = ({ navigation, route }) => {
     setPhotoSheetVisible(true);
   };
 
+  const closeInfoPage = () => setActiveInfoPage(null);
+
+  const openSupportEmail = async () => {
+    const subject = encodeURIComponent('Support Rentify');
+    const body = encodeURIComponent(`Bonjour Rentify,\n\nMon compte: ${profile?.email || ''}\n\n`);
+    await Linking.openURL(`mailto:${COMPANY_SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
+  };
+
+  const openSupportPhone = async () => {
+    await Linking.openURL(`tel:${COMPANY_SUPPORT_PHONE.replace(/\s/g, '')}`);
+  };
+
+  const openStoreReview = async () => {
+    if (!PLAY_STORE_REVIEW_URL) {
+      Alert.alert(
+        "Lien Play Store a ajouter",
+        "Le formulaire est pret. Ajoutez EXPO_PUBLIC_PLAY_STORE_REVIEW_URL quand l'application sera publiee."
+      );
+      return;
+    }
+
+    await Linking.openURL(PLAY_STORE_REVIEW_URL);
+  };
+
   return (
     <View style={styles.container}>
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
@@ -722,6 +784,163 @@ const ProfileScreen = ({ navigation, route }) => {
               </View>
             </Modal>
 
+            <SettingsModal visible={activeInfoPage === 'privacy'} title="Confidentialite & Securite" onClose={closeInfoPage}>
+              <InfoLine
+                icon="lock-closed-outline"
+                title="Compte protege"
+                text="Votre mot de passe est chiffre cote serveur et les actions sensibles demandent une session connectee."
+              />
+              <InfoLine
+                icon="shield-checkmark-outline"
+                title="Verification"
+                text="Les comptes, documents et voitures peuvent etre verifies avant validation pour limiter les faux profils."
+              />
+              <InfoLine
+                icon="card-outline"
+                title="Paiements"
+                text="Les paiements carte passent par Stripe. Les owners configurent leur compte de versement depuis leur profil."
+              />
+              <InfoLine
+                icon="qr-code-outline"
+                title="Remise du vehicule"
+                text="Le pickup et le retour utilisent un code ou QR code afin de confirmer clairement chaque etape."
+              />
+              <InfoLine
+                icon="eye-off-outline"
+                title="Donnees visibles"
+                text="Les autres utilisateurs voient uniquement les informations utiles a la reservation: nom, contact, voiture, reservation et avis."
+              />
+            </SettingsModal>
+
+            <SettingsModal visible={activeInfoPage === 'help'} title="Centre d'aide" onClose={closeInfoPage}>
+              <Text style={styles.pageIntro}>
+                Notre equipe peut aider pour les reservations, paiements, documents, annonces, pickup, retour et remboursements.
+              </Text>
+              <TouchableOpacity style={styles.contactButton} onPress={openSupportEmail}>
+                <Ionicons name="mail-outline" size={18} color="#fff" />
+                <View style={styles.contactButtonTextWrap}>
+                  <Text style={styles.contactButtonLabel}>Email</Text>
+                  <Text style={styles.contactButtonValue}>{COMPANY_SUPPORT_EMAIL}</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.contactButton} onPress={openSupportPhone}>
+                <Ionicons name="call-outline" size={18} color="#fff" />
+                <View style={styles.contactButtonTextWrap}>
+                  <Text style={styles.contactButtonLabel}>Telephone</Text>
+                  <Text style={styles.contactButtonValue}>{COMPANY_SUPPORT_PHONE}</Text>
+                </View>
+              </TouchableOpacity>
+              <InfoLine
+                icon="chatbubble-ellipses-outline"
+                title="Messagerie"
+                text="Pour une reservation precise, utilisez aussi le chat avec l'autre utilisateur afin de garder l'historique."
+              />
+              <InfoLine
+                icon="alert-circle-outline"
+                title="Litige"
+                text="En cas de probleme avec une location, ouvrez la reservation concernee et signalez le souci depuis les actions disponibles."
+              />
+            </SettingsModal>
+
+            <SettingsModal visible={activeInfoPage === 'about'} title="A propos de Rentify" onClose={closeInfoPage}>
+              <Text style={styles.pageIntro}>
+                Rentify est une application de location de voitures entre clients et owners, pensee pour gerer toute la location depuis une seule interface.
+              </Text>
+              <InfoLine
+                icon="car-sport-outline"
+                title="Annonces de voitures"
+                text="Les owners ajoutent leurs voitures, photos, disponibilites, prix par jour, semaine ou mois, et frais de livraison."
+              />
+              <InfoLine
+                icon="calendar-outline"
+                title="Reservations"
+                text="Les clients choisissent les dates, le mode de recuperation, puis suivent le statut de la reservation."
+              />
+              <InfoLine
+                icon="cash-outline"
+                title="Paiements"
+                text="Rentify gere les paiements carte, les paiements cash, les statuts de paiement, remboursements et factures."
+              />
+              <InfoLine
+                icon="star-outline"
+                title="Avis et favoris"
+                text="Les clients peuvent garder leurs voitures favorites et laisser un avis apres une location terminee."
+              />
+              <InfoLine
+                icon="notifications-outline"
+                title="Notifications et messages"
+                text="L'application inclut les notifications, l'historique, une inbox et un chat entre utilisateurs."
+              />
+              <InfoLine
+                icon="settings-outline"
+                title="Version"
+                text="Rentify v1.0.0"
+              />
+            </SettingsModal>
+
+            <SettingsModal visible={activeInfoPage === 'rate'} title="Evaluer l'application" onClose={closeInfoPage}>
+              <Text style={styles.pageIntro}>
+                Votre avis nous aide a ameliorer Rentify. Ce formulaire est pret pour envoyer vers le Play Store lorsque le lien sera branche.
+              </Text>
+              <Text style={styles.ratingLabel}>Votre note</Text>
+              <View style={styles.ratingStars}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <TouchableOpacity key={value} style={styles.ratingStarButton} onPress={() => setRatingValue(value)}>
+                    <Ionicons
+                      name={value <= ratingValue ? 'star' : 'star-outline'}
+                      size={30}
+                      color={value <= ratingValue ? '#ffd166' : '#7d83b0'}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.ratingLabel}>Votre commentaire</Text>
+              <TextInput
+                style={styles.ratingInput}
+                value={ratingComment}
+                onChangeText={setRatingComment}
+                multiline
+                textAlignVertical="top"
+                placeholder="Dites-nous ce qui marche bien ou ce qu'on doit ameliorer..."
+                placeholderTextColor="#7d83b0"
+              />
+              <TouchableOpacity style={styles.primaryWideButton} onPress={openStoreReview}>
+                <Ionicons name="logo-google-playstore" size={18} color="#fff" />
+                <Text style={styles.primaryWideButtonText}>Envoyer vers le Play Store</Text>
+              </TouchableOpacity>
+            </SettingsModal>
+
+            <SettingsModal visible={activeInfoPage === 'notifications'} title="Notifications" onClose={closeInfoPage}>
+              <InfoLine
+                icon="notifications-outline"
+                title="Reservations"
+                text="Recevez les changements de statut, confirmations, annulations et rappels importants."
+              />
+              <InfoLine
+                icon="chatbubble-outline"
+                title="Messages"
+                text="Les notifications de messages vous aident a repondre rapidement pendant une location."
+              />
+              <InfoLine
+                icon="time-outline"
+                title="Pickup et retour"
+                text="Rentify peut vous rappeler les etapes de recuperation et de retour du vehicule."
+              />
+            </SettingsModal>
+
+            <SettingsModal visible={activeInfoPage === 'language'} title="Langue" onClose={closeInfoPage}>
+              <InfoLine
+                icon="globe-outline"
+                title="Langue actuelle"
+                text="Francais"
+              />
+              <InfoLine
+                icon="construct-outline"
+                title="A venir"
+                text="Le changement de langue pourra etre branche quand l'application aura plusieurs traductions."
+              />
+            </SettingsModal>
+
             {isEditingPersonalInfo && (
               <View style={styles.editCard}>
                 <Text style={styles.editTitle}>Informations personnelles</Text>
@@ -804,7 +1023,6 @@ const ProfileScreen = ({ navigation, route }) => {
                     : (connectStatus?.cardPaymentsAvailable ? 'Mettre a jour Stripe' : 'Configurer Stripe'),
                   icon: 'cash-outline',
                 }] : []),
-                { label: 'Mes adresses', icon: 'location-outline' },
               ]}
               onItemPress={(item) => {
                 if (item.action === 'personalInfo') openPersonalInfoEditor();
@@ -816,21 +1034,25 @@ const ProfileScreen = ({ navigation, route }) => {
             <Text style={styles.sectionTitle}>PREFERENCES</Text>
             <SectionCard
               items={[
-                { label: 'Notifications', icon: 'notifications-outline' },
-                { label: 'Confidentialite & Securite', icon: 'shield-checkmark-outline' },
-                { label: 'Langue', icon: 'globe-outline' },
+                { action: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
+                { action: 'privacy', label: 'Confidentialite & Securite', icon: 'shield-checkmark-outline' },
+                { action: 'language', label: 'Langue', icon: 'globe-outline' },
               ]}
-              onItemPress={() => {}}
+              onItemPress={(item) => {
+                if (item.action) setActiveInfoPage(item.action);
+              }}
             />
 
             <Text style={styles.sectionTitle}>AIDE & SUPPORT</Text>
             <SectionCard
               items={[
-                { label: "Centre d'aide", icon: 'help-circle-outline' },
-                { label: "Evaluer l'application", icon: 'star-outline' },
-                { label: 'A propos de Rentify', icon: 'information-circle-outline' },
+                { action: 'help', label: "Centre d'aide", icon: 'help-circle-outline' },
+                { action: 'about', label: 'A propos de Rentify', icon: 'information-circle-outline' },
+                { action: 'rate', label: "Evaluer l'application", icon: 'star-outline' },
               ]}
-              onItemPress={() => {}}
+              onItemPress={(item) => {
+                if (item.action) setActiveInfoPage(item.action);
+              }}
             />
 
             <TouchableOpacity
@@ -994,6 +1216,119 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
+  pageModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    justifyContent: 'flex-end',
+  },
+  pageModal: {
+    maxHeight: '86%',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderColor: 'rgba(145, 152, 229, 0.22)',
+    backgroundColor: 'rgba(16, 19, 43, 0.99)',
+    paddingTop: 12,
+  },
+  pageModalHeader: {
+    minHeight: 46,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pageModalTitle: { color: '#f2f4ff', fontSize: appFont(17), fontWeight: '800', flex: 1, paddingRight: 10 },
+  pageModalClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(31, 35, 67, 0.95)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.18)',
+  },
+  pageModalContent: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 26 },
+  pageIntro: {
+    color: '#c7ccef',
+    fontSize: appFont(13.5),
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  infoLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.18)',
+    backgroundColor: 'rgba(23, 26, 54, 0.82)',
+    padding: 12,
+    marginBottom: 10,
+  },
+  infoLineIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(56, 45, 120, 0.55)',
+    marginRight: 10,
+  },
+  infoLineBody: { flex: 1, minWidth: 0 },
+  infoLineTitle: { color: '#eef1ff', fontSize: appFont(13.5), fontWeight: '800', marginBottom: 4 },
+  infoLineText: { color: '#aeb5df', fontSize: appFont(12.5), lineHeight: 18 },
+  contactButton: {
+    minHeight: 58,
+    borderRadius: 14,
+    backgroundColor: '#8f6cff',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  contactButtonTextWrap: { flex: 1, minWidth: 0 },
+  contactButtonLabel: { color: '#fff', fontSize: appFont(12), fontWeight: '700', opacity: 0.86 },
+  contactButtonValue: { color: '#fff', fontSize: appFont(14), fontWeight: '800', marginTop: 2 },
+  ratingLabel: { color: '#d7dcff', fontSize: appFont(13), fontWeight: '800', marginTop: 4, marginBottom: 8 },
+  ratingStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  ratingStarButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 3,
+  },
+  ratingInput: {
+    minHeight: 116,
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.3)',
+    backgroundColor: 'rgba(12, 15, 37, 0.9)',
+    color: '#eef1ff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: appFont(14),
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  primaryWideButton: {
+    minHeight: 50,
+    borderRadius: 14,
+    backgroundColor: '#8f6cff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 9,
+    paddingHorizontal: 12,
+  },
+  primaryWideButtonText: { color: '#fff', fontSize: appFont(14), fontWeight: '800' },
   sheet: {
     position: 'absolute',
     left: 14,
