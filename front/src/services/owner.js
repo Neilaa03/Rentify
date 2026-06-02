@@ -8,6 +8,66 @@ const authHeaders = (token) => ({
   'Content-Type': 'application/json',
 });
 
+const allowedMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+
+const inferMimeType = ({ file, safeUri, safeName }) => {
+  const explicit = String(file?.type || '').toLowerCase();
+  if (allowedMimeTypes.has(explicit)) return explicit;
+
+  const source = String(file?.name || safeName || safeUri || '').toLowerCase();
+  if (source.endsWith('.pdf')) return 'application/pdf';
+  if (source.endsWith('.png')) return 'image/png';
+  if (source.endsWith('.webp')) return 'image/webp';
+  if (source.endsWith('.jpg') || source.endsWith('.jpeg')) return 'image/jpeg';
+  return 'application/octet-stream';
+};
+
+const extensionForMimeType = (mimeType) => {
+  if (mimeType === 'application/pdf') return '.pdf';
+  if (mimeType === 'image/png') return '.png';
+  if (mimeType === 'image/webp') return '.webp';
+  return '.jpg';
+};
+
+export const uploadDocument = async ({ token, documentType, file, ownerKey, ownerValue }) => {
+  const formData = await buildMultipartDocument({
+    file,
+    documentType,
+    ownerKey,
+    ownerValue,
+  });
+
+  return fetchJson('/api/documents/upload', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+};
+
+const buildMultipartDocument = async ({ file, documentType, ownerKey, ownerValue }) => {
+  const formData = new FormData();
+  const safeUri = String(file?.uri || '');
+  const mimeType = inferMimeType({ file, safeUri, safeName: file?.name || '' });
+  const safeName = file?.name || `${documentType}${extensionForMimeType(mimeType)}`;
+
+  if (Platform.OS === 'web' && file?.file) {
+    formData.append('document', file.file, safeName);
+  } else if (Platform.OS === 'web') {
+    const blob = await fetch(safeUri).then((r) => r.blob());
+    formData.append('document', blob, safeName);
+  } else {
+    formData.append('document', {
+      uri: safeUri,
+      name: safeName,
+      type: mimeType,
+    });
+  }
+
+  formData.append(ownerKey, String(ownerValue));
+  formData.append('documentType', documentType);
+  return formData;
+};
+
 const getListingState = ({ isActive, docsByType }) => {
   if (isActive) return 'published';
 
@@ -201,6 +261,7 @@ export const uploadCarDocument = async ({
   documentType,
   file,
 }) => {
+<<<<<<< HEAD
   const formData = new FormData();
   const safeUri = String(file?.uri || '');
   const isPdf =
@@ -227,18 +288,44 @@ export const uploadCarDocument = async ({
   formData.append('carId', String(carId));
   formData.append('documentType', documentType);
 
+=======
+>>>>>>> dev
   console.log('Uploading document:', {
     carId,
     documentType,
     file,
   });
 
-  return fetchJson('/api/documents/upload', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
+  return uploadDocument({
+    token,
+    documentType,
+    file,
+    ownerKey: 'carId',
+    ownerValue: carId,
+  });
+};
+
+export const uploadUserDocument = async ({
+  token,
+  userId,
+  documentType,
+  file,
+}) => {
+  return uploadDocument({
+    token,
+    documentType,
+    file,
+    ownerKey: 'userId',
+    ownerValue: userId,
+  });
+};
+
+export const getUserDocuments = async ({ token, userId, documentType }) => {
+  const params = new URLSearchParams();
+  if (userId) params.set('userId', userId);
+  if (documentType) params.set('documentType', documentType);
+  return fetchJson(`/api/documents?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 };
 
@@ -246,7 +333,19 @@ export const uploadCarImage = async ({ token, carId, file, isPrimary }) => {
   const formData = new FormData();
   const safeUri = String(file?.uri || '');
   const safeName = file?.name || `car-image-${carId}.jpg`;
+<<<<<<< HEAD
   const mimeType = file?.type || 'image/jpeg';
+=======
+  const explicitType = String(file?.type || '').toLowerCase();
+  const mimeType =
+    allowedMimeTypes.has(explicitType) && explicitType !== 'application/pdf'
+      ? explicitType
+      : (safeName.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : safeName.toLowerCase().endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg');
+>>>>>>> dev
 
   if (Platform.OS === 'web') {
     const blob = await fetch(safeUri).then((r) => r.blob());

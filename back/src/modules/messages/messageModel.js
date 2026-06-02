@@ -21,6 +21,8 @@ const toUserDto = (row) => ({
   email: row.email,
   phone: row.phone,
   role: row.role,
+  profilePicture: row.profile_picture || null,
+  profile_picture: row.profile_picture || null,
 });
 
 export const createMessage = async ({ senderId, receiverId, message }) => {
@@ -97,7 +99,7 @@ export const getConversations = async (userId) => {
 
   const { data: users, error: usersError } = await supabase
     .from(USERS_TABLE)
-    .select('id, first_name, last_name, email, phone, role')
+    .select('id, first_name, last_name, email, phone, role, profile_picture')
     .in('id', otherIds);
 
   if (usersError) throw usersError;
@@ -153,7 +155,7 @@ export const getOwnerClients = async ({ ownerId }) => {
   // 2) Fetch reservations renters for those listings
   const { data: reservationRows, error: resError } = await supabase
     .from(RESERVATIONS_TABLE)
-    .select('renter_id, users(id, first_name, last_name, email, phone, role)')
+    .select('renter_id, users(id, first_name, last_name, email, phone, role, profile_picture)')
     .in('listing_id', listingIds)
     .order('created_at', { ascending: false })
     .limit(5000);

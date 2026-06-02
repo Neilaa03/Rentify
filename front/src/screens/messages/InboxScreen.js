@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, FlatList } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getConversations, getOwnerClientsExpanded } from '../../services/messages';
 import { getCurrentUserProfile } from '../../services/authSession';
 import { getSocket } from '../../services/socketClient';
+import { buildApiUrl } from '../../services/api';
 
 const initialsFor = (user) => {
   const first = (user?.firstName || user?.first_name || '').trim();
@@ -31,6 +32,21 @@ const formatTime = (iso) => {
 };
 
 const IMAGE_PREFIX = '__image__:';
+
+const avatarUriFor = (user) => {
+  const raw =
+    user?.profilePicture ||
+    user?.profile_picture ||
+    user?.avatar ||
+    user?.avatarUrl ||
+    user?.photoUrl ||
+    '';
+  const uri = String(raw || '').trim();
+  if (!uri) return null;
+  if (/^https?:\/\//i.test(uri)) return uri;
+  const path = uri.startsWith('/') ? uri : `/${uri}`;
+  return buildApiUrl(path);
+};
 
 const InboxScreen = ({ navigation, route }) => {
   const mode = route?.params?.mode || 'conversations'; // 'conversations' | 'owner_clients'
@@ -230,6 +246,7 @@ const InboxScreen = ({ navigation, route }) => {
           contentContainerStyle={styles.list}
           renderItem={({ item }) => {
             const otherUser = item?.otherUser || null;
+            const avatarUri = avatarUriFor(otherUser);
             const last = item?.lastMessage || null;
             const unreadCount = item?.unreadCount || 0;
             const hasMessages = item?.hasMessages;
@@ -258,7 +275,11 @@ const InboxScreen = ({ navigation, route }) => {
               >
                 <View style={[styles.avatarRing, unreadCount ? styles.avatarRingUnread : null]}>
                   <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initialsFor(otherUser)}</Text>
+                    {avatarUri ? (
+                      <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                    ) : (
+                      <Text style={styles.avatarText}>{initialsFor(otherUser)}</Text>
+                    )}
                   </View>
                 </View>
                 <View style={styles.rowBody}>
@@ -338,7 +359,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(23, 26, 54, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   avatarText: { color: '#d6dbff', fontWeight: '900' },
   rowBody: { flex: 1, marginLeft: 12 },
   rowTop: { flexDirection: 'row', alignItems: 'center' },

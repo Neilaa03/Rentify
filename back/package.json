@@ -24,6 +24,7 @@
     "dotenv": "^17.4.2",
     "expo-camera": "^56.0.7",
     "express": "^5.2.1",
+    "google-auth-library": "^10.3.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.9",

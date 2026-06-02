@@ -329,6 +329,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
                     uri,
                     name,
                     mimeType,
+                    file: asset?.file || null,
                 },
             }));
         } catch (error) {
@@ -344,11 +345,12 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const targetCarId = car?.id || form?.carId || null;
 
     if (!targetCarId) {
-      setDocumentField(type, {
+        setDocumentField(type, {
         ...form.documents[type],
         uri: staged.uri,
         name: staged.name,
         mimeType: staged.mimeType,
+        file: staged.file || null,
         status: 'pending',
       });
       setStagedDocuments((prev) => {
@@ -373,6 +375,10 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
             uri: staged.uri,
             name: staged.name || `${type}.pdf`,
             type: inferDocumentMimeType(staged),
+<<<<<<< HEAD
+=======
+            file: staged.file || null,
+>>>>>>> dev
           },
         });
 
@@ -576,6 +582,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
             uri: document.uri,
             name: document.name || `${documentType}.pdf`,
             type: document.mimeType || 'application/octet-stream',
+            file: document.file || null,
           },
         });
         return { documentType, uploaded };

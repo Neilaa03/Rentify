@@ -4,6 +4,22 @@ import { createNotification } from '../notifications/notificationModel.js';
 
 const withPagination = (query, page = 1, limit = 20) => query.range((page - 1) * limit, page * limit - 1);
 
+const getDocumentTimestamp = (doc) => new Date(doc?.updated_at || doc?.created_at || 0).getTime();
+
+const dedupeDocumentsByType = (documents = []) => {
+  const latestByType = new Map();
+
+  for (const doc of documents) {
+    const type = String(doc?.document_type || '').trim() || 'document';
+    const existing = latestByType.get(type);
+    if (!existing || getDocumentTimestamp(doc) >= getDocumentTimestamp(existing)) {
+      latestByType.set(type, doc);
+    }
+  }
+
+  return [...latestByType.values()].sort((a, b) => getDocumentTimestamp(b) - getDocumentTimestamp(a));
+};
+
 export const getDashboardMetrics = async () => {
   const [users, cars, reservations, payments, pendingCars, recentReservations] = await Promise.all([
     supabase.from('users').select('id', { count: 'exact', head: true }).neq('role', 'admin'),
@@ -60,17 +76,33 @@ export const updateUser = async (userId, payload) => {
 };
 
 export const getUserDetails = async (userId) => {
-  const [userRes, reservationsRes, paymentsRes] = await Promise.all([
+  const [userRes, reservationsRes, paymentsRes, docsRes] = await Promise.all([
     supabase.from('users').select('*').eq('id', userId).neq('role', 'admin').single(),
     supabase.from('reservations').select('*').eq('renter_id', userId).order('created_at', { ascending: false }).limit(20),
     supabase.from('payments').select('*, reservations!inner(renter_id)').eq('reservations.renter_id', userId).order('created_at', { ascending: false }).limit(20),
+    supabase.from('documents').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
   ]);
 
   if (userRes.error) throw userRes.error;
+
+  const docs = dedupeDocumentsByType(docsRes.data || []);
+  const documentIds = docs.map((doc) => doc.id).filter(Boolean);
+  const { data: ocrResults } = documentIds.length
+    ? await supabase
+      .from('document_ocr_results')
+      .select('*')
+      .in('document_id', documentIds)
+    : { data: [] };
+  const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+
   return {
     user: userRes.data,
     reservations: reservationsRes.data || [],
     payments: paymentsRes.data || [],
+    documents: (docs || []).map((doc) => ({
+      ...doc,
+      ocr_result: ocrByDocumentId[doc.id] || null,
+    })),
   };
 };
 
@@ -124,7 +156,11 @@ export const getCarDetails = async (carId) => {
     : { data: [] };
 
   const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+<<<<<<< HEAD
   const documents = (docs || []).map((doc) => ({
+=======
+  const documents = dedupeDocumentsByType(docs || []).map((doc) => ({
+>>>>>>> dev
     ...doc,
     ocr_result: ocrByDocumentId[doc.id] || null,
   }));
@@ -225,8 +261,13 @@ export const getReservationDetails = async (reservationId) => {
     ? await supabase.from('document_ocr_results').select('*').in('document_id', allDocIds)
     : { data: [] };
   const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+<<<<<<< HEAD
   const ownerDocuments = (ownerDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
   const carDocuments = (carDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
+=======
+  const ownerDocuments = dedupeDocumentsByType(ownerDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
+  const carDocuments = dedupeDocumentsByType(carDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
+>>>>>>> dev
 
   return { reservation, listing: listing || null, renter: renter || null, car: car || null, owner: owner || null, company: company || null, payment: payment || null, pickup: pickup || null, ownerDocuments, carDocuments };
 };

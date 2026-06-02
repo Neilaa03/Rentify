@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
 
 const toneColor = {
   blue: '#58a6ff',
@@ -42,12 +43,7 @@ export default function AdminDashboardScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.kicker}>ADMINISTRATION</Text>
-            <Text style={styles.title}>Tableau de bord</Text>
-          </View>
-        </View>
+        <ScreenHeader kicker="ADMINISTRATION" title="Tableau de bord" rightAction={<AdminLogoutButton navigation={navigation} />} />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {!!state.error ? <Text style={styles.error}>{state.error}</Text> : null}
@@ -123,9 +119,6 @@ function SummaryLine({ label, value, tone }) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#070a1f' },
   container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#070a1f' },
-  headerRow: { marginTop: 8, marginBottom: 12 },
-  kicker: { color: '#7d78b6', fontWeight: '700', letterSpacing: 1.1, fontSize: 11 },
-  title: { color: '#f2f4ff', fontSize: 34, fontWeight: '800', marginTop: 4 },
   content: { paddingBottom: 94 },
   alertBox: { borderRadius: 12, borderWidth: 1, borderColor: '#6d4f1f', backgroundColor: 'rgba(255,176,32,0.08)', paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   alertText: { color: '#ffc35c', fontSize: 13, fontWeight: '600' },

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
 
 const tabs = ['Tout', 'Inscriptions', 'Reservations', 'Documents', 'Paiements'];
 
@@ -43,24 +44,24 @@ export default function AdminReservationsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Journal d'activite</Text>
+        <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
+          <ScreenHeader title="Journal d'activite" rightAction={<AdminLogoutButton navigation={navigation} />} />
 
-        <View style={styles.topStats}>
-          <MiniStat icon="flash-outline" value={visible.length} label="Aujourd'hui" />
-          <MiniStat icon="list-outline" value={events.length} label="Total" />
-          <MiniStat icon="calendar-outline" value={visible.filter((e) => e.category === 'Reservations').length} label="Reservations" />
-          <MiniStat icon="cash-outline" value={visible.filter((e) => e.category === 'Paiements').length} label="Paiements" />
-        </View>
+          <View style={styles.topStats}>
+            <MiniStat icon="flash-outline" value={visible.length} label="Aujourd'hui" />
+            <MiniStat icon="list-outline" value={events.length} label="Total" />
+            <MiniStat icon="calendar-outline" value={visible.filter((e) => e.category === 'Reservations').length} label="Reservations" />
+            <MiniStat icon="cash-outline" value={visible.filter((e) => e.category === 'Paiements').length} label="Paiements" />
+          </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow}>
-          {tabs.map((tab) => (
-            <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
-              <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{tab}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow} contentContainerStyle={styles.filtersRowContent}>
+            {tabs.map((tab) => (
+              <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
+                <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{tab}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           {visible.map((e) => (
             <View key={e._id} style={styles.item}>
@@ -84,8 +85,10 @@ export default function AdminReservationsScreen({ navigation, route }) {
 function MiniStat({ icon, value, label }) {
   return (
     <View style={styles.statCard}>
-      <Ionicons name={icon} size={14} color="#8f9dff" />
-      <Text style={styles.statValue}>{value}</Text>
+      <View style={styles.statRow}>
+        <Ionicons name={icon} size={14} color="#8f9dff" />
+        <Text style={styles.statValue}>{value}</Text>
+      </View>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
@@ -94,17 +97,21 @@ function MiniStat({ icon, value, label }) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#070a1f' },
   container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#070a1f' },
+  pageScroll: { flex: 1 },
+  pageContent: { paddingBottom: 92 },
   title: { color: '#f2f4ff', fontSize: 36, fontWeight: '800', marginTop: 10, marginBottom: 14 },
   topStats: { flexDirection: 'row', justifyContent: 'space-between' },
-  statCard: { width: '23.5%', backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2b315c', borderRadius: 12, alignItems: 'center', paddingVertical: 8 },
-  statValue: { color: '#f2f4ff', fontSize: 20, fontWeight: '800', marginTop: 6 },
-  statLabel: { color: '#7d84b1', fontSize: 11, marginTop: 2 },
-  filtersRow: { marginTop: 12, marginBottom: 8, maxHeight: 42 },
+  statCard: { width: '23%', backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2b315c', borderRadius: 12, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 6 },
+  statRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statValue: { color: '#f2f4ff', fontSize: 18, fontWeight: '800' },
+  statLabel: { color: '#7d84b1', fontSize: 10, marginTop: 2, textAlign: 'center' },
+  filtersRow: { marginTop: 12, marginBottom: 12 },
+  filtersRowContent: { paddingVertical: 6, paddingRight: 8 },
   filterChip: { backgroundColor: '#171d44', borderRadius: 99, borderWidth: 1, borderColor: '#2d3360', paddingHorizontal: 14, height: 34, justifyContent: 'center', marginRight: 8 },
   filterChipActive: { backgroundColor: '#8f7dff', borderColor: '#8f7dff' },
   filterText: { color: '#9299c8', fontWeight: '700' },
   filterTextActive: { color: '#fff' },
-  content: { paddingTop: 10, paddingBottom: 92 },
+  content: { paddingTop: 10 },
   item: { backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2b315c', borderRadius: 14, padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
   time: { color: '#6e76a6', width: 44, fontSize: 12 },
   iconWrap: { width: 28, height: 28, borderRadius: 8, backgroundColor: '#1b214a', justifyContent: 'center', alignItems: 'center' },

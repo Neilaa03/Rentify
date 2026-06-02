@@ -18,22 +18,44 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const scrollRef = useRef(null);
+  const selectedListing = listing?.selectedOffer || listing;
+  const offerCount = Number(listing?.offerCount || 0) || 0;
+  const matchingOfferCount = Number(listing?.matchingOfferCount || 0) || 0;
+  const availableCities = useMemo(() => {
+    const sourceOffers = Array.isArray(listing?.offers) && listing.offers.length ? listing.offers : [selectedListing];
+    const seenCities = new Set();
+    const cities = [];
+
+    sourceOffers.forEach((offer) => {
+      const city = String(offer?.city || '').trim();
+      const normalizedCity = city.toLowerCase();
+
+      if (!city || seenCities.has(normalizedCity)) return;
+      seenCities.add(normalizedCity);
+      cities.push(city);
+    });
+
+    return cities;
+  }, [listing, selectedListing]);
+
+  const visibleCities = availableCities.slice(0, 5);
+  const hasMoreCities = availableCities.length > 5;
 
   const imageUrls = useMemo(() => {
-    const fromListingImages = Array.isArray(listing?.images)
-      ? listing.images.map(toImageUrl).filter(Boolean)
+    const fromListingImages = Array.isArray(selectedListing?.images)
+      ? selectedListing.images.map(toImageUrl).filter(Boolean)
       : [];
 
-    const fromCarImages = Array.isArray(listing?.car?.images)
-      ? listing.car.images.map(toImageUrl).filter(Boolean)
+    const fromCarImages = Array.isArray(selectedListing?.car?.images)
+      ? selectedListing.car.images.map(toImageUrl).filter(Boolean)
       : [];
 
-    const primary = toImageUrl(listing?.image);
+    const primary = toImageUrl(selectedListing?.image);
 
     const urls = [...fromListingImages, ...fromCarImages, primary].filter(Boolean);
     const unique = [...new Set(urls)];
     return unique.length ? unique : [FALLBACK_IMAGE];
-  }, [listing]);
+  }, [selectedListing]);
 
   const handleImageScroll = (event) => {
     const { contentOffset, layoutMeasurement } = event.nativeEvent;
@@ -88,9 +110,18 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
 
         <View style={styles.overlay}>
           <View style={styles.imageTopRow}>
-            {!listing.available && (
+            {!selectedListing.available && (
               <View style={styles.unavailableBadge}>
                 <Text style={styles.unavailableText}>Indisponible</Text>
+              </View>
+            )}
+            {offerCount > 1 && (
+              <View style={styles.offerBadge}>
+                <Text style={styles.offerBadgeText}>
+                  {matchingOfferCount > 0 && matchingOfferCount < offerCount
+                    ? `${matchingOfferCount}/${offerCount} offres`
+                    : `${offerCount} offres`}
+                </Text>
               </View>
             )}
             <TouchableOpacity
@@ -119,7 +150,7 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
             ) : <View />}
 
             <View style={styles.priceBadge}>
-              <Text style={styles.priceText}>{formatPrice(listing.pricePerDay)}</Text>
+              <Text style={styles.priceText}>{formatPrice(Number(selectedListing.pricePerDay || 0))}</Text>
             </View>
           </View>
         </View>
@@ -127,31 +158,45 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{`${listing.brand} ${listing.model}`}</Text>
+          <Text style={styles.title}>{`${selectedListing.brand} ${selectedListing.model}`}</Text>
           <View style={styles.ratingPill}>
             <Ionicons name="star" size={14} color="#F8B84E" />
-            <Text style={styles.ratingText}>{listing.rating}</Text>
+            <Text style={styles.ratingText}>{selectedListing.rating}</Text>
           </View>
         </View>
 
-        <Text style={styles.subtitle}>{`${listing.year} · ${listing.category}`}</Text>
+        <Text style={styles.subtitle}>{`${selectedListing.year} · ${selectedListing.category}`}</Text>
 
         <View style={styles.chipsRow}>
           <View style={styles.chip}>
             <Ionicons name="people-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{listing.seats}</Text>
+            <Text style={styles.chipText}>{selectedListing.seats}</Text>
           </View>
           <View style={styles.chip}>
             <Ionicons name="flash-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{listing.fuel}</Text>
+            <Text style={styles.chipText}>{selectedListing.fuel}</Text>
           </View>
           <View style={styles.chip}>
             <Ionicons name="settings-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{listing.transmission}</Text>
+            <Text style={styles.chipText}>{selectedListing.transmission}</Text>
           </View>
-          <View style={styles.chip}>
-            <Ionicons name="location-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{listing.city}</Text>
+        </View>
+
+        <View style={styles.citiesRow}>
+          <Ionicons name="location-outline" size={14} color="#9aa0c8" />
+          <View style={styles.citiesWrap}>
+            {visibleCities.map((city) => (
+              <View key={city} style={styles.cityChip}>
+                <Text style={styles.cityChipText} numberOfLines={1}>
+                  {city}
+                </Text>
+              </View>
+            ))}
+            {hasMoreCities && (
+              <View style={styles.moreCitiesChip}>
+                <Text style={styles.cityChipText}>...</Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
@@ -222,6 +267,22 @@ const styles = StyleSheet.create({
     fontSize: appFont(12),
     fontWeight: '700',
   },
+  offerBadge: {
+    flex: 1,
+    marginHorizontal: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(8, 10, 24, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  offerBadgeText: {
+    color: '#fff',
+    fontSize: appFont(11.5),
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   iconButton: {
     marginLeft: 'auto',
     width: 34,
@@ -284,6 +345,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
+  citiesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  citiesWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    flex: 1,
+    marginLeft: 8,
+    overflow: 'hidden',
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -297,10 +371,49 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
+  cityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.12)',
+    marginRight: 6,
+    maxWidth: 92,
+  },
+  moreCitiesChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.12)',
+  },
   chipText: {
     color: '#9aa0c8',
     fontSize: appFont(12),
     marginLeft: 5,
+  },
+  cityChipText: {
+    color: '#9aa0c8',
+    fontSize: appFont(11.5),
+    fontWeight: '500',
+  },
+  availabilityRow: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  availabilityText: {
+    color: '#aeb4d6',
+    fontSize: appFont(11.5),
+    fontWeight: '500',
+    flexShrink: 1,
   },
 });
 

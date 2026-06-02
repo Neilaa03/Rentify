@@ -12,6 +12,7 @@ import ReviewCard from '../../components/reviews/ReviewCard';
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const roundToHalf = (value) => Math.round(value * 2) / 2;
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
 const SpecCard = ({ icon, value, label }) => (
   <View style={styles.specCard}>
@@ -25,14 +26,50 @@ const SpecCard = ({ icon, value, label }) => (
 
 const ListingDetailsScreen = ({ navigation, route }) => {
   const listing = route?.params?.listing;
+  const groupedOffers = Array.isArray(route?.params?.groupedOffers) ? route.params.groupedOffers : [];
   const [activeIndex, setActiveIndex] = useState(0);
   const { isFavorite, toggleFavorite } = useFavorites();
   const [reviewSummary, setReviewSummary] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [activeReviewIndex, setActiveReviewIndex] = useState(0);
+  const [selectedOfferId, setSelectedOfferId] = useState(listing?.id || null);
 
   const carId = listing?.carId || listing?.car?.id || listing?.car_id || null;
+
+  useEffect(() => {
+    setSelectedOfferId(listing?.id || null);
+  }, [listing?.id]);
+
+  const cityOffers = useMemo(() => {
+    const baseOffers = groupedOffers.length ? groupedOffers : (listing ? [listing] : []);
+    const map = new Map();
+
+    baseOffers.forEach((offer) => {
+      const key = normalizeText(offer?.city) || `offer-${offer?.id}`;
+      if (!map.has(key)) map.set(key, offer);
+    });
+
+    return [...map.values()];
+  }, [groupedOffers, listing]);
+
+  const selectedOffer = useMemo(() => {
+    if (!cityOffers.length) return listing || null;
+    const byId = cityOffers.find((offer) => String(offer.id) === String(selectedOfferId));
+    if (byId) return byId;
+    const byCity = cityOffers.find((offer) => normalizeText(offer.city) === normalizeText(listing?.city));
+    return byCity || cityOffers[0] || listing || null;
+  }, [cityOffers, listing, selectedOfferId]);
+
+  const canChooseCity = cityOffers.length > 1;
+
+  const goToReservationDatePicker = () => {
+    navigation.navigate('ReservationDatePicker', {
+      listing: selectedOffer,
+      selectedCity: selectedOffer?.city || '',
+      groupedOffers: cityOffers,
+    });
+  };
 
   useEffect(() => {
     if (!carId) return undefined;
@@ -94,19 +131,19 @@ const ListingDetailsScreen = ({ navigation, route }) => {
       return img.imageUrl || img.image_url || img.url || null;
     };
 
-    const fromListingImages = Array.isArray(listing?.images)
-      ? listing.images.map(toImageUrl).filter(Boolean)
+    const fromListingImages = Array.isArray(selectedOffer?.images)
+      ? selectedOffer.images.map(toImageUrl).filter(Boolean)
       : [];
 
-    const fromCarImages = Array.isArray(listing?.car?.images)
-      ? listing.car.images.map(toImageUrl).filter(Boolean)
+    const fromCarImages = Array.isArray(selectedOffer?.car?.images)
+      ? selectedOffer.car.images.map(toImageUrl).filter(Boolean)
       : [];
 
-    const primary = toImageUrl(listing?.image);
+    const primary = toImageUrl(selectedOffer?.image);
     const urls = [...fromListingImages, ...fromCarImages, primary].filter(Boolean);
     const unique = [...new Set(urls)];
     return unique.length ? unique : ['https://picsum.photos/seed/listing-details/1200/800'];
-  }, [listing]);
+  }, [selectedOffer]);
 
   if (!listing) {
     return (
@@ -149,13 +186,13 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             <View style={styles.heroActionsRight}>
               <TouchableOpacity
                 style={styles.heroButton}
-                onPress={() => toggleFavorite(listing.id)}
+                onPress={() => toggleFavorite(selectedOffer.id)}
                 activeOpacity={0.85}
               >
                 <Ionicons
-                  name={isFavorite(listing.id) ? 'heart' : 'heart-outline'}
+                  name={isFavorite(selectedOffer.id) ? 'heart' : 'heart-outline'}
                   size={20}
-                  color={isFavorite(listing.id) ? COLORS.primary : '#fff'}
+                  color={isFavorite(selectedOffer.id) ? COLORS.primary : '#fff'}
                 />
               </TouchableOpacity>
               <TouchableOpacity style={styles.heroButton}>
@@ -179,37 +216,69 @@ const ListingDetailsScreen = ({ navigation, route }) => {
         <View style={styles.body}>
           <View style={styles.titlePriceRow}>
             <View>
-              <Text style={styles.brand}>{listing.brand}</Text>
-              <Text style={styles.model}>{listing.model}</Text>
+              <Text style={styles.brand}>{selectedOffer.brand}</Text>
+              <Text style={styles.model}>{selectedOffer.model}</Text>
             </View>
             <View style={styles.priceBlock}>
               <Text style={styles.priceLead}>a partir de</Text>
-              <Text style={styles.price}>{formatPrice(listing.pricePerDay)}</Text>
+              <Text style={styles.price}>{formatPrice(selectedOffer.pricePerDay)}</Text>
               <Text style={styles.priceUnit}>DA/jour</Text>
             </View>
           </View>
 
           <View style={styles.metaRow}>
             <View style={styles.categoryPill}>
-              <Text style={styles.categoryText}>{listing.category}</Text>
+              <Text style={styles.categoryText}>{selectedOffer.category}</Text>
             </View>
-            <Text style={styles.metaText}>{listing.year}</Text>
+            <Text style={styles.metaText}>{selectedOffer.year}</Text>
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color="#F8B84E" />
-              <Text style={styles.ratingText}>{listing.rating}</Text>
-              <Text style={styles.reviewsText}>({listing.reviewsCount} avis)</Text>
+              <Text style={styles.ratingText}>{selectedOffer.rating}</Text>
+              <Text style={styles.reviewsText}>({selectedOffer.reviewsCount} avis)</Text>
             </View>
           </View>
 
           <View style={styles.specsGrid}>
-            <SpecCard icon="people-outline" value={listing.seats} label="Places" />
-            <SpecCard icon="flash-outline" value={listing.fuel} label="Carburant" />
-            <SpecCard icon="settings-outline" value={listing.transmission} label="Boite" />
-            <SpecCard icon="pulse-outline" value={`${listing.mileageKm} km`} label="Kilometrage" />
+            <SpecCard icon="people-outline" value={selectedOffer.seats} label="Places" />
+            <SpecCard icon="flash-outline" value={selectedOffer.fuel} label="Carburant" />
+            <SpecCard icon="settings-outline" value={selectedOffer.transmission} label="Boite" />
+            <SpecCard icon="pulse-outline" value={`${selectedOffer.mileageKm} km`} label="Kilometrage" />
           </View>
 
+          {canChooseCity ? (
+            <>
+              <Text style={styles.sectionTitle}>Villes disponibles</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cityList}>
+                {cityOffers.map((offer) => {
+                  const isActive = String(offer.id) === String(selectedOffer.id);
+                  return (
+                    <TouchableOpacity
+                      key={offer.id}
+                      style={[styles.cityChip, isActive && styles.cityChipActive]}
+                      onPress={() => setSelectedOfferId(offer.id)}
+                      activeOpacity={0.86}
+                    >
+                      <Ionicons name="location-outline" size={14} color={isActive ? '#fff' : '#bfc6ec'} />
+                      <Text style={[styles.cityChipText, isActive && styles.cityChipTextActive]}>
+                        {offer.city || 'Ville'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </>
+          ) : selectedOffer.city ? (
+            <>
+              <Text style={styles.sectionTitle}>Ville de retrait</Text>
+              <View style={styles.singleCityCard}>
+                <Ionicons name="location-outline" size={14} color="#dce1ff" />
+                <Text style={styles.singleCityText}>{selectedOffer.city}</Text>
+              </View>
+            </>
+          ) : null}
+
           <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.description}>{listing.description}</Text>
+          <Text style={styles.description}>{selectedOffer.description}</Text>
 
           <View style={styles.reviewsHeaderRow}>
             <Text style={styles.sectionTitle}>{`Avis${reviewCount ? ` (${reviewCount})` : ''}`}</Text>
@@ -267,12 +336,12 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           <View style={styles.pickupInfoCard}>
             <View style={styles.pickupInfoRow}>
               <Ionicons name="location-outline" size={16} color="#cfd3ff" />
-              <Text style={styles.pickupInfoText}>{listing.pickupAddress || 'Adresse non précisée'}</Text>
+              <Text style={styles.pickupInfoText}>{selectedOffer.pickupAddress || 'Adresse non précisée'}</Text>
             </View>
             <View style={styles.pickupInfoRow}>
               <Ionicons name="car-outline" size={16} color="#cfd3ff" />
               <Text style={styles.pickupInfoText}>
-                Livraison: {Number(listing.deliveryFee || 0) > 0 ? `${Number(listing.deliveryFee).toLocaleString('fr-FR')} DA` : 'non disponible'}
+                Livraison: {Number(selectedOffer.deliveryFee || 0) > 0 ? `${Number(selectedOffer.deliveryFee).toLocaleString('fr-FR')} DA` : 'non disponible'}
               </Text>
             </View>
           </View>
@@ -280,17 +349,19 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           <View style={styles.reservationCard}>
             <View style={styles.reservationInfo}>
               <Text style={styles.reservationLabel}>Prix par jour</Text>
-              <Text style={styles.reservationPrice}>{formatPrice(listing.pricePerDay)}</Text>
+              <Text style={styles.reservationPrice}>{formatPrice(selectedOffer.pricePerDay)}</Text>
             </View>
-            {listing.available ? (
-              <TouchableOpacity onPress={() => navigation.navigate('ReservationDatePicker', { listing })}>
+            {selectedOffer.available ? (
+              <TouchableOpacity onPress={goToReservationDatePicker}>
                 <LinearGradient
                   colors={[COLORS.secondary, COLORS.primary]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.reservationButton}
                 >
-                  <Text style={styles.reservationButtonText}>Reserver</Text>
+                  <Text style={styles.reservationButtonText}>
+                    {selectedOffer.city ? `Reserver à ${selectedOffer.city}` : 'Reserver'}
+                  </Text>
                 </LinearGradient>
               </TouchableOpacity>
             ) : (
@@ -307,14 +378,14 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               </View>
               <View>
                 <View style={styles.ownerNameRow}>
-                  <Text style={styles.ownerName}>{listing.owner?.name || 'Proprietaire'}</Text>
-                  {listing.owner?.verified && (
+                  <Text style={styles.ownerName}>{selectedOffer.owner?.name || 'Proprietaire'}</Text>
+                  {selectedOffer.owner?.verified && (
                     <Text style={styles.ownerVerified}>Verifie</Text>
                   )}
                 </View>
                 <View style={styles.ownerLocationRow}>
                   <Ionicons name="location-outline" size={13} color="#8e95bf" />
-                  <Text style={styles.ownerLocation}>{listing.owner?.city || listing.city}</Text>
+                  <Text style={styles.ownerLocation}>{selectedOffer.owner?.city || selectedOffer.city}</Text>
                 </View>
               </View>
             </View>
@@ -322,9 +393,9 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.ownerMessageButton}
               onPress={() => {
-                const otherUserId = listing?.car?.ownerId;
+                const otherUserId = selectedOffer?.car?.ownerId;
                 if (!otherUserId) return;
-                const rawName = String(listing?.owner?.name || '').trim();
+                const rawName = String(selectedOffer?.owner?.name || '').trim();
                 const [firstName, ...rest] = rawName ? rawName.split(/\s+/) : [];
                 const lastName = rest.join(' ');
                 navigation.navigate('Chat', {
@@ -589,6 +660,50 @@ const styles = StyleSheet.create({
     color: '#8e95bf',
     fontSize: 13,
     marginBottom: 14,
+  },
+  cityList: {
+    paddingRight: 8,
+    marginBottom: 2,
+  },
+  cityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(188, 194, 232, 0.22)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  cityChipActive: {
+    backgroundColor: 'rgba(143, 108, 255, 0.25)',
+    borderColor: '#8f6cff',
+  },
+  cityChipText: {
+    color: '#d5dbf5',
+    fontWeight: '700',
+  },
+  cityChipTextActive: {
+    color: '#fff',
+  },
+  singleCityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(188, 194, 232, 0.18)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+  singleCityText: {
+    color: '#dce1ff',
+    fontWeight: '700',
   },
   description: {
     color: '#9aa2cc',

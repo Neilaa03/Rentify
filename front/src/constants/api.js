@@ -4,11 +4,19 @@ export const API_ENDPOINTS = {
     AUTH: {
         LOGIN: `${API_BASE_URL}/api/auth/login`,
         REGISTER: `${API_BASE_URL}/api/auth/register`,
+        GOOGLE: `${API_BASE_URL}/api/auth/google`,
         ME: `${API_BASE_URL}/api/auth/me`,
+        SET_PASSWORD: `${API_BASE_URL}/api/auth/set-password`,
+        PROFILE_PICTURE: `${API_BASE_URL}/api/auth/me/profile-picture`,
         VERIFY_EMAIL: `${API_BASE_URL}/api/auth/verify-email`,
         RESEND_VERIFICATION: `${API_BASE_URL}/api/auth/resend-verification`,
         FORGOT_PASSWORD: `${API_BASE_URL}/api/auth/forgot-password`,
         RESET_PASSWORD: `${API_BASE_URL}/api/auth/reset-password`,
+    },
+    PROFILE: {
+        ME_STATS: `${API_BASE_URL}/api/profile/me/stats`,
+        ME_CLIENT_STATS: `${API_BASE_URL}/api/profile/me/client-stats`,
+        ME_PASSWORD: `${API_BASE_URL}/api/profile/me/password`,
     },
     CARS: {
         LIST: `${API_BASE_URL}/api/cars`,
@@ -18,6 +26,15 @@ export const API_ENDPOINTS = {
     LISTINGS: {
         LIST: `${API_BASE_URL}/api/listings`,
         GET: (id) => `${API_BASE_URL}/api/listings/${id}`,
+    },
+    AGENCY: {
+        DASHBOARD: `${API_BASE_URL}/api/agency/dashboard`,
+        DOCUMENTS: `${API_BASE_URL}/api/agency/documents`,
+        DOCUMENT_UPLOAD: `${API_BASE_URL}/api/agency/documents/upload`,
+        VEHICLES: `${API_BASE_URL}/api/agency/vehicles`,
+        VEHICLE_VISIBILITY: (id) => `${API_BASE_URL}/api/agency/vehicles/${id}/visibility`,
+        REQUESTS: `${API_BASE_URL}/api/agency/requests`,
+        PROFILE: `${API_BASE_URL}/api/agency/profile`,
     },
     RESERVATIONS: {
         CREATE: `${API_BASE_URL}/api/reservations`,

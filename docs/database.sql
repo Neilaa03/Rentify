@@ -15,6 +15,13 @@ CREATE TYPE user_role AS ENUM (
     'admin'
 );
 
+CREATE TYPE agency_verification_status AS ENUM (
+    'PENDING',
+    'VERIFIED',
+    'REJECTED',
+    'INCOMPLETE'
+);
+
 CREATE TYPE reservation_status AS ENUM (
     'confirmed',
     'cancelled',
@@ -77,7 +84,9 @@ CREATE TYPE document_type AS ENUM (
     'technical_control',
 
     -- COMPANY DOCUMENTS
-    'business_registration'
+    'business_registration',
+    'nif',
+    'professional_insurance'
 );
 
 -- =========================================================
@@ -85,28 +94,28 @@ CREATE TYPE document_type AS ENUM (
 -- =========================================================
 
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-
-    phone VARCHAR(30),
-
-    profile_picture TEXT,
-    bio TEXT,
-
-    role user_role NOT NULL DEFAULT 'client',
-
-    is_verified BOOLEAN DEFAULT FALSE,
-    is_active BOOLEAN DEFAULT TRUE,
-
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-
-    stripe_account_id text
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  email character varying NOT NULL UNIQUE,
+  password_hash text NOT NULL,
+  first_name character varying,
+  last_name character varying,
+  phone character varying,
+  profile_picture text,
+  bio text,
+  role USER-DEFINED NOT NULL DEFAULT 'client'::user_role,
+  is_verified boolean DEFAULT false,
+  is_active boolean DEFAULT true,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  stripe_account_id text,
+  email_verified_at timestamp with time zone,
+  email_verification_token_hash text,
+  email_verification_expires_at timestamp with time zone,
+  password_reset_token_hash text,
+  password_reset_expires_at timestamp with time zone,
+  google_sub text,
+  auth_provider text DEFAULT 'password'::text,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
 );
 
 -- =========================================================
@@ -135,6 +144,13 @@ CREATE TABLE company (
     company_name VARCHAR(255) NOT NULL,
     company_email VARCHAR(255),
     company_phone VARCHAR(50),
+    commercial_name VARCHAR(255),
+    corporate_name VARCHAR(255),
+    nif VARCHAR(32),
+    manager_name VARCHAR(255),
+    manager_phone VARCHAR(50),
+    verification_status agency_verification_status DEFAULT 'INCOMPLETE',
+    completion_percentage INTEGER DEFAULT 0,
 
     address TEXT,
     city VARCHAR(100),
@@ -167,6 +183,7 @@ CREATE TABLE cars (
     seats INTEGER,
 
     registration_number VARCHAR(100),
+    visible_by_tenants BOOLEAN DEFAULT TRUE,
 
     description TEXT,
 

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
-import { Button, Card, Row, ScreenHeader, SearchBox, StatCard, StatusBadge } from '../../components/admin/AdminUI';
+import { AdminLogoutButton, Button, Card, Row, ScreenHeader, SearchBox, StatCard, StatusBadge } from '../../components/admin/AdminUI';
 
 export default function AdminPaymentsScreen({ navigation, route }) {
   const [status, setStatus] = useState('');
@@ -31,7 +31,7 @@ export default function AdminPaymentsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ScreenHeader kicker="ADMIN PANEL" title="Payments" />
+        <ScreenHeader kicker="ADMIN PANEL" title="Payments" rightAction={<AdminLogoutButton navigation={navigation} />} />
         <View style={styles.topActions}>
           <Button label="Reports" type="ghost" onPress={() => navigation.navigate('AdminReports', route?.params || {})} />
         </View>

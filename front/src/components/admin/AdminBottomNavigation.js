@@ -6,6 +6,7 @@ import { CommonActions } from '@react-navigation/native';
 
 const AdminBottomNavigation = ({ navigation, route, active }) => {
   const insets = useSafeAreaInsets();
+  const bottomOffset = 2;
   const params = route?.params || {};
 
   const resetTo = (screenName) => {
@@ -26,7 +27,7 @@ const AdminBottomNavigation = ({ navigation, route, active }) => {
   ];
 
   return (
-    <View style={[styles.footer, { bottom: 8 + (insets?.bottom || 0) }]}>
+    <View style={[styles.footer, { bottom: bottomOffset + (insets?.bottom || 0) }]}>
       {tabs.map((tab) => {
         const isActive = active === tab.key;
         const color = isActive ? '#8f6cff' : '#8a90b8';

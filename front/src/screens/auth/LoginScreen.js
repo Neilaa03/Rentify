@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     StyleSheet,
     View,
@@ -19,6 +19,11 @@ import AuthHeader from '../../components/auth/AuthHeader';
 import AuthInputField from '../../components/auth/AuthInputField';
 import AuthGradientButton from '../../components/auth/AuthGradientButton';
 import { isTablet, moderateScale, rf } from '../../utils/responsive';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+import Constants from 'expo-constants';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({ navigation }) => {
     const tabletLayout = isTablet();
@@ -26,15 +31,147 @@ const LoginScreen = ({ navigation }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [errors, setErrors] = useState({
         email: '',
         password: '',
         form: '',
     });
 
+    const useProxy = useMemo(() => {
+        const ownership = Constants?.appOwnership;
+        return ownership === 'expo' || ownership === 'guest';
+    }, []);
+
+    const googleClientId = useMemo(() => {
+        const webClientId = process?.env?.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
+        const androidClientId = process?.env?.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '';
+        const iosClientId = process?.env?.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
+
+        if (Platform.OS === 'android' && !useProxy) return androidClientId || webClientId;
+        if (Platform.OS === 'ios' && !useProxy) return iosClientId || webClientId;
+        return webClientId;
+    }, [useProxy]);
+
+    const proxyProjectFullName = useMemo(() => {
+        const owner =
+            Constants?.expoConfig?.owner ||
+            Constants?.manifest2?.extra?.expoClient?.owner ||
+            process?.env?.EXPO_PUBLIC_EXPO_OWNER ||
+            process?.env?.EXPO_PUBLIC_EXPO_USERNAME ||
+            '';
+        const slug = Constants?.expoConfig?.slug || Constants?.manifest2?.extra?.expoClient?.slug || 'rentify';
+        return owner ? `@${owner}/${slug}` : '';
+    }, [useProxy]);
+
+    const redirectUri = useMemo(() => {
+        // Expo Go cannot receive a browser redirect to `exp://` from Google OAuth directly.
+        // We must use the Expo AuthSession proxy. In that flow, the *returnUrl* is the deep link,
+        // while the *OAuth redirect_uri* is `https://auth.expo.io/@owner/slug`.
+        if (useProxy) return AuthSession.getDefaultReturnUrl();
+        return AuthSession.makeRedirectUri({ scheme: 'rentify' });
+    }, [useProxy]);
+
+    useEffect(() => {
+        console.log('[GoogleAuth] appOwnership:', Constants?.appOwnership);
+        console.log('[GoogleAuth] useProxy:', useProxy);
+        console.log('[GoogleAuth] redirectUri:', redirectUri);
+        if (useProxy) console.log('[GoogleAuth] proxyProjectFullName:', proxyProjectFullName || '(missing)');
+    }, [redirectUri, useProxy, proxyProjectFullName]);
+
+    const discovery = AuthSession.useAutoDiscovery('https://accounts.google.com');
+    const [googleRequest, googleResponse, googlePromptAsync] = AuthSession.useAuthRequest(
+        {
+            clientId: googleClientId,
+            redirectUri,
+            responseType: AuthSession.ResponseType.IdToken,
+            scopes: ['openid', 'profile', 'email'],
+            extraParams: {
+                prompt: 'select_account',
+            },
+        },
+        discovery
+    );
+
     const clearError = (key) => {
         if (!errors[key]) return;
         setErrors((prev) => ({ ...prev, [key]: '' }));
+    };
+
+    const handleAuthSuccess = async (data) => {
+        if (data?.token) {
+            await storage.setItemAsync('userToken', data.token);
+        }
+
+        const userParams = { token: data?.token, user: data?.user };
+        const isOwner = data?.user?.role === 'owner';
+        const isAdmin = data?.user?.role === 'admin';
+        const initialProvider = String(data?.user?.authProvider || data?.user?.auth_provider || '').toLowerCase();
+        const shouldOfferPasswordSetup = (provider) => String(provider || '').toLowerCase() === 'google';
+
+        try {
+            if (data?.token) {
+                const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
+                    headers: { Authorization: `Bearer ${data.token}` },
+                });
+                const meJson = meRes.ok ? await meRes.json() : null;
+                const rawUser = meJson?.user || data.user || null;
+
+                if (rawUser) {
+                    const normalized = {
+                        id: rawUser.id,
+                        email: rawUser.email,
+                        firstName: rawUser.firstName || rawUser.first_name || '',
+                        lastName: rawUser.lastName || rawUser.last_name || '',
+                        phone: rawUser.phone || '',
+                        role: rawUser.role,
+                        isVerified: rawUser.isVerified ?? rawUser.is_verified,
+                        isActive: rawUser.isActive ?? rawUser.is_active,
+                        authProvider: rawUser.authProvider || rawUser.auth_provider || '',
+                    };
+
+                    await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+
+                    // If the account was created via Google-only sign-in, offer setting a password.
+                    if (shouldOfferPasswordSetup(normalized.authProvider || initialProvider)) {
+                        navigation.navigate('SetPassword', { token: data?.token, allowSkip: true });
+                        return;
+                    }
+                }
+            }
+        } catch {
+            // Non-blocking.
+        }
+
+        if (shouldOfferPasswordSetup(initialProvider)) {
+            navigation.navigate('SetPassword', { token: data?.token, allowSkip: true });
+            return;
+        }
+
+        if (isAdmin) {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'AdminDashboard', params: userParams }],
+            });
+        } else if (isOwner) {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'OwnerDashboard', params: userParams }],
+            });
+        } else {
+            navigation.reset({
+                index: 0,
+                routes: [
+                    {
+                        name: 'ClientApp',
+                        params: {
+                            screen: 'HomeTab',
+                            params: userParams,
+                        },
+                    },
+                ],
+            });
+        }
     };
 
     const handleLogin = async () => {
@@ -73,6 +210,7 @@ const LoginScreen = ({ navigation }) => {
 
                 const userParams = { token: data?.token, user: data?.user };
                 const isOwner = data?.user?.role === 'owner';
+                const isAgencyOwner = data?.user?.role === 'companyManager';
                 const isAdmin = data?.user?.role === 'admin';
 
                 try {
@@ -107,6 +245,11 @@ const LoginScreen = ({ navigation }) => {
                         index: 0,
                         routes: [{ name: 'AdminDashboard', params: userParams }],
                     });
+                } else if (isAgencyOwner) {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'AgencyDashboard', params: userParams }],
+                    });
                 } else if (isOwner) {
                     navigation.reset({
                         index: 0,
@@ -126,6 +269,7 @@ const LoginScreen = ({ navigation }) => {
                         ],
                     });
                 }
+                await handleAuthSuccess(data);
             } else {
                 const message = data?.error || "We couldn't log you in. Please try again.";
 
@@ -162,6 +306,120 @@ const LoginScreen = ({ navigation }) => {
             setLoading(false);
         }
     };
+
+    const handleGoogleLogin = async () => {
+        if (!googleClientId) {
+            setErrors({ email: '', password: '', form: 'Missing Google Client ID. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID (and for builds, also ANDROID/IOS client IDs).' });
+            return;
+        }
+        try {
+            setErrors({ email: '', password: '', form: '' });
+            if (useProxy) {
+                if (!proxyProjectFullName) {
+                    setErrors({ email: '', password: '', form: 'Expo AuthSession proxy needs your project full name (@owner/slug). Set EXPO_PUBLIC_EXPO_OWNER to your Expo username and restart.' });
+                    return;
+                }
+                // Manual proxy flow for Expo Go:
+                // - Google must redirect to https://auth.expo.io/@owner/slug (web-allowed redirect)
+                // - Expo proxy then forwards back to the app deep link return URL (exp://...).
+                const proxyRedirectUrl = `https://auth.expo.io/${proxyProjectFullName}`;
+                const returnUrl = AuthSession.getDefaultReturnUrl();
+                if (!discovery?.authorizationEndpoint) {
+                    setErrors({ email: '', password: '', form: 'Google sign-in is not ready yet. Please try again.' });
+                    return;
+                }
+
+                const authUrl = `${discovery?.authorizationEndpoint}?` +
+                    new URLSearchParams({
+                        client_id: googleClientId,
+                        redirect_uri: proxyRedirectUrl,
+                        response_type: AuthSession.ResponseType.IdToken,
+                        scope: ['openid', 'profile', 'email'].join(' '),
+                        prompt: 'select_account',
+                        nonce: String(Date.now()),
+                    }).toString();
+
+                const startUrl = `${proxyRedirectUrl}/start?` +
+                    new URLSearchParams({ authUrl, returnUrl }).toString();
+
+                const result = await WebBrowser.openAuthSessionAsync(startUrl, returnUrl);
+                if (result.type !== 'success' || !result.url) return;
+
+                const extractParam = (url, key) => {
+                    try {
+                        const [, fragment = ''] = String(url).split('#');
+                        const [base, query = ''] = String(url).split('?');
+                        const params = new URLSearchParams(query);
+                        const fragParams = new URLSearchParams(fragment);
+                        return fragParams.get(key) || params.get(key) || '';
+                    } catch {
+                        return '';
+                    }
+                };
+                const idToken = extractParam(result.url, 'id_token');
+                if (!idToken) {
+                    setErrors({ email: '', password: '', form: 'Google sign-in failed.' });
+                    return;
+                }
+
+                // Mirror the hook-based flow by reusing the existing effect handler expectation.
+                // Trigger the same backend call directly here.
+                setGoogleLoading(true);
+                try {
+                    const res = await fetch(API_ENDPOINTS.AUTH.GOOGLE, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ idToken }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok) await handleAuthSuccess(data);
+                    else {
+                        const detail = data?.message ? ` (${data.message})` : '';
+                        setErrors({ email: '', password: '', form: `${data?.error || 'Google sign-in failed.'}${detail}` });
+                    }
+                } finally {
+                    setGoogleLoading(false);
+                }
+            } else {
+                await googlePromptAsync();
+            }
+        } catch (e) {
+            setErrors({ email: '', password: '', form: 'Google sign-in failed to start.' });
+        }
+    };
+
+    useEffect(() => {
+        const run = async () => {
+            if (googleResponse?.type !== 'success') return;
+            const idToken = googleResponse?.params?.id_token;
+            if (!idToken) {
+                setErrors({ email: '', password: '', form: 'Google sign-in failed.' });
+                return;
+            }
+
+            setGoogleLoading(true);
+            setErrors({ email: '', password: '', form: '' });
+            try {
+                const res = await fetch(API_ENDPOINTS.AUTH.GOOGLE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    await handleAuthSuccess(data);
+                } else {
+                    const detail = data?.message ? ` (${data.message})` : '';
+                    setErrors({ email: '', password: '', form: `${data?.error || 'Google sign-in failed.'}${detail}` });
+                }
+            } catch (e) {
+                setErrors({ email: '', password: '', form: "We couldn't reach the server. Please try again." });
+            } finally {
+                setGoogleLoading(false);
+            }
+        };
+        run();
+    }, [googleResponse]);
 
     return (
         <View style={styles.container}>
@@ -257,6 +515,17 @@ const LoginScreen = ({ navigation }) => {
                                     {!!errors.form && <Text style={styles.formErrorText}>{errors.form}</Text>}
 
                                     <AuthGradientButton label="Login" onPress={handleLogin} disabled={loading} />
+
+                                    <TouchableOpacity
+                                        style={[styles.googleButton, (!googleRequest || googleLoading) ? styles.googleButtonDisabled : null]}
+                                        onPress={handleGoogleLogin}
+                                        disabled={!googleRequest || googleLoading}
+                                    >
+                                        <Ionicons name="logo-google" size={18} color="#fff" />
+                                        <Text style={styles.googleButtonText}>
+                                            {googleLoading ? 'Signing in…' : 'Continue with Google'}
+                                        </Text>
+                                    </TouchableOpacity>
                                 </View>
 
                                 <View style={styles.footer}>
@@ -350,6 +619,26 @@ const styles = StyleSheet.create({
     },
     footerText: { color: '#aaa' },
     linkText: { color: COLORS.secondary, fontWeight: 'bold' },
+    googleButton: {
+        marginTop: moderateScale(12),
+        height: moderateScale(48),
+        borderRadius: moderateScale(12),
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.22)',
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    googleButtonDisabled: {
+        opacity: 0.6,
+    },
+    googleButtonText: {
+        marginLeft: moderateScale(10),
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: rf(14, 12, 16),
+    },
 });
 
 export default LoginScreen;

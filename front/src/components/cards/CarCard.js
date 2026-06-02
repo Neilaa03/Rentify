@@ -148,10 +148,10 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: '#111329',
+    borderColor: 'rgba(143, 150, 255, 0.14)',
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 22,
     overflow: 'hidden',
     marginBottom: 16,
   },
