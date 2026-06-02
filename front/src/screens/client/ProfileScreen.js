@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground, TextInput, useWindowDimensions, Image, Modal, Pressable, Alert } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground, TextInput, useWindowDimensions, Image, Modal, Pressable, Alert, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -70,6 +70,8 @@ const ProfileScreen = ({ navigation, route }) => {
   const [changePasswordError, setChangePasswordError] = useState('');
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
   const [showPasswordFields, setShowPasswordFields] = useState(false);
+  const [connectLoading, setConnectLoading] = useState(false);
+  const [connectStatus, setConnectStatus] = useState(null);
   const [ownerStats, setOwnerStats] = useState({ cars: 0, listings: 0, reservations: 0 });
   const [ownerStatsLoading, setOwnerStatsLoading] = useState(false);
   const [clientStats, setClientStats] = useState({ favorites: 0, reservations: 0, reviews: 0 });
@@ -174,6 +176,29 @@ const ProfileScreen = ({ navigation, route }) => {
 
     fetchOwnerStats();
   }, [isOwner, token]);
+
+  useEffect(() => {
+    const loadConnectStatus = async () => {
+      if (!isOwner) return;
+      if (!token || !profile?.id) return;
+
+      try {
+        const response = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_STATUS(profile.id), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) return;
+        const status = await response.json();
+        setConnectStatus(status || null);
+      } catch (_e) {
+        // ignore
+      }
+    };
+
+    loadConnectStatus();
+  }, [isOwner, token, profile?.id]);
 
   useEffect(() => {
     const fetchClientStats = async () => {
@@ -480,6 +505,64 @@ const ProfileScreen = ({ navigation, route }) => {
     }
   };
 
+  const configureStripePayouts = async () => {
+    if (!token) {
+      const msg = 'Session expirée. Reconnectez-vous puis réessayez.';
+      setPersonalInfoError(msg);
+      Alert.alert('Configurer Stripe', msg);
+      return;
+    }
+    if (!profile?.id) {
+      const msg = 'Utilisateur introuvable. Rechargez la page.';
+      setPersonalInfoError(msg);
+      Alert.alert('Configurer Stripe', msg);
+      return;
+    }
+
+    try {
+      setConnectLoading(true);
+      const response = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_ONBOARDING_LINK, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || 'Impossible de configurer Stripe');
+      }
+
+      const payload = await response.json();
+      const url = payload?.onboardingUrl;
+      if (!url) throw new Error('Lien Stripe indisponible');
+
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) {
+        throw new Error('Impossible d’ouvrir le lien Stripe sur cet appareil');
+      }
+
+      await Linking.openURL(url);
+
+      const statusResponse = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_STATUS(profile.id), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (statusResponse.ok) {
+        const status = await statusResponse.json();
+        setConnectStatus(status || null);
+      }
+    } catch (e) {
+      const msg = e.message || 'Impossible de configurer Stripe';
+      setPersonalInfoError(msg);
+      Alert.alert('Configurer Stripe', msg);
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
   const openPhotoSheet = () => {
     setPersonalInfoError('');
     setPhotoSheetVisible(true);
@@ -714,12 +797,19 @@ const ProfileScreen = ({ navigation, route }) => {
               items={[
                 { action: 'personalInfo', label: 'Informations personnelles', icon: 'person-outline' },
                 { action: 'password', label: isGoogleOnly ? 'Definir un mot de passe' : 'Changer mot de passe', icon: 'key-outline' },
-                { label: 'Moyens de paiement', icon: 'card-outline' },
+                ...(isOwner ? [{
+                  action: 'stripe',
+                  label: connectLoading
+                    ? 'Ouverture...'
+                    : (connectStatus?.cardPaymentsAvailable ? 'Mettre a jour Stripe' : 'Configurer Stripe'),
+                  icon: 'cash-outline',
+                }] : []),
                 { label: 'Mes adresses', icon: 'location-outline' },
               ]}
               onItemPress={(item) => {
                 if (item.action === 'personalInfo') openPersonalInfoEditor();
                 if (item.action === 'password') openPasswordEditor();
+                if (item.action === 'stripe' && !connectLoading) configureStripePayouts();
               }}
             />
 
