@@ -9,8 +9,8 @@ import {
   Alert,
   Image,
   Platform,
-  TextInput,
-} from 'react-native';
+  TextInput } from
+'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
 import CustomCalendar from '../../components/reservation/CustomCalendar';
@@ -25,10 +25,10 @@ import {
   fetchListingAvailability,
   getListingAvailabilityWindow,
   isDateWithinAvailability,
-  isDateReserved,
-} from '../../utils/reservationUtils';
+  isDateReserved } from
+'../../utils/reservationUtils';import { useTranslation } from "react-i18next";
 
-const ReservationDatePickerScreen = ({ navigation, route }) => {
+const ReservationDatePickerScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const DELIVERY_ADDRESS_REGEX = /^\d+\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*\s+\d{4,5}\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*$/u;
   const { listing: initialListing, reservation: reservationFromParams, isEditing } = route.params;
   const [listing, setListing] = useState(initialListing);
@@ -50,15 +50,15 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (!reservationFromParams) return;
     const existingStart =
-      reservationFromParams.startDate ||
-      reservationFromParams.start_date ||
-      reservationFromParams.start_date?.split?.('T')?.[0] ||
-      null;
+    reservationFromParams.startDate ||
+    reservationFromParams.start_date ||
+    reservationFromParams.start_date?.split?.('T')?.[0] ||
+    null;
     const existingEnd =
-      reservationFromParams.endDate ||
-      reservationFromParams.end_date ||
-      reservationFromParams.end_date?.split?.('T')?.[0] ||
-      null;
+    reservationFromParams.endDate ||
+    reservationFromParams.end_date ||
+    reservationFromParams.end_date?.split?.('T')?.[0] ||
+    null;
     if (existingStart) setStartDate(existingStart);
     if (existingEnd) setEndDate(existingEnd);
     setPickupMethod(
@@ -87,21 +87,21 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     try {
       console.log('Initial listing:', initialListing);
       console.log('Fetching from:', API_ENDPOINTS.LISTINGS.GET(initialListing.id));
-      
+
       const token = await storage.getItemAsync('userToken');
       const response = await fetch(
         API_ENDPOINTS.LISTINGS.GET(initialListing.id),
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+            'Authorization': `Bearer ${token}`
+          }
         }
       );
-      
+
       console.log('Listing fetch response status:', response.status);
       const data = await response.json();
       console.log('API returned data:', data);
-      
+
       if (data) {
         setListing((current) => ({
           ...current,
@@ -115,18 +115,18 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           seats: data?.car?.seats ?? current?.seats,
           mileageKm: data?.car?.mileage ?? current?.mileageKm,
           image:
-            data?.car?.images?.find((img) => img?.isPrimary && img?.imageUrl)?.imageUrl ||
-            data?.car?.images?.find((img) => img?.imageUrl)?.imageUrl ||
-            current?.image,
+          data?.car?.images?.find((img) => img?.isPrimary && img?.imageUrl)?.imageUrl ||
+          data?.car?.images?.find((img) => img?.imageUrl)?.imageUrl ||
+          current?.image,
           availableFrom: data?.availableFrom ?? data?.available_from ?? current?.availableFrom ?? current?.available_from,
-          availableTo: data?.availableTo ?? data?.available_to ?? current?.availableTo ?? current?.available_to,
+          availableTo: data?.availableTo ?? data?.available_to ?? current?.availableTo ?? current?.available_to
         }));
         console.log('Listing state updated');
       }
     } catch (error) {
       console.error('Error fetching listing details:', error);
     }
-    
+
     // Fetch calendar availability (blocked dates + listing dates)
     try {
       const availability = await fetchListingAvailability(initialListing.id);
@@ -134,15 +134,15 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
 
       if (isEditing && reservationFromParams) {
         const existingStart =
-          reservationFromParams.startDate ||
-          reservationFromParams.start_date ||
-          reservationFromParams.start_date?.split?.('T')?.[0] ||
-          null;
+        reservationFromParams.startDate ||
+        reservationFromParams.start_date ||
+        reservationFromParams.start_date?.split?.('T')?.[0] ||
+        null;
         const existingEnd =
-          reservationFromParams.endDate ||
-          reservationFromParams.end_date ||
-          reservationFromParams.end_date?.split?.('T')?.[0] ||
-          null;
+        reservationFromParams.endDate ||
+        reservationFromParams.end_date ||
+        reservationFromParams.end_date?.split?.('T')?.[0] ||
+        null;
 
         if (existingStart && existingEnd) {
           const excluded = new Set();
@@ -173,24 +173,24 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     const dateStr = day.dateString;
     const pressedDate = parseLocalDate(dateStr);
     if (!pressedDate) return;
-    
+
     // Can't select past dates
     const todayLocal = new Date();
     todayLocal.setHours(0, 0, 0, 0);
     if (pressedDate < todayLocal) {
-      Alert.alert('Date invalide', 'Vous ne pouvez pas sélectionner une date passée');
+      Alert.alert(t("screens.reservations.reservationdatepickerscreen.dateInvalide"), t("screens.reservations.reservationdatepickerscreen.vousNePouvezPasSelectionnerUneDate"));
       return;
     }
 
     // Can't select reserved dates
     if (isDateReserved(dateStr, reservedDates)) {
-      Alert.alert('Date indisponible', 'Cette date est déjà réservée');
+      Alert.alert(t("screens.reservations.reservationdatepickerscreen.dateIndisponible"), t("screens.reservations.reservationdatepickerscreen.cetteDateEstDejaReservee"));
       return;
     }
 
     // Check if date is within listing's availability window
     if (!isDateWithinAvailability(dateStr, listing)) {
-      Alert.alert('Date indisponible', 'Cette date est en dehors de la période de disponibilité');
+      Alert.alert(t("screens.reservations.reservationdatepickerscreen.dateIndisponible"), t("screens.reservations.reservationdatepickerscreen.cetteDateEstEnDehorsDeLa"));
       return;
     }
 
@@ -199,7 +199,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     } else if (!endDate) {
       const startLocal = parseLocalDate(startDate);
       if (startLocal && pressedDate < startLocal) {
-        Alert.alert('Erreur', 'La date de fin doit être après la date de début');
+        Alert.alert(t("screens.reservations.reservationdatepickerscreen.erreur"), t("screens.reservations.reservationdatepickerscreen.laDateDeFinDoitEtreApres"));
         return;
       }
       setEndDate(dateStr);
@@ -219,14 +219,14 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       marked[start] = {
         selected: true,
         startingDay: true,
-        endingDay: !end,
+        endingDay: !end
       };
     }
 
     if (end) {
       marked[end] = {
         selected: true,
-        endingDay: true,
+        endingDay: true
       };
 
       const current = parseLocalDate(start);
@@ -242,7 +242,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         if (!dateStr) continue;
         if (dateStr !== end) {
           marked[dateStr] = {
-            inRange: true,
+            inRange: true
           };
         }
       }
@@ -254,7 +254,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   const calculatePrice = (start, end) => {
     const deliveryFee = Number(listing?.deliveryFee ?? listing?.delivery_fee ?? 0);
     const price = calculateReservationPrice(listing, start, end, {
-      deliveryFee: pickupMethod === 'renter_delivery' ? deliveryFee : 0,
+      deliveryFee: pickupMethod === 'renter_delivery' ? deliveryFee : 0
     });
     setEstimatedPrice(price);
   };
@@ -265,7 +265,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     if (navigator === parent) {
       parent.navigate('ReservationsTab', {
         screen: 'ReservationDetailsFromReservations',
-        params: { reservation: reservationData, listing },
+        params: { reservation: reservationData, listing }
       });
       return;
     }
@@ -274,19 +274,19 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
 
   const handlePrimaryAction = async () => {
     if (!startDate || !endDate) {
-      Alert.alert('Erreur', 'Veuillez sélectionner une plage de dates');
+      Alert.alert(t("screens.reservations.reservationdatepickerscreen.erreur"), t("screens.reservations.reservationdatepickerscreen.veuillezSelectionnerUnePlageDeDates"));
       return;
     }
 
     if (pickupMethod === 'renter_delivery' && !deliveryAddress.trim()) {
-      Alert.alert('Adresse requise', 'Veuillez saisir votre adresse de livraison');
+      Alert.alert(t("screens.reservations.reservationdatepickerscreen.adresseRequise"), t("screens.reservations.reservationdatepickerscreen.veuillezSaisirVotreAdresseDeLivraison"));
       return;
     }
 
     if (pickupMethod === 'renter_delivery' && !DELIVERY_ADDRESS_REGEX.test(deliveryAddress.trim())) {
-      Alert.alert(
-        'Adresse invalide',
-        'Le format attendu est: "12 Rue Exemple 16000 Alger".'
+      Alert.alert(t("screens.reservations.reservationdatepickerscreen.adresseInvalide"), t("screens.reservations.reservationdatepickerscreen.leFormatAttenduEst12RueExemple")
+
+
       );
       return;
     }
@@ -295,36 +295,36 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       setLoading(true);
       const token = await storage.getItemAsync('userToken');
       if (!token) {
-        Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
+        Alert.alert(t("screens.reservations.reservationdatepickerscreen.erreur"), t("screens.reservations.reservationdatepickerscreen.authentificationRequiseVeuillezVousConnecter"));
         return;
       }
       const isEditFlow = !!reservationFromParams?.id;
       const response = await fetch(
-        isEditFlow
-          ? API_ENDPOINTS.RESERVATIONS.UPDATE_DETAILS(reservationFromParams.id)
-          : API_ENDPOINTS.RESERVATIONS.CREATE,
+        isEditFlow ?
+        API_ENDPOINTS.RESERVATIONS.UPDATE_DETAILS(reservationFromParams.id) :
+        API_ENDPOINTS.RESERVATIONS.CREATE,
         {
           method: isEditFlow ? 'PATCH' : 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify(
-            isEditFlow
-              ? {
-                  startDate,
-                  endDate,
-                  pickupMethod,
-                  pickupAddress: pickupMethod === 'renter_delivery' ? deliveryAddress.trim() : undefined,
-                }
-              : {
-                  listingId: listing.id,
-                  startDate,
-                  endDate,
-                  pickupMethod,
-                  pickupAddress: pickupMethod === 'renter_delivery' ? deliveryAddress.trim() : undefined,
-                }
-          ),
+            isEditFlow ?
+            {
+              startDate,
+              endDate,
+              pickupMethod,
+              pickupAddress: pickupMethod === 'renter_delivery' ? deliveryAddress.trim() : undefined
+            } :
+            {
+              listingId: listing.id,
+              startDate,
+              endDate,
+              pickupMethod,
+              pickupAddress: pickupMethod === 'renter_delivery' ? deliveryAddress.trim() : undefined
+            }
+          )
         }
       );
 
@@ -334,7 +334,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         // Keep the current date picker route in sync with the latest reservation state.
         navigation.setParams?.({
           reservation: data,
-          isEditing: true,
+          isEditing: true
         });
 
         if (isEditFlow) {
@@ -342,18 +342,18 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           return;
         }
 
-        Alert.alert('Réservation créée', "Votre réservation est en attente de paiement. Merci d’effectuer le paiement sous 24 heures pour la confirmer, sinon elle sera automatiquement annulée.", [
-          {
-            text: 'OK',
-            onPress: () => goToReservationDetails(data),
-          },
-        ]);
+        Alert.alert(t("screens.reservations.reservationdatepickerscreen.reservationCreee"), t("screens.reservations.reservationdatepickerscreen.votreReservationEstEnAttenteDePaiement"), [
+        {
+          text: 'OK',
+          onPress: () => goToReservationDetails(data)
+        }]
+        );
       } else {
-        Alert.alert('Erreur', data.error || 'Impossible de créer la réservation');
+        Alert.alert(t("screens.reservations.reservationdatepickerscreen.erreur"), data.error || 'Impossible de créer la réservation');
       }
     } catch (error) {
       console.error('Error saving reservation:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(t("screens.reservations.reservationdatepickerscreen.erreur"), t("screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue"));
     } finally {
       setLoading(false);
     }
@@ -385,8 +385,8 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         <SafeAreaView style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </SafeAreaView>
-      </LinearGradient>
-    );
+      </LinearGradient>);
+
   }
 
   const { from: availableFromStr, to: availableToStr } = getListingAvailabilityWindow(listing);
@@ -399,57 +399,57 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       <SafeAreaView style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
+          style={styles.backButton}>
+          
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sélectionner les dates</Text>
+        <Text style={styles.headerTitle}>{t("screens.reservations.reservationdatepickerscreen.selectionnerLesDates")}</Text>
         <View style={{ width: 50 }} />
       </SafeAreaView>
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
+        
         {/* Car Info Preview */}
         <View style={styles.carPreview}>
           <View style={styles.carImage}>
-            {listing.image ? (
-              <Image source={{ uri: listing.image }} style={styles.carImageMedia} resizeMode="cover" />
-            ) : (
-              <View style={styles.carImageFallback}>
+            {listing.image ?
+            <Image source={{ uri: listing.image }} style={styles.carImageMedia} resizeMode="cover" /> :
+
+            <View style={styles.carImageFallback}>
                 <Ionicons name="car-outline" size={34} color={COLORS.primary} />
               </View>
-            )}
+            }
           </View>
           <View style={styles.carInfo}>
             <Text style={styles.carBrand}>{listing.brand}</Text>
             <Text style={styles.carModel}>{listing.model}</Text>
-            {!!listing.city && (
-              <View style={styles.carMetaRow}>
+            {!!listing.city &&
+            <View style={styles.carMetaRow}>
                 <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
                 <Text style={styles.carMetaText}>{listing.city}</Text>
               </View>
-            )}
+            }
             <Text style={styles.carPrice}>
-              {(parseFloat(listing.price_per_day || listing.pricePerDay || 0)).toLocaleString('fr-FR')} DA/jour
+              {parseFloat(listing.price_per_day || listing.pricePerDay || 0).toLocaleString('fr-FR')}{t("screens.reservations.reservationdatepickerscreen.daJour")}
             </Text>
           </View>
         </View>
 
         {/* Calendar */}
         <View style={styles.calendarSection}>
-          <Text style={styles.sectionTitle}>Sélectionnez vos dates</Text>
+          <Text style={styles.sectionTitle}>{t("screens.reservations.reservationdatepickerscreen.selectionnezVosDates")}</Text>
           
           <View style={styles.legendContainer}>
             <View style={styles.legendChip}>
               <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
-              <Text style={styles.legendText}>Sélection</Text>
+              <Text style={styles.legendText}>{t("screens.reservations.reservationdatepickerscreen.selection")}</Text>
             </View>
             <View style={styles.legendChip}>
               <View style={[styles.legendDot, { backgroundColor: 'rgba(142, 149, 191, 0.6)' }]} />
-              <Text style={styles.legendText}>Indisponible</Text>
+              <Text style={styles.legendText}>{t("screens.reservations.reservationdatepickerscreen.indisponible")}</Text>
             </View>
           </View>
 
@@ -460,158 +460,158 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
             maxDate={maxDateStr}
             disabledDates={reservedDates}
             locale="fr-FR"
-            startFromMonday
-          />
+            startFromMonday />
+          
         </View>
 
-        {listing ? (
-          <View style={styles.pickupSection}>
-            <Text style={styles.pickupTitle}>Récupération</Text>
+        {listing ?
+        <View style={styles.pickupSection}>
+            <Text style={styles.pickupTitle}>{t("screens.reservations.reservationdatepickerscreen.recuperation")}</Text>
             <View style={styles.pickupRow}>
               <TouchableOpacity
-                onPress={() => {
-                  setPickupMethod('owner_place');
-                  setDeliveryAddress('');
-                }}
-                style={[styles.pickupOption, pickupMethod === 'owner_place' && styles.pickupOptionActive]}
-                activeOpacity={0.85}
-              >
-                <Text style={[styles.pickupOptionText, pickupMethod === 'owner_place' && styles.pickupOptionTextActive]}>
-                  Chez le propriétaire
-                </Text>
-                {listing?.pickupAddress ? (
-                  <Text style={styles.pickupHint} numberOfLines={2}>{listing.pickupAddress}</Text>
-                ) : (
-                  <Text style={styles.pickupHint} numberOfLines={2}>Adresse non précisée</Text>
-                )}
+              onPress={() => {
+                setPickupMethod('owner_place');
+                setDeliveryAddress('');
+              }}
+              style={[styles.pickupOption, pickupMethod === 'owner_place' && styles.pickupOptionActive]}
+              activeOpacity={0.85}>
+              
+                <Text style={[styles.pickupOptionText, pickupMethod === 'owner_place' && styles.pickupOptionTextActive]}>{t("screens.reservations.reservationdatepickerscreen.chezLeProprietaire")}
+
+              </Text>
+                {listing?.pickupAddress ?
+              <Text style={styles.pickupHint} numberOfLines={2}>{listing.pickupAddress}</Text> :
+
+              <Text style={styles.pickupHint} numberOfLines={2}>{t("screens.reservations.reservationdatepickerscreen.adresseNonPrecisee")}</Text>
+              }
               </TouchableOpacity>
 
               {(() => {
-                const fee = Number(listing?.deliveryFee ?? listing?.delivery_fee ?? 0);
-                const deliveryAvailable = Number.isFinite(fee) && fee > 0;
-                return (
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (!deliveryAvailable) return;
-                      setPickupMethod('renter_delivery');
-                    }}
-                    disabled={!deliveryAvailable}
-                    style={[
-                      styles.pickupOption,
-                      pickupMethod === 'renter_delivery' && styles.pickupOptionActive,
-                      !deliveryAvailable && styles.pickupOptionDisabled,
-                    ]}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={[styles.pickupOptionText, pickupMethod === 'renter_delivery' && styles.pickupOptionTextActive]}>
-                      Livraison
-                    </Text>
+              const fee = Number(listing?.deliveryFee ?? listing?.delivery_fee ?? 0);
+              const deliveryAvailable = Number.isFinite(fee) && fee > 0;
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    if (!deliveryAvailable) return;
+                    setPickupMethod('renter_delivery');
+                  }}
+                  disabled={!deliveryAvailable}
+                  style={[
+                  styles.pickupOption,
+                  pickupMethod === 'renter_delivery' && styles.pickupOptionActive,
+                  !deliveryAvailable && styles.pickupOptionDisabled]
+                  }
+                  activeOpacity={0.85}>
+                  
+                    <Text style={[styles.pickupOptionText, pickupMethod === 'renter_delivery' && styles.pickupOptionTextActive]}>{t("screens.reservations.reservationdatepickerscreen.livraison")}
+
+                  </Text>
                     <Text style={styles.pickupHint}>
                       {deliveryAvailable ? `+${fee.toLocaleString('fr-FR')} DA` : 'Non disponible'}
                     </Text>
-                  </TouchableOpacity>
-                );
-              })()}
+                  </TouchableOpacity>);
+
+            })()}
             </View>
 
-            {pickupMethod === 'renter_delivery' ? (
-              <View style={styles.deliveryInputWrap}>
-                <Text style={styles.deliveryLabel}>Adresse de livraison</Text>
+            {pickupMethod === 'renter_delivery' ?
+          <View style={styles.deliveryInputWrap}>
+                <Text style={styles.deliveryLabel}>{t("screens.reservations.reservationdatepickerscreen.adresseDeLivraison")}</Text>
                 <TextInput
-                  style={styles.deliveryInput}
-                  value={deliveryAddress}
-                  onChangeText={(value) => setDeliveryAddress(value)}
-                  placeholder="Ex: Rue..., Ville..."
-                  placeholderTextColor="rgba(255,255,255,0.45)"
-                  multiline
-                />
-              </View>
-            ) : null}
-          </View>
-        ) : null}
+              style={styles.deliveryInput}
+              value={deliveryAddress}
+              onChangeText={(value) => setDeliveryAddress(value)}
+              placeholder={t("screens.reservations.reservationdatepickerscreen.exRueVille")}
+              placeholderTextColor="rgba(255,255,255,0.45)"
+              multiline />
+            
+              </View> :
+          null}
+          </View> :
+        null}
 
         {/* Selected Dates Summary */}
-        {(startDate || endDate) && (
-          <View style={styles.summarySection}>
-            <Text style={styles.sectionTitle}>Résumé</Text>
+        {(startDate || endDate) &&
+        <View style={styles.summarySection}>
+            <Text style={styles.sectionTitle}>{t("screens.reservations.reservationdatepickerscreen.resume")}</Text>
             
             <View style={styles.dateRow}>
               <View style={styles.dateItem}>
-                <Text style={styles.dateLabel}>Départ</Text>
+                <Text style={styles.dateLabel}>{t("screens.reservations.reservationdatepickerscreen.depart")}</Text>
                 <Text style={styles.dateValue}>
-                  {startDate
-                    ? (parseLocalDate(startDate)?.toLocaleDateString('fr-FR') || '-')
-                    : '-'}
+                  {startDate ?
+                parseLocalDate(startDate)?.toLocaleDateString('fr-FR') || '-' :
+                '-'}
                 </Text>
               </View>
               <Ionicons name="arrow-forward" size={18} color={COLORS.textMuted} />
               <View style={styles.dateItem}>
-                <Text style={styles.dateLabel}>Retour</Text>
+                <Text style={styles.dateLabel}>{t("screens.reservations.reservationdatepickerscreen.retour")}</Text>
                 <Text style={styles.dateValue}>
-                  {endDate ? (parseLocalDate(endDate)?.toLocaleDateString('fr-FR') || '-') : '-'}
+                  {endDate ? parseLocalDate(endDate)?.toLocaleDateString('fr-FR') || '-' : '-'}
                 </Text>
               </View>
             </View>
 
-            {estimatedPrice > 0 && (
-              <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>Estimé</Text>
+            {estimatedPrice > 0 &&
+          <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>{t("screens.reservations.reservationdatepickerscreen.estime")}</Text>
                 <Text style={styles.priceValue}>
-                  {estimatedPrice.toLocaleString('fr-FR')} DA
-                </Text>
+                  {estimatedPrice.toLocaleString('fr-FR')}{t("screens.reservations.reservationdatepickerscreen.da")}
+            </Text>
               </View>
-            )}
+          }
 
             <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-              <Text style={styles.clearButtonText}>Réinitialiser</Text>
+              <Text style={styles.clearButtonText}>{t("screens.reservations.reservationdatepickerscreen.reinitialiser")}</Text>
             </TouchableOpacity>
           </View>
-        )}
+        }
       </ScrollView>
 
       {/* Action Bar */}
       <View style={styles.actionBar}>
         <TouchableOpacity
           onPress={handleCancel}
-          style={styles.cancelButton}
-        >
-          <Text style={styles.cancelButtonText}>Annuler</Text>
+          style={styles.cancelButton}>
+          
+          <Text style={styles.cancelButtonText}>{t("screens.reservations.reservationdatepickerscreen.annuler")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handlePrimaryAction}
           disabled={!startDate || !endDate || loading}
-          style={styles.reserveButtonWrapper}
-        >
+          style={styles.reserveButtonWrapper}>
+          
           <LinearGradient
             colors={
-              startDate && endDate
-                ? ['#4C6FFF', COLORS.primary]
-                : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)']
+            startDate && endDate ?
+            ['#4C6FFF', COLORS.primary] :
+            ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)']
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.reserveButton}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.reserveButtonText}>{reservationFromParams?.id ? 'Confirmer' : 'Réserver'}</Text>
-            )}
+            style={styles.reserveButton}>
+            
+            {loading ?
+            <ActivityIndicator color="#fff" size="small" /> :
+
+            <Text style={styles.reserveButtonText}>{reservationFromParams?.id ? t("screens.owner.reservationdetailsscreen.confirmer") : 'Réserver'}</Text>
+            }
           </LinearGradient>
         </TouchableOpacity>
       </View>
-    </LinearGradient>
-  );
+    </LinearGradient>);
+
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 1
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   header: {
     flexDirection: 'row',
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: 'rgba(21, 24, 55, 0.65)',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.border
   },
   backButton: {
     width: 44,
@@ -632,20 +632,20 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   headerTitle: {
     color: COLORS.text,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   scroll: {
-    flex: 1,
+    flex: 1
   },
   contentContainer: {
     paddingHorizontal: 16,
     paddingTop: 18,
-    paddingBottom: 140,
+    paddingBottom: 140
   },
   carPreview: {
     flexDirection: 'row',
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 22,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.border
   },
   carImage: {
     width: 76,
@@ -661,69 +661,69 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.18)',
-    marginRight: 12,
+    marginRight: 12
   },
   carImageMedia: {
     width: '100%',
-    height: '100%',
+    height: '100%'
   },
   carImageFallback: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   carInfo: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   carBrand: {
     color: COLORS.textMuted,
-    fontSize: 12,
+    fontSize: 12
   },
   carModel: {
     color: COLORS.text,
     fontSize: 17,
     fontWeight: '800',
     marginTop: 4,
-    marginBottom: 6,
+    marginBottom: 6
   },
   carMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
-    gap: 6,
+    gap: 6
   },
   carMetaText: {
     color: COLORS.textMuted,
-    fontSize: 12,
+    fontSize: 12
   },
   carPrice: {
     color: COLORS.primary,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   calendarSection: {
-    marginBottom: 18,
+    marginBottom: 18
   },
   summarySection: {
     marginTop: 18,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 18,
+    marginBottom: 18
   },
   sectionTitle: {
     color: COLORS.text,
     marginBottom: 16,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   legendContainer: {
     flexDirection: 'row',
     marginTop: 18,
     marginBottom: 18,
     gap: 10,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   legendChip: {
     flexDirection: 'row',
@@ -733,18 +733,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.10)'
   },
   legendDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 8,
+    marginRight: 8
   },
   legendText: {
     color: COLORS.textMuted,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   dateRow: {
     flexDirection: 'row',
@@ -754,21 +754,21 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.border
   },
   dateItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   dateLabel: {
     color: COLORS.textMuted,
     fontSize: 12,
-    marginBottom: 4,
+    marginBottom: 4
   },
   dateValue: {
     color: COLORS.text,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   priceRow: {
     flexDirection: 'row',
@@ -779,32 +779,32 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(138, 43, 226, 0.28)',
+    borderColor: 'rgba(138, 43, 226, 0.28)'
   },
   priceLabel: {
     color: COLORS.textMuted,
-    fontSize: 14,
+    fontSize: 14
   },
   priceValue: {
     color: COLORS.primary,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   pickupSection: {
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: 'rgba(255,255,255,0.08)'
   },
   pickupTitle: {
     color: COLORS.text,
     fontSize: 18,
     fontWeight: '700',
-    marginBottom: 10,
+    marginBottom: 10
   },
   pickupRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 10
   },
   pickupOption: {
     flex: 1,
@@ -812,34 +812,34 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   pickupOptionActive: {
     borderColor: 'rgba(143,108,255,0.8)',
-    backgroundColor: 'rgba(143,108,255,0.18)',
+    backgroundColor: 'rgba(143,108,255,0.18)'
   },
   pickupOptionDisabled: {
-    opacity: 0.6,
+    opacity: 0.6
   },
   pickupOptionText: {
     color: COLORS.text,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 6
   },
   pickupOptionTextActive: {
-    color: '#fff',
+    color: '#fff'
   },
   pickupHint: {
     color: COLORS.textMuted,
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 16
   },
   deliveryInputWrap: {
-    marginTop: 10,
+    marginTop: 10
   },
   deliveryLabel: {
     color: COLORS.textMuted,
-    marginBottom: 6,
+    marginBottom: 6
   },
   deliveryInput: {
     minHeight: 44,
@@ -849,16 +849,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    color: '#fff',
+    color: '#fff'
   },
   clearButton: {
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   clearButtonText: {
     color: COLORS.primary,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   actionBar: {
     position: 'absolute',
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: -10 },
-    elevation: Platform.OS === 'android' ? 10 : 0,
+    elevation: Platform.OS === 'android' ? 10 : 0
   },
   cancelButton: {
     flex: 1,
@@ -889,27 +889,27 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(142, 149, 191, 0.4)',
     backgroundColor: 'transparent',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   cancelButtonText: {
     color: '#8e95bf',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   reserveButtonWrapper: {
-    flex: 1,
+    flex: 1
   },
   reserveButton: {
     paddingVertical: 16,
     borderRadius: 14,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   reserveButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '800',
-  },
+    fontWeight: '800'
+  }
 });
 
 export default ReservationDatePickerScreen;

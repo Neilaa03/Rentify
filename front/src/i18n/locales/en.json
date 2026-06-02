@@ -1,5 +1,27 @@
 {
-  "common": {},
+  "common": {
+    "legacyHome": {
+      "allVehicles": "All vehicles",
+      "all": "All",
+      "gearboxAuto": "Gearbox: Auto",
+      "gearboxManual": "Gearbox: Manual",
+      "fuelGasoline": "Fuel: Gasoline",
+      "fuelDiesel": "Fuel: Diesel",
+      "popular": "Popular",
+      "priceAsc": "Price ↑",
+      "priceDesc": "Price ↓",
+      "rating": "Rating",
+      "loadListingsError": "Unable to load listings",
+      "searchPlaceholder": "Search for a car or city",
+      "filter": "Filter",
+      "sort": "Sort",
+      "loadingVehicles": "Loading vehicles...",
+      "error": "Error",
+      "retry": "Retry",
+      "noVehicleFound": "No vehicle found",
+      "tryAnotherSearch": "Try another search or filter."
+    }
+  },
   "components": {
     "admin": {
       "adminbottomnavigation": {

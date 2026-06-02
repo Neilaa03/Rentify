@@ -4,16 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
-import { API_ENDPOINTS } from '../../constants/api';
+import { API_ENDPOINTS } from '../../constants/api';import { useTranslation } from "react-i18next";
 
-const ResetPasswordScreen = ({ navigation, route }) => {
+const ResetPasswordScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const queryParams = useMemo(() => {
     if (Platform.OS !== 'web') return { email: '', token: '' };
     const search = globalThis?.window?.location?.search || '';
     const params = new URLSearchParams(search);
     return {
       email: params.get('email') || '',
-      token: params.get('token') || '',
+      token: params.get('token') || ''
     };
   }, []);
 
@@ -70,14 +70,14 @@ const ResetPasswordScreen = ({ navigation, route }) => {
           email: trimmedEmail,
           token,
           password,
-          confirmPassword,
-        }),
+          confirmPassword
+        })
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setMessage(data?.message || 'Password reset successful. You can log in now.');
         setTimeout(() => {
-          navigation.reset({ index: 0, routes: [{ name: 'Login', params: { email: trimmedEmail } }] });
+          navigation.reset({ index: 0, routes: [{ name: t("screens.auth.loginscreen.login"), params: { email: trimmedEmail } }] });
         }, 700);
       } else if (data?.reason) {
         setError(friendlyReason(data.reason));
@@ -94,18 +94,18 @@ const ResetPasswordScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Reset password</Text>
-        <Text style={styles.subtitle}>Choose a new password for {email || 'your account'}.</Text>
+        <Text style={styles.title}>{t("screens.auth.resetpasswordscreen.resetPassword")}</Text>
+        <Text style={styles.subtitle}>{t("screens.auth.resetpasswordscreen.chooseANewPasswordFor")}{email || 'your account'}.</Text>
 
         <View style={styles.field}>
           <TextInput
             style={styles.input}
-            placeholder="New password"
+            placeholder={t("screens.auth.resetpasswordscreen.newPassword")}
             placeholderTextColor="rgba(255,255,255,0.55)"
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={setPassword}
-          />
+            onChangeText={setPassword} />
+          
           <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eyeButton}>
             <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
@@ -113,12 +113,12 @@ const ResetPasswordScreen = ({ navigation, route }) => {
 
         <TextInput
           style={[styles.input, { marginTop: 10 }]}
-          placeholder="Confirm password"
+          placeholder={t("screens.auth.resetpasswordscreen.confirmPassword")}
           placeholderTextColor="rgba(255,255,255,0.55)"
           secureTextEntry={!showPassword}
           value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
+          onChangeText={setConfirmPassword} />
+        
 
         {!!error && <Text style={styles.messageError}>{error}</Text>}
         {!!message && <Text style={styles.messageOk}>{message}</Text>}
@@ -128,18 +128,18 @@ const ResetPasswordScreen = ({ navigation, route }) => {
             colors={[COLORS.secondary, COLORS.primary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.button}
-          >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Reset password</Text>}
+            style={styles.button}>
+            
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("screens.auth.resetpasswordscreen.resetPassword")}</Text>}
           </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword', { email })} style={styles.link}>
-          <Text style={styles.linkText}>Resend reset email</Text>
+          <Text style={styles.linkText}>{t("screens.auth.resetpasswordscreen.resendResetEmail")}</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 };
 
 const styles = StyleSheet.create({
@@ -155,8 +155,7 @@ const styles = StyleSheet.create({
   messageError: { color: 'rgba(255, 92, 92, 0.95)', marginTop: 10 },
   messageOk: { color: 'rgba(126, 231, 135, 0.95)', marginTop: 10 },
   link: { marginTop: 14, alignSelf: 'center' },
-  linkText: { color: COLORS.secondary, fontWeight: '700' },
+  linkText: { color: COLORS.secondary, fontWeight: '700' }
 });
 
 export default ResetPasswordScreen;
-

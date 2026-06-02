@@ -7,23 +7,23 @@ import { COLORS } from '../../constants/colors';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import { API_ENDPOINTS } from '../../constants/api';
 import RatingStars from '../../components/reviews/RatingStars';
-import ReviewCard from '../../components/reviews/ReviewCard';
+import ReviewCard from '../../components/reviews/ReviewCard';import { useTranslation } from "react-i18next";
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const roundToHalf = (value) => Math.round(value * 2) / 2;
 
-const SpecCard = ({ icon, value, label }) => (
-  <View style={styles.specCard}>
+const SpecCard = ({ icon, value, label }) =>
+<View style={styles.specCard}>
     <View style={styles.specIconBadge}>
       <Ionicons name={icon} size={18} color="#8f6cff" />
     </View>
     <Text style={styles.specValue}>{value}</Text>
     <Text style={styles.specLabel}>{label}</Text>
-  </View>
-);
+  </View>;
 
-const ListingDetailsScreen = ({ navigation, route }) => {
+
+const ListingDetailsScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const listing = route?.params?.listing;
   const [activeIndex, setActiveIndex] = useState(0);
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -42,9 +42,9 @@ const ListingDetailsScreen = ({ navigation, route }) => {
       try {
         setReviewsLoading(true);
         const [summaryRes, reviewsRes] = await Promise.all([
-          fetch(API_ENDPOINTS.REVIEWS.CAR_SUMMARY(carId)),
-          fetch(`${API_ENDPOINTS.REVIEWS.CAR_LIST(carId)}?limit=3&page=1`),
-        ]);
+        fetch(API_ENDPOINTS.REVIEWS.CAR_SUMMARY(carId)),
+        fetch(`${API_ENDPOINTS.REVIEWS.CAR_LIST(carId)}?limit=3&page=1`)]
+        );
 
         if (!cancelled && summaryRes.ok) {
           const json = await summaryRes.json();
@@ -94,13 +94,13 @@ const ListingDetailsScreen = ({ navigation, route }) => {
       return img.imageUrl || img.image_url || img.url || null;
     };
 
-    const fromListingImages = Array.isArray(listing?.images)
-      ? listing.images.map(toImageUrl).filter(Boolean)
-      : [];
+    const fromListingImages = Array.isArray(listing?.images) ?
+    listing.images.map(toImageUrl).filter(Boolean) :
+    [];
 
-    const fromCarImages = Array.isArray(listing?.car?.images)
-      ? listing.car.images.map(toImageUrl).filter(Boolean)
-      : [];
+    const fromCarImages = Array.isArray(listing?.car?.images) ?
+    listing.car.images.map(toImageUrl).filter(Boolean) :
+    [];
 
     const primary = toImageUrl(listing?.image);
     const urls = [...fromListingImages, ...fromCarImages, primary].filter(Boolean);
@@ -111,12 +111,12 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   if (!listing) {
     return (
       <SafeAreaView style={styles.fallbackContainer}>
-        <Text style={styles.fallbackTitle}>Détails indisponibles</Text>
+        <Text style={styles.fallbackTitle}>{t("screens.client.listingdetailsscreen.detailsIndisponibles")}</Text>
         <TouchableOpacity style={styles.fallbackButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.fallbackButtonText}>Retour</Text>
+          <Text style={styles.fallbackButtonText}>{t("screens.client.listingdetailsscreen.retour")}</Text>
         </TouchableOpacity>
-      </SafeAreaView>
-    );
+      </SafeAreaView>);
+
   }
 
   return (
@@ -135,11 +135,11 @@ const ListingDetailsScreen = ({ navigation, route }) => {
                 setActiveIndex(nextIndex);
               }
             }}
-            scrollEventThrottle={16}
-          >
-            {imageUrls.map((uri, index) => (
-              <Image key={`${uri}-${index}`} source={{ uri }} style={styles.heroSlideImage} resizeMode="cover" />
-            ))}
+            scrollEventThrottle={16}>
+            
+            {imageUrls.map((uri, index) =>
+            <Image key={`${uri}-${index}`} source={{ uri }} style={styles.heroSlideImage} resizeMode="cover" />
+            )}
           </ScrollView>
 
           <SafeAreaView pointerEvents="box-none" style={styles.heroTopRow}>
@@ -150,13 +150,13 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 style={styles.heroButton}
                 onPress={() => toggleFavorite(listing.id)}
-                activeOpacity={0.85}
-              >
+                activeOpacity={0.85}>
+                
                 <Ionicons
                   name={isFavorite(listing.id) ? 'heart' : 'heart-outline'}
                   size={20}
-                  color={isFavorite(listing.id) ? COLORS.primary : '#fff'}
-                />
+                  color={isFavorite(listing.id) ? COLORS.primary : '#fff'} />
+                
               </TouchableOpacity>
               <TouchableOpacity style={styles.heroButton}>
                 <Ionicons name="share-social-outline" size={20} color="#fff" />
@@ -164,16 +164,16 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             </View>
           </SafeAreaView>
 
-          {imageUrls.length > 1 ? (
-            <View style={styles.heroDotsRow}>
-              {imageUrls.map((_, index) => (
-                <View
-                  key={`hero-dot-${index}`}
-                  style={[styles.heroDot, index === activeIndex && styles.heroDotActive]}
-                />
-              ))}
-            </View>
-          ) : null}
+          {imageUrls.length > 1 ?
+          <View style={styles.heroDotsRow}>
+              {imageUrls.map((_, index) =>
+            <View
+              key={`hero-dot-${index}`}
+              style={[styles.heroDot, index === activeIndex && styles.heroDotActive]} />
+
+            )}
+            </View> :
+          null}
         </View>
 
         <View style={styles.body}>
@@ -183,9 +183,9 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               <Text style={styles.model}>{listing.model}</Text>
             </View>
             <View style={styles.priceBlock}>
-              <Text style={styles.priceLead}>a partir de</Text>
+              <Text style={styles.priceLead}>{t("screens.client.listingdetailsscreen.aPartirDe")}</Text>
               <Text style={styles.price}>{formatPrice(listing.pricePerDay)}</Text>
-              <Text style={styles.priceUnit}>DA/jour</Text>
+              <Text style={styles.priceUnit}>{t("screens.client.listingdetailsscreen.daJour")}</Text>
             </View>
           </View>
 
@@ -197,107 +197,107 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color="#F8B84E" />
               <Text style={styles.ratingText}>{listing.rating}</Text>
-              <Text style={styles.reviewsText}>({listing.reviewsCount} avis)</Text>
+              <Text style={styles.reviewsText}>({listing.reviewsCount}{t("screens.client.listingdetailsscreen.avis")}</Text>
             </View>
           </View>
 
           <View style={styles.specsGrid}>
-            <SpecCard icon="people-outline" value={listing.seats} label="Places" />
-            <SpecCard icon="flash-outline" value={listing.fuel} label="Carburant" />
-            <SpecCard icon="settings-outline" value={listing.transmission} label="Boite" />
-            <SpecCard icon="pulse-outline" value={`${listing.mileageKm} km`} label="Kilometrage" />
+            <SpecCard icon="people-outline" value={listing.seats} label={t("screens.client.listingdetailsscreen.places")} />
+            <SpecCard icon="flash-outline" value={listing.fuel} label={t("screens.client.listingdetailsscreen.carburant")} />
+            <SpecCard icon="settings-outline" value={listing.transmission} label={t("screens.client.listingdetailsscreen.boite")} />
+            <SpecCard icon="pulse-outline" value={`${listing.mileageKm} km`} label={t("screens.client.listingdetailsscreen.kilometrage")} />
           </View>
 
-          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.sectionTitle}>{t("screens.client.listingdetailsscreen.description")}</Text>
           <Text style={styles.description}>{listing.description}</Text>
 
           <View style={styles.reviewsHeaderRow}>
             <Text style={styles.sectionTitle}>{`Avis${reviewCount ? ` (${reviewCount})` : ''}`}</Text>
-            {reviewCount ? (
-              <View style={styles.reviewsSummaryRight}>
+            {reviewCount ?
+            <View style={styles.reviewsSummaryRight}>
                 <RatingStars rating={averageRatingRounded} />
                 <Text style={styles.reviewsAvgText}>{averageRatingRounded.toFixed(1)}</Text>
-              </View>
-            ) : null}
+              </View> :
+            null}
           </View>
 
-          {reviewsLoading ? (
-            <View style={styles.reviewsLoadingRow}>
+          {reviewsLoading ?
+          <View style={styles.reviewsLoadingRow}>
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.reviewsLoadingText}>Chargement…</Text>
-            </View>
-          ) : reviews.length ? (
-            <>
+              <Text style={styles.reviewsLoadingText}>{t("screens.client.listingdetailsscreen.chargement")}</Text>
+            </View> :
+          reviews.length ?
+          <>
               <ScrollView
-                horizontal
-                pagingEnabled={false}
-                showsHorizontalScrollIndicator={false}
-                snapToInterval={slideWidth}
-                decelerationRate="fast"
-                onScroll={handleReviewsScroll}
-                scrollEventThrottle={16}
-                contentContainerStyle={styles.reviewsCarousel}
-              >
-                {reviews.map((r) => (
-                  <View key={r.id} style={[styles.reviewsSlide, { width: slideWidth }]}>
+              horizontal
+              pagingEnabled={false}
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={slideWidth}
+              decelerationRate="fast"
+              onScroll={handleReviewsScroll}
+              scrollEventThrottle={16}
+              contentContainerStyle={styles.reviewsCarousel}>
+              
+                {reviews.map((r) =>
+              <View key={r.id} style={[styles.reviewsSlide, { width: slideWidth }]}>
                     <ReviewCard review={r} />
                   </View>
-                ))}
+              )}
               </ScrollView>
 
-              {reviews.length > 1 ? (
-                <View style={styles.reviewsDotsRow}>
-                  {reviews.map((_, index) => (
-                    <View
-                      key={`review-dot-${index}`}
-                      style={[
-                        styles.reviewsDot,
-                        index === activeReviewIndex && styles.reviewsDotActive,
-                      ]}
-                    />
-                  ))}
-                </View>
-              ) : null}
-            </>
-          ) : (
-            <Text style={styles.reviewsEmptyText}>Aucun avis pour le moment.</Text>
-          )}
+              {reviews.length > 1 ?
+            <View style={styles.reviewsDotsRow}>
+                  {reviews.map((_, index) =>
+              <View
+                key={`review-dot-${index}`}
+                style={[
+                styles.reviewsDot,
+                index === activeReviewIndex && styles.reviewsDotActive]
+                } />
 
-          <Text style={styles.sectionTitle}>Récupération</Text>
+              )}
+                </View> :
+            null}
+            </> :
+
+          <Text style={styles.reviewsEmptyText}>{t("screens.client.listingdetailsscreen.aucunAvisPourLeMoment")}</Text>
+          }
+
+          <Text style={styles.sectionTitle}>{t("screens.client.listingdetailsscreen.recuperation")}</Text>
           <View style={styles.pickupInfoCard}>
             <View style={styles.pickupInfoRow}>
               <Ionicons name="location-outline" size={16} color="#cfd3ff" />
-              <Text style={styles.pickupInfoText}>{listing.pickupAddress || 'Adresse non précisée'}</Text>
+              <Text style={styles.pickupInfoText}>{listing.pickupAddress || t("screens.reservations.reservationdatepickerscreen.adresseNonPrecisee")}</Text>
             </View>
             <View style={styles.pickupInfoRow}>
               <Ionicons name="car-outline" size={16} color="#cfd3ff" />
-              <Text style={styles.pickupInfoText}>
-                Livraison: {Number(listing.deliveryFee || 0) > 0 ? `${Number(listing.deliveryFee).toLocaleString('fr-FR')} DA` : 'non disponible'}
+              <Text style={styles.pickupInfoText}>{t("screens.client.listingdetailsscreen.livraison")}
+                {Number(listing.deliveryFee || 0) > 0 ? `${Number(listing.deliveryFee).toLocaleString('fr-FR')} DA` : 'non disponible'}
               </Text>
             </View>
           </View>
 
           <View style={styles.reservationCard}>
             <View style={styles.reservationInfo}>
-              <Text style={styles.reservationLabel}>Prix par jour</Text>
+              <Text style={styles.reservationLabel}>{t("screens.client.listingdetailsscreen.prixParJour")}</Text>
               <Text style={styles.reservationPrice}>{formatPrice(listing.pricePerDay)}</Text>
             </View>
-            {listing.available ? (
-              <TouchableOpacity onPress={() => navigation.navigate('ReservationDatePicker', { listing })}>
+            {listing.available ?
+            <TouchableOpacity onPress={() => navigation.navigate('ReservationDatePicker', { listing })}>
                 <LinearGradient
-                  colors={[COLORS.secondary, COLORS.primary]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.reservationButton}
-                >
-                  <Text style={styles.reservationButtonText}>Reserver</Text>
+                colors={[COLORS.secondary, COLORS.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.reservationButton}>
+                
+                  <Text style={styles.reservationButtonText}>{t("screens.client.listingdetailsscreen.reserver")}</Text>
                 </LinearGradient>
-              </TouchableOpacity>
-            ) : (
-              <View style={[styles.reservationButton, styles.reservationButtonDisabled]}>
-                <Text style={styles.reservationButtonText}>Indisponible</Text>
+              </TouchableOpacity> :
+
+            <View style={[styles.reservationButton, styles.reservationButtonDisabled]}>
+                <Text style={styles.reservationButtonText}>{t("screens.client.listingdetailsscreen.indisponible")}</Text>
               </View>
-            )}
+            }
           </View>
 
           <View style={styles.ownerCard}>
@@ -308,9 +308,9 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               <View>
                 <View style={styles.ownerNameRow}>
                   <Text style={styles.ownerName}>{listing.owner?.name || 'Proprietaire'}</Text>
-                  {listing.owner?.verified && (
-                    <Text style={styles.ownerVerified}>Verifie</Text>
-                  )}
+                  {listing.owner?.verified &&
+                  <Text style={styles.ownerVerified}>{t("screens.client.listingdetailsscreen.verifie")}</Text>
+                  }
                 </View>
                 <View style={styles.ownerLocationRow}>
                   <Ionicons name="location-outline" size={13} color="#8e95bf" />
@@ -333,39 +333,39 @@ const ListingDetailsScreen = ({ navigation, route }) => {
                     id: otherUserId,
                     name: rawName || undefined,
                     firstName: firstName || undefined,
-                    lastName: lastName || undefined,
-                  },
+                    lastName: lastName || undefined
+                  }
                 });
-              }}
-            >
+              }}>
+              
               <Ionicons name="chatbubble-ellipses-outline" size={18} color="#8f6cff" />
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
-    </View>
-  );
+    </View>);
+
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090b1e',
+    backgroundColor: '#090b1e'
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#090b1e',
+    backgroundColor: '#090b1e'
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 20
   },
   heroImage: {
     height: 290,
-    position: 'relative',
+    position: 'relative'
   },
   heroSlideImage: {
     width: SCREEN_WIDTH,
-    height: 290,
+    height: 290
   },
   heroTopRow: {
     position: 'absolute',
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   heroDotsRow: {
     position: 'absolute',
@@ -386,21 +386,21 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 6,
+    gap: 6
   },
   heroDot: {
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.5)'
   },
   heroDotActive: {
     width: 18,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff'
   },
   heroActionsRight: {
-    flexDirection: 'row',
+    flexDirection: 'row'
   },
   heroButton: {
     width: 38,
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(8, 10, 27, 0.6)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
-    marginLeft: 8,
+    marginLeft: 8
   },
   body: {
     marginTop: -10,
@@ -419,81 +419,81 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingHorizontal: 16,
     paddingTop: 18,
-    backgroundColor: '#090b1e',
+    backgroundColor: '#090b1e'
   },
   titlePriceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'flex-start'
   },
   brand: {
     color: '#aab0d6',
     fontSize: 20 / 2,
-    marginBottom: 4,
+    marginBottom: 4
   },
   model: {
     color: '#f6f8ff',
     fontSize: 42 / 2,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   priceBlock: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-end'
   },
   priceLead: {
     color: '#aab0d6',
-    fontSize: 10,
+    fontSize: 10
   },
   price: {
     color: '#7a5cff',
     fontSize: 42 / 2,
     fontWeight: '800',
-    lineHeight: 26,
+    lineHeight: 26
   },
   priceUnit: {
     color: '#cdd2f2',
-    fontSize: 12,
+    fontSize: 12
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 12,
-    marginBottom: 14,
+    marginBottom: 14
   },
   categoryPill: {
     backgroundColor: 'rgba(122, 92, 255, 0.2)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    marginRight: 10,
+    marginRight: 10
   },
   categoryText: {
     color: '#8f6cff',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   metaText: {
     color: '#c6ccef',
     fontSize: 14,
-    marginRight: 10,
+    marginRight: 10
   },
   ratingRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   ratingText: {
     color: '#F8B84E',
     fontWeight: '700',
     marginLeft: 3,
-    marginRight: 4,
+    marginRight: 4
   },
   reviewsText: {
     color: '#98a0c8',
-    fontSize: 12,
+    fontSize: 12
   },
   specsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   specCard: {
     width: '48.4%',
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 12,
     marginBottom: 10,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   specIconBadge: {
     width: 38,
@@ -513,47 +513,47 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(143, 108, 255, 0.16)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 10
   },
   specValue: {
     color: '#f3f5ff',
     fontSize: 28 / 2,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 4
   },
   specLabel: {
     color: '#9aa2cc',
-    fontSize: 13,
+    fontSize: 13
   },
   sectionTitle: {
     color: '#f3f5ff',
     fontSize: 32 / 2,
     fontWeight: '700',
     marginTop: 10,
-    marginBottom: 8,
+    marginBottom: 8
   },
   reviewsHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 12
   },
   reviewsSummaryRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 8
   },
   reviewsAvgText: {
     color: '#cfd3ff',
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '900'
   },
   reviewsCarousel: {
     paddingRight: 16,
-    marginBottom: 14,
+    marginBottom: 14
   },
   reviewsSlide: {
-    marginRight: 12,
+    marginRight: 12
   },
   reviewsDotsRow: {
     flexDirection: 'row',
@@ -561,39 +561,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     marginTop: -2,
-    marginBottom: 14,
+    marginBottom: 14
   },
   reviewsDot: {
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.35)'
   },
   reviewsDotActive: {
     width: 18,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff'
   },
   reviewsLoadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 14
   },
   reviewsLoadingText: {
     color: '#8e95bf',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   reviewsEmptyText: {
     color: '#8e95bf',
     fontSize: 13,
-    marginBottom: 14,
+    marginBottom: 14
   },
   description: {
     color: '#9aa2cc',
     fontSize: 15,
-    lineHeight: 22,
+    lineHeight: 22
   },
   pickupInfoCard: {
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -601,18 +601,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
     borderRadius: 16,
     padding: 12,
-    marginBottom: 12,
+    marginBottom: 12
   },
   pickupInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 8
   },
   pickupInfoText: {
     flex: 1,
     color: '#cfd3ff',
-    lineHeight: 18,
+    lineHeight: 18
   },
   ownerCard: {
     marginTop: 18,
@@ -625,12 +625,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(148, 156, 233, 0.2)',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   ownerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    flex: 1
   },
   ownerAvatar: {
     width: 46,
@@ -639,32 +639,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#5a62f2',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 10
   },
   ownerNameRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   ownerName: {
     color: '#f2f4ff',
     fontSize: 16,
     fontWeight: '700',
-    marginRight: 8,
+    marginRight: 8
   },
   ownerVerified: {
     color: '#23d49f',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '700'
   },
   ownerLocationRow: {
     marginTop: 4,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   ownerLocation: {
     color: '#8e95bf',
     fontSize: 13,
-    marginLeft: 4,
+    marginLeft: 4
   },
   ownerMessageButton: {
     width: 38,
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(13, 16, 35, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 10,
+    marginLeft: 10
   },
   reservationCard: {
     marginTop: 18,
@@ -688,20 +688,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(148, 156, 233, 0.2)',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   reservationInfo: {
-    alignItems: 'flex-start',
+    alignItems: 'flex-start'
   },
   reservationLabel: {
     color: '#9aa2cc',
     fontSize: 12,
-    marginBottom: 4,
+    marginBottom: 4
   },
   reservationPrice: {
     color: '#7a5cff',
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '800'
   },
   reservationButton: {
     minWidth: 140,
@@ -709,37 +709,37 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 20
   },
   reservationButtonDisabled: {
-    backgroundColor: '#444a71',
+    backgroundColor: '#444a71'
   },
   reservationButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 16
   },
   fallbackContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#090b1e',
+    backgroundColor: '#090b1e'
   },
   fallbackTitle: {
     color: '#f6f8ff',
     fontSize: 16,
-    marginBottom: 12,
+    marginBottom: 12
   },
   fallbackButton: {
     borderRadius: 10,
     backgroundColor: '#6C4DFF',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 10
   },
   fallbackButtonText: {
     color: '#fff',
-    fontWeight: '600',
-  },
+    fontWeight: '600'
+  }
 });
 
 export default ListingDetailsScreen;

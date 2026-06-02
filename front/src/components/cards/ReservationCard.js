@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';import { useTranslation } from "react-i18next";
 
 const formatPrice = (value) => `${(value || 0).toLocaleString('fr-FR')} DA`;
 
@@ -38,8 +38,8 @@ const ReservationCard = ({
   onPress,
   showFinishPayment = false,
   onFinishPayment,
-  compact = false,
-}) => {
+  compact = false
+}) => {const { t } = useTranslation();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const tightLayout = width <= 380;
@@ -50,7 +50,7 @@ const ReservationCard = ({
     duration: adaptFont(width, 14, 12.5, 11.5),
     status: adaptFont(width, 11, 10.5, 9.5),
     price: adaptFont(width, compact ? 18 : 22, compact ? 14.5 : 14, compact ? 13.5 : 12.5),
-    finishPayment: adaptFont(width, 11, 10.5, 9.5),
+    finishPayment: adaptFont(width, 11, 10.5, 9.5)
   };
 
   const listing = reservation?.listing || {};
@@ -60,19 +60,19 @@ const ReservationCard = ({
   const end = reservation?.endDate || reservation?.to || reservation?.end_date || reservation?.toDate;
 
   const imageUri =
-    listing?.image ||
-    listing?.car?.carImages?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
-    listing?.car?.carImages?.find((i) => i?.image_url)?.image_url ||
-    listing?.car?.carImages?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
-    listing?.car?.carImages?.find((i) => i?.imageUrl)?.imageUrl ||
-    listing?.car?.car_images?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
-    listing?.car?.car_images?.find((i) => i?.image_url)?.image_url ||
-    listing?.car?.car_images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
-    listing?.car?.car_images?.find((i) => i?.imageUrl)?.imageUrl ||
-    listing?.car?.images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
-    listing?.car?.images?.find((i) => i?.imageUrl)?.imageUrl ||
-    listing?.imageUrl ||
-    null;
+  listing?.image ||
+  listing?.car?.carImages?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
+  listing?.car?.carImages?.find((i) => i?.image_url)?.image_url ||
+  listing?.car?.carImages?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
+  listing?.car?.carImages?.find((i) => i?.imageUrl)?.imageUrl ||
+  listing?.car?.car_images?.find((i) => i?.is_primary && i?.image_url)?.image_url ||
+  listing?.car?.car_images?.find((i) => i?.image_url)?.image_url ||
+  listing?.car?.car_images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
+  listing?.car?.car_images?.find((i) => i?.imageUrl)?.imageUrl ||
+  listing?.car?.images?.find((i) => i?.isPrimary && i?.imageUrl)?.imageUrl ||
+  listing?.car?.images?.find((i) => i?.imageUrl)?.imageUrl ||
+  listing?.imageUrl ||
+  null;
 
   const handlePress = () => {
     if (onPress) return onPress(reservation);
@@ -105,7 +105,7 @@ const ReservationCard = ({
     cancelled: '#FF4D4F', // red
     refunded: '#3895dc',
     refund_pending: '#FF8C00',
-    finished: '#5e1b78', // dark purple
+    finished: '#5e1b78' // dark purple
   };
 
   const badgeColor = statusColors[status] || '#6EC1FF';
@@ -114,17 +114,17 @@ const ReservationCard = ({
     <TouchableOpacity style={[styles.card, compact && styles.compactCard, tightLayout && styles.tightCard]} activeOpacity={0.85} onPress={handlePress}>
       {/* Image */}
       <View style={[styles.imageWrapper, compact && styles.compactImageWrapper, tightLayout && styles.tightImageWrapper]}>
-        {imageUri ? (
-          <Image 
-            source={{ uri: imageUri }} 
-            style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage]}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage, styles.imagePlaceholder]}>
+        {imageUri ?
+        <Image
+          source={{ uri: imageUri }}
+          style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage]}
+          resizeMode="cover" /> :
+
+
+        <View style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage, styles.imagePlaceholder]}>
             <Ionicons name="car-sport-outline" size={36} color="rgba(255,255,255,0.8)" />
           </View>
-        )}
+        }
       </View>
 
       {/* Content Area */}
@@ -132,25 +132,25 @@ const ReservationCard = ({
         {/* Top: Car Name */}
         <View style={styles.titleSection}>
           <Text style={[styles.carName, { fontSize: fontSize.carName }]} numberOfLines={1}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
-          {listing?.city && (
-            <View style={styles.cityContainer}>
+          {listing?.city &&
+          <View style={styles.cityContainer}>
               <Ionicons name="location-outline" size={12} color="#8b91ba" />
               <Text style={[styles.cityText, { fontSize: fontSize.city }]}>{listing.city}</Text>
             </View>
-          )}
+          }
         </View>
 
         {/* Middle: Dates */}
         <View style={[styles.dateSection, tightLayout && styles.tightDateSection]}>
           <Ionicons name="calendar-outline" size={14} color="#8b91ba" />
-          {tightLayout ? (
-            <View style={styles.stackedDateText}>
+          {tightLayout ?
+          <View style={styles.stackedDateText}>
               <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(start)} →</Text>
               <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(end)}</Text>
-            </View>
-          ) : (
-            <Text style={[styles.dateText, { fontSize: fontSize.date }]} numberOfLines={1}>{formatDateRange(start, end)}</Text>
-          )}
+            </View> :
+
+          <Text style={[styles.dateText, { fontSize: fontSize.date }]} numberOfLines={1}>{formatDateRange(start, end)}</Text>
+          }
         </View>
 
         {/* Bottom: Duration */}
@@ -167,19 +167,19 @@ const ReservationCard = ({
             {status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}
           </Text>
         </View>
-        {showFinishPayment && (
-          <TouchableOpacity style={[styles.finishPaymentButton, tightLayout && styles.tightFinishPaymentButton]} onPress={handleFinishPaymentPress}>
-            <Text style={[styles.finishPaymentButtonText, { fontSize: fontSize.finishPayment }]} numberOfLines={1}>
-              Finish payment
-            </Text>
+        {showFinishPayment &&
+        <TouchableOpacity style={[styles.finishPaymentButton, tightLayout && styles.tightFinishPaymentButton]} onPress={handleFinishPaymentPress}>
+            <Text style={[styles.finishPaymentButtonText, { fontSize: fontSize.finishPayment }]} numberOfLines={1}>{t("components.cards.reservationcard.finishPayment")}
+
+          </Text>
           </TouchableOpacity>
-        )}
+        }
         <Text style={[styles.price, compact && styles.compactPrice, { fontSize: fontSize.price }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
           {formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}
         </Text>
       </View>
-    </TouchableOpacity>
-  );
+    </TouchableOpacity>);
+
 };
 
 const styles = StyleSheet.create({
@@ -194,44 +194,44 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 14,
     overflow: 'hidden',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   compactCard: {
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 8
   },
   tightCard: {
     paddingVertical: 11,
-    paddingHorizontal: 6,
+    paddingHorizontal: 6
   },
   imageWrapper: {
     position: 'relative',
-    marginRight: 14,
+    marginRight: 14
   },
   compactImageWrapper: {
-    marginRight: 10,
+    marginRight: 10
   },
   tightImageWrapper: {
-    marginRight: 7,
+    marginRight: 7
   },
   image: {
     width: 120,
     height: 95,
     borderRadius: 12,
-    backgroundColor: '#1a1d2e',
+    backgroundColor: '#1a1d2e'
   },
   compactImage: {
     width: 132,
-    height: 104,
+    height: 104
   },
   tightImage: {
     width: 104,
-    height: 92,
+    height: 92
   },
   imagePlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#6C4DFF',
+    backgroundColor: '#6C4DFF'
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -239,117 +239,117 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#22c55e',
     marginBottom: 35,
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-end'
   },
   tightStatusBadge: {
     paddingHorizontal: 6,
     paddingVertical: 4,
     marginBottom: 22,
-    maxWidth: 82,
+    maxWidth: 82
   },
   statusText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '700'
   },
   contentWrapper: {
     flex: 1,
     justifyContent: 'space-between',
     paddingRight: 8,
-    minWidth: 0,
+    minWidth: 0
   },
   tightContentWrapper: {
-    paddingRight: 4,
+    paddingRight: 4
   },
   titleSection: {
-    marginBottom: 6,
+    marginBottom: 6
   },
   carName: {
     color: '#F5F7FF',
     fontWeight: '700',
-    maxWidth: '90%',
+    maxWidth: '90%'
   },
   cityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 3,
-    gap: 4,
+    gap: 4
   },
   cityText: {
     color: '#8b91ba',
-    fontWeight: '400',
+    fontWeight: '400'
   },
   dateSection: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-    flexWrap: 'nowrap',
+    flexWrap: 'nowrap'
   },
   tightDateSection: {
     alignItems: 'flex-start',
-    marginBottom: 6,
+    marginBottom: 6
   },
   stackedDateText: {
     flex: 1,
     marginLeft: 6,
-    minWidth: 0,
+    minWidth: 0
   },
   dateText: {
     color: '#8b91ba',
     marginLeft: 6,
     fontWeight: '500',
-    flexShrink: 1,
+    flexShrink: 1
   },
   tightDateText: {
-    marginLeft: 0,
+    marginLeft: 0
   },
   durationSection: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   durationText: {
     color: '#8b91ba',
     marginLeft: 6,
-    fontWeight: '500',
+    fontWeight: '500'
   },
   rightSection: {
     alignItems: 'flex-end',
     justifyContent: 'flex-start',
     minWidth: 95,
-    marginLeft: 10,
+    marginLeft: 10
   },
   compactRightSection: {
     minWidth: 74,
-    marginLeft: 6,
+    marginLeft: 6
   },
   tightRightSection: {
     minWidth: 58,
     marginLeft: 4,
-    flexShrink: 0,
+    flexShrink: 0
   },
   price: {
     color: '#0b63ff',
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.3
   },
   compactPrice: {
-    letterSpacing: 0,
+    letterSpacing: 0
   },
   finishPaymentButton: {
     backgroundColor: '#0b63ff',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 10
   },
   tightFinishPaymentButton: {
     paddingHorizontal: 6,
     paddingVertical: 5,
-    maxWidth: 82,
+    maxWidth: 82
   },
   finishPaymentButtonText: {
     color: '#fff',
-    fontWeight: '700',
-  },
+    fontWeight: '700'
+  }
 });
 
 export default ReservationCard;

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
-import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
 
 const tabs = ['Tout', 'Inscriptions', 'Reservations', 'Documents', 'Paiements'];
 
@@ -16,7 +16,7 @@ const pickType = (item) => {
   return 'Reservations';
 };
 
-export default function AdminReservationsScreen({ navigation, route }) {
+export default function AdminReservationsScreen({ navigation, route }) {const { t } = useTranslation();
   const [active, setActive] = useState('Tout');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,49 +36,49 @@ export default function AdminReservationsScreen({ navigation, route }) {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {load();}, []);
 
   const visible = useMemo(() => events.filter((e) => active === 'Tout' || e.category === active), [events, active]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Journal d'activite</Text>
+        <Text style={styles.title}>{t("screens.admin.adminreservationsscreen.journalDactivite")}</Text>
 
         <View style={styles.topStats}>
-          <MiniStat icon="flash-outline" value={visible.length} label="Aujourd'hui" />
-          <MiniStat icon="list-outline" value={events.length} label="Total" />
-          <MiniStat icon="calendar-outline" value={visible.filter((e) => e.category === 'Reservations').length} label="Reservations" />
-          <MiniStat icon="cash-outline" value={visible.filter((e) => e.category === 'Paiements').length} label="Paiements" />
+          <MiniStat icon="flash-outline" value={visible.length} label={t("screens.admin.adminreservationsscreen.aujourdhui")} />
+          <MiniStat icon="list-outline" value={events.length} label={t("screens.admin.adminreservationsscreen.total")} />
+          <MiniStat icon="calendar-outline" value={visible.filter((e) => e.category === t("screens.admin.adminreservationsscreen.reservations")).length} label={t("screens.admin.adminreservationsscreen.reservations")} />
+          <MiniStat icon="cash-outline" value={visible.filter((e) => e.category === t("screens.admin.adminreservationsscreen.paiements")).length} label={t("screens.admin.adminreservationsscreen.paiements")} />
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow}>
-          {tabs.map((tab) => (
-            <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
+          {tabs.map((tab) =>
+          <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
               <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{tab}</Text>
             </TouchableOpacity>
-          ))}
+          )}
         </ScrollView>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
-          {visible.map((e) => (
-            <View key={e._id} style={styles.item}>
+          {visible.map((e) =>
+          <View key={e._id} style={styles.item}>
               <Text style={styles.time}>{e.at ? new Date(e.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</Text>
-              <View style={styles.iconWrap}><Ionicons name={e.category === 'Paiements' ? 'cash-outline' : e.category === 'Documents' ? 'document-outline' : e.category === 'Inscriptions' ? 'person-add-outline' : 'calendar-outline'} size={15} color="#8f9dff" /></View>
+              <View style={styles.iconWrap}><Ionicons name={e.category === t("screens.admin.adminreservationsscreen.paiements") ? 'cash-outline' : e.category === t("components.admin.adminbottomnavigation.documents") ? 'document-outline' : e.category === 'Inscriptions' ? 'person-add-outline' : 'calendar-outline'} size={15} color="#8f9dff" /></View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.badge}>{e.category}</Text>
                 <Text style={styles.eventTitle}>{e.type || 'Evenement'}</Text>
                 <Text style={styles.eventSub}>{e.status || ''}</Text>
               </View>
             </View>
-          ))}
-          {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
+          )}
+          {loading ? <Text style={styles.loading}>{t("screens.admin.adminreservationsscreen.chargement")}</Text> : null}
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="activity" />
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 }
 
 function MiniStat({ icon, value, label }) {
@@ -87,8 +87,8 @@ function MiniStat({ icon, value, label }) {
       <Ionicons name={icon} size={14} color="#8f9dff" />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
+    </View>);
+
 }
 
 const styles = StyleSheet.create({
@@ -112,5 +112,5 @@ const styles = StyleSheet.create({
   eventTitle: { color: '#f1f4ff', fontSize: 14, marginTop: 2 },
   eventSub: { color: '#8b93c2', fontSize: 12, marginTop: 1 },
   loading: { color: '#8d94c2', marginTop: 8 },
-  error: { color: '#ff7f90', marginBottom: 8 },
+  error: { color: '#ff7f90', marginBottom: 8 }
 });

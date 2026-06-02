@@ -1,5 +1,27 @@
 {
-  "common": {},
+  "common": {
+    "legacyHome": {
+      "allVehicles": "Tous les véhicules",
+      "all": "Tous",
+      "gearboxAuto": "Boîte: Auto",
+      "gearboxManual": "Boîte: Manuelle",
+      "fuelGasoline": "Carburant: Essence",
+      "fuelDiesel": "Carburant: Diesel",
+      "popular": "Populaire",
+      "priceAsc": "Prix ↑",
+      "priceDesc": "Prix ↓",
+      "rating": "Note",
+      "loadListingsError": "Impossible de charger les annonces",
+      "searchPlaceholder": "Rechercher une voiture ou une ville",
+      "filter": "Filtrer",
+      "sort": "Trier",
+      "loadingVehicles": "Chargement des vehicules...",
+      "error": "Erreur",
+      "retry": "Reessayer",
+      "noVehicleFound": "Aucun véhicule trouvé",
+      "tryAnotherSearch": "Essaie une autre recherche ou un autre filtre."
+    }
+  },
   "components": {
     "admin": {
       "adminbottomnavigation": {

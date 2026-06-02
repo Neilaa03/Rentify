@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, SectionTitle } from '../../components/agency/AgencyPrimitives';
-import { getAgencyProfile } from '../../services/agency';
+import { getAgencyProfile } from '../../services/agency';import { useTranslation } from "react-i18next";
 
-export default function AgencyProfileScreen({ navigation, route }) {
+export default function AgencyProfileScreen({ navigation, route }) {const { t } = useTranslation();
   const token = route?.params?.token;
   const [state, setState] = useState({ loading: true, error: '', profile: null });
   const [isEditing, setIsEditing] = useState(false);
@@ -23,7 +23,7 @@ export default function AgencyProfileScreen({ navigation, route }) {
       setState({
         loading: false,
         error: '',
-        profile: profileData,
+        profile: profileData
       });
       setEditData(profileData || {});
     } catch (error) {
@@ -38,45 +38,45 @@ export default function AgencyProfileScreen({ navigation, route }) {
   const profile = state.profile || {};
 
   const onLeave = () => {
-    Alert.alert(
-      'Quitter l\'espace agence',
-      'Souhaitez-vous revenir à l\'écran de connexion ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Quitter',
-          style: 'destructive',
-          onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
-        },
-      ]
+    Alert.alert(t("screens.agency.agencyprofilescreen.quitterLespaceAgence"), t("screens.agency.agencyprofilescreen.souhaitezVousRevenirALecranDeConnexion"),
+
+
+    [
+    { text: t("screens.agency.agencyprofilescreen.annuler"), style: 'cancel' },
+    {
+      text: 'Quitter',
+      style: 'destructive',
+      onPress: () => navigation.reset({ index: 0, routes: [{ name: t("screens.auth.loginscreen.login") }] })
+    }]
+
     );
   };
 
   const handleSaveChanges = async () => {
     // TODO: Implement API call to update profile
     setIsEditing(false);
-    Alert.alert('Succès', 'Modifications enregistrées avec succès');
+    Alert.alert(t("screens.agency.agencyprofilescreen.succes"), t("screens.agency.agencyprofilescreen.modificationsEnregistreesAvecSucces"));
   };
 
-  const EditableField = ({ label, value, placeholder, icon }) => (
-    <View style={styles.fieldContainer}>
+  const EditableField = ({ label, value, placeholder, icon }) =>
+  <View style={styles.fieldContainer}>
       <View style={styles.fieldHeader}>
         {icon && <Ionicons name={icon} size={16} color="#8f7dff" style={{ marginRight: 6 }} />}
         <Text style={styles.fieldLabel}>{label}</Text>
       </View>
-      {isEditing ? (
-        <TextInput
-          style={styles.fieldInput}
-          value={editData[value] || ''}
-          placeholder={placeholder}
-          placeholderTextColor="#5a6280"
-          onChangeText={(text) => setEditData({ ...editData, [value]: text })}
-        />
-      ) : (
-        <Text style={styles.fieldValue}>{editData[value] || profile[value] || '-'}</Text>
-      )}
-    </View>
-  );
+      {isEditing ?
+    <TextInput
+      style={styles.fieldInput}
+      value={editData[value] || ''}
+      placeholder={placeholder}
+      placeholderTextColor="#5a6280"
+      onChangeText={(text) => setEditData({ ...editData, [value]: text })} /> :
+
+
+    <Text style={styles.fieldValue}>{editData[value] || profile[value] || '-'}</Text>
+    }
+    </View>;
+
 
   return (
     <View style={styles.container}>
@@ -91,40 +91,40 @@ export default function AgencyProfileScreen({ navigation, route }) {
             <View style={styles.headerWithAction}>
               <View style={{ flex: 1 }}>
                 <SectionTitle
-                  kicker="AGENCE"
-                  title="Profil & vérification"
-                  subtitle="Informations légales, documents et gestion"
-                />
+                      kicker="AGENCE"
+                      title={t("screens.agency.agencyprofilescreen.profilVerification")}
+                      subtitle={t("screens.agency.agencyprofilescreen.informationsLegalesDocumentsEtGestion")} />
+                    
               </View>
-              {!isEditing && (
-                <TouchableOpacity 
-                  style={styles.editIconButton}
-                  onPress={() => setIsEditing(true)}
-                >
+              {!isEditing &&
+                  <TouchableOpacity
+                    style={styles.editIconButton}
+                    onPress={() => setIsEditing(true)}>
+                    
                   <Ionicons name="create-outline" size={20} color="#8f7dff" />
                 </TouchableOpacity>
-              )}
+                  }
             </View>
 
             {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
-            {state.loading ? (
-              <View style={styles.centered}>
+            {state.loading ?
+                <View style={styles.centered}>
                 <ActivityIndicator size="large" color="#8f7dff" />
-              </View>
-            ) : (
-              <>
+              </View> :
+
+                <>
                 {/* Company Information Section */}
                 <AgencyCard style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <Ionicons name="business-outline" size={20} color="#8f7dff" />
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.sectionTitle}>Informations commerciales</Text>
-                      <Text style={styles.sectionSubtitle}>Raison sociale et identifiants</Text>
+                      <Text style={styles.sectionTitle}>{t("screens.agency.agencyprofilescreen.informationsCommerciales")}</Text>
+                      <Text style={styles.sectionSubtitle}>{t("screens.agency.agencyprofilescreen.raisonSocialeEtIdentifiants")}</Text>
                     </View>
                   </View>
                   <View style={styles.divider} />
-                  <EditableField label="Nom commercial" value="commercialName" placeholder="Ex: Rentify Agency" icon="storefront-outline" />
-                  <EditableField label="Raison sociale" value="corporateName" placeholder="Raison sociale" icon="document-text-outline" />
+                  <EditableField label={t("screens.agency.agencyprofilescreen.nomCommercial")} value="commercialName" placeholder={t("screens.agency.agencyprofilescreen.exRentifyAgency")} icon="storefront-outline" />
+                  <EditableField label={t("screens.agency.agencyprofilescreen.raisonSociale")} value="corporateName" placeholder={t("screens.agency.agencyprofilescreen.raisonSociale")} icon="document-text-outline" />
                 </AgencyCard>
 
                 {/* Legal Information Section */}
@@ -132,13 +132,13 @@ export default function AgencyProfileScreen({ navigation, route }) {
                   <View style={styles.sectionHeader}>
                     <Ionicons name="shield-checkmark-outline" size={20} color="#21d4a7" />
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.sectionTitle}>Informations légales</Text>
-                      <Text style={styles.sectionSubtitle}>Enregistrement et vérification</Text>
+                      <Text style={styles.sectionTitle}>{t("screens.agency.agencyprofilescreen.informationsLegales")}</Text>
+                      <Text style={styles.sectionSubtitle}>{t("screens.agency.agencyprofilescreen.enregistrementEtVerification")}</Text>
                     </View>
                   </View>
                   <View style={styles.divider} />
-                  <EditableField label="Registre de commerce" value="registrationNumber" placeholder="Numéro RC" icon="receipt-outline" />
-                  <EditableField label="Numéro NIF" value="nif" placeholder="NIF" icon="card-outline" />
+                  <EditableField label={t("screens.agency.agencyprofilescreen.registreDeCommerce")} value="registrationNumber" placeholder={t("screens.agency.agencyprofilescreen.numeroRc")} icon="receipt-outline" />
+                  <EditableField label={t("screens.agency.agencyprofilescreen.numeroNif")} value="nif" placeholder={t("screens.agency.agencyprofilescreen.nif")} icon="card-outline" />
                 </AgencyCard>
 
                 {/* Manager Information Section */}
@@ -146,74 +146,74 @@ export default function AgencyProfileScreen({ navigation, route }) {
                   <View style={styles.sectionHeader}>
                     <Ionicons name="person-outline" size={20} color="#ffb347" />
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.sectionTitle}>Responsable de l'agence</Text>
-                      <Text style={styles.sectionSubtitle}>Contact du gérant</Text>
+                      <Text style={styles.sectionTitle}>{t("screens.agency.agencyprofilescreen.responsableDeLagence")}</Text>
+                      <Text style={styles.sectionSubtitle}>{t("screens.agency.agencyprofilescreen.contactDuGerant")}</Text>
                     </View>
                   </View>
                   <View style={styles.divider} />
-                  <EditableField label="Nom du gérant" value="managerName" placeholder="Nom complet" icon="person-circle-outline" />
-                  <EditableField label="Téléphone" value="managerPhone" placeholder="+213..." icon="call-outline" />
+                  <EditableField label={t("screens.agency.agencyprofilescreen.nomDuGerant")} value="managerName" placeholder={t("screens.agency.agencyprofilescreen.nomComplet")} icon="person-circle-outline" />
+                  <EditableField label={t("screens.agency.agencyprofilescreen.telephone")} value="managerPhone" placeholder="+213..." icon="call-outline" />
                 </AgencyCard>
 
                 {/* Verification Status */}
                 <AgencyCard style={[styles.section, styles.statusCard]}>
                   <View style={styles.statusContent}>
                     <View style={styles.statusIcon}>
-                      <Ionicons 
-                        name={profile.verificationStatus === 'VERIFIED' ? "checkmark-circle" : "information-circle"} 
-                        size={32} 
-                        color={profile.verificationStatus === 'VERIFIED' ? '#21d4a7' : '#ffb347'} 
-                      />
+                      <Ionicons
+                          name={profile.verificationStatus === 'VERIFIED' ? "checkmark-circle" : "information-circle"}
+                          size={32}
+                          color={profile.verificationStatus === 'VERIFIED' ? '#21d4a7' : '#ffb347'} />
+                        
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.statusTitle}>
-                        {profile.verificationStatus === 'VERIFIED' ? 'Agence vérifiée' : 'En attente de vérification'}
+                        {profile.verificationStatus === 'VERIFIED' ? 'Agence vérifiée' : t("screens.agency.agencydashboardscreen.enAttenteDeVerification")}
                       </Text>
                       <Text style={styles.statusSubtitle}>
-                        {profile.verificationStatus === 'VERIFIED' 
-                          ? 'Votre agence est approuvée et active'
-                          : 'Votre dossier est en cours de révision'}
+                        {profile.verificationStatus === 'VERIFIED' ?
+                          'Votre agence est approuvée et active' :
+                          'Votre dossier est en cours de révision'}
                       </Text>
                     </View>
                   </View>
                 </AgencyCard>
 
                 {/* Action Buttons */}
-                {isEditing && (
+                {isEditing &&
                   <View style={styles.editingActions}>
                     <TouchableOpacity style={styles.saveButton} onPress={handleSaveChanges}>
                       <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                      <Text style={styles.saveButtonText}>Enregistrer les modifications</Text>
+                      <Text style={styles.saveButtonText}>{t("screens.agency.agencyprofilescreen.enregistrerLesModifications")}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditing(false)}>
-                      <Text style={styles.cancelButtonText}>Annuler</Text>
+                      <Text style={styles.cancelButtonText}>{t("screens.agency.agencyprofilescreen.annuler")}</Text>
                     </TouchableOpacity>
                   </View>
-                )}
+                  }
 
-                {!isEditing && (
+                {!isEditing &&
                   <>
                     <TouchableOpacity style={styles.primaryAction} onPress={() => navigation.navigate('AgencyDocuments', { token: route?.params?.token, user: route?.params?.user })}>
                       <Ionicons name="document-attach-outline" size={18} color="#fff" />
-                      <Text style={styles.primaryActionText}>Gérer mes documents</Text>
+                      <Text style={styles.primaryActionText}>{t("screens.agency.agencyprofilescreen.gererMesDocuments")}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.dangerAction} onPress={onLeave}>
                       <Ionicons name="log-out-outline" size={18} color="#FF5C6C" />
-                      <Text style={styles.dangerActionText}>Quitter l'espace agence</Text>
+                      <Text style={styles.dangerActionText}>{t("screens.agency.agencyprofilescreen.quitterLespaceAgence")}</Text>
                     </TouchableOpacity>
                   </>
-                )}
+                  }
               </>
-            )}
+                }
           </ScrollView>
           </View>
           </View>
           <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
         </SafeAreaView>
       </ImageBackground>
-    </View>
-  );
+    </View>);
+
 }
 
 const styles = StyleSheet.create({
@@ -251,5 +251,5 @@ const styles = StyleSheet.create({
   primaryAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(79,140,255,0.95)', paddingVertical: 14, borderRadius: 12, marginBottom: 10 },
   primaryActionText: { color: '#fff', fontWeight: '900', fontSize: 14 },
   dangerAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, marginBottom: 10 },
-  dangerActionText: { color: '#FF5C6C', fontWeight: '900', fontSize: 14 },
+  dangerActionText: { color: '#FF5C6C', fontWeight: '900', fontSize: 14 }
 });

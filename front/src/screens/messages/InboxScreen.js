@@ -7,7 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getConversations, getOwnerClientsExpanded } from '../../services/messages';
 import { getCurrentUserProfile } from '../../services/authSession';
 import { getSocket } from '../../services/socketClient';
-import { buildApiUrl } from '../../services/api';
+import { buildApiUrl } from '../../services/api';import { useTranslation } from "react-i18next";
 
 const initialsFor = (user) => {
   const first = (user?.firstName || user?.first_name || '').trim();
@@ -35,12 +35,12 @@ const IMAGE_PREFIX = '__image__:';
 
 const avatarUriFor = (user) => {
   const raw =
-    user?.profilePicture ||
-    user?.profile_picture ||
-    user?.avatar ||
-    user?.avatarUrl ||
-    user?.photoUrl ||
-    '';
+  user?.profilePicture ||
+  user?.profile_picture ||
+  user?.avatar ||
+  user?.avatarUrl ||
+  user?.photoUrl ||
+  '';
   const uri = String(raw || '').trim();
   if (!uri) return null;
   if (/^https?:\/\//i.test(uri)) return uri;
@@ -48,7 +48,7 @@ const avatarUriFor = (user) => {
   return buildApiUrl(path);
 };
 
-const InboxScreen = ({ navigation, route }) => {
+const InboxScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const mode = route?.params?.mode || 'conversations'; // 'conversations' | 'owner_clients'
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,16 +78,16 @@ const InboxScreen = ({ navigation, route }) => {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load]),
+    }, [load])
   );
 
   useEffect(() => {
     let cancelled = false;
-    getCurrentUserProfile()
-      .then((me) => {
-        if (!cancelled) setMeId(me?.id || null);
-      })
-      .catch(() => {});
+    getCurrentUserProfile().
+    then((me) => {
+      if (!cancelled) setMeId(me?.id || null);
+    }).
+    catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -156,7 +156,7 @@ const InboxScreen = ({ navigation, route }) => {
             ...row,
             hasMessages: true,
             unreadCount: nextUnread,
-            lastMessage: msg,
+            lastMessage: msg
           };
 
           const next = [...rows];
@@ -198,15 +198,15 @@ const InboxScreen = ({ navigation, route }) => {
     };
   }, [load, meId]);
 
-  const headerRight = useMemo(() => (
-    <TouchableOpacity style={styles.headerIcon} onPress={() => load()} disabled={isLoading}>
-      {isRefreshing ? (
-        <Ionicons name="sync-outline" size={20} color="#d6dbff" />
-      ) : (
-        <Ionicons name="refresh-outline" size={20} color="#d6dbff" />
-      )}
-    </TouchableOpacity>
-  ), [isLoading, isRefreshing, load]);
+  const headerRight = useMemo(() =>
+  <TouchableOpacity style={styles.headerIcon} onPress={() => load()} disabled={isLoading}>
+      {isRefreshing ?
+    <Ionicons name="sync-outline" size={20} color="#d6dbff" /> :
+
+    <Ionicons name="refresh-outline" size={20} color="#d6dbff" />
+    }
+    </TouchableOpacity>,
+  [isLoading, isRefreshing, load]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -214,72 +214,72 @@ const InboxScreen = ({ navigation, route }) => {
         <TouchableOpacity style={styles.headerIcon} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{mode === 'owner_clients' ? 'Clients' : 'Messages'}</Text>
+        <Text style={styles.headerTitle}>{mode === 'owner_clients' ? 'Clients' : t("screens.client.profilescreen.messages")}</Text>
         {headerRight}
       </View>
 
-      {isLoading ? (
-        <View style={styles.state}>
-          <Text style={styles.stateTitle}>Chargement...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.state}>
-          <Text style={styles.stateTitle}>Erreur</Text>
+      {isLoading ?
+      <View style={styles.state}>
+          <Text style={styles.stateTitle}>{t("screens.messages.inboxscreen.chargement")}</Text>
+        </View> :
+      error ?
+      <View style={styles.state}>
+          <Text style={styles.stateTitle}>{t("screens.messages.inboxscreen.erreur")}</Text>
           <Text style={styles.stateSubtitle}>{error}</Text>
           <TouchableOpacity style={styles.retry} onPress={load}>
-            <Text style={styles.retryText}>Reessayer</Text>
+            <Text style={styles.retryText}>{t("screens.messages.inboxscreen.reessayer")}</Text>
           </TouchableOpacity>
-        </View>
-      ) : items.length === 0 ? (
-        <View style={styles.state}>
-          <Text style={styles.stateTitle}>Aucune discussion</Text>
+        </View> :
+      items.length === 0 ?
+      <View style={styles.state}>
+          <Text style={styles.stateTitle}>{t("screens.messages.inboxscreen.aucuneDiscussion")}</Text>
           <Text style={styles.stateSubtitle}>
-            {mode === 'owner_clients'
-              ? "Aucun client pour l'instant."
-              : 'Commence une conversation depuis une annonce.'}
+            {mode === 'owner_clients' ?
+          "Aucun client pour l'instant." :
+          'Commence une conversation depuis une annonce.'}
           </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => String(item?.otherUser?.id || item?.otherUserId)}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => {
-            const otherUser = item?.otherUser || null;
-            const avatarUri = avatarUriFor(otherUser);
-            const last = item?.lastMessage || null;
-            const unreadCount = item?.unreadCount || 0;
-            const hasMessages = item?.hasMessages;
-            const isEmptyOwnerClient = mode === 'owner_clients' && hasMessages === false;
-            const isTyping = Boolean(otherUser?.id && typingByUser?.[otherUser.id]);
-            const previewText = (() => {
-              if (isTyping) return 'Typing...';
-              if (isEmptyOwnerClient) return "Aucune conversation — envoie le premier message";
-              if (unreadCount > 1) return `+${unreadCount} new messages`;
-              const msg = last?.message || '';
-              if (typeof msg === 'string' && msg.startsWith(IMAGE_PREFIX)) return 'Photo';
-              return msg;
-            })();
+        </View> :
 
-            return (
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() =>
-                  navigation.navigate('Chat', {
-                    otherUserId: otherUser?.id,
-                    otherUser,
-                    isNewConversation: isEmptyOwnerClient,
-                  })
-                }
-                activeOpacity={0.85}
-              >
+      <FlatList
+        data={items}
+        keyExtractor={(item) => String(item?.otherUser?.id || item?.otherUserId)}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => {
+          const otherUser = item?.otherUser || null;
+          const avatarUri = avatarUriFor(otherUser);
+          const last = item?.lastMessage || null;
+          const unreadCount = item?.unreadCount || 0;
+          const hasMessages = item?.hasMessages;
+          const isEmptyOwnerClient = mode === 'owner_clients' && hasMessages === false;
+          const isTyping = Boolean(otherUser?.id && typingByUser?.[otherUser.id]);
+          const previewText = (() => {
+            if (isTyping) return 'Typing...';
+            if (isEmptyOwnerClient) return "Aucune conversation — envoie le premier message";
+            if (unreadCount > 1) return `+${unreadCount} new messages`;
+            const msg = last?.message || '';
+            if (typeof msg === 'string' && msg.startsWith(IMAGE_PREFIX)) return 'Photo';
+            return msg;
+          })();
+
+          return (
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() =>
+              navigation.navigate('Chat', {
+                otherUserId: otherUser?.id,
+                otherUser,
+                isNewConversation: isEmptyOwnerClient
+              })
+              }
+              activeOpacity={0.85}>
+              
                 <View style={[styles.avatarRing, unreadCount ? styles.avatarRingUnread : null]}>
                   <View style={styles.avatar}>
-                    {avatarUri ? (
-                      <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-                    ) : (
-                      <Text style={styles.avatarText}>{initialsFor(otherUser)}</Text>
-                    )}
+                    {avatarUri ?
+                  <Image source={{ uri: avatarUri }} style={styles.avatarImage} /> :
+
+                  <Text style={styles.avatarText}>{initialsFor(otherUser)}</Text>
+                  }
                   </View>
                 </View>
                 <View style={styles.rowBody}>
@@ -291,33 +291,33 @@ const InboxScreen = ({ navigation, route }) => {
                   </View>
                   <View style={styles.rowBottom}>
                     <Text
-                      style={[
-                        styles.preview,
-                        unreadCount ? styles.previewUnread : null,
-                        isTyping ? styles.previewTyping : null,
-                      ]}
-                      numberOfLines={1}
-                    >
+                    style={[
+                    styles.preview,
+                    unreadCount ? styles.previewUnread : null,
+                    isTyping ? styles.previewTyping : null]
+                    }
+                    numberOfLines={1}>
+                    
                       {previewText}
                     </Text>
-                    {unreadCount ? (
-                      <View style={styles.unreadBadge}>
+                    {unreadCount ?
+                  <View style={styles.unreadBadge}>
                         <Text style={styles.unreadBadgeText}>{unreadCount > 99 ? '99+' : String(unreadCount)}</Text>
-                      </View>
-                    ) : isEmptyOwnerClient ? (
-                      <View style={styles.newPill}>
-                        <Text style={styles.newPillText}>Nouveau</Text>
-                      </View>
-                    ) : null}
+                      </View> :
+                  isEmptyOwnerClient ?
+                  <View style={styles.newPill}>
+                        <Text style={styles.newPillText}>{t("screens.messages.inboxscreen.nouveau")}</Text>
+                      </View> :
+                  null}
                   </View>
                 </View>
-              </TouchableOpacity>
-            );
-          }}
-        />
-      )}
-    </SafeAreaView>
-  );
+              </TouchableOpacity>);
+
+        }} />
+
+      }
+    </SafeAreaView>);
+
 };
 
 const styles = StyleSheet.create({
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(255,255,255,0.08)'
   },
   headerIcon: { padding: 8 },
   headerTitle: { flex: 1, textAlign: 'center', color: '#f2f4ff', fontSize: 18, fontWeight: '800' },
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(255,255,255,0.06)'
   },
   avatarRing: {
     width: 56,
@@ -347,10 +347,10 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.10)'
   },
   avatarRingUnread: {
-    backgroundColor: 'rgba(47, 123, 255, 0.22)',
+    backgroundColor: 'rgba(47, 123, 255, 0.22)'
   },
   avatar: {
     width: 52,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(23, 26, 54, 0.92)',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   avatarText: { color: '#d6dbff', fontWeight: '900' },
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#8f6cff',
-    marginLeft: 10,
+    marginLeft: 10
   },
   unreadBadgeText: { color: '#fff', fontWeight: '900', fontSize: 11 },
   newPill: {
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(79, 140, 255, 0.16)',
     borderWidth: 1,
     borderColor: 'rgba(79, 140, 255, 0.35)',
-    marginLeft: 10,
+    marginLeft: 10
   },
   newPillText: { color: '#d6dbff', fontWeight: '800', fontSize: 11 },
   state: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
@@ -402,9 +402,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(47, 123, 255, 0.18)',
     borderWidth: 1,
-    borderColor: 'rgba(47, 123, 255, 0.35)',
+    borderColor: 'rgba(47, 123, 255, 0.35)'
   },
-  retryText: { color: '#fff', fontWeight: '800' },
+  retryText: { color: '#fff', fontWeight: '800' }
 });
 
 export default InboxScreen;

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
-import { appFont } from '../../utils/responsive';
+import { appFont } from '../../utils/responsive';import { useTranslation } from "react-i18next";
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/540x280';
 
@@ -12,7 +12,7 @@ const toImageUrl = (img) => {
   return img.imageUrl || img.image_url || img.url || null;
 };
 
-const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {
+const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const scrollRef = useRef(null);
@@ -59,52 +59,52 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {
       <View style={styles.imageWrapper}>
         <View
           style={styles.carouselContainer}
-          onLayout={(event) => setCarouselWidth(event.nativeEvent.layout.width)}
-        >
+          onLayout={(event) => setCarouselWidth(event.nativeEvent.layout.width)}>
+          
         <ScrollView
-          ref={scrollRef}
-          horizontal
-          pagingEnabled
-          scrollEnabled={false}
-          showsHorizontalScrollIndicator={false}
-          onScroll={handleImageScroll}
-          scrollEventThrottle={16}
-        >
-          {imageUrls.map((uri, index) => (
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            scrollEnabled={false}
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleImageScroll}
+            scrollEventThrottle={16}>
+            
+          {imageUrls.map((uri, index) =>
             <Image
               key={`${uri}-${index}`}
               source={{ uri }}
               style={[styles.image, carouselWidth ? { width: carouselWidth } : null]}
-              resizeMode="cover"
-            />
-          ))}
+              resizeMode="cover" />
+
+            )}
         </ScrollView>
         </View>
 
-        {imageUrls.length > 1 ? (
-          <View style={styles.dotsRow}>
-            {imageUrls.map((_, index) => (
-              <View
-                key={`dot-${index}`}
-                style={[styles.dot, index === activeIndex && styles.dotActive]}
-              />
-            ))}
-          </View>
-        ) : null}
+        {imageUrls.length > 1 ?
+        <View style={styles.dotsRow}>
+            {imageUrls.map((_, index) =>
+          <View
+            key={`dot-${index}`}
+            style={[styles.dot, index === activeIndex && styles.dotActive]} />
+
+          )}
+          </View> :
+        null}
 
         <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>En ligne</Text>
+          <Text style={styles.statusText}>{t("components.cards.carcard.enLigne")}</Text>
         </View>
 
-        {typeof onReviewsPress === 'function' ? (
-          <TouchableOpacity
-            style={styles.reviewsBadge}
-            activeOpacity={0.85}
-            onPress={onReviewsPress}
-          >
+        {typeof onReviewsPress === 'function' ?
+        <TouchableOpacity
+          style={styles.reviewsBadge}
+          activeOpacity={0.85}
+          onPress={onReviewsPress}>
+          
             <Ionicons name="chatbubbles-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-        ) : null}
+          </TouchableOpacity> :
+        null}
       </View>
 
       <View style={styles.body}>
@@ -134,16 +134,16 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.editButton} onPress={onEdit}>
             <Ionicons name="pencil-outline" size={16} color="#fff" />
-            <Text style={styles.editButtonText}>Modifier</Text>
+            <Text style={styles.editButtonText}>{t("components.cards.carcard.modifier")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
             <Ionicons name="trash-outline" size={16} color="#ff5a5a" />
-            <Text style={styles.deleteButtonText}>Supprimer</Text>
+            <Text style={styles.deleteButtonText}>{t("components.cards.carcard.supprimer")}</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
-  );
+    </TouchableOpacity>);
+
 };
 
 const styles = StyleSheet.create({
@@ -153,20 +153,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 22,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 16
   },
   imageWrapper: {
     width: '100%',
     height: 180,
-    backgroundColor: COLORS.gray,
+    backgroundColor: COLORS.gray
   },
   carouselContainer: {
     width: '100%',
-    height: '100%',
+    height: '100%'
   },
   image: {
     width: 0,
-    height: '100%',
+    height: '100%'
   },
   dotsRow: {
     position: 'absolute',
@@ -175,18 +175,18 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 6,
+    gap: 6
   },
   dot: {
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    backgroundColor: 'rgba(255,255,255,0.45)'
   },
   dotActive: {
     width: 18,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#fff'
   },
   statusBadge: {
     position: 'absolute',
@@ -195,12 +195,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 20
   },
   statusText: {
     color: '#fff',
     fontSize: appFont(12),
-    fontWeight: '700',
+    fontWeight: '700'
   },
   reviewsBadge: {
     position: 'absolute',
@@ -213,54 +213,54 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(15, 18, 40, 0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+    borderColor: 'rgba(255, 255, 255, 0.22)'
   },
   body: {
-    padding: 16,
+    padding: 16
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 10
   },
   titleBlock: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: 12
   },
   title: {
     color: '#fff',
     fontSize: appFont(17),
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 6
   },
   subtitle: {
     color: '#c3c8e1',
-    fontSize: appFont(13),
+    fontSize: appFont(13)
   },
   priceText: {
     color: COLORS.primary,
     fontSize: appFont(15),
-    fontWeight: '700',
+    fontWeight: '700'
   },
   detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 14
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 6
   },
   detailLabel: {
     color: '#a7adcf',
-    fontSize: appFont(12),
+    fontSize: appFont(12)
   },
   actionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 10
   },
   editButton: {
     flex: 1,
@@ -270,12 +270,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 11,
-    gap: 8,
+    gap: 8
   },
   editButtonText: {
     color: '#fff',
     fontSize: appFont(14),
-    fontWeight: '700',
+    fontWeight: '700'
   },
   deleteButton: {
     flex: 1,
@@ -286,13 +286,13 @@ const styles = StyleSheet.create({
     borderColor: '#ff5a5a',
     borderRadius: 12,
     paddingVertical: 11,
-    gap: 8,
+    gap: 8
   },
   deleteButtonText: {
     color: '#ff5a5a',
     fontSize: appFont(14),
-    fontWeight: '700',
-  },
+    fontWeight: '700'
+  }
 });
 
 export default CarCard;

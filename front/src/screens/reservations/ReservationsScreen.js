@@ -9,17 +9,17 @@ import {
   Alert,
   RefreshControl,
   Image,
-  ImageBackground,
-} from 'react-native';
+  ImageBackground } from
+'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import storage from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
-import ReservationCard from '../../components/cards/ReservationCard';
+import ReservationCard from '../../components/cards/ReservationCard';import { useTranslation } from "react-i18next";
 
-const ReservationsScreen = ({ navigation }) => {
+const ReservationsScreen = ({ navigation }) => {const { t } = useTranslation();
   const [reservations, setReservations] = useState([]);
   const [paymentByReservationId, setPaymentByReservationId] = useState({});
   const [loading, setLoading] = useState(true);
@@ -37,12 +37,12 @@ const ReservationsScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const token = await storage.getItemAsync('userToken');
-      
+
       const response = await fetch(API_ENDPOINTS.RESERVATIONS.GET_USER, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -66,8 +66,8 @@ const ReservationsScreen = ({ navigation }) => {
             const paymentResponse = await fetch(API_ENDPOINTS.PAYMENTS.GET_STATUS(reservation.id), {
               headers: {
                 Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
+                'Content-Type': 'application/json'
+              }
             });
 
             if (!paymentResponse.ok) return null;
@@ -88,7 +88,7 @@ const ReservationsScreen = ({ navigation }) => {
       setPaymentByReservationId(nextMap);
     } catch (error) {
       console.error('Error fetching reservations:', error);
-      Alert.alert('Erreur', 'Impossible de charger les réservations');
+      Alert.alert(t("screens.reservations.reservationsscreen.erreur"), t("screens.reservations.reservationsscreen.impossibleDeChargerLesReservations"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -130,20 +130,20 @@ const ReservationsScreen = ({ navigation }) => {
 
   const getStatusLabel = (status) => {
     const labels = {
-      reserved: 'Réservé',
-      confirmed: 'Confirmé',
+      reserved: t("screens.owner.reservationdetailsscreen.reserve"),
+      confirmed: t("screens.owner.reservationdetailsscreen.confirme"),
       pickup_pending: 'En attente de récupération',
-      cancelled: 'Annulé',
+      cancelled: t("screens.owner.reservationdetailsscreen.annule")
     };
     return labels[status] || status;
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -158,7 +158,7 @@ const ReservationsScreen = ({ navigation }) => {
     navigation.navigate('ReservationDetailsFromReservations', {
       reservation,
       listing,
-      resumeCardPayment: true,
+      resumeCardPayment: true
     });
   };
 
@@ -168,17 +168,17 @@ const ReservationsScreen = ({ navigation }) => {
         <ImageBackground
           source={require('../../assets/background.png')}
           style={styles.background}
-          resizeMode="cover"
-        >
+          resizeMode="cover">
+          
           <SafeAreaView style={styles.overlay}>
             <View style={styles.centerContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Chargement...</Text>
+              <Text style={styles.loadingText}>{t("screens.reservations.reservationsscreen.chargement")}</Text>
             </View>
           </SafeAreaView>
         </ImageBackground>
-      </View>
-    );
+      </View>);
+
   }
 
   return (
@@ -186,12 +186,12 @@ const ReservationsScreen = ({ navigation }) => {
       <ImageBackground
         source={require('../../assets/background.png')}
         style={styles.background}
-        resizeMode="cover"
-      >
+        resizeMode="cover">
+        
         <SafeAreaView style={[styles.overlay, { flex: 1 }]}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Mes Réservations</Text>
+            <Text style={styles.headerTitle}>{t("screens.reservations.reservationsscreen.mesReservations")}</Text>
             <View style={{ width: 44 }} />
           </View>
 
@@ -199,18 +199,18 @@ const ReservationsScreen = ({ navigation }) => {
           <View style={styles.tabContainer}>
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'upcoming' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('upcoming')}
-            >
-              <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>
-                Upcoming
+              onPress={() => setActiveTab('upcoming')}>
+              
+              <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>{t("screens.reservations.reservationsscreen.upcoming")}
+
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'past' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('past')}
-            >
-              <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>
-                Past
+              onPress={() => setActiveTab('past')}>
+              
+              <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>{t("screens.reservations.reservationsscreen.past")}
+
               </Text>
             </TouchableOpacity>
           </View>
@@ -219,72 +219,72 @@ const ReservationsScreen = ({ navigation }) => {
           <ScrollView
             style={styles.content}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            showsVerticalScrollIndicator={false}
-          >
-            {filteredReservations.length === 0 ? (
-              <View style={styles.emptyContainer}>
+            showsVerticalScrollIndicator={false}>
+            
+            {filteredReservations.length === 0 ?
+            <View style={styles.emptyContainer}>
                 <View style={styles.emptyIconContainer}>
                   <Ionicons name="calendar-outline" size={56} color="#7c3aed" />
                 </View>
-                <Text style={styles.emptyTitle}>Aucune réservation</Text>
-                <Text style={styles.emptyText}>Vous n'avez pas encore de réservation. Commencez à explorer nos véhicules disponibles!</Text>
-              </View>
-              ) : (
-              filteredReservations.map((reservation) => (
-                <ReservationCard
-                  key={reservation.id}
-                  reservation={reservation}
-                  onPress={handleReservationPress}
-                  showFinishPayment={
-                    reservation?.status === 'reserved' &&
-                    paymentByReservationId?.[reservation.id]?.paymentMethod === 'card' &&
-                    paymentByReservationId?.[reservation.id]?.status === 'pending'
-                  }
-                  onFinishPayment={handleFinishPaymentPress}
-                />
-              ))
-            )}
+                <Text style={styles.emptyTitle}>{t("screens.reservations.reservationsscreen.aucuneReservation")}</Text>
+                <Text style={styles.emptyText}>{t("screens.reservations.reservationsscreen.vousNavezPasEncoreDeReservationCommencez")}</Text>
+              </View> :
+
+            filteredReservations.map((reservation) =>
+            <ReservationCard
+              key={reservation.id}
+              reservation={reservation}
+              onPress={handleReservationPress}
+              showFinishPayment={
+              reservation?.status === 'reserved' &&
+              paymentByReservationId?.[reservation.id]?.paymentMethod === 'card' &&
+              paymentByReservationId?.[reservation.id]?.status === 'pending'
+              }
+              onFinishPayment={handleFinishPaymentPress} />
+
+            )
+            }
             <View style={{ height: 20 }} />
           </ScrollView>
         </SafeAreaView>
       </ImageBackground>
 
 
-    </View>
-  );
+    </View>);
+
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.background
   },
   background: {
-    flex: 1,
+    flex: 1
   },
   overlay: {
     flex: 1,
     paddingHorizontal: 16,
     backgroundColor: 'rgba(2,3,14,0.62)',
-    paddingBottom: 80,
+    paddingBottom: 80
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 0,
+    paddingHorizontal: 0
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: '#fff'
   },
   tabContainer: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 16,
-    marginTop: 8,
+    marginTop: 8
   },
   tabButton: {
     flex: 1,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   tabButtonActive: {
     backgroundColor: '#7c3aed',
@@ -303,36 +303,36 @@ const styles = StyleSheet.create({
     shadowColor: '#7c3aed',
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 4
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#8b91ba',
+    color: '#8b91ba'
   },
   tabTextActive: {
-    color: '#fff',
+    color: '#fff'
   },
   content: {
-    flex: 1,
+    flex: 1
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
     color: '#fff',
-    fontWeight: '500',
+    fontWeight: '500'
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
-    paddingHorizontal: 24,
+    paddingHorizontal: 24
   },
   emptyIconContainer: {
     width: 100,
@@ -342,21 +342,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(124, 58, 237, 0.3)',
+    borderColor: 'rgba(124, 58, 237, 0.3)'
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#fff',
     marginTop: 20,
-    textAlign: 'center',
+    textAlign: 'center'
   },
   emptyText: {
     fontSize: 14,
     color: '#9ca3af',
     marginTop: 12,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 22
   },
   reservationCard: {
     flexDirection: 'row',
@@ -366,53 +366,53 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(165, 102, 255, 0.2)',
-    height: 140,
+    height: 140
   },
   carImage: {
     width: 140,
     height: 140,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: COLORS.cardBackground
   },
   cardContent: {
     flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'flex-start'
   },
   vehicleInfo: {
-    flex: 1,
+    flex: 1
   },
   carName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#fff',
+    color: '#fff'
   },
   carYear: {
     fontSize: 12,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: 2
   },
   price: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: COLORS.primary
   },
   datesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 6
   },
   dateItem: {
-    flex: 1,
+    flex: 1
   },
   dateLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.textMuted
   },
   statusBadge: {
     flexDirection: 'row',
@@ -422,17 +422,17 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     gap: 4,
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-start'
   },
   statusDot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: 3
   },
   statusText: {
     fontSize: 10,
-    fontWeight: '600',
-  },
+    fontWeight: '600'
+  }
 
 });
 

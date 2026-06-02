@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
-import { appFont } from '../../utils/responsive';
+import { appFont } from '../../utils/responsive';import { useTranslation } from "react-i18next";
 
 export const ADMIN_COLORS = {
   bg: '#0a0c24',
@@ -11,27 +11,29 @@ export const ADMIN_COLORS = {
   accent: '#8f7dff',
   success: '#21d4a7',
   danger: '#ff7f90',
-  warning: '#ffb347',
+  warning: '#ffb347'
 };
 
-export const ScreenHeader = ({ kicker, title }) => (
-  <View style={styles.header}>
+export const ScreenHeader = ({ kicker, title }) =>
+<View style={styles.header}>
     {!!kicker && <Text style={styles.kicker}>{kicker}</Text>}
     <Text style={styles.title}>{title}</Text>
-  </View>
-);
+  </View>;
+
 
 export const Card = ({ children }) => <View style={styles.card}>{children}</View>;
 
-export const SearchBox = ({ value, onChangeText, placeholder = 'Search' }) => (
-  <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#8890be" style={styles.input} />
-);
+export const SearchBox = ({ value, onChangeText, placeholder }) => {
+  const { t } = useTranslation();
+  return <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder || t("screens.admin.adminpaymentsscreen.search")} placeholderTextColor="#8890be" style={styles.input} />;
+};
 
-export const Button = ({ label, onPress, type = 'primary' }) => (
-  <TouchableOpacity onPress={onPress} style={[styles.btn, type === 'danger' && styles.btnDanger, type === 'ghost' && styles.btnGhost]}>
+
+export const Button = ({ label, onPress, type = 'primary' }) =>
+<TouchableOpacity onPress={onPress} style={[styles.btn, type === 'danger' && styles.btnDanger, type === 'ghost' && styles.btnGhost]}>
     <Text style={styles.btnText}>{label}</Text>
-  </TouchableOpacity>
-);
+  </TouchableOpacity>;
+
 
 export const StatusBadge = ({ status }) => {
   const s = String(status || '').toLowerCase();
@@ -40,26 +42,26 @@ export const StatusBadge = ({ status }) => {
   return (
     <View style={[styles.badge, { backgroundColor: `${map[tone]}22` }]}>
       <Text style={[styles.badgeText, { color: map[tone] }]}>{status}</Text>
-    </View>
-  );
+    </View>);
+
 };
 
-export const StatCard = ({ label, value }) => (
-  <View style={styles.statCard}>
+export const StatCard = ({ label, value }) =>
+<View style={styles.statCard}>
     <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
+  </View>;
 
-export const Row = ({ title, subtitle, right }) => (
-  <View style={styles.row}>
+
+export const Row = ({ title, subtitle, right }) =>
+<View style={styles.row}>
     <View style={{ flex: 1, paddingRight: 10 }}>
       <Text style={styles.rowTitle}>{title}</Text>
       {!!subtitle && <Text style={styles.rowSubtitle}>{subtitle}</Text>}
     </View>
     {right}
-  </View>
-);
+  </View>;
+
 
 const styles = StyleSheet.create({
   header: { marginTop: 6, marginBottom: 14 },
@@ -78,5 +80,5 @@ const styles = StyleSheet.create({
   statLabel: { color: '#bfc5e6', marginTop: 3, fontSize: appFont(12) },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: 'rgba(146,151,214,0.14)', paddingVertical: 10 },
   rowTitle: { color: '#fff', fontWeight: '700', fontSize: appFont(14) },
-  rowSubtitle: { color: '#9ea4cf', marginTop: 2, fontSize: appFont(12) },
+  rowSubtitle: { color: '#9ea4cf', marginTop: 2, fontSize: appFont(12) }
 });

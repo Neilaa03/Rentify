@@ -42,6 +42,7 @@ import AgencyListingsScreen from './src/screens/agency/AgencyListingsScreen';
 import AgencyRequestsScreen from './src/screens/agency/AgencyRequestsScreen';
 import AgencyDocumentsScreen from './src/screens/agency/AgencyDocumentsScreen';
 import AgencyProfileScreen from './src/screens/agency/AgencyProfileScreen';
+import './src/i18n';
 
 const Stack = createStackNavigator();
 const APP_BACKGROUND = '#0f1228';

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
-import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
 
 const tabs = ['Tous', 'Ouverts', 'En cours', 'Resolus', 'Clotures'];
 
@@ -15,9 +15,9 @@ const normalize = (status) => {
   return 'Ouverts';
 };
 
-export default function AdminReportsScreen({ navigation, route }) {
+export default function AdminReportsScreen({ navigation, route }) {const { t } = useTranslation();
   const [rows, setRows] = useState([]);
-  const [active, setActive] = useState('Tous');
+  const [active, setActive] = useState(t("common.legacyHome.all"));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -34,39 +34,39 @@ export default function AdminReportsScreen({ navigation, route }) {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {load();}, []);
 
-  const visible = useMemo(() => rows.filter((r) => active === 'Tous' || normalize(r.status) === active), [rows, active]);
+  const visible = useMemo(() => rows.filter((r) => active === t("common.legacyHome.all") || normalize(r.status) === active), [rows, active]);
   const counts = useMemo(() => ({
     open: rows.filter((r) => normalize(r.status) === 'Ouverts').length,
-    progress: rows.filter((r) => normalize(r.status) === 'En cours').length,
+    progress: rows.filter((r) => normalize(r.status) === t("screens.admin.adminreportsscreen.enCours")).length,
     resolved: rows.filter((r) => normalize(r.status) === 'Resolus').length,
-    closed: rows.filter((r) => normalize(r.status) === 'Clotures').length,
+    closed: rows.filter((r) => normalize(r.status) === 'Clotures').length
   }), [rows]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Signalements</Text>
+        <Text style={styles.title}>{t("screens.admin.adminreportsscreen.signalements")}</Text>
 
         <View style={styles.alertBox}>
           <Ionicons name="alert-circle-outline" size={16} color="#ff4d6d" />
-          <Text style={styles.alertText}>{counts.open} signalements ouverts necessitant une action</Text>
+          <Text style={styles.alertText}>{counts.open}{t("screens.admin.adminreportsscreen.signalementsOuvertsNecessitantUneAction")}</Text>
         </View>
 
         <View style={styles.topStats}>
-          <Stat value={counts.open} label="Ouvert" tone="#ff4d6d" />
-          <Stat value={counts.progress} label="En cours" tone="#ffb020" />
-          <Stat value={counts.resolved} label="Resolu" tone="#00d084" />
-          <Stat value={counts.closed} label="Cloture" tone="#8f9dff" />
+          <Stat value={counts.open} label={t("screens.admin.adminreportsscreen.ouvert")} tone="#ff4d6d" />
+          <Stat value={counts.progress} label={t("screens.admin.adminreportsscreen.enCours")} tone="#ffb020" />
+          <Stat value={counts.resolved} label={t("screens.admin.adminreportsscreen.resolu")} tone="#00d084" />
+          <Stat value={counts.closed} label={t("screens.admin.adminreportsscreen.cloture")} tone="#8f9dff" />
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow}>
-          {tabs.map((tab) => (
-            <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
+          {tabs.map((tab) =>
+          <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
               <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{tab}</Text>
             </TouchableOpacity>
-          ))}
+          )}
         </ScrollView>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -77,27 +77,27 @@ export default function AdminReportsScreen({ navigation, route }) {
               <View key={r.id} style={[styles.reportCard, status === 'Ouverts' ? styles.reportOpen : null]}>
                 <View style={styles.tagsRow}>
                   <Text style={styles.reason}>{r.reason || 'Signalement'}</Text>
-                  <Text style={[styles.status, status === 'Ouverts' ? styles.statusOpen : status === 'En cours' ? styles.statusProgress : status === 'Resolus' ? styles.statusResolved : styles.statusClosed]}>{status}</Text>
+                  <Text style={[styles.status, status === 'Ouverts' ? styles.statusOpen : status === t("screens.admin.adminreportsscreen.enCours") ? styles.statusProgress : status === 'Resolus' ? styles.statusResolved : styles.statusClosed]}>{status}</Text>
                 </View>
-                <Text style={styles.reportTitle}>{r.reporter_name || 'Utilisateur'} -> {r.target_name || 'Compte'}</Text>
+                <Text style={styles.reportTitle}>{r.reporter_name || 'Utilisateur'}{t("screens.admin.adminreportsscreen.text")}{r.target_name || 'Compte'}</Text>
                 <Text style={styles.reportDesc} numberOfLines={2}>{r.description || 'Aucune description.'}</Text>
                 <View style={styles.actions}>
-                  <TouchableOpacity style={styles.actionBtn} onPress={async () => { await adminApi.updateReport(r.id, 'rejected'); load(); }}>
-                    <Text style={styles.actionText}>Cloturer</Text>
+                  <TouchableOpacity style={styles.actionBtn} onPress={async () => {await adminApi.updateReport(r.id, 'rejected');load();}}>
+                    <Text style={styles.actionText}>{t("screens.admin.adminreportsscreen.cloturer")}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary]} onPress={async () => { await adminApi.updateReport(r.id, 'resolved'); load(); }}>
-                    <Text style={styles.actionText}>Resoudre</Text>
+                  <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary]} onPress={async () => {await adminApi.updateReport(r.id, 'resolved');load();}}>
+                    <Text style={styles.actionText}>{t("screens.admin.adminreportsscreen.resoudre")}</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            );
+              </View>);
+
           })}
-          {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
+          {loading ? <Text style={styles.loading}>{t("screens.admin.adminreportsscreen.chargement")}</Text> : null}
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="reports" />
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 }
 
 function Stat({ value, label, tone }) {
@@ -105,8 +105,8 @@ function Stat({ value, label, tone }) {
     <View style={styles.statCard}>
       <Text style={[styles.statValue, { color: tone }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
+    </View>);
+
 }
 
 const styles = StyleSheet.create({
@@ -141,5 +141,5 @@ const styles = StyleSheet.create({
   actionPrimary: { borderColor: '#00a86d', backgroundColor: 'rgba(0,208,132,0.16)' },
   actionText: { color: '#d7dcff', fontWeight: '700', fontSize: 12 },
   loading: { color: '#8d94c2', marginTop: 8 },
-  error: { color: '#ff7f90', marginBottom: 8 },
+  error: { color: '#ff7f90', marginBottom: 8 }
 });

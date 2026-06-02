@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import storage from '../../utils/storage';
 import { API_ENDPOINTS } from '../../constants/api';
-import { COLORS } from '../../constants/colors';
+import { COLORS } from '../../constants/colors';import { useTranslation } from "react-i18next";
 
 const onlyDigits = (value) => String(value || '').replace(/\D/g, '').slice(0, 6);
 
@@ -17,7 +17,7 @@ const useCameraSafe = () => {
     const cam = require('expo-camera');
     return {
       CameraView: cam?.CameraView || null,
-      useCameraPermissions: cam?.useCameraPermissions || null,
+      useCameraPermissions: cam?.useCameraPermissions || null
     };
   } catch (_e) {
     return { CameraView: null, useCameraPermissions: null };
@@ -29,7 +29,7 @@ const getVerifyEndpoint = ({ flow, reservationId }) => {
   return API_ENDPOINTS.RESERVATIONS.PICKUP.VERIFY(reservationId);
 };
 
-const HandoverVerifyScreen = ({ navigation, route }) => {
+const HandoverVerifyScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const reservationId = route?.params?.reservationId;
   const flow = route?.params?.flow || 'pickup'; // pickup | return
   const tokenFromParams = route?.params?.token || null;
@@ -53,7 +53,7 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
     if (!reservationId) return;
     const endpoint = getVerifyEndpoint({ flow, reservationId });
     if (!endpoint) {
-      Alert.alert('Indisponible', 'Ce flux n’est pas encore disponible.');
+      Alert.alert(t("screens.handover.handoververifyscreen.indisponible"), t("screens.handover.handoververifyscreen.ceFluxNestPasEncoreDisponible"));
       return;
     }
 
@@ -63,17 +63,17 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
       if (!token) throw new Error('Authentification requise');
 
       const body =
-        qrToken && String(qrToken).trim()
-          ? { qrToken: String(qrToken).trim() }
-          : { code: onlyDigits(codeValue ?? code) };
+      qrToken && String(qrToken).trim() ?
+      { qrToken: String(qrToken).trim() } :
+      { code: onlyDigits(codeValue ?? code) };
 
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(body)
       });
 
       const data = await response.json();
@@ -81,7 +81,7 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
 
       setSuccessOpen(true);
     } catch (e) {
-      Alert.alert('Erreur', e.message || 'Une erreur est survenue');
+      Alert.alert(t("screens.handover.handoververifyscreen.erreur"), e.message || t("screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue"));
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
 
   const openScanner = async () => {
     if (!CameraView) {
-      Alert.alert('Indisponible', "Le scanner QR n'est pas disponible. Installez `expo-camera` ou utilisez le code.");
+      Alert.alert(t("screens.handover.handoververifyscreen.indisponible"), t("screens.handover.handoververifyscreen.leScannerQrNestPasDisponibleInstallez"));
       return;
     }
     scanHandledRef.current = false;
@@ -98,7 +98,7 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
       const res = await requestPermission();
       const ok = res?.granted || res?.status === 'granted';
       if (!ok) {
-        Alert.alert('Permission requise', "Autorisez l'accès à la caméra pour scanner le QR code.");
+        Alert.alert(t("screens.handover.handoververifyscreen.permissionRequise"), t("screens.handover.handoververifyscreen.autorisezLaccesALaCameraPourScanner"));
         return;
       }
     }
@@ -126,56 +126,56 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
 
       <View style={styles.content}>
         <View style={styles.card}>
-          {mode === 'qr' ? (
-            <>
-              <Text style={styles.lead}>Scannez d’abord le QR code. Si ça ne marche pas, utilisez le code à 6 chiffres.</Text>
+          {mode === 'qr' ?
+          <>
+              <Text style={styles.lead}>{t("screens.handover.handoververifyscreen.scannezDabordLeQrCodeSiCa")}</Text>
 
               <TouchableOpacity onPress={openScanner} disabled={loading} activeOpacity={0.85} style={styles.buttonWrap}>
                 <LinearGradient
-                  colors={['#4C6FFF', COLORS.primary]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[styles.button, loading && styles.buttonDisabled]}
-                >
+                colors={['#4C6FFF', COLORS.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.button, loading && styles.buttonDisabled]}>
+                
                   <Ionicons name="scan-outline" size={18} color="#fff" />
-                  <Text style={styles.buttonText}>Scanner le QR code</Text>
+                  <Text style={styles.buttonText}>{t("screens.handover.handoververifyscreen.scannerLeQrCode")}</Text>
                 </LinearGradient>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => setMode('code')} activeOpacity={0.85} style={styles.altLinkWrap}>
-                <Text style={styles.altLink}>Saisir le code à 6 chiffres</Text>
+                <Text style={styles.altLink}>{t("screens.handover.handoververifyscreen.saisirLeCodeA6Chiffres")}</Text>
               </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text style={styles.lead}>Saisissez le code à 6 chiffres.</Text>
+            </> :
+
+          <>
+              <Text style={styles.lead}>{t("screens.handover.handoververifyscreen.saisissezLeCodeA6Chiffres")}</Text>
 
               <TextInput
-                value={onlyDigits(code)}
-                onChangeText={(v) => setCode(onlyDigits(v))}
-                keyboardType="numeric"
-                style={styles.input}
-                placeholder="------"
-                placeholderTextColor="rgba(255,255,255,0.45)"
-                maxLength={6}
-              />
+              value={onlyDigits(code)}
+              onChangeText={(v) => setCode(onlyDigits(v))}
+              keyboardType="numeric"
+              style={styles.input}
+              placeholder="------"
+              placeholderTextColor="rgba(255,255,255,0.45)"
+              maxLength={6} />
+            
 
               <TouchableOpacity onPress={() => submit({ code })} disabled={!canSubmit} activeOpacity={0.85} style={styles.buttonWrap}>
                 <LinearGradient
-                  colors={canSubmit ? ['#4C6FFF', COLORS.primary] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.button}
-                >
-                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Valider</Text>}
+                colors={canSubmit ? ['#4C6FFF', COLORS.primary] : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.button}>
+                
+                  {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("screens.handover.handoververifyscreen.valider")}</Text>}
                 </LinearGradient>
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => setMode('qr')} activeOpacity={0.85} style={styles.altLinkWrap}>
-                <Text style={styles.altLink}>Scanner le QR code</Text>
+                <Text style={styles.altLink}>{t("screens.handover.handoververifyscreen.scannerLeQrCode")}</Text>
               </TouchableOpacity>
             </>
-          )}
+          }
         </View>
       </View>
 
@@ -185,23 +185,23 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
             <TouchableOpacity onPress={() => setScannerOpen(false)} style={styles.scannerClose}>
               <Ionicons name="close" size={22} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.scannerTitle}>Scanner QR</Text>
+            <Text style={styles.scannerTitle}>{t("screens.handover.handoververifyscreen.scannerQr")}</Text>
             <View style={{ width: 44 }} />
           </SafeAreaView>
 
           <View style={styles.scannerBody}>
-            {CameraView ? (
-              <CameraView style={StyleSheet.absoluteFillObject} onBarcodeScanned={onBarcodeScanned} barcodeScannerSettings={{ barcodeTypes: ['qr'] }} />
-            ) : (
-              <View style={styles.scannerFallback}>
-                <Text style={styles.scannerFallbackText}>Scanner indisponible.</Text>
+            {CameraView ?
+            <CameraView style={StyleSheet.absoluteFillObject} onBarcodeScanned={onBarcodeScanned} barcodeScannerSettings={{ barcodeTypes: ['qr'] }} /> :
+
+            <View style={styles.scannerFallback}>
+                <Text style={styles.scannerFallbackText}>{t("screens.handover.handoververifyscreen.scannerIndisponible")}</Text>
               </View>
-            )}
+            }
             <View style={styles.scannerOverlay}>
               <View style={styles.scannerFrame} />
-              <Text style={styles.scannerHint}>Alignez le QR code dans le cadre.</Text>
-              <TouchableOpacity onPress={() => { setScannerOpen(false); setMode('code'); }} activeOpacity={0.85} style={styles.scannerAltButton}>
-                <Text style={styles.scannerAltButtonText}>Saisir le code à la place</Text>
+              <Text style={styles.scannerHint}>{t("screens.handover.handoververifyscreen.alignezLeQrCodeDansLeCadre")}</Text>
+              <TouchableOpacity onPress={() => {setScannerOpen(false);setMode('code');}} activeOpacity={0.85} style={styles.scannerAltButton}>
+                <Text style={styles.scannerAltButtonText}>{t("screens.handover.handoververifyscreen.saisirLeCodeALaPlace")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -214,25 +214,25 @@ const HandoverVerifyScreen = ({ navigation, route }) => {
             <View style={styles.successIconWrap}>
               <Ionicons name="checkmark" size={30} color="#0f1228" />
             </View>
-            <Text style={styles.successTitle}>Validation effectuée</Text>
-            <Text style={styles.successSubtitle}>La récupération a été confirmée avec succès.</Text>
+            <Text style={styles.successTitle}>{t("screens.handover.handoververifyscreen.validationEffectuee")}</Text>
+            <Text style={styles.successSubtitle}>{t("screens.handover.handoververifyscreen.laRecuperationAEteConfirmeeAvecSucces")}</Text>
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => {
                 setSuccessOpen(false);
                 navigation.goBack();
               }}
-              style={{ marginTop: 14 }}
-            >
+              style={{ marginTop: 14 }}>
+              
               <LinearGradient colors={['#4C6FFF', COLORS.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.successButton}>
-                <Text style={styles.successButtonText}>Retour</Text>
+                <Text style={styles.successButtonText}>{t("screens.handover.handoververifyscreen.retour")}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </LinearGradient>
-  );
+    </LinearGradient>);
+
 };
 
 const styles = StyleSheet.create({
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: 'rgba(21, 24, 55, 0.65)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(255,255,255,0.08)'
   },
   backButton: {
     width: 44,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
   content: { flex: 1, padding: 16 },
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   lead: { color: COLORS.textMuted, marginBottom: 14, lineHeight: 18 },
   input: {
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
-    letterSpacing: 6,
+    letterSpacing: 6
   },
   buttonWrap: { marginTop: 16 },
   button: { height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10 },
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 12,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.35)'
   },
   scannerClose: {
     width: 44,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.12)'
   },
   scannerTitle: { color: '#fff', fontSize: 18, fontWeight: '800' },
   scannerBody: { flex: 1 },
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 18,
+    padding: 18
   },
   scannerFrame: {
     width: 260,
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.85)',
-    backgroundColor: 'rgba(0,0,0,0.10)',
+    backgroundColor: 'rgba(0,0,0,0.10)'
   },
   scannerHint: { marginTop: 14, color: 'rgba(255,255,255,0.9)', fontWeight: '700' },
   scannerAltButton: {
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.18)'
   },
   scannerAltButtonText: { color: '#fff', fontWeight: '800' },
   scannerFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 18,
+    padding: 18
   },
   successCard: {
     width: '100%',
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
     padding: 18,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   successIconWrap: {
     width: 56,
@@ -358,12 +358,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#2ECC71',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   successTitle: { marginTop: 12, color: '#fff', fontSize: 18, fontWeight: '900' },
   successSubtitle: { marginTop: 6, color: 'rgba(255,255,255,0.70)', textAlign: 'center', lineHeight: 18 },
   successButton: { height: 46, paddingHorizontal: 20, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  successButtonText: { color: '#fff', fontWeight: '900' },
+  successButtonText: { color: '#fff', fontWeight: '900' }
 });
 
 export default HandoverVerifyScreen;

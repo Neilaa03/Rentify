@@ -8,30 +8,31 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  View } from
+'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   deleteOwnerListing,
   getOwnerListings,
-  toggleListingPublication,
-} from '../../services/owner';
+  toggleListingPublication } from
+'../../services/owner';
 import { fetchJson } from '../../services/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
-import AppBackground from '../../components/layout/AppBackground';
+import AppBackground from '../../components/layout/AppBackground';import { useTranslation } from "react-i18next";
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
   blue: { color: '#4f8cff', backgroundColor: 'rgba(79,140,255,0.16)' },
-  amber: { color: '#ffb347', backgroundColor: 'rgba(255,179,71,0.16)' },
+  amber: { color: '#ffb347', backgroundColor: 'rgba(255,179,71,0.16)' }
 };
 
 const OwnerListingsScreen = ({
   navigation,
   route,
   BottomNavigationComponent = OwnerBottomNavigation,
-  title = 'Mes annonces',
-}) => {
+  title
+}) => {const { t } = useTranslation();
+  const screenTitle = title || t("screens.owner.dashboardscreen.mesAnnonces");
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -48,16 +49,16 @@ const OwnerListingsScreen = ({
       setError('');
       const data = await getOwnerListings({ token, ownerId: user.id });
       setListings(data);
-      
+
       // Fetch primary images for each unique car
       const images = {};
-      const uniqueCarIds = [...new Set(data.map(item => item.carId).filter(Boolean))];
-      
+      const uniqueCarIds = [...new Set(data.map((item) => item.carId).filter(Boolean))];
+
       await Promise.all(
         uniqueCarIds.map(async (carId) => {
           try {
             const carImagesData = await fetchJson(`/api/car-images?carId=${carId}`, {
-              headers: { Authorization: `Bearer ${token}` },
+              headers: { Authorization: `Bearer ${token}` }
             });
             const primaryImage = (Array.isArray(carImagesData) ? carImagesData : []).find(
               (img) => img.isPrimary
@@ -66,10 +67,10 @@ const OwnerListingsScreen = ({
               images[carId] = primaryImage.imageUrl;
             }
           } catch (_err) {
+
+
             // Silently fail for image loading
-          }
-        })
-      );
+          }}));
       setCarImages(images);
     } catch (err) {
       setError(err.message || 'Erreur chargement annonces');
@@ -89,33 +90,33 @@ const OwnerListingsScreen = ({
   };
 
   const handleDelete = (listing) => {
-    Alert.alert(
-      'Supprimer',
-      `Êtes-vous sûr de vouloir supprimer l'annonce "${listing.title}" ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteOwnerListing({ token, listingId: listing.id });
-              loadListings();
-            } catch (err) {
-              console.error(err);
-              Alert.alert('Erreur', 'Impossible de supprimer l\'annonce. Réessayez plus tard.');
-            }
-          },
-        },
-      ]
+    Alert.alert(t("screens.owner.listingsscreen.supprimer"),
+
+    `Êtes-vous sûr de vouloir supprimer l'annonce "${listing.title}" ?`,
+    [
+    { text: t("screens.agency.agencyprofilescreen.annuler"), style: 'cancel' },
+    {
+      text: t("screens.owner.listingsscreen.supprimer"),
+      style: 'destructive',
+      onPress: async () => {
+        try {
+          await deleteOwnerListing({ token, listingId: listing.id });
+          loadListings();
+        } catch (err) {
+          console.error(err);
+          Alert.alert(t("screens.owner.listingsscreen.erreur"), t("screens.owner.listingsscreen.impossibleDeSupprimerLannonceReessayezPlusTard"));
+        }
+      }
+    }]
+
     );
   };
 
   const handleTogglePublish = async (listing) => {
     if (!listing.isActive && listing.state !== 'ready_to_publish') {
-      Alert.alert(
-        'Publication bloquée',
-        'Vous devez valider carte grise, assurance et contrôle technique avant publication.'
+      Alert.alert(t("screens.owner.listingsscreen.publicationBloquee"), t("screens.owner.listingsscreen.vousDevezValiderCarteGriseAssuranceEt")
+
+
       );
       return;
     }
@@ -123,7 +124,7 @@ const OwnerListingsScreen = ({
     await toggleListingPublication({
       token,
       listingId: listing.id,
-      shouldPublish: !listing.isActive,
+      shouldPublish: !listing.isActive
     });
     loadListings();
   };
@@ -138,34 +139,34 @@ const OwnerListingsScreen = ({
           <Text style={styles.headerTitle}>{title}</Text>
           <TouchableOpacity
             style={styles.iconBtn}
-            onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}
-          >
+            onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}>
+            
             <Ionicons name="add" size={22} color="#8f7dff" />
           </TouchableOpacity>
         </View>
 
-        {isLoading ? (
-          <View style={styles.loaderWrap}>
+        {isLoading ?
+        <View style={styles.loaderWrap}>
             <ActivityIndicator size="large" color="#8f7dff" />
-          </View>
-        ) : (
-          <FlatList
-            data={listings}
-            keyExtractor={(item) => item.id}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8f7dff" />}
-            ListEmptyComponent={<Text style={styles.emptyText}>Aucune annonce.</Text>}
-            ListHeaderComponent={error ? <Text style={styles.errorText}>{error}</Text> : null}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => {
-              const badgeStyle = badgeByTone[item.stateTone] || badgeByTone.amber;
-              return (
-                <View style={styles.card}>
-                  {carImages[item.carId] && (
-                    <Image
-                      source={{ uri: carImages[item.carId] }}
-                      style={styles.cardImage}
-                    />
-                  )}
+          </View> :
+
+        <FlatList
+          data={listings}
+          keyExtractor={(item) => item.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8f7dff" />}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t("screens.owner.listingsscreen.aucuneAnnonce")}</Text>}
+          ListHeaderComponent={error ? <Text style={styles.errorText}>{error}</Text> : null}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => {
+            const badgeStyle = badgeByTone[item.stateTone] || badgeByTone.amber;
+            return (
+              <View style={styles.card}>
+                  {carImages[item.carId] &&
+                <Image
+                  source={{ uri: carImages[item.carId] }}
+                  style={styles.cardImage} />
+
+                }
                   
                   <View style={styles.cardContent}>
                     <View style={styles.cardTop}>
@@ -178,37 +179,37 @@ const OwnerListingsScreen = ({
                       <Text style={[styles.badge, badgeStyle]}>{item.stateLabel}</Text>
                     </View>
 
-                    <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString('fr-FR')} DA / jour</Text>
+                    <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString('fr-FR')}{t("screens.owner.listingsscreen.daJour")}</Text>
 
                     <View style={styles.actions}>
                       <TouchableOpacity
-                        style={styles.actionBtn}
-                        onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'edit', listing: item })}
-                      >
-                        <Text style={styles.actionText}>Modifier</Text>
+                      style={styles.actionBtn}
+                      onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'edit', listing: item })}>
+                      
+                        <Text style={styles.actionText}>{t("screens.owner.listingsscreen.modifier")}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
-                        <Text style={[styles.actionText, { color: '#ff8a9e' }]}>Supprimer</Text>
+                        <Text style={[styles.actionText, { color: '#ff8a9e' }]}>{t("screens.owner.listingsscreen.supprimer")}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        style={[styles.publishBtn, !item.isActive && item.state !== 'ready_to_publish' && styles.publishBtnDisabled]}
-                        onPress={() => handleTogglePublish(item)}
-                      >
+                      style={[styles.publishBtn, !item.isActive && item.state !== 'ready_to_publish' && styles.publishBtnDisabled]}
+                      onPress={() => handleTogglePublish(item)}>
+                      
                         <Text style={styles.publishText}>{item.isActive ? 'Dépublier' : 'Publier'}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
-                </View>
-              );
-            }}
-          />
-        )}
+                </View>);
+
+          }} />
+
+        }
       </View>
       <BottomNavigationComponent navigation={navigation} route={route} active="listings" />
-    </AppBackground>
-  );
+    </AppBackground>);
+
 };
 
 const styles = StyleSheet.create({
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 12
   },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
   iconBtn: {
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.06)'
   },
   loaderWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   listContent: { paddingBottom: 96 },
@@ -238,14 +239,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(143, 150, 255, 0.14)',
     backgroundColor: '#111329',
     overflow: 'hidden',
-    marginBottom: 10,
+    marginBottom: 10
   },
   cardImage: {
     width: '100%',
-    height: 140,
+    height: 140
   },
   cardContent: {
-    padding: 12,
+    padding: 12
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   title: { color: '#fff', fontWeight: '700', fontSize: 16, maxWidth: 220 },
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 10,
+    borderRadius: 10
   },
   price: { color: '#8f7dff', fontWeight: '800', marginTop: 10 },
   actions: { marginTop: 12, flexDirection: 'row', gap: 8 },
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(146,151,214,0.25)',
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   actionText: { color: '#d8dcf7', fontWeight: '600' },
   publishBtn: {
@@ -273,12 +274,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#8f7dff',
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   publishBtnDisabled: {
-    opacity: 0.45,
+    opacity: 0.45
   },
-  publishText: { color: '#fff', fontWeight: '700' },
+  publishText: { color: '#fff', fontWeight: '700' }
 });
 
 export default OwnerListingsScreen;

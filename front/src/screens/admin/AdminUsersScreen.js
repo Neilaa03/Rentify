@@ -3,16 +3,16 @@ import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
-import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
 
 const FILTERS = [
-  { key: 'all', label: 'Tous', roles: [] },
-  { key: 'owner', label: 'Entreprises', roles: [ 'companyOwner'] },
-  { key: 'client', label: 'Particuliers', roles: ['client'] },
-  { key: 'renter', label: 'Locataires', roles: ['owner'] },
-];
+{ key: 'all', label: 'Tous', roles: [] },
+{ key: 'owner', label: 'Entreprises', roles: ['companyOwner'] },
+{ key: 'client', label: 'Particuliers', roles: ['client'] },
+{ key: 'renter', label: 'Locataires', roles: ['owner'] }];
 
-export default function AdminUsersScreen({ navigation, route }) {
+
+export default function AdminUsersScreen({ navigation, route }) {const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [active, setActive] = useState('all');
   const [rows, setRows] = useState([]);
@@ -32,7 +32,7 @@ export default function AdminUsersScreen({ navigation, route }) {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {load();}, []);
 
   const list = useMemo(() => {
     const selected = FILTERS.find((f) => f.key === active);
@@ -42,7 +42,7 @@ export default function AdminUsersScreen({ navigation, route }) {
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      items = items.filter((u) => (`${u.first_name || ''} ${u.last_name || ''}`.toLowerCase().includes(q) || String(u.email || '').toLowerCase().includes(q)));
+      items = items.filter((u) => `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase().includes(q) || String(u.email || '').toLowerCase().includes(q));
     }
     return items;
   }, [rows, search, active]);
@@ -50,11 +50,11 @@ export default function AdminUsersScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Comptes utilisateurs</Text>
+        <Text style={styles.title}>{t("screens.admin.adminusersscreen.comptesUtilisateurs")}</Text>
 
         <View style={styles.searchWrap}>
           <Ionicons name="search-outline" size={16} color="#8a91bf" />
-          <TextInput value={search} onChangeText={setSearch} placeholder="Rechercher..." placeholderTextColor="#7078ab" style={styles.searchInput} />
+          <TextInput value={search} onChangeText={setSearch} placeholder={t("screens.admin.adminusersscreen.rechercher")} placeholderTextColor="#7078ab" style={styles.searchInput} />
         </View>
 
         <ScrollView
@@ -62,16 +62,16 @@ export default function AdminUsersScreen({ navigation, route }) {
           showsHorizontalScrollIndicator={false}
           persistentScrollbar={false}
           style={styles.filtersRow}
-          contentContainerStyle={styles.filtersRowContent}
-        >
-          {FILTERS.map((f) => (
-            <TouchableOpacity key={f.key} style={[styles.filterChip, active === f.key && styles.filterChipActive]} onPress={() => setActive(f.key)}>
+          contentContainerStyle={styles.filtersRowContent}>
+          
+          {FILTERS.map((f) =>
+          <TouchableOpacity key={f.key} style={[styles.filterChip, active === f.key && styles.filterChipActive]} onPress={() => setActive(f.key)}>
               <Text style={[styles.filterText, active === f.key && styles.filterTextActive]}>{f.label}</Text>
             </TouchableOpacity>
-          ))}
+          )}
         </ScrollView>
 
-        <Text style={styles.countText}>{list.length} comptes</Text>
+        <Text style={styles.countText}>{list.length}{t("screens.admin.adminusersscreen.comptes")}</Text>
 
         <ScrollView style={styles.listContainer} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
@@ -90,19 +90,19 @@ export default function AdminUsersScreen({ navigation, route }) {
                       <Text style={styles.dateTag}>{u.created_at ? new Date(u.created_at).toLocaleDateString('fr-FR') : ''}</Text>
                     </View>
                   </View>
-                  <TouchableOpacity style={[styles.statusBadge, { backgroundColor: u.is_active ? 'rgba(0,208,132,0.2)' : 'rgba(255,176,32,0.2)' }]} onPress={async () => { await adminApi.updateUser(u.id, { isActive: !u.is_active }); load(); }}>
-                    <Text style={[styles.statusText, { color: u.is_active ? '#00d084' : '#ffb020' }]}>{u.is_active ? 'Verifie' : 'En attente'}</Text>
+                  <TouchableOpacity style={[styles.statusBadge, { backgroundColor: u.is_active ? 'rgba(0,208,132,0.2)' : 'rgba(255,176,32,0.2)' }]} onPress={async () => {await adminApi.updateUser(u.id, { isActive: !u.is_active });load();}}>
+                    <Text style={[styles.statusText, { color: u.is_active ? '#00d084' : '#ffb020' }]}>{u.is_active ? t("screens.client.listingdetailsscreen.verifie") : t("screens.admin.admincarsscreen.enAttente")}</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            );
+              </View>);
+
           })}
-          {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
+          {loading ? <Text style={styles.loading}>{t("screens.admin.adminusersscreen.chargement")}</Text> : null}
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="users" />
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 }
 
 const styles = StyleSheet.create({
@@ -132,5 +132,5 @@ const styles = StyleSheet.create({
   statusBadge: { borderRadius: 9, paddingHorizontal: 8, paddingVertical: 5 },
   statusText: { fontWeight: '700', fontSize: 11 },
   loading: { color: '#8d94c2', marginTop: 8 },
-  error: { color: '#ff7f90', marginBottom: 8 },
+  error: { color: '#ff7f90', marginBottom: 8 }
 });

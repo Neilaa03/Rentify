@@ -3,9 +3,9 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
-import { API_ENDPOINTS } from '../../constants/api';
+import { API_ENDPOINTS } from '../../constants/api';import { useTranslation } from "react-i18next";
 
-const ForgotPasswordScreen = ({ navigation, route }) => {
+const ForgotPasswordScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const initialEmail = useMemo(() => String(route?.params?.email || '').trim(), [route?.params?.email]);
   const [email, setEmail] = useState(initialEmail);
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,7 @@ const ForgotPasswordScreen = ({ navigation, route }) => {
       const res = await fetch(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmedEmail }),
+        body: JSON.stringify({ email: trimmedEmail })
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -44,18 +44,18 @@ const ForgotPasswordScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Forgot password</Text>
-        <Text style={styles.subtitle}>Enter your email and we’ll send you a reset link.</Text>
+        <Text style={styles.title}>{t("screens.auth.forgotpasswordscreen.forgotPassword")}</Text>
+        <Text style={styles.subtitle}>{t("screens.auth.forgotpasswordscreen.enterYourEmailAndWellSendYou")}</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t("screens.auth.forgotpasswordscreen.email")}
           placeholderTextColor="rgba(255,255,255,0.55)"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
-          onChangeText={(t) => setEmail(t)}
-        />
+          onChangeText={(t) => setEmail(t)} />
+        
 
         {!!error && <Text style={styles.messageError}>{error}</Text>}
         {!!message && <Text style={styles.messageOk}>{message}</Text>}
@@ -65,18 +65,18 @@ const ForgotPasswordScreen = ({ navigation, route }) => {
             colors={[COLORS.secondary, COLORS.primary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.button}
-          >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send reset link</Text>}
+            style={styles.button}>
+            
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("screens.auth.forgotpasswordscreen.sendResetLink")}</Text>}
           </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.link}>
-          <Text style={styles.linkText}>Back to login</Text>
+          <Text style={styles.linkText}>{t("screens.auth.forgotpasswordscreen.backToLogin")}</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 };
 
 const styles = StyleSheet.create({
@@ -90,8 +90,7 @@ const styles = StyleSheet.create({
   messageError: { color: 'rgba(255, 92, 92, 0.95)', marginTop: 10 },
   messageOk: { color: 'rgba(126, 231, 135, 0.95)', marginTop: 10 },
   link: { marginTop: 14, alignSelf: 'center' },
-  linkText: { color: COLORS.secondary, fontWeight: '700' },
+  linkText: { color: COLORS.secondary, fontWeight: '700' }
 });
 
 export default ForgotPasswordScreen;
-

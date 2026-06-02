@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import storage from '../../utils/storage';
 import { API_ENDPOINTS } from '../../constants/api';
-import { COLORS } from '../../constants/colors';
+import { COLORS } from '../../constants/colors';import { useTranslation } from "react-i18next";
 
 const formatCountdown = (ms) => {
   if (!Number.isFinite(ms) || ms <= 0) return '00:00';
@@ -24,7 +24,7 @@ const getPayloadEndpoint = ({ flow, reservationId }) => {
   return API_ENDPOINTS.RESERVATIONS.PICKUP.PAYLOAD(reservationId);
 };
 
-const HandoverCodeScreen = ({ navigation, route }) => {
+const HandoverCodeScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const reservationId = route?.params?.reservationId;
   const flow = route?.params?.flow || 'pickup'; // pickup | return
   const title = flow === 'return' ? 'Code de retour' : 'Code de récupération';
@@ -54,7 +54,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {
 
   const generate = async () => {
     if (!reservationId) {
-      Alert.alert('Erreur', 'reservationId manquant');
+      Alert.alert(t("screens.handover.handovercodescreen.erreur"), t("screens.handover.handovercodescreen.reservationidManquant"));
       return;
     }
     const endpoint = getGenerateEndpoint({ flow, reservationId });
@@ -68,8 +68,8 @@ const HandoverCodeScreen = ({ navigation, route }) => {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       });
 
       const data = await response.json();
@@ -78,7 +78,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {
       setPayload(data);
       setVerifiedAt(null);
     } catch (e) {
-      Alert.alert('Erreur', e.message || 'Une erreur est survenue');
+      Alert.alert(t("screens.handover.handovercodescreen.erreur"), e.message || t("screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue"));
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {
         if (!token) return;
 
         const res = await fetch(getPayloadEndpoint({ flow, reservationId }), {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
@@ -120,10 +120,10 @@ const HandoverCodeScreen = ({ navigation, route }) => {
           setVerifiedAt(json.verifiedAt);
         }
       } catch (_e) {
+
+
         // ignore
-      } finally {
-        if (!cancelled) timer = setTimeout(poll, 2000);
-      }
+      } finally {if (!cancelled) timer = setTimeout(poll, 2000);}
     };
 
     poll();
@@ -147,67 +147,67 @@ const HandoverCodeScreen = ({ navigation, route }) => {
 
       <View style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.lead}>Présentez ce code pour valider la remise du véhicule</Text>
+          <Text style={styles.lead}>{t("screens.handover.handovercodescreen.presentezCeCodePourValiderLaRemise")}</Text>
 
           <View style={styles.modeTabs}>
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => setMode('qr')}
-              style={[styles.modeTab, mode === 'qr' && styles.modeTabActive]}
-            >
-              <Text style={[styles.modeTabText, mode === 'qr' && styles.modeTabTextActive]}>QR</Text>
+              style={[styles.modeTab, mode === 'qr' && styles.modeTabActive]}>
+              
+              <Text style={[styles.modeTabText, mode === 'qr' && styles.modeTabTextActive]}>{t("screens.handover.handovercodescreen.qr")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => setMode('code')}
-              style={[styles.modeTab, mode === 'code' && styles.modeTabActive]}
-            >
-              <Text style={[styles.modeTabText, mode === 'code' && styles.modeTabTextActive]}>Code</Text>
+              style={[styles.modeTab, mode === 'code' && styles.modeTabActive]}>
+              
+              <Text style={[styles.modeTabText, mode === 'code' && styles.modeTabTextActive]}>{t("screens.handover.handovercodescreen.code")}</Text>
             </TouchableOpacity>
           </View>
 
-          {mode === 'qr' && canShowQr ? (
-            <View style={styles.qrBox}>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <View style={styles.qrInner}>
+          {mode === 'qr' && canShowQr ?
+          <View style={styles.qrBox}>
+              {loading ?
+            <ActivityIndicator color="#fff" /> :
+
+            <View style={styles.qrInner}>
                   <Image source={{ uri: payload?.qrDataUrl }} style={styles.qrImage} resizeMode="contain" />
                 </View>
-              )}
-              <Text style={styles.qrHint}>Scannez ce QR code côté propriétaire.</Text>
+            }
+              <Text style={styles.qrHint}>{t("screens.handover.handovercodescreen.scannezCeQrCodeCoteProprietaire")}</Text>
               <TouchableOpacity onPress={() => setMode('code')} activeOpacity={0.85} style={styles.altLinkWrap}>
-                <Text style={styles.altLink}>Utiliser le code à 6 chiffres</Text>
+                <Text style={styles.altLink}>{t("screens.handover.handovercodescreen.utiliserLeCodeA6Chiffres")}</Text>
               </TouchableOpacity>
-            </View>
-          ) : mode === 'qr' && !canShowQr ? (
-            <View style={styles.qrBox}>
+            </View> :
+          mode === 'qr' && !canShowQr ?
+          <View style={styles.qrBox}>
               <Ionicons name="qr-code-outline" size={40} color="rgba(255,255,255,0.7)" />
-              <Text style={styles.qrHint}>
-                QR indisponible pour le moment, utilisez le code.
-              </Text>
+              <Text style={styles.qrHint}>{t("screens.handover.handovercodescreen.qrIndisponiblePourLeMomentUtilisezLe")}
+
+            </Text>
               <TouchableOpacity onPress={() => setMode('code')} activeOpacity={0.85} style={styles.altLinkWrap}>
-                <Text style={styles.altLink}>Utiliser le code à 6 chiffres</Text>
+                <Text style={styles.altLink}>{t("screens.handover.handovercodescreen.utiliserLeCodeA6Chiffres")}</Text>
               </TouchableOpacity>
+            </View> :
+
+          <View style={styles.codeBox}>
+              {loading ?
+            <ActivityIndicator color="#fff" /> :
+
+            <Text style={styles.codeText}>{payload?.code || '— — — — — —'}</Text>
+            }
+              {canShowQr ?
+            <TouchableOpacity onPress={() => setMode('qr')} activeOpacity={0.85} style={styles.altLinkWrap}>
+                  <Text style={styles.altLink}>{t("screens.handover.handovercodescreen.utiliserLeQrCode")}</Text>
+                </TouchableOpacity> :
+            null}
             </View>
-          ) : (
-            <View style={styles.codeBox}>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.codeText}>{payload?.code || '— — — — — —'}</Text>
-              )}
-              {canShowQr ? (
-                <TouchableOpacity onPress={() => setMode('qr')} activeOpacity={0.85} style={styles.altLinkWrap}>
-                  <Text style={styles.altLink}>Utiliser le QR code</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          )}
+          }
 
           <View style={styles.metaRow}>
             <Ionicons name="time-outline" size={16} color={COLORS.textMuted} />
-            <Text style={styles.metaText}>Expire dans {formatCountdown(remainingMs)}</Text>
+            <Text style={styles.metaText}>{t("screens.handover.handovercodescreen.expireDans")}{formatCountdown(remainingMs)}</Text>
           </View>
 
           <TouchableOpacity onPress={generate} disabled={loading} activeOpacity={0.85} style={styles.buttonWrap}>
@@ -215,15 +215,15 @@ const HandoverCodeScreen = ({ navigation, route }) => {
               colors={['#4C6FFF', COLORS.primary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={[styles.button, loading && styles.buttonDisabled]}
-            >
+              style={[styles.button, loading && styles.buttonDisabled]}>
+              
               <Ionicons name="refresh" size={18} color="#fff" />
-              <Text style={styles.buttonText}>Regénérer</Text>
+              <Text style={styles.buttonText}>{t("screens.handover.handovercodescreen.regenerer")}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
-          <Text style={styles.hint}>
-            Pour votre sécurité, le code est valable quelques minutes. Vous pouvez le régénérer si besoin.
+          <Text style={styles.hint}>{t("screens.handover.handovercodescreen.pourVotreSecuriteLeCodeEstValable")}
+
           </Text>
         </View>
       </View>
@@ -234,25 +234,25 @@ const HandoverCodeScreen = ({ navigation, route }) => {
             <View style={styles.successIconWrap}>
               <Ionicons name="checkmark" size={30} color="#0f1228" />
             </View>
-            <Text style={styles.successTitle}>Récupération validée</Text>
-            <Text style={styles.successSubtitle}>Le propriétaire a confirmé la remise du véhicule.</Text>
+            <Text style={styles.successTitle}>{t("screens.handover.handovercodescreen.recuperationValidee")}</Text>
+            <Text style={styles.successSubtitle}>{t("screens.handover.handovercodescreen.leProprietaireAConfirmeLaRemiseDu")}</Text>
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => {
                 setVerifiedAt(null);
                 navigation.goBack();
               }}
-              style={{ marginTop: 14 }}
-            >
+              style={{ marginTop: 14 }}>
+              
               <LinearGradient colors={['#4C6FFF', COLORS.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.successButton}>
-                <Text style={styles.successButtonText}>Retour aux détails</Text>
+                <Text style={styles.successButtonText}>{t("screens.handover.handovercodescreen.retourAuxDetails")}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </LinearGradient>
-  );
+    </LinearGradient>);
+
 };
 
 const styles = StyleSheet.create({
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: 'rgba(21, 24, 55, 0.65)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(255,255,255,0.08)'
   },
   backButton: {
     width: 44,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   headerTitle: { color: COLORS.text, fontSize: 18, fontWeight: '700' },
   content: { flex: 1, padding: 16 },
@@ -285,13 +285,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   lead: { color: COLORS.textMuted, marginBottom: 12 },
   modeTabs: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 12,
+    marginBottom: 12
   },
   modeTab: {
     flex: 1,
@@ -301,11 +301,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   modeTabActive: {
     backgroundColor: 'rgba(143,108,255,0.18)',
-    borderColor: 'rgba(143,108,255,0.55)',
+    borderColor: 'rgba(143,108,255,0.55)'
   },
   modeTabText: { color: 'rgba(255,255,255,0.72)', fontWeight: '900' },
   modeTabTextActive: { color: '#fff' },
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   codeText: { color: '#fff', fontSize: 32, fontWeight: '800', letterSpacing: 3 },
   qrBox: {
@@ -327,12 +327,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   qrInner: {
     padding: 10,
     borderRadius: 18,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffff'
   },
   qrImage: { width: 210, height: 210 },
   qrHint: { marginTop: 10, color: COLORS.textMuted, textAlign: 'center' },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 10
   },
   buttonDisabled: { opacity: 0.7 },
   buttonText: { color: '#fff', fontWeight: '800' },
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 18,
+    padding: 18
   },
   successCard: {
     width: '100%',
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.10)',
     padding: 18,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   successIconWrap: {
     width: 56,
@@ -375,12 +375,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#2ECC71',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   successTitle: { marginTop: 12, color: '#fff', fontSize: 18, fontWeight: '900' },
   successSubtitle: { marginTop: 6, color: 'rgba(255,255,255,0.70)', textAlign: 'center', lineHeight: 18 },
   successButton: { height: 46, paddingHorizontal: 20, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  successButtonText: { color: '#fff', fontWeight: '900' },
+  successButtonText: { color: '#fff', fontWeight: '900' }
 });
 
 export default HandoverCodeScreen;

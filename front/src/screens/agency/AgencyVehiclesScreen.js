@@ -4,13 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, Badge, PillRow, SectionTitle, VehicleCard } from '../../components/agency/AgencyPrimitives';
-import { getAgencyVehicles, toggleAgencyVehicleVisibility } from '../../services/agency';
+import { getAgencyVehicles, toggleAgencyVehicleVisibility } from '../../services/agency';import { useTranslation } from "react-i18next";
 
 const statusFilters = [
-  { key: 'ALL', label: 'Tous' },
-  { key: 'AVAILABLE', label: 'En ligne' },
-  { key: 'HIDDEN', label: 'Hors ligne' },
-];
+{ key: 'ALL', label: 'Tous' },
+{ key: 'AVAILABLE', label: 'En ligne' },
+{ key: 'HIDDEN', label: 'Hors ligne' }];
+
 
 const getSortValue = (item, sortKey) => {
   if (sortKey === 'price_asc') return Number(item.listing?.pricePerDay || 0);
@@ -19,7 +19,7 @@ const getSortValue = (item, sortKey) => {
   return -(Number(item.totalReservations || 0) * 10 + Number(item.favoritesCount || 0));
 };
 
-export default function AgencyVehiclesScreen({ navigation, route }) {
+export default function AgencyVehiclesScreen({ navigation, route }) {const { t } = useTranslation();
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || (route?.name === 'AgencyListings' ? 'listings' : 'fleet');
@@ -30,7 +30,7 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
     error: '',
     data: null,
     status: 'ALL',
-    sort: 'popular',
+    sort: 'popular'
   });
 
   const load = useCallback(async () => {
@@ -72,15 +72,15 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
       await toggleAgencyVehicleVisibility({ token, vehicleId: vehicle.id });
       await load();
     } catch (error) {
-      Alert.alert('Erreur', error.message || 'Impossible de modifier la visibilité');
+      Alert.alert(t("screens.agency.agencyvehiclesscreen.erreur"), error.message || 'Impossible de modifier la visibilité');
     }
   };
 
   const onEdit = (vehicle) => {
     const routeName = mode === 'listings' ? 'OwnerListingForm' : 'OwnerCarForm';
-    const params = mode === 'listings'
-      ? { token, user, mode: 'edit', listing: vehicle.listing || { car: vehicle } }
-      : { token, user, mode: 'edit_car', car: vehicle };
+    const params = mode === 'listings' ?
+    { token, user, mode: 'edit', listing: vehicle.listing || { car: vehicle } } :
+    { token, user, mode: 'edit_car', car: vehicle };
     navigation.navigate(routeName, params);
   };
 
@@ -101,62 +101,62 @@ export default function AgencyVehiclesScreen({ navigation, route }) {
           <View style={styles.page}>
           <View style={styles.headerSpacer} />
 
-          {state.loading ? (
-            <View style={styles.centered}>
+          {state.loading ?
+              <View style={styles.centered}>
               <ActivityIndicator size="large" color="#A78BFF" />
-            </View>
-          ) : (
-            <ScrollView
-              refreshControl={<RefreshControl refreshing={state.refreshing} onRefresh={onRefresh} tintColor="#A78BFF" />}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.content}
-            >
+            </View> :
+
+              <ScrollView
+                refreshControl={<RefreshControl refreshing={state.refreshing} onRefresh={onRefresh} tintColor="#A78BFF" />}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.content}>
+                
               <SectionTitle
-                kicker={mode === 'listings' ? 'LISTINGS' : 'FLEET'}
-                title={mode === 'listings' ? 'Annonces de l’agence' : 'Flotte & véhicules'}
-                subtitle="Gestion, visibilité publique et statuts"
-                right={(
+                  kicker={mode === 'listings' ? 'LISTINGS' : 'FLEET'}
+                  title={mode === 'listings' ? 'Annonces de l’agence' : 'Flotte & véhicules'}
+                  subtitle={t("screens.agency.agencyvehiclesscreen.gestionVisibilitePubliqueEtStatuts")}
+                  right={
                   <TouchableOpacity style={styles.addButton} onPress={onAdd}>
                     <Ionicons name="add" size={16} color="#fff" />
-                    <Text style={styles.addButtonText}>{mode === 'listings' ? 'Ajouter une annonce' : 'Ajouter un véhicule'}</Text>
+                    <Text style={styles.addButtonText}>{mode === 'listings' ? 'Ajouter une annonce' : t("screens.owner.carsscreen.ajouterUnVehicule")}</Text>
                   </TouchableOpacity>
-                )}
-              />
+                  } />
+                
 
               {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
 
               <PillRow
-                items={statusFilters}
-                activeKey={state.status}
-                onSelect={(status) => setState((prev) => ({ ...prev, status }))}
-              />
+                  items={statusFilters}
+                  activeKey={state.status}
+                  onSelect={(status) => setState((prev) => ({ ...prev, status }))} />
+                
 
               <AgencyCard style={styles.countsCard}>
                 <View style={styles.countsRow}>
-                  <Text style={styles.countText}>Disponibles: {Number(counters.available || 0)}</Text>
-                  <Text style={styles.countText}>Loués: {Number(counters.rented || 0)}</Text>
-                  <Text style={styles.countText}>Non publiés: {Number(counters.hidden || 0)}</Text>
+                  <Text style={styles.countText}>{t("screens.agency.agencyvehiclesscreen.disponibles")}{Number(counters.available || 0)}</Text>
+                  <Text style={styles.countText}>{t("screens.agency.agencyvehiclesscreen.loues")}{Number(counters.rented || 0)}</Text>
+                  <Text style={styles.countText}>{t("screens.agency.agencyvehiclesscreen.nonPublies")}{Number(counters.hidden || 0)}</Text>
                 </View>
-                <Text style={styles.countHint}>Les véhicules sans documents obligatoires restent masqués jusqu'à validation.</Text>
+                <Text style={styles.countHint}>{t("screens.agency.agencyvehiclesscreen.lesVehiculesSansDocumentsObligatoiresRestentMasques")}</Text>
               </AgencyCard>
 
-              {items.length ? items.map((item) => (
+              {items.length ? items.map((item) =>
                 <VehicleCard
                   key={item.id}
                   item={item}
                   onToggleVisibility={onToggleVisibility}
-                  onEdit={onEdit}
-                />
-              )) : <Text style={styles.empty}>Aucun véhicule trouvé.</Text>}
+                  onEdit={onEdit} />
+
+                ) : <Text style={styles.empty}>{t("screens.agency.agencyvehiclesscreen.aucunVehiculeTrouve")}</Text>}
             </ScrollView>
-          )}
+              }
           </View>
           </View>
           <AgencyBottomNavigation navigation={navigation} route={route} active={mode === 'listings' ? 'listings' : 'fleet'} />
         </SafeAreaView>
       </ImageBackground>
-    </View>
-  );
+    </View>);
+
 }
 
 const styles = StyleSheet.create({
@@ -185,13 +185,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.12)'
   },
   addButtonText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '900',
-    flexShrink: 1,
+    flexShrink: 1
   },
   primaryAction: {
     flexDirection: 'row',
@@ -201,8 +201,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(41,121,255,0.95)',
     paddingVertical: 14,
     borderRadius: 18,
-    marginBottom: 12,
+    marginBottom: 12
   },
   primaryActionText: { color: '#fff', fontWeight: '900', fontSize: 14 },
-  empty: { color: '#A5AECF', fontStyle: 'italic', marginTop: 10, marginBottom: 20 },
+  empty: { color: '#A5AECF', fontStyle: 'italic', marginTop: 10, marginBottom: 20 }
 });
