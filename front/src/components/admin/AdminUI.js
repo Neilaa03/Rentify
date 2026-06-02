@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { appFont } from '../../utils/responsive';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const ADMIN_COLORS = {
   bg: '#0a0c24',
@@ -14,12 +16,33 @@ export const ADMIN_COLORS = {
   warning: '#ffb347',
 };
 
-export const ScreenHeader = ({ kicker, title }) => (
-  <View style={styles.header}>
-    {!!kicker && <Text style={styles.kicker}>{kicker}</Text>}
-    <Text style={styles.title}>{title}</Text>
+export const ScreenHeader = ({ kicker, title, rightAction }) => (
+  <View style={[styles.header, rightAction ? styles.headerWithAction : null]}>
+    <View style={styles.headerTextWrap}>
+      {!!kicker && <Text style={styles.kicker}>{kicker}</Text>}
+      <Text style={styles.title}>{title}</Text>
+    </View>
+    {!!rightAction && <View style={styles.headerActionWrap}>{rightAction}</View>}
   </View>
 );
+
+export const AdminLogoutButton = ({ navigation, tint = ADMIN_COLORS.danger }) => {
+  const { clearSession } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await clearSession();
+    } finally {
+      navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
+    }
+  };
+
+  return (
+    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} accessibilityRole="button" accessibilityLabel="Se déconnecter">
+      <Ionicons name="log-out-outline" size={20} color={tint} />
+    </TouchableOpacity>
+  );
+};
 
 export const Card = ({ children }) => <View style={styles.card}>{children}</View>;
 
@@ -63,10 +86,14 @@ export const Row = ({ title, subtitle, right }) => (
 
 const styles = StyleSheet.create({
   header: { marginTop: 6, marginBottom: 14 },
+  headerWithAction: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  headerTextWrap: { flex: 1, paddingRight: 12 },
+  headerActionWrap: { paddingTop: 6 },
   kicker: { color: '#8f7dff', fontSize: appFont(12), letterSpacing: 1.1, fontWeight: '700' },
   title: { color: '#fff', fontSize: appFont(28, 30), fontWeight: '800', marginTop: 6 },
+  logoutButton: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,127,144,0.12)', borderWidth: 1, borderColor: 'rgba(255,127,144,0.25)' },
   card: { borderRadius: 14, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, padding: 12, marginBottom: 10 },
-  input: { borderRadius: 12, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, paddingHorizontal: 12, paddingVertical: 10, color: '#fff', marginBottom: 10 },
+  input: { borderRadius: 12, borderWidth: 1, borderColor: ADMIN_COLORS.border, backgroundColor: ADMIN_COLORS.panel, paddingHorizontal: 12, minHeight: 32, color: '#fff', marginBottom: 5 },
   btn: { borderRadius: 10, backgroundColor: ADMIN_COLORS.accent, paddingHorizontal: 12, paddingVertical: 9, alignSelf: 'flex-start', marginRight: 8 },
   btnGhost: { backgroundColor: 'rgba(255,255,255,0.08)' },
   btnDanger: { backgroundColor: 'rgba(255,127,144,0.25)' },

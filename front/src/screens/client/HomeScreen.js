@@ -6,9 +6,75 @@ import { COLORS } from '../../constants/colors';
 import ListingCard from '../../components/cards/ListingCard';
 import MessageIconButton from '../../components/messaging/MessageIconButton';
 import NotificationIconButton from '../../components/notifications/NotificationIconButton';
+import CustomCalendar from '../../components/reservation/CustomCalendar';
 import { getListings } from '../../services/listings';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import storage from '../../utils/storage';
+import { parseLocalDate, formatLocalYmd } from '../../utils/reservationUtils';
+
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+const formatDateLabel = (value) => {
+    if (!value) return '';
+    const parsed = parseLocalDate(value);
+    if (!parsed) return value;
+    return parsed.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+};
+
+const getListingSearchText = (listing) => [
+    listing?.brand,
+    listing?.model,
+    listing?.city,
+    listing?.country,
+    listing?.pickupAddress,
+    listing?.title,
+].filter(Boolean).join(' ').toLowerCase();
+
+const getListingCityText = (listing) => String(listing?.city || '').trim().toLowerCase();
+
+const getListingDateWindow = (listing) => {
+    const from = listing?.availableFrom || listing?.available_from || null;
+    const to = listing?.availableTo || listing?.available_to || null;
+    return { from, to };
+};
+
+const matchesDateRange = (listing, startDate, endDate) => {
+    if (!startDate && !endDate) return true;
+
+    const { from, to } = getListingDateWindow(listing);
+    if (!from && !to) return true;
+
+    const rangeStart = parseLocalDate(startDate || endDate);
+    const rangeEnd = parseLocalDate(endDate || startDate);
+    const availabilityStart = parseLocalDate(from);
+    const availabilityEnd = parseLocalDate(to);
+
+    if (!rangeStart || !rangeEnd) return true;
+
+    if (availabilityStart && availabilityEnd) {
+        return availabilityStart <= rangeEnd && availabilityEnd >= rangeStart;
+    }
+
+    if (availabilityStart) {
+        return availabilityStart <= rangeEnd;
+    }
+
+    if (availabilityEnd) {
+        return availabilityEnd >= rangeStart;
+    }
+
+    return true;
+};
+
+const sortListingsForDisplay = (items) => [...items].sort((a, b) => {
+    const priceA = Number(a?.pricePerDay || 0);
+    const priceB = Number(b?.pricePerDay || 0);
+    if (priceA !== priceB) return priceA - priceB;
+    if (a.availableFrom && b.availableFrom && a.availableFrom !== b.availableFrom) {
+        return a.availableFrom.localeCompare(b.availableFrom);
+    }
+    return (b.rating || 0) - (a.rating || 0);
+});
 
 const HomeScreen = ({ navigation, route }) => {
     const [activeTab, setActiveTab] = useState('Accueil');
@@ -32,6 +98,10 @@ const HomeScreen = ({ navigation, route }) => {
     const sortOptions = ['Populaire', 'Prix ↑', 'Prix ↓', 'Note'];
     const [showFilterOptions, setShowFilterOptions] = useState(false);
     const [showSortOptions, setShowSortOptions] = useState(false);
+    const [placeValue, setPlaceValue] = useState('');
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const loadListings = async () => {
         try {
@@ -92,28 +162,148 @@ const HomeScreen = ({ navigation, route }) => {
         setPhoneReminderDismissedThisSession(true);
     };
 
-    const filteredListings = useMemo(() => listings
-        .filter((listing) => {
-            const normalizedSearch = searchValue.trim().toLowerCase();
-            const matchSearch =
-                normalizedSearch.length === 0 ||
-                `${listing.brand} ${listing.model} ${listing.city}`.toLowerCase().includes(normalizedSearch);
+    const clearDateFilters = () => {
+        setStartDate(null);
+        setEndDate(null);
+    };
 
-            const matchFilter =
-                activeFilter === 'Tous' ||
-                (activeFilter === 'Boîte: Auto' && listing.transmission.toLowerCase() === 'auto') ||
-                (activeFilter === 'Boîte: Manuelle' && listing.transmission.toLowerCase() === 'manuelle') ||
-                (activeFilter === 'Carburant: Essence' && listing.fuel.toLowerCase() === 'essence') ||
-                (activeFilter === 'Carburant: Diesel' && listing.fuel.toLowerCase() === 'diesel');
+    const handleCalendarDayPress = (day) => {
+        const dateStr = day?.dateString;
+        if (!dateStr) return;
 
-            return matchSearch && matchFilter;
-        })
-        .sort((a, b) => {
-            if (activeSort === 'Prix ↑') return a.pricePerDay - b.pricePerDay;
-            if (activeSort === 'Prix ↓') return b.pricePerDay - a.pricePerDay;
-            if (activeSort === 'Note') return b.rating - a.rating;
-            return b.rating - a.rating;
-        }), [listings, searchValue, activeFilter, activeSort]);
+        if (!startDate || (startDate && endDate)) {
+            setStartDate(dateStr);
+            setEndDate(null);
+            return;
+        }
+
+        const pressedDate = parseLocalDate(dateStr);
+        const startLocal = parseLocalDate(startDate);
+        if (!pressedDate || !startLocal) return;
+
+        if (pressedDate < startLocal) {
+            setStartDate(dateStr);
+            setEndDate(startDate);
+            return;
+        }
+
+        setEndDate(dateStr);
+    };
+
+    const markedDates = useMemo(() => {
+        const marked = {};
+        if (startDate) {
+            marked[startDate] = {
+                selected: true,
+                startingDay: true,
+                endingDay: !endDate,
+                color: '#6C4DFF',
+                textColor: '#fff',
+            };
+        }
+        if (startDate && endDate) {
+            const current = parseLocalDate(startDate);
+            const final = parseLocalDate(endDate);
+            if (current && final) {
+                while (current <= final) {
+                    const dateStr = formatLocalYmd(current);
+                    if (dateStr) {
+                        marked[dateStr] = {
+                            selected: true,
+                            color: '#6C4DFF',
+                            textColor: '#fff',
+                            startingDay: dateStr === startDate,
+                            endingDay: dateStr === endDate,
+                            inRange: dateStr !== startDate && dateStr !== endDate,
+                        };
+                    }
+                    current.setDate(current.getDate() + 1);
+                }
+            }
+        }
+        return marked;
+    }, [startDate, endDate]);
+
+    const groupedListings = useMemo(() => {
+        const normalizedSearch = normalizeText(searchValue);
+        const normalizedPlace = normalizeText(placeValue);
+
+        const groupedByCar = new Map();
+
+        listings.forEach((listing) => {
+            const groupKey = listing?.carId || listing?.id;
+            if (!groupKey) return;
+
+            const current = groupedByCar.get(groupKey) || {
+                carId: listing.carId || listing.id,
+                brand: listing.brand,
+                model: listing.model,
+                year: listing.year,
+                category: listing.category,
+                car: listing.car,
+                images: listing.images,
+                offers: [],
+            };
+
+            current.offers.push(listing);
+            groupedByCar.set(groupKey, current);
+        });
+
+        return Array.from(groupedByCar.values())
+            .map((group) => {
+                const offersMatchingCriteria = group.offers.filter((offer) => {
+                    const searchMatch =
+                        normalizedSearch.length === 0 ||
+                        getListingSearchText(offer).includes(normalizedSearch);
+
+                    const placeMatch =
+                        normalizedPlace.length === 0 ||
+                        getListingCityText(offer).includes(normalizedPlace);
+
+                    const filterMatch =
+                        activeFilter === 'Tous' ||
+                        (activeFilter === 'Boîte: Auto' && normalizeText(offer.transmission) === 'auto') ||
+                        (activeFilter === 'Boîte: Manuelle' && normalizeText(offer.transmission) === 'manuelle') ||
+                        (activeFilter === 'Carburant: Essence' && normalizeText(offer.fuel) === 'essence') ||
+                        (activeFilter === 'Carburant: Diesel' && normalizeText(offer.fuel) === 'diesel');
+
+                    const dateMatch = matchesDateRange(offer, startDate, endDate);
+                    return searchMatch && placeMatch && filterMatch && dateMatch;
+                });
+
+                const visibleOffers = offersMatchingCriteria.length > 0 ? offersMatchingCriteria : [];
+                const sortedVisibleOffers = sortListingsForDisplay(visibleOffers.length > 0 ? visibleOffers : group.offers);
+                const selectedOffer = sortedVisibleOffers[0] || group.offers[0];
+
+                if (!selectedOffer || offersMatchingCriteria.length === 0 && (normalizedSearch.length > 0 || normalizedPlace.length > 0 || startDate || endDate || activeFilter !== 'Tous')) {
+                    return null;
+                }
+
+                const allOffersSorted = sortListingsForDisplay(group.offers);
+                const fallbackOffer = sortedVisibleOffers[0] || allOffersSorted[0] || selectedOffer;
+
+                return {
+                    ...group,
+                    id: group.carId || fallbackOffer?.id,
+                    offers: allOffersSorted,
+                    selectedOffer: fallbackOffer,
+                    offerCount: allOffersSorted.length,
+                    matchingOfferCount: offersMatchingCriteria.length,
+                    image: fallbackOffer?.image || group.images?.[0] || null,
+                    pricePerDay: fallbackOffer?.pricePerDay || 0,
+                    city: fallbackOffer?.city || '',
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                const aOffer = a.selectedOffer || {};
+                const bOffer = b.selectedOffer || {};
+                if (activeSort === 'Prix ↑') return (aOffer.pricePerDay || 0) - (bOffer.pricePerDay || 0);
+                if (activeSort === 'Prix ↓') return (bOffer.pricePerDay || 0) - (aOffer.pricePerDay || 0);
+                if (activeSort === 'Note') return (bOffer.rating || 0) - (aOffer.rating || 0);
+                return (bOffer.rating || 0) - (aOffer.rating || 0);
+            });
+    }, [listings, searchValue, placeValue, activeFilter, activeSort, startDate, endDate]);
 
     return (
         <View style={styles.container}>
@@ -136,15 +326,102 @@ const HomeScreen = ({ navigation, route }) => {
                         contentContainerStyle={styles.contentContainer}
                         showsVerticalScrollIndicator={false}
                     >
-                        <View style={styles.searchBar}>
-                            <Ionicons name="search-outline" size={20} color="#9aa0c8" />
-                            <TextInput
-                                value={searchValue}
-                                onChangeText={setSearchValue}
-                                placeholder="Rechercher une voiture ou une ville"
-                                placeholderTextColor="#7c82ab"
-                                style={styles.searchInput}
-                            />
+                        <View style={styles.filterPanel}>
+                            <View style={styles.filterRow}>
+                                <View style={styles.filterField}>
+                                    <Ionicons name="location-outline" size={16} color="#9aa0c8" />
+                                    <TextInput
+                                        value={placeValue}
+                                        onChangeText={setPlaceValue}
+                                        placeholder="Lieu, ville ou quartier"
+                                        placeholderTextColor="#7c82ab"
+                                        style={styles.filterInput}
+                                    />
+                                </View>
+                                <TouchableOpacity
+                                    style={[styles.dateFilterButton, showDatePicker && styles.dateFilterButtonActive]}
+                                    onPress={() => setShowDatePicker((prev) => !prev)}
+                                    activeOpacity={0.85}
+                                >
+                                    <Ionicons name="calendar-outline" size={16} color="#d6dbff" />
+                                    <Text style={styles.dateFilterButtonText}>
+                                        {startDate
+                                            ? endDate
+                                                ? `${formatDateLabel(startDate)} → ${formatDateLabel(endDate)}`
+                                                : `${formatDateLabel(startDate)} ...`
+                                            : 'Dates'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {(placeValue || startDate || endDate) && (
+                                <View style={styles.activeFiltersRow}>
+                                    {placeValue ? (
+                                        <TouchableOpacity
+                                            style={styles.activeFilterChip}
+                                            onPress={() => setPlaceValue('')}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Text style={styles.activeFilterChipText}>{placeValue}</Text>
+                                            <Ionicons name="close" size={12} color="#fff" />
+                                        </TouchableOpacity>
+                                    ) : null}
+                                    {startDate ? (
+                                        <TouchableOpacity
+                                            style={styles.activeFilterChip}
+                                            onPress={clearDateFilters}
+                                            activeOpacity={0.8}
+                                        >
+                                            <Text style={styles.activeFilterChipText}>
+                                                {endDate ? `${formatDateLabel(startDate)} → ${formatDateLabel(endDate)}` : formatDateLabel(startDate)}
+                                            </Text>
+                                            <Ionicons name="close" size={12} color="#fff" />
+                                        </TouchableOpacity>
+                                    ) : null}
+                                    <TouchableOpacity
+                                        style={styles.clearFiltersButton}
+                                        onPress={() => {
+                                            setPlaceValue('');
+                                            clearDateFilters();
+                                        }}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Text style={styles.clearFiltersButtonText}>Tout effacer</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+
+                            {showDatePicker && (
+                                <View style={styles.datePickerCard}>
+                                    <Text style={styles.datePickerTitle}>Choisis une période</Text>
+                                    <CustomCalendar
+                                        onDayPress={handleCalendarDayPress}
+                                        markedDates={markedDates}
+                                        minDate={null}
+                                        maxDate={null}
+                                        disabledDates={[]}
+                                    />
+                                    <View style={styles.datePickerActions}>
+                                        <TouchableOpacity
+                                            style={styles.datePickerActionGhost}
+                                            onPress={() => {
+                                                clearDateFilters();
+                                                setShowDatePicker(false);
+                                            }}
+                                            activeOpacity={0.85}
+                                        >
+                                            <Text style={styles.datePickerActionGhostText}>Réinitialiser</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.datePickerActionPrimary}
+                                            onPress={() => setShowDatePicker(false)}
+                                            activeOpacity={0.85}
+                                        >
+                                            <Text style={styles.datePickerActionPrimaryText}>Appliquer</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
                         </View>
 
                         {showPhoneReminder && (
@@ -256,16 +533,19 @@ const HomeScreen = ({ navigation, route }) => {
                                 </TouchableOpacity>
                             </View>
                         ) : null}
-                        {!isLoading && !error && filteredListings.map((listing) => (
+                        {!isLoading && !error && groupedListings.map((listing) => (
                             <ListingCard
                                 key={listing.id}
                                 listing={listing}
-                                isFavorite={isFavorite(listing.id)}
-                                onToggleFavorite={() => toggleFavorite(listing.id)}
-                                onPress={() => navigation.navigate('ListingDetails', { listing })}
+                                isFavorite={isFavorite(listing.selectedOffer?.id || listing.id)}
+                                onToggleFavorite={() => toggleFavorite(listing.selectedOffer?.id || listing.id)}
+                                onPress={() => navigation.navigate('ListingDetails', {
+                                    listing: listing.selectedOffer || listing,
+                                    groupedOffers: listing.offers,
+                                })}
                             />
                         ))}
-                        {!isLoading && !error && filteredListings.length === 0 && (
+                        {!isLoading && !error && groupedListings.length === 0 && (
                             <View style={styles.emptyState}>
                                 <Text style={styles.emptyTitle}>Aucun véhicule trouvé</Text>
                                 <Text style={styles.emptySubtitle}>Essaie une autre recherche ou un autre filtre.</Text>
@@ -349,6 +629,140 @@ const styles = StyleSheet.create({
         color: '#f4f6ff',
         flex: 1,
         fontSize: 14,
+    },
+    filterPanel: {
+        marginBottom: 14,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(145, 152, 229, 0.18)',
+        backgroundColor: 'rgba(13, 16, 35, 0.68)',
+        padding: 12,
+    },
+    filterRow: {
+        flexDirection: 'row',
+        gap: 10,
+        alignItems: 'center',
+    },
+    filterField: {
+        flex: 1,
+        minHeight: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(145, 152, 229, 0.18)',
+        backgroundColor: 'rgba(18, 21, 46, 0.92)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+    },
+    filterInput: {
+        flex: 1,
+        marginLeft: 8,
+        color: '#f4f6ff',
+        fontSize: 13,
+    },
+    dateFilterButton: {
+        minHeight: 44,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(145, 152, 229, 0.18)',
+        backgroundColor: 'rgba(18, 21, 46, 0.92)',
+        paddingHorizontal: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    dateFilterButtonActive: {
+        borderColor: 'rgba(143, 108, 255, 0.6)',
+        backgroundColor: 'rgba(108, 77, 255, 0.2)',
+    },
+    dateFilterButtonText: {
+        color: '#d6dbff',
+        fontWeight: '700',
+        fontSize: 12,
+    },
+    activeFiltersRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 10,
+    },
+    activeFilterChip: {
+        minHeight: 32,
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: 'rgba(108, 77, 255, 0.34)',
+        borderWidth: 1,
+        borderColor: 'rgba(143, 108, 255, 0.55)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    activeFilterChipText: {
+        color: '#fff',
+        fontSize: 11.5,
+        fontWeight: '700',
+    },
+    clearFiltersButton: {
+        minHeight: 32,
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(145, 152, 229, 0.18)',
+    },
+    clearFiltersButtonText: {
+        color: '#c7cdf4',
+        fontSize: 11.5,
+        fontWeight: '600',
+    },
+    datePickerCard: {
+        marginTop: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(145, 152, 229, 0.18)',
+        backgroundColor: 'rgba(10, 12, 28, 0.9)',
+        padding: 12,
+    },
+    datePickerTitle: {
+        color: '#f4f6ff',
+        fontSize: 13,
+        fontWeight: '700',
+        marginBottom: 10,
+    },
+    datePickerActions: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 12,
+    },
+    datePickerActionGhost: {
+        flex: 1,
+        minHeight: 40,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(145, 152, 229, 0.18)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255,255,255,0.04)',
+    },
+    datePickerActionGhostText: {
+        color: '#d6dbff',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    datePickerActionPrimary: {
+        flex: 1,
+        minHeight: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(108, 77, 255, 0.9)',
+    },
+    datePickerActionPrimaryText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '700',
     },
     actionsRow: {
         flexDirection: 'row',

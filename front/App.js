@@ -5,6 +5,7 @@ import * as Linking from 'expo-linking';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { AuthProvider } from './src/contexts/AuthContext';
 import LandingScreen from './src/screens/client/LandingScreen';
 import HomeScreen from './src/screens/client/HomeScreen';
 import ListingDetailsScreen from './src/screens/client/ListingDetailsScreen';
@@ -97,52 +98,54 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NativeStripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-        <NavigationContainer linking={linking}>
-          <Stack.Navigator
-            screenOptions={{
-              headerShown: false,
-              cardStyle: { backgroundColor: APP_BACKGROUND },
-            }}
-          >
-            <Stack.Screen name="Landing" component={LandingScreen} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-            <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-            <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-            <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />
-            <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
-            <Stack.Screen name="OwnerCars" component={OwnerCarsScreen} />
-            <Stack.Screen name="OwnerCarForm" component={OwnerCarFormScreen} />
-            <Stack.Screen name="OwnerCarReviews" component={OwnerCarReviewsScreen} />
-            <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
-            <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
-            <Stack.Screen name="OwnerReservations" component={OwnerReservationsScreen} />
-            <Stack.Screen name="OwnerReservationDetails" component={OwnerReservationDetailsScreen} />
-            <Stack.Screen name="AgencyDashboard" component={AgencyDashboardScreen} />
-            <Stack.Screen name="AgencyFleet" component={AgencyVehiclesScreen} initialParams={{ mode: 'fleet' }} />
-            <Stack.Screen name="AgencyListings" component={AgencyListingsScreen} />
-            <Stack.Screen name="AgencyRequests" component={AgencyRequestsScreen} />
-            <Stack.Screen name="AgencyDocuments" component={AgencyDocumentsScreen} />
-            <Stack.Screen name="AgencyProfile" component={AgencyProfileScreen} />
-            <Stack.Screen name="NotificationScreen" component={UnreadNotificationsScreen} />
-            <Stack.Screen name="NotificationsHistory" component={NotificationsHistoryScreen} />
-            <Stack.Screen name="OwnerPickupVerify" component={HandoverVerifyScreen} />
-            <Stack.Screen name="OwnerReturnCode" component={HandoverCodeScreen} />
-            <Stack.Screen name="Inbox" component={InboxScreen} />
-            <Stack.Screen name="Chat" component={ChatScreen} />
-            <Stack.Screen name="ClientApp" component={ClientNavigation} />
-            <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-            <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
-            <Stack.Screen name="AdminCars" component={AdminCarsScreen} />
-            <Stack.Screen name="AdminReservations" component={AdminReservationsScreen} />
-            <Stack.Screen name="AdminPayments" component={AdminPaymentsScreen} />
-            <Stack.Screen name="AdminReports" component={AdminReportsScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
+        <AuthProvider>
+          <NavigationContainer linking={linking}>
+            <Stack.Navigator
+              screenOptions={{
+                headerShown: false,
+                cardStyle: { backgroundColor: APP_BACKGROUND },
+              }}
+            >
+              <Stack.Screen name="Landing" component={LandingScreen} />
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Register" component={RegisterScreen} />
+              <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+              <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+              <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="ListingDetails" component={ListingDetailsScreen} />
+              <Stack.Screen name="OwnerDashboard" component={OwnerDashboardScreen} />
+              <Stack.Screen name="OwnerCars" component={OwnerCarsScreen} />
+              <Stack.Screen name="OwnerCarForm" component={OwnerCarFormScreen} />
+              <Stack.Screen name="OwnerCarReviews" component={OwnerCarReviewsScreen} />
+              <Stack.Screen name="OwnerListings" component={OwnerListingsScreen} />
+              <Stack.Screen name="OwnerListingForm" component={OwnerListingFormScreen} />
+              <Stack.Screen name="OwnerReservations" component={OwnerReservationsScreen} />
+              <Stack.Screen name="OwnerReservationDetails" component={OwnerReservationDetailsScreen} />
+              <Stack.Screen name="AgencyDashboard" component={AgencyDashboardScreen} />
+              <Stack.Screen name="AgencyFleet" component={AgencyVehiclesScreen} initialParams={{ mode: 'fleet' }} />
+              <Stack.Screen name="AgencyListings" component={AgencyListingsScreen} />
+              <Stack.Screen name="AgencyRequests" component={AgencyRequestsScreen} />
+              <Stack.Screen name="AgencyDocuments" component={AgencyDocumentsScreen} />
+              <Stack.Screen name="AgencyProfile" component={AgencyProfileScreen} />
+              <Stack.Screen name="NotificationScreen" component={UnreadNotificationsScreen} />
+              <Stack.Screen name="NotificationsHistory" component={NotificationsHistoryScreen} />
+              <Stack.Screen name="OwnerPickupVerify" component={HandoverVerifyScreen} />
+              <Stack.Screen name="OwnerReturnCode" component={HandoverCodeScreen} />
+              <Stack.Screen name="Inbox" component={InboxScreen} />
+              <Stack.Screen name="Chat" component={ChatScreen} />
+              <Stack.Screen name="ClientApp" component={ClientNavigation} />
+              <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+              <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
+              <Stack.Screen name="AdminCars" component={AdminCarsScreen} />
+              <Stack.Screen name="AdminReservations" component={AdminReservationsScreen} />
+              <Stack.Screen name="AdminPayments" component={AdminPaymentsScreen} />
+              <Stack.Screen name="AdminReports" component={AdminReportsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </AuthProvider>
       </NativeStripeProvider>
     </GestureHandlerRootView>
   );

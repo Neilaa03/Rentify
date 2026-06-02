@@ -64,8 +64,8 @@ export const createDocumentSchema = z.object({
 
 export const updateDocumentSchema = z.object({
   status: z.enum(documentStatuses).optional(),
-  reviewedBy: z.string().uuid().optional(),
-  reviewedAt: z.string().datetime().optional(),
+  reviewedBy: z.string().uuid().nullable().optional(),
+  reviewedAt: z.string().datetime().nullable().optional(),
   documentUrl: z.string().url().optional(),
 }).refine((value) => Object.keys(value).length > 0, {
   message: 'At least one field is required for update',

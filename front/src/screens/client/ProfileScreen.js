@@ -1,5 +1,4 @@
-
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   Alert,
   ActivityIndicator,
@@ -17,6 +16,7 @@ import {
   Pressable,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -120,6 +120,14 @@ const getIdentityStatusMeta = (status) => {
   return { label: 'Manquant', tone: '#9ca2cb', bg: 'rgba(255,255,255,0.05)' };
 };
 
+const pickLatestDocument = (documents = []) =>
+  [...documents]
+    .sort((a, b) => {
+      const aTime = new Date(a?.updatedAt || a?.createdAt || 0).getTime();
+      const bTime = new Date(b?.updatedAt || b?.createdAt || 0).getTime();
+      return bTime - aTime;
+    })[0] || null;
+
 const ProfileScreen = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const [profile, setProfile] = useState(route?.params?.user || null);
@@ -137,11 +145,17 @@ const ProfileScreen = ({ navigation, route }) => {
   const [identityBusy, setIdentityBusy] = useState(false);
   const [identityAlertShown, setIdentityAlertShown] = useState(false);
   const [identityError, setIdentityError] = useState('');
+  const [profileSynced, setProfileSynced] = useState(false);
   const [didAutoOpenPersonalInfo, setDidAutoOpenPersonalInfo] = useState(false);
   const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [localProfilePictureUri, setLocalProfilePictureUri] = useState('');
+  const profileRef = useRef(profile);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [changePasswordCurrent, setChangePasswordCurrent] = useState('');
   const [changePasswordNew, setChangePasswordNew] = useState('');
@@ -173,57 +187,90 @@ const ProfileScreen = ({ navigation, route }) => {
     logout: profileFont(width, appFont(15), 14, 13),
   };
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      let effectiveToken = token;
-      if (!effectiveToken) {
-        effectiveToken = (await storage.getItemAsync('userToken')) || '';
-        if (effectiveToken) setToken(effectiveToken);
-      }
+  const refreshProfile = useCallback(async () => {
+    let effectiveToken = token;
+    if (!effectiveToken) {
+      effectiveToken = (await storage.getItemAsync('userToken')) || '';
+      if (effectiveToken) setToken(effectiveToken);
+    }
 
-      // Show cached profile immediately (helps client tab where params are not forwarded).
-      if (!profile) {
-        const cached = await storage.getItemAsync('userProfile');
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (parsed && typeof parsed === 'object') setProfile(parsed);
-          } catch {
-            // ignore
-          }
+    // Show cached profile immediately (helps client tab where params are not forwarded).
+    if (!profileRef.current) {
+      const cached = await storage.getItemAsync('userProfile');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed === 'object') setProfile(parsed);
+        } catch {
+          // ignore
         }
       }
+    }
 
-      if (!effectiveToken) return;
+    if (!effectiveToken) return;
 
-      try {
-        setLoading(true);
-        setError('');
+    try {
+      setLoading(true);
+      setProfileSynced(false);
+      setError('');
 
-        const response = await fetch(API_ENDPOINTS.AUTH.ME, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${effectiveToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      const response = await fetch(API_ENDPOINTS.AUTH.ME, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${effectiveToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
         const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data?.error || 'Unable to load profile');
-        }
 
-        const next = data?.user || null;
-        await persistUpdatedUser(next);
-      } catch (err) {
-        setError(err.message || 'Unable to load profile');
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(data?.error || 'Unable to load profile');
       }
-    };
 
-    fetchProfile();
+      const next = data?.user || null;
+
+      await persistUpdatedUser(next);
+
+      setProfile(next);
+      setProfileSynced(true);
+
+      if (next) {
+        const normalized = {
+          id: next.id,
+          email: next.email,
+          firstName: next.firstName || next.first_name || '',
+          lastName: next.lastName || next.last_name || '',
+          phone: next.phone || '',
+          role: next.role,
+          isVerified: next.isVerified ?? next.is_verified,
+          isActive: next.isActive ?? next.is_active,
+          authProvider: next.authProvider || next.auth_provider || '',
+          profilePicture: next.profilePicture || next.profile_picture || '',
+        };
+
+        await storage.setItemAsync(
+          'userProfile',
+          JSON.stringify(normalized)
+        );
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to load profile');
+    } finally {
+      setProfileSynced(true);
+      setLoading(false);
+    }
   }, [token]);
+
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshProfile();
+    }, [refreshProfile])
+  );
 
   useEffect(() => {
     const fetchOwnerStats = async () => {
@@ -232,6 +279,7 @@ const ProfileScreen = ({ navigation, route }) => {
 
       try {
         setOwnerStatsLoading(true);
+
         const response = await fetch(API_ENDPOINTS.PROFILE.ME_STATS, {
           method: 'GET',
           headers: {
@@ -241,9 +289,13 @@ const ProfileScreen = ({ navigation, route }) => {
         });
 
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data?.error || 'Unable to load stats');
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Unable to load stats');
+        }
 
         const stats = data?.stats || {};
+
         setOwnerStats({
           cars: Number(stats.cars || 0) || 0,
           listings: Number(stats.listings || 0) || 0,
@@ -258,6 +310,29 @@ const ProfileScreen = ({ navigation, route }) => {
 
     fetchOwnerStats();
   }, [isOwner, token]);
+
+
+  const loadIdentityDocument = useCallback(async () => {
+    if (!token || !isOwner || !profile?.id) return;
+
+    try {
+      setIdentityLoading(true);
+      setIdentityError('');
+      const docs = await getUserDocuments({
+        token,
+        userId: profile.id,
+        documentType: 'identity_card',
+      });
+      const identityDocs = (Array.isArray(docs) ? docs : []).filter((doc) => doc.documentType === 'identity_card');
+      const identity = pickLatestDocument(identityDocs);
+      setIdentityDocument(identity);
+    } catch (err) {
+      setIdentityError(err.message || 'Impossible de charger la carte d’identité');
+    } finally {
+      setIdentityLoading(false);
+    }
+  }, [isOwner, profile?.id, token]);
+
 
   useEffect(() => {
     const loadConnectStatus = async () => {
@@ -327,17 +402,18 @@ const ProfileScreen = ({ navigation, route }) => {
   const identityStatus = getIdentityStatusMeta(identityDocument?.status);
   const identityReason = identityDocument?.ocrResult?.verificationReason || '';
   const identityVerified = String(identityDocument?.status || '').toLowerCase() === 'approved';
+  const accountVerified = Boolean(profile?.isVerified ?? profile?.is_verified);
 
   useEffect(() => {
-    if (!isOwner || loading || identityLoading || identityAlertShown) return;
-    if (identityVerified) return;
+    if (!isOwner || loading || identityLoading || identityAlertShown || !profileSynced) return;
+    if (accountVerified || identityVerified) return;
 
     Alert.alert(
       'Carte d’identité requise',
       'Vous devez téléverser et faire valider votre carte d’identité pour publier un véhicule ou une annonce.'
     );
     setIdentityAlertShown(true);
-  }, [identityAlertShown, identityLoading, identityVerified, isOwner, loading]);
+  }, [accountVerified, identityAlertShown, identityLoading, identityVerified, isOwner, loading, profileSynced]);
 
   const openPersonalInfoEditor = () => {
     setEditFirstName(profile?.first_name || profile?.firstName || '');
@@ -514,6 +590,10 @@ const ProfileScreen = ({ navigation, route }) => {
 
   const deleteIdentityDocument = useCallback(async () => {
     if (!identityDocument?.id) return;
+    if (accountVerified || identityVerified) {
+      Alert.alert('Document verrouillé', 'Votre carte d’identité est vérifiée et ne peut plus être supprimée.');
+      return;
+    }
     try {
       setIdentityBusy(true);
       await deleteDocument({ token, documentId: identityDocument.id });
@@ -524,7 +604,7 @@ const ProfileScreen = ({ navigation, route }) => {
     } finally {
       setIdentityBusy(false);
     }
-  }, [identityDocument?.id, token]);
+  }, [accountVerified, identityDocument?.id, identityVerified, token]);
   const pickAndUploadProfilePicture = async () => {
     const effectiveToken = token || (await storage.getItemAsync('userToken')) || '';
     if (!effectiveToken) {
@@ -1179,10 +1259,16 @@ const ProfileScreen = ({ navigation, route }) => {
                       {!identityVerified ? (
                         <TouchableOpacity style={[styles.identityActionBtn, styles.identityPrimaryBtn]} onPress={pickIdentityDocument} disabled={identityBusy}>
                           <Ionicons name={identityDocument?.documentUrl ? 'create-outline' : 'cloud-upload-outline'} size={16} color="#fff" />
-                          <Text style={styles.identityActionPrimaryText}>{identityDocument?.documentUrl ? 'Remplacer' : 'Téléverser'}</Text>
+                          <Text style={styles.identityActionPrimaryText}>
+                            {identityBusy
+                              ? 'Chargement...'
+                              : identityDocument?.documentUrl
+                                ? 'Remplacer'
+                                : 'Téléverser'}
+                          </Text>
                         </TouchableOpacity>
                       ) : null}
-                      {identityDocument?.id ? (
+                      {identityDocument?.id && !accountVerified && !identityVerified ? (
                         <TouchableOpacity style={styles.identityActionBtn} onPress={deleteIdentityDocument} disabled={identityBusy}>
                           <Ionicons name="trash-outline" size={16} color="#ff7b89" />
                           <Text style={styles.identityActionDangerText}>Supprimer</Text>

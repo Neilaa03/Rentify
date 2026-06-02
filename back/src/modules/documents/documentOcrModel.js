@@ -53,3 +53,26 @@ export const upsertDocumentOcrResult = async (payload) => {
   if (error) throw error;
   return toDocumentOcrDto(data);
 };
+
+export const deleteDocumentOcrResultByDocumentId = async (documentId) => {
+  const { error } = await supabase
+    .from(DOCUMENT_OCR_TABLE)
+    .delete()
+    .eq('document_id', documentId);
+
+  if (error) throw error;
+  return { message: 'OCR result deleted' };
+};
+
+export const deleteDocumentOcrResultsByDocumentIds = async (documentIds = []) => {
+  const ids = [...new Set(documentIds)].filter(Boolean);
+  if (!ids.length) return { message: 'No OCR results to delete' };
+
+  const { error } = await supabase
+    .from(DOCUMENT_OCR_TABLE)
+    .delete()
+    .in('document_id', ids);
+
+  if (error) throw error;
+  return { message: 'OCR results deleted' };
+};

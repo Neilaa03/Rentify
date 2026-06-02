@@ -1,4 +1,8 @@
 import { supabase } from '../../config/supabase.js';
+import {
+  deleteDocumentOcrResultByDocumentId,
+  deleteDocumentOcrResultsByDocumentIds,
+} from './documentOcrModel.js';
 
 const DOCUMENTS_TABLE = 'documents';
 
@@ -89,7 +93,43 @@ export const updateDocument = async (id, updates) => {
 };
 
 export const deleteDocument = async (id) => {
+  await deleteDocumentOcrResultByDocumentId(id);
   const { error } = await supabase.from(DOCUMENTS_TABLE).delete().eq('id', id);
   if (error) throw error;
   return { message: 'Document deleted' };
+};
+
+export const deleteDocumentsByOwnerAndType = async ({
+  userId,
+  carId,
+  companyId,
+  documentType,
+  excludeId,
+}) => {
+  let selectQuery = supabase
+    .from(DOCUMENTS_TABLE)
+    .select('id');
+
+  if (userId !== undefined) selectQuery = selectQuery.eq('user_id', userId);
+  if (carId !== undefined) selectQuery = selectQuery.eq('car_id', carId);
+  if (companyId !== undefined) selectQuery = selectQuery.eq('company_id', companyId);
+  if (documentType !== undefined) selectQuery = selectQuery.eq('document_type', documentType);
+  if (excludeId) selectQuery = selectQuery.neq('id', excludeId);
+
+  const { data: rows, error } = await selectQuery;
+  if (error) throw error;
+
+  const ids = (rows || []).map((row) => row.id).filter(Boolean);
+  if (!ids.length) return { message: 'No documents deleted' };
+
+  await deleteDocumentOcrResultsByDocumentIds(ids);
+
+  let deleteQuery = supabase
+    .from(DOCUMENTS_TABLE)
+    .delete()
+    .in('id', ids);
+
+  const { error: deleteError } = await deleteQuery;
+  if (deleteError) throw deleteError;
+  return { message: 'Documents deleted' };
 };
