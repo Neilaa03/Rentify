@@ -1034,9 +1034,9 @@ const ProfileScreen = ({ navigation, route }) => {
             <Text style={styles.sectionTitle}>PREFERENCES</Text>
             <SectionCard
               items={[
+                { action: 'language', label: 'Langue', icon: 'globe-outline' },
                 { action: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
                 { action: 'privacy', label: 'Confidentialite & Securite', icon: 'shield-checkmark-outline' },
-                { action: 'language', label: 'Langue', icon: 'globe-outline' },
               ]}
               onItemPress={(item) => {
                 if (item.action) setActiveInfoPage(item.action);
