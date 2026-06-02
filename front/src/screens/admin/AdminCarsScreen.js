@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
 
 const tabs = ['Tous', 'En attente', 'Verifies', 'Rejetes'];
 
@@ -23,6 +24,11 @@ const statusTone = (status) => {
   if (s.includes('reject')) return styles.bad;
   if (s.includes('manual_review')) return styles.review;
   return styles.wait;
+};
+
+const isVerifiedDocument = (status) => {
+  const s = norm(status);
+  return s.includes('approve') || s.includes('verif');
 };
 
 const isRejectedDocument = (status) => norm(status).includes('reject');
@@ -59,6 +65,7 @@ export default function AdminCarsScreen({ navigation, route }) {
   const [detailsByCar, setDetailsByCar] = useState({});
   const [selectedCar, setSelectedCar] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [reviewingDocId, setReviewingDocId] = useState(null);
 
   const load = async () => {
     try {
@@ -126,6 +133,7 @@ export default function AdminCarsScreen({ navigation, route }) {
   const openCarDocuments = async (car) => {
     setSelectedCar(car);
     setModalVisible(true);
+    setReviewingDocId(null);
 
     if (detailsByCar[car.id]) return;
     try {
@@ -162,6 +170,7 @@ export default function AdminCarsScreen({ navigation, route }) {
 
     try {
       await adminApi.updateDocument(documentId, { status });
+      setReviewingDocId(null);
       setDetailsByCar((prev) => {
         const current = prev[selectedCar.id];
         if (!current?.documents) return prev;
@@ -228,7 +237,7 @@ export default function AdminCarsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Documents</Text>
+          <ScreenHeader title="Documents" rightAction={<AdminLogoutButton navigation={navigation} />} />
 
           <View style={styles.statsRow}>
             <TopStat value={stats.pending} label="En attente" tone="amber" icon="time-outline" />
@@ -334,18 +343,46 @@ export default function AdminCarsScreen({ navigation, route }) {
                       <Text style={styles.ocrEmpty}>Aucun resultat OCR disponible.</Text>
                     )}
                     <View style={styles.docActionsRow}>
-                      <TouchableOpacity
-                        style={[styles.docActionBtn, styles.docRejectBtn]}
-                        onPress={() => reviewDocument(doc.id, 'rejected')}
-                      >
-                        <Text style={styles.docActionText}>Rejeter</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.docActionBtn, styles.docAcceptBtn]}
-                        onPress={() => reviewDocument(doc.id, 'approved')}
-                      >
-                        <Text style={styles.docActionText}>Accepter</Text>
-                      </TouchableOpacity>
+                      {isVerifiedDocument(doc.status) ? (
+                        reviewingDocId === doc.id ? (
+                          <>
+                            <TouchableOpacity
+                              style={[styles.docActionBtn, styles.docRejectBtn]}
+                              onPress={() => reviewDocument(doc.id, 'rejected')}
+                            >
+                              <Text style={styles.docActionText}>Rejeter</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.docActionBtn, styles.docDiscardBtn]}
+                              onPress={() => setReviewingDocId(null)}
+                            >
+                              <Text style={styles.docActionText}>Annuler</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <TouchableOpacity
+                            style={[styles.docActionBtn, styles.docReviewBtn, styles.docActionBtnFull]}
+                            onPress={() => setReviewingDocId(doc.id)}
+                          >
+                            <Text style={styles.docActionText}>Changer etat</Text>
+                          </TouchableOpacity>
+                        )
+                      ) : (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.docActionBtn, styles.docRejectBtn]}
+                            onPress={() => reviewDocument(doc.id, 'rejected')}
+                          >
+                            <Text style={styles.docActionText}>Rejeter</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.docActionBtn, styles.docAcceptBtn]}
+                            onPress={() => reviewDocument(doc.id, 'approved')}
+                          >
+                            <Text style={styles.docActionText}>Accepter</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
                     </View>
                   </View>
                   <TouchableOpacity style={styles.modalBtn} onPress={() => openDocument(doc.url)}>
@@ -437,5 +474,8 @@ const styles = StyleSheet.create({
   docActionBtn: { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1 },
   docRejectBtn: { backgroundColor: 'rgba(255,77,109,0.16)', borderColor: '#8f3247' },
   docAcceptBtn: { backgroundColor: 'rgba(0,208,132,0.16)', borderColor: '#197c5c' },
+  docReviewBtn: { backgroundColor: 'rgba(143,157,255,0.16)', borderColor: '#8f9dff' },
+  docDiscardBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: '#4a5392' },
+  docActionBtnFull: { flex: 1 },
   docActionText: { color: '#fff', fontWeight: '800' },
 });

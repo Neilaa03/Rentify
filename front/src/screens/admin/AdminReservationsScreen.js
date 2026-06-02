@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
 
 const tabs = ['Tout', 'Inscriptions', 'Reservations', 'Documents', 'Paiements'];
 
@@ -44,7 +45,7 @@ export default function AdminReservationsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Journal d'activite</Text>
+          <ScreenHeader title="Journal d'activite" rightAction={<AdminLogoutButton navigation={navigation} />} />
 
           <View style={styles.topStats}>
             <MiniStat icon="flash-outline" value={visible.length} label="Aujourd'hui" />

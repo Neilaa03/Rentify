@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
 
 const tabs = ['Tous', 'Ouverts', 'En cours', 'Resolus', 'Clotures'];
 
@@ -48,7 +49,7 @@ export default function AdminReportsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>Signalements</Text>
+          <ScreenHeader title="Signalements" rightAction={<AdminLogoutButton navigation={navigation} />} />
 
           <View style={styles.alertBox}>
             <Ionicons name="alert-circle-outline" size={16} color="#ff4d6d" />
