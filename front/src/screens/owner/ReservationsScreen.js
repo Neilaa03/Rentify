@@ -168,10 +168,7 @@ const OwnerReservationsScreen = ({
             <OwnerBottomNavigation navigation={navigation} route={route} active="reservations" />
           </SafeAreaView>
         </ImageBackground>
-<<<<<<< HEAD
-=======
         <BottomNavigationComponent navigation={navigation} route={route} active="reservations" />
->>>>>>> dev
       </View>
     );
   }
@@ -228,11 +225,6 @@ const OwnerReservationsScreen = ({
           <OwnerBottomNavigation navigation={navigation} route={route} active="reservations" />
         </SafeAreaView>
       </ImageBackground>
-<<<<<<< HEAD
-=======
-
-      <BottomNavigationComponent navigation={navigation} route={route} active="reservations" />
->>>>>>> dev
     </View>
   );
 };

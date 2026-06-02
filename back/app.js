@@ -13,11 +13,8 @@ import messageRoutes from './src/modules/messages/messageRoutes.js';
 import favoritesRoutes from './src/modules/favorites/favoritesRoutes.js';
 import adminRoutes from './src/modules/admin/adminRoutes.js';
 import reviewRoutes from './src/modules/reviews/reviewRoutes.js';
-<<<<<<< HEAD
 import profileRoutes from './src/modules/profile/profileRoutes.js';
-=======
 import agencyRoutes from './src/modules/agency/agencyRoutes.js';
->>>>>>> dev
 
 const app = express();
 
@@ -46,11 +43,8 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reviews', reviewRoutes);
-<<<<<<< HEAD
 app.use('/api/profile', profileRoutes);
-=======
 app.use('/api/agency', agencyRoutes);
->>>>>>> dev
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

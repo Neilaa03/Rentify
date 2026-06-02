@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-import React, { useMemo, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground, TextInput, useWindowDimensions, Image, Modal, Pressable, Alert, Linking } from 'react-native';
-=======
+
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   Alert,
@@ -20,7 +17,6 @@ import {
   Pressable,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
->>>>>>> dev
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -229,7 +225,6 @@ const ProfileScreen = ({ navigation, route }) => {
     fetchProfile();
   }, [token]);
 
-<<<<<<< HEAD
   useEffect(() => {
     const fetchOwnerStats = async () => {
       if (!isOwner) return;
@@ -320,31 +315,6 @@ const ProfileScreen = ({ navigation, route }) => {
 
     fetchClientStats();
   }, [isOwner, token]);
-=======
-  const loadIdentityDocument = useCallback(async () => {
-    if (!token || !isOwner || !profile?.id) return;
-
-    try {
-      setIdentityLoading(true);
-      setIdentityError('');
-      const docs = await getUserDocuments({
-        token,
-        userId: profile.id,
-        documentType: 'identity_card',
-      });
-      const identity = (Array.isArray(docs) ? docs : []).find((doc) => doc.documentType === 'identity_card') || null;
-      setIdentityDocument(identity);
-    } catch (err) {
-      setIdentityError(err.message || 'Impossible de charger la carte d’identité');
-    } finally {
-      setIdentityLoading(false);
-    }
-  }, [isOwner, profile?.id, token]);
-
-  useEffect(() => {
-    loadIdentityDocument();
-  }, [loadIdentityDocument]);
->>>>>>> dev
 
   const fullName = useMemo(() => {
     const first = profile?.first_name || profile?.firstName || '';
