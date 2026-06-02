@@ -35,7 +35,15 @@
       "languageChange": "Impossible de changer la langue. Veuillez réessayer."
     },
     "calendar": {
-      "weekdays": ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+      "weekdays": [
+        "Lun",
+        "Mar",
+        "Mer",
+        "Jeu",
+        "Ven",
+        "Sam",
+        "Dim"
+      ]
     },
     "cash": "Espèces",
     "daPerDayCompact": " DA/jour",
@@ -50,6 +58,9 @@
         "documents": "Documents",
         "activite": "Activite",
         "signalements": "Signalements"
+      },
+      "adminui": {
+        "seDeconnecter": "Se déconnecter"
       }
     },
     "agency": {
@@ -75,7 +86,9 @@
         "supprimer": "Supprimer"
       },
       "listingcard": {
-        "indisponible": "Indisponible"
+        "indisponible": "Indisponible",
+        "offers": "{{count}} offres",
+        "matchingOffers": "{{matching}}/{{total}} offres"
       },
       "reservationcard": {
         "text": "→",
@@ -150,7 +163,20 @@
         "aucunResultatOcrDisponible": "Aucun resultat OCR disponible.",
         "rejeter": "Rejeter",
         "accepter": "Accepter",
-        "voir": "Voir"
+        "voir": "Voir",
+        "impossibleDeChargerLesDocuments": "Impossible de charger les documents",
+        "miseAJourDuDocumentImpossible": "Mise à jour du document impossible",
+        "miseAJourImpossible": "Mise à jour impossible",
+        "leDocumentNePeutPasEtreOuvert": "Le document ne peut pas être ouvert sur cet appareil.",
+        "tabs": {
+          "Tous": "Tous",
+          "En attente": "En attente",
+          "Verifies": "Vérifiés",
+          "Rejetes": "Rejetés"
+        },
+        "aucuneRaisonFournie": "Aucune raison fournie",
+        "annuler": "Annuler",
+        "changerEtat": "Changer état"
       },
       "admindashboardscreen": {
         "docsEnAttente": "Docs en attente",
@@ -190,7 +216,22 @@
         "text": "->",
         "cloturer": "Cloturer",
         "resoudre": "Resoudre",
-        "chargement": "Chargement..."
+        "chargement": "Chargement...",
+        "tabs": {
+          "Tous": "Tous",
+          "Ouverts": "Ouverts",
+          "En cours": "En cours",
+          "Resolus": "Résolus",
+          "Clotures": "Clôturés"
+        },
+        "statuses": {
+          "Ouverts": "Ouverts",
+          "En cours": "En cours",
+          "Resolus": "Résolus",
+          "Clotures": "Clôturés"
+        },
+        "compte": "Compte",
+        "aucuneDescription": "Aucune description."
       },
       "adminreservationsscreen": {
         "journalDactivite": "Journal d'activite",
@@ -199,7 +240,15 @@
         "inscriptions": "Inscriptions",
         "reservations": "Reservations",
         "paiements": "Paiements",
-        "chargement": "Chargement..."
+        "chargement": "Chargement...",
+        "tabs": {
+          "Tout": "Tout",
+          "Inscriptions": "Inscriptions",
+          "Reservations": "Réservations",
+          "Documents": "Documents",
+          "Paiements": "Paiements"
+        },
+        "evenement": "Événement"
       },
       "adminusersscreen": {
         "tous": "Tous",
@@ -209,7 +258,25 @@
         "comptesUtilisateurs": "Comptes utilisateurs",
         "rechercher": "Rechercher...",
         "comptes": "comptes",
-        "chargement": "Chargement..."
+        "chargement": "Chargement...",
+        "erreur": "Erreur",
+        "impossibleDeChargerLesDocuments": "Impossible de charger les documents",
+        "miseAJourDuDocumentImpossible": "Mise à jour du document impossible",
+        "impossibleDouvrirLeDocument": "Impossible d’ouvrir le document",
+        "filters": {
+          "all": "Tous",
+          "owner": "Propriétaires",
+          "company": "Entreprises",
+          "client": "Particuliers"
+        },
+        "voirDocs": "Voir docs",
+        "verifie": "Vérifié",
+        "enAttente": "En attente",
+        "chargementDesDocuments": "Chargement des documents...",
+        "aucunDocumentTrouvePourCetUtilisateur": "Aucun document trouvé pour cet utilisateur.",
+        "voir": "Voir",
+        "rejeter": "Rejeter",
+        "accepter": "Accepter"
       }
     },
     "agency": {
@@ -397,7 +464,13 @@
         "erreur": "Erreur",
         "reessayer": "Reessayer",
         "aucunVehiculeTrouve": "Aucun véhicule trouvé",
-        "essaieUneAutreRechercheOuUnAutre": "Essaie une autre recherche ou un autre filtre."
+        "essaieUneAutreRechercheOuUnAutre": "Essaie une autre recherche ou un autre filtre.",
+        "lieuVilleOuQuartier": "Lieu, ville ou quartier",
+        "dates": "Dates",
+        "toutEffacer": "Tout effacer",
+        "choisisUnePeriode": "Choisis une période",
+        "reinitialiser": "Réinitialiser",
+        "appliquer": "Appliquer"
       },
       "landingscreen": {
         "rentify": "Rentify",
@@ -411,7 +484,7 @@
         "retour": "Retour",
         "aPartirDe": "a partir de",
         "daJour": "DA/jour",
-        "avis": "avis)",
+        "avis": "avis",
         "places": "Places",
         "carburant": "Carburant",
         "boite": "Boite",
@@ -424,7 +497,13 @@
         "prixParJour": "Prix par jour",
         "reserver": "Reserver",
         "indisponible": "Indisponible",
-        "verifie": "Verifie"
+        "verifie": "Verifie",
+        "avisTitle": "Avis",
+        "villesDisponibles": "Villes disponibles",
+        "ville": "Ville",
+        "villeDeRetrait": "Ville de retrait",
+        "reserverACity": "Réserver à {{city}}",
+        "proprietaire": "Propriétaire"
       },
       "profilescreen": {
         "verifie": "Vérifié",
@@ -517,9 +596,20 @@
         "carteDidentite": "Carte d'identité",
         "obligatoirePourPublierUnVehiculeOuUne": "Obligatoire pour publier un véhicule ou une annonce",
         "monCompte": "MON COMPTE",
-        "preferences": "PREFERENCES",
+        "preferences": "PRÉFÉRENCES",
         "aideSupport": "AIDE & SUPPORT",
-        "seDeconnecter": "Se deconnecter"
+        "seDeconnecter": "Se déconnecter",
+        "erreurLorsDeLaMiseAJour": "Erreur lors de la mise à jour",
+        "impossibleDouvrirLeDocument": "Impossible d’ouvrir le document",
+        "impossibleDeTeleverserLaCarteDidentite": "Impossible de téléverser la carte d’identité",
+        "suppressionImpossible": "Suppression impossible",
+        "enregistrement": "Enregistrement...",
+        "definir": "Définir",
+        "changer": "Changer",
+        "enregistrer": "Enregistrer",
+        "televerser": "Téléverser",
+        "definirUnMotDePasse": "Définir un mot de passe",
+        "changerMotDePasse": "Changer mot de passe"
       }
     },
     "handover": {
@@ -725,7 +815,23 @@
         "vousDevezValiderCarteGriseAssuranceEt": "Vous devez valider carte grise, assurance et contrôle technique avant publication.",
         "aucuneAnnonce": "Aucune annonce.",
         "daJour": "DA / jour",
-        "modifier": "Modifier"
+        "modifier": "Modifier",
+        "mesAnnonces": "Mes annonces",
+        "toutes": "Toutes",
+        "publiees": "Publiées",
+        "nonPubliees": "Non publiées",
+        "recentes": "Récentes",
+        "voitureAz": "Voiture A-Z",
+        "voitureZa": "Voiture Z-A",
+        "voiture": "Voiture",
+        "erreurChargementAnnonces": "Erreur chargement annonces",
+        "confirmerSuppressionAnnonce": "Êtes-vous sûr de vouloir supprimer \"{{title}}\" ?",
+        "annuler": "Annuler",
+        "aucuneAnnonceNeCorrespondACesFiltres": "Aucune annonce ne correspond à ces filtres.",
+        "toutesLesVoitures": "Toutes les voitures",
+        "depublier": "Dépublier",
+        "publier": "Publier",
+        "filtrerParVoiture": "Filtrer par voiture"
       },
       "reservationdetailsscreen": {
         "recapitulatif": "Récapitulatif",
@@ -821,7 +927,10 @@
         "estime": "Estimé",
         "da": "DA",
         "reinitialiser": "Réinitialiser",
-        "annuler": "Annuler"
+        "annuler": "Annuler",
+        "impossibleDeCreerLaReservation": "Impossible de créer la réservation",
+        "confirmer": "Confirmer",
+        "reserver": "Réserver"
       },
       "reservationdetailsscreen": {
         "stripeIsNotSupportedOnWeb": "Stripe is not supported on web",

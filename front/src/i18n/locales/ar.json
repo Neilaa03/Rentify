@@ -35,7 +35,15 @@
       "languageChange": "تعذر تغيير اللغة. يرجى المحاولة مرة أخرى."
     },
     "calendar": {
-      "weekdays": ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
+      "weekdays": [
+        "الإثنين",
+        "الثلاثاء",
+        "الأربعاء",
+        "الخميس",
+        "الجمعة",
+        "السبت",
+        "الأحد"
+      ]
     },
     "cash": "نقدا",
     "daPerDayCompact": " دج/اليوم",
@@ -50,6 +58,9 @@
         "documents": "المستندات",
         "activite": "النشاط",
         "signalements": "البلاغات"
+      },
+      "adminui": {
+        "seDeconnecter": "تسجيل الخروج"
       }
     },
     "agency": {
@@ -75,7 +86,9 @@
         "supprimer": "حذف"
       },
       "listingcard": {
-        "indisponible": "غير متاح"
+        "indisponible": "غير متاح",
+        "offers": "{{count}} عروض",
+        "matchingOffers": "{{matching}}/{{total}} عروض"
       },
       "reservationcard": {
         "text": "→",
@@ -150,7 +163,20 @@
         "aucunResultatOcrDisponible": "لا توجد نتيجة OCR متاحة.",
         "rejeter": "رفض",
         "accepter": "قبول",
-        "voir": "عرض"
+        "voir": "عرض",
+        "impossibleDeChargerLesDocuments": "تعذر تحميل المستندات",
+        "miseAJourDuDocumentImpossible": "تعذر تحديث المستند",
+        "miseAJourImpossible": "تعذر التحديث",
+        "leDocumentNePeutPasEtreOuvert": "لا يمكن فتح المستند على هذا الجهاز.",
+        "tabs": {
+          "Tous": "الكل",
+          "En attente": "قيد الانتظار",
+          "Verifies": "تم التحقق",
+          "Rejetes": "مرفوضة"
+        },
+        "aucuneRaisonFournie": "لا يوجد سبب مقدم",
+        "annuler": "إلغاء",
+        "changerEtat": "تغيير الحالة"
       },
       "admindashboardscreen": {
         "docsEnAttente": "مستندات معلقة",
@@ -190,7 +216,22 @@
         "text": "->",
         "cloturer": "إغلاق",
         "resoudre": "حل",
-        "chargement": "جار التحميل..."
+        "chargement": "جار التحميل...",
+        "tabs": {
+          "Tous": "الكل",
+          "Ouverts": "مفتوحة",
+          "En cours": "قيد المعالجة",
+          "Resolus": "محلولة",
+          "Clotures": "مغلقة"
+        },
+        "statuses": {
+          "Ouverts": "مفتوحة",
+          "En cours": "قيد المعالجة",
+          "Resolus": "محلولة",
+          "Clotures": "مغلقة"
+        },
+        "compte": "حساب",
+        "aucuneDescription": "لا يوجد وصف."
       },
       "adminreservationsscreen": {
         "journalDactivite": "سجل النشاط",
@@ -199,7 +240,15 @@
         "inscriptions": "التسجيلات",
         "reservations": "الحجوزات",
         "paiements": "المدفوعات",
-        "chargement": "جار التحميل..."
+        "chargement": "جار التحميل...",
+        "tabs": {
+          "Tout": "الكل",
+          "Inscriptions": "التسجيلات",
+          "Reservations": "الحجوزات",
+          "Documents": "المستندات",
+          "Paiements": "المدفوعات"
+        },
+        "evenement": "حدث"
       },
       "adminusersscreen": {
         "tous": "الكل",
@@ -209,7 +258,25 @@
         "comptesUtilisateurs": "حسابات المستخدمين",
         "rechercher": "بحث...",
         "comptes": "حسابات",
-        "chargement": "جار التحميل..."
+        "chargement": "جار التحميل...",
+        "erreur": "خطأ",
+        "impossibleDeChargerLesDocuments": "تعذر تحميل المستندات",
+        "miseAJourDuDocumentImpossible": "تعذر تحديث المستند",
+        "impossibleDouvrirLeDocument": "تعذر فتح المستند",
+        "filters": {
+          "all": "الكل",
+          "owner": "المالكون",
+          "company": "الشركات",
+          "client": "الأفراد"
+        },
+        "voirDocs": "عرض المستندات",
+        "verifie": "تم التحقق",
+        "enAttente": "قيد الانتظار",
+        "chargementDesDocuments": "جار تحميل المستندات...",
+        "aucunDocumentTrouvePourCetUtilisateur": "لم يتم العثور على مستند لهذا المستخدم.",
+        "voir": "عرض",
+        "rejeter": "رفض",
+        "accepter": "قبول"
       }
     },
     "agency": {
@@ -397,7 +464,13 @@
         "erreur": "خطأ",
         "reessayer": "حاول مرة أخرى",
         "aucunVehiculeTrouve": "لم يتم العثور على مركبة",
-        "essaieUneAutreRechercheOuUnAutre": "جرّب بحثا أو تصفية أخرى."
+        "essaieUneAutreRechercheOuUnAutre": "جرّب بحثا أو تصفية أخرى.",
+        "lieuVilleOuQuartier": "المكان أو المدينة أو الحي",
+        "dates": "التواريخ",
+        "toutEffacer": "مسح الكل",
+        "choisisUnePeriode": "اختر فترة",
+        "reinitialiser": "إعادة التعيين",
+        "appliquer": "تطبيق"
       },
       "landingscreen": {
         "rentify": "Rentify",
@@ -411,7 +484,7 @@
         "retour": "العودة",
         "aPartirDe": "ابتداء من",
         "daJour": "DZD/day",
-        "avis": "تقييمات)",
+        "avis": "تقييمات",
         "places": "المقاعد",
         "carburant": "الوقود",
         "boite": "علبة السرعة",
@@ -424,7 +497,13 @@
         "prixParJour": "السعر في اليوم",
         "reserver": "احجز",
         "indisponible": "غير متاح",
-        "verifie": "تم التحقق"
+        "verifie": "تم التحقق",
+        "avisTitle": "التقييمات",
+        "villesDisponibles": "المدن المتاحة",
+        "ville": "مدينة",
+        "villeDeRetrait": "مدينة الاستلام",
+        "reserverACity": "احجز في {{city}}",
+        "proprietaire": "المالك"
       },
       "profilescreen": {
         "verifie": "تم التحقق",
@@ -519,7 +598,18 @@
         "monCompte": "حسابي",
         "preferences": "التفضيلات",
         "aideSupport": "المساعدة والدعم",
-        "seDeconnecter": "تسجيل الخروج"
+        "seDeconnecter": "تسجيل الخروج",
+        "erreurLorsDeLaMiseAJour": "حدث خطأ أثناء التحديث",
+        "impossibleDouvrirLeDocument": "تعذر فتح المستند",
+        "impossibleDeTeleverserLaCarteDidentite": "تعذر رفع بطاقة الهوية",
+        "suppressionImpossible": "تعذر الحذف",
+        "enregistrement": "جار الحفظ...",
+        "definir": "تعيين",
+        "changer": "تغيير",
+        "enregistrer": "حفظ",
+        "televerser": "رفع",
+        "definirUnMotDePasse": "تعيين كلمة مرور",
+        "changerMotDePasse": "تغيير كلمة المرور"
       }
     },
     "handover": {
@@ -725,7 +815,23 @@
         "vousDevezValiderCarteGriseAssuranceEt": "يجب المصادقة على البطاقة الرمادية والتأمين والفحص التقني قبل النشر.",
         "aucuneAnnonce": "لا توجد إعلانات.",
         "daJour": "DZD / day",
-        "modifier": "تعديل"
+        "modifier": "تعديل",
+        "mesAnnonces": "إعلاناتي",
+        "toutes": "الكل",
+        "publiees": "منشورة",
+        "nonPubliees": "غير منشورة",
+        "recentes": "الأحدث",
+        "voitureAz": "السيارة A-Z",
+        "voitureZa": "السيارة Z-A",
+        "voiture": "سيارة",
+        "erreurChargementAnnonces": "تعذر تحميل الإعلانات",
+        "confirmerSuppressionAnnonce": "هل تريد حذف الإعلان \"{{title}}\"؟",
+        "annuler": "إلغاء",
+        "aucuneAnnonceNeCorrespondACesFiltres": "لا يوجد إعلان يطابق هذه المرشحات.",
+        "toutesLesVoitures": "كل السيارات",
+        "depublier": "إلغاء النشر",
+        "publier": "نشر",
+        "filtrerParVoiture": "تصفية حسب السيارة"
       },
       "reservationdetailsscreen": {
         "recapitulatif": "الملخص",
@@ -821,7 +927,10 @@
         "estime": "تقديري",
         "da": "DA",
         "reinitialiser": "إعادة تعيين",
-        "annuler": "إلغاء"
+        "annuler": "إلغاء",
+        "impossibleDeCreerLaReservation": "تعذر إنشاء الحجز",
+        "confirmer": "تأكيد",
+        "reserver": "احجز"
       },
       "reservationdetailsscreen": {
         "stripeIsNotSupportedOnWeb": "Stripe غير مدعوم على الويب",

@@ -1,5 +1,4 @@
-
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   Alert,
   ActivityIndicator,
@@ -14,20 +13,20 @@ import {
   View,
   Image,
   Modal,
-  Pressable } from
-'react-native';
+  Pressable,
+} from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
 import { API_ENDPOINTS } from '../../constants/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import storage from '../../utils/storage';
 import { appFont } from '../../utils/responsive';
 import { deleteDocument, getUserDocuments, uploadUserDocument } from '../../services/owner';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { getLanguageMeta, setAppLanguage, supportedLanguages } from '../../i18n';
-import { getFriendlyError } from '../../utils/friendlyError';
 
 const profileFont = (width, regular, small, verySmall = small) => {
   if (width <= 340) return verySmall;
@@ -40,8 +39,8 @@ const COMPANY_SUPPORT_EMAIL = runtimeEnv.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@r
 const COMPANY_SUPPORT_PHONE = runtimeEnv.EXPO_PUBLIC_SUPPORT_PHONE || '+213 555 00 00 00';
 const PLAY_STORE_REVIEW_URL = runtimeEnv.EXPO_PUBLIC_PLAY_STORE_REVIEW_URL || '';
 
-const InfoLine = ({ icon, title, text }) =>
-<View style={styles.infoLine}>
+const InfoLine = ({ icon, title, text }) => (
+  <View style={styles.infoLine}>
     <View style={styles.infoLineIcon}>
       <Ionicons name={icon} size={17} color="#8f6cff" />
     </View>
@@ -49,11 +48,11 @@ const InfoLine = ({ icon, title, text }) =>
       <Text style={styles.infoLineTitle}>{title}</Text>
       <Text style={styles.infoLineText}>{text}</Text>
     </View>
-  </View>;
+  </View>
+);
 
-
-const SettingsModal = ({ visible, title, onClose, children }) =>
-<Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+const SettingsModal = ({ visible, title, onClose, children }) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <View style={styles.pageModalBackdrop}>
       <View style={styles.pageModal}>
         <View style={styles.pageModalHeader}>
@@ -67,8 +66,8 @@ const SettingsModal = ({ visible, title, onClose, children }) =>
         </ScrollView>
       </View>
     </View>
-  </Modal>;
-
+  </Modal>
+);
 
 const SectionCard = ({ items, onItemPress }) => {
   const { width } = useWindowDimensions();
@@ -76,12 +75,12 @@ const SectionCard = ({ items, onItemPress }) => {
 
   return (
     <View style={styles.sectionCard}>
-      {items.map((item, index) =>
-      <TouchableOpacity
-        key={item.label}
-        style={[styles.rowItem, index !== items.length - 1 && styles.rowItemBorder]}
-        onPress={() => onItemPress?.(item)}>
-        
+      {items.map((item, index) => (
+        <TouchableOpacity
+          key={item.label}
+          style={[styles.rowItem, index !== items.length - 1 && styles.rowItemBorder]}
+          onPress={() => onItemPress?.(item)}
+        >
           <View style={styles.rowLeft}>
             <View style={styles.iconWrap}>
               <Ionicons name={item.icon} size={17} color="#8f6cff" />
@@ -90,17 +89,17 @@ const SectionCard = ({ items, onItemPress }) => {
           </View>
           <Ionicons name="chevron-forward" size={16} color="#7d83b0" />
         </TouchableOpacity>
-      )}
-    </View>);
-
+      ))}
+    </View>
+  );
 };
 
-const StatCard = ({ value, label }) =>
-<View style={styles.statCard}>
+const StatCard = ({ value, label }) => (
+  <View style={styles.statCard}>
     <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
-  </View>;
-
+  </View>
+);
 
 const identityMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
@@ -116,16 +115,24 @@ const inferIdentityMimeType = (file) => {
 
 const getIdentityStatusMeta = (status) => {
   const normalized = String(status || '').toLowerCase();
-  if (normalized === 'approved') return { labelKey: 'screens.agency.agencydocumentsscreen.verifie', tone: '#21d4a7', bg: 'rgba(33,212,167,0.12)' };
-  if (normalized === 'rejected') return { labelKey: 'screens.agency.agencydocumentsscreen.rejete', tone: '#ff6b6b', bg: 'rgba(255,107,107,0.12)' };
-  if (normalized === 'manual_review') return { labelKey: 'screens.agency.agencydocumentsscreen.enVerification', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
-  if (normalized === 'pending') return { labelKey: 'screens.owner.carsscreen.enAttente', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
-  return { labelKey: 'screens.agency.agencydocumentsscreen.manquant', tone: '#9ca2cb', bg: 'rgba(255,255,255,0.05)' };
+  if (normalized === 'approved') return { label: 'Vérifié', tone: '#21d4a7', bg: 'rgba(33,212,167,0.12)' };
+  if (normalized === 'rejected') return { label: 'Rejeté', tone: '#ff6b6b', bg: 'rgba(255,107,107,0.12)' };
+  if (normalized === 'manual_review') return { label: 'En vérification', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
+  if (normalized === 'pending') return { label: 'En attente', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
+  return { label: 'Manquant', tone: '#9ca2cb', bg: 'rgba(255,255,255,0.05)' };
 };
 
+const pickLatestDocument = (documents = []) =>
+  [...documents]
+    .sort((a, b) => {
+      const aTime = new Date(a?.updatedAt || a?.createdAt || 0).getTime();
+      const bTime = new Date(b?.updatedAt || b?.createdAt || 0).getTime();
+      return bTime - aTime;
+    })[0] || null;
+
 const ProfileScreen = ({ navigation, route }) => {
-  const { width } = useWindowDimensions();
   const { t, i18n } = useTranslation();
+  const { width } = useWindowDimensions();
   const [profile, setProfile] = useState(route?.params?.user || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -141,11 +148,17 @@ const ProfileScreen = ({ navigation, route }) => {
   const [identityBusy, setIdentityBusy] = useState(false);
   const [identityAlertShown, setIdentityAlertShown] = useState(false);
   const [identityError, setIdentityError] = useState('');
+  const [profileSynced, setProfileSynced] = useState(false);
   const [didAutoOpenPersonalInfo, setDidAutoOpenPersonalInfo] = useState(false);
   const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [localProfilePictureUri, setLocalProfilePictureUri] = useState('');
+  const profileRef = useRef(profile);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [changePasswordCurrent, setChangePasswordCurrent] = useState('');
   const [changePasswordNew, setChangePasswordNew] = useState('');
@@ -162,7 +175,7 @@ const ProfileScreen = ({ navigation, route }) => {
   const [activeInfoPage, setActiveInfoPage] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
-  const currentLanguage = getLanguageMeta(i18n.language);
+  const [changingLanguage, setChangingLanguage] = useState(false);
 
   const [token, setToken] = useState(route?.params?.token || '');
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
@@ -175,68 +188,93 @@ const ProfileScreen = ({ navigation, route }) => {
     profilePhone: profileFont(width, appFont(14), 13, 12.5),
     editText: profileFont(width, appFont(13), 12, 11.5),
     input: profileFont(width, appFont(14), 13, 12.5),
-    logout: profileFont(width, appFont(15), 14, 13)
+    logout: profileFont(width, appFont(15), 14, 13),
   };
 
-  const changeLanguage = async (language) => {
-    try {
-      await setAppLanguage(language);
-    } catch {
-      Alert.alert(t('screens.client.profilescreen.erreur'), t('common.errors.languageChange'));
+  const refreshProfile = useCallback(async () => {
+    let effectiveToken = token;
+    if (!effectiveToken) {
+      effectiveToken = (await storage.getItemAsync('userToken')) || '';
+      if (effectiveToken) setToken(effectiveToken);
     }
-  };
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      let effectiveToken = token;
-      if (!effectiveToken) {
-        effectiveToken = (await storage.getItemAsync('userToken')) || '';
-        if (effectiveToken) setToken(effectiveToken);
+    // Show cached profile immediately (helps client tab where params are not forwarded).
+    if (!profileRef.current) {
+      const cached = await storage.getItemAsync('userProfile');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed === 'object') setProfile(parsed);
+        } catch {
+          // ignore
+        }
       }
+    }
 
-      // Show cached profile immediately (helps client tab where params are not forwarded).
-      if (!profile) {
-        const cached = await storage.getItemAsync('userProfile');
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (parsed && typeof parsed === 'object') setProfile(parsed);
-          } catch {
+    if (!effectiveToken) return;
 
-            // ignore
-          }}
-      }
+    try {
+      setLoading(true);
+      setProfileSynced(false);
+      setError('');
 
-      if (!effectiveToken) return;
-
-      try {
-        setLoading(true);
-        setError('');
-
-        const response = await fetch(API_ENDPOINTS.AUTH.ME, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${effectiveToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
+      const response = await fetch(API_ENDPOINTS.AUTH.ME, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${effectiveToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
         const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data?.error || 'Unable to load profile');
-        }
 
-        const next = data?.user || null;
-        await persistUpdatedUser(next);
-      } catch (err) {
-        setError(getFriendlyError(err, t));
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(data?.error || 'Unable to load profile');
       }
-    };
 
-    fetchProfile();
+      const next = data?.user || null;
+
+      await persistUpdatedUser(next);
+
+      setProfile(next);
+      setProfileSynced(true);
+
+      if (next) {
+        const normalized = {
+          id: next.id,
+          email: next.email,
+          firstName: next.firstName || next.first_name || '',
+          lastName: next.lastName || next.last_name || '',
+          phone: next.phone || '',
+          role: next.role,
+          isVerified: next.isVerified ?? next.is_verified,
+          isActive: next.isActive ?? next.is_active,
+          authProvider: next.authProvider || next.auth_provider || '',
+          profilePicture: next.profilePicture || next.profile_picture || '',
+        };
+
+        await storage.setItemAsync(
+          'userProfile',
+          JSON.stringify(normalized)
+        );
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to load profile');
+    } finally {
+      setProfileSynced(true);
+      setLoading(false);
+    }
   }, [token]);
+
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshProfile();
+    }, [refreshProfile])
+  );
 
   useEffect(() => {
     const fetchOwnerStats = async () => {
@@ -245,32 +283,60 @@ const ProfileScreen = ({ navigation, route }) => {
 
       try {
         setOwnerStatsLoading(true);
+
         const response = await fetch(API_ENDPOINTS.PROFILE.ME_STATS, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            'Content-Type': 'application/json',
+          },
         });
 
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data?.error || 'Unable to load stats');
+
+        if (!response.ok) {
+          throw new Error(data?.error || 'Unable to load stats');
+        }
 
         const stats = data?.stats || {};
+
         setOwnerStats({
           cars: Number(stats.cars || 0) || 0,
           listings: Number(stats.listings || 0) || 0,
-          reservations: Number(stats.reservations || 0) || 0
+          reservations: Number(stats.reservations || 0) || 0,
         });
       } catch (_err) {
-
         // keep defaults
-      } finally {setOwnerStatsLoading(false);
+      } finally {
+        setOwnerStatsLoading(false);
       }
     };
 
     fetchOwnerStats();
   }, [isOwner, token]);
+
+
+  const loadIdentityDocument = useCallback(async () => {
+    if (!token || !isOwner || !profile?.id) return;
+
+    try {
+      setIdentityLoading(true);
+      setIdentityError('');
+      const docs = await getUserDocuments({
+        token,
+        userId: profile.id,
+        documentType: 'identity_card',
+      });
+      const identityDocs = (Array.isArray(docs) ? docs : []).filter((doc) => doc.documentType === 'identity_card');
+      const identity = pickLatestDocument(identityDocs);
+      setIdentityDocument(identity);
+    } catch (err) {
+      setIdentityError(err.message || 'Impossible de charger la carte d’identité');
+    } finally {
+      setIdentityLoading(false);
+    }
+  }, [isOwner, profile?.id, token]);
+
 
   useEffect(() => {
     const loadConnectStatus = async () => {
@@ -281,16 +347,16 @@ const ProfileScreen = ({ navigation, route }) => {
         const response = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_STATUS(profile.id), {
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            'Content-Type': 'application/json',
+          },
         });
         if (!response.ok) return;
         const status = await response.json();
         setConnectStatus(status || null);
       } catch (_e) {
-
         // ignore
-      }};
+      }
+    };
 
     loadConnectStatus();
   }, [isOwner, token, profile?.id]);
@@ -306,8 +372,8 @@ const ProfileScreen = ({ navigation, route }) => {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            'Content-Type': 'application/json',
+          },
         });
 
         const data = await response.json().catch(() => ({}));
@@ -317,12 +383,12 @@ const ProfileScreen = ({ navigation, route }) => {
         setClientStats({
           favorites: Number(stats.favorites || 0) || 0,
           reservations: Number(stats.reservations || 0) || 0,
-          reviews: Number(stats.reviews || 0) || 0
+          reviews: Number(stats.reviews || 0) || 0,
         });
       } catch (_err) {
-
         // keep defaults
-      } finally {setClientStatsLoading(false);
+      } finally {
+        setClientStatsLoading(false);
       }
     };
 
@@ -333,24 +399,25 @@ const ProfileScreen = ({ navigation, route }) => {
     const first = profile?.first_name || profile?.firstName || '';
     const last = profile?.last_name || profile?.lastName || '';
     const value = `${first} ${last}`.trim();
-    return value || 'Utilisateur';
+    return value || t('common.unknownUser');
   }, [profile]);
 
   const initial = (profile?.first_name?.[0] || profile?.firstName?.[0] || profile?.email?.[0] || 'U').toUpperCase();
   const identityStatus = getIdentityStatusMeta(identityDocument?.status);
   const identityReason = identityDocument?.ocrResult?.verificationReason || '';
   const identityVerified = String(identityDocument?.status || '').toLowerCase() === 'approved';
+  const accountVerified = Boolean(profile?.isVerified ?? profile?.is_verified);
 
   useEffect(() => {
-    if (!isOwner || loading || identityLoading || identityAlertShown) return;
-    if (identityVerified) return;
+    if (!isOwner || loading || identityLoading || identityAlertShown || !profileSynced) return;
+    if (accountVerified || identityVerified) return;
 
-    Alert.alert(t("screens.client.profilescreen.carteDidentiteRequise"), t("screens.client.profilescreen.vousDevezTeleverserEtFaireValiderVotre")
-
-
+    Alert.alert(
+      'Carte d’identité requise',
+      'Vous devez téléverser et faire valider votre carte d’identité pour publier un véhicule ou une annonce.'
     );
     setIdentityAlertShown(true);
-  }, [identityAlertShown, identityLoading, identityVerified, isOwner, loading]);
+  }, [accountVerified, identityAlertShown, identityLoading, identityVerified, isOwner, loading, profileSynced]);
 
   const openPersonalInfoEditor = () => {
     setEditFirstName(profile?.first_name || profile?.firstName || '');
@@ -375,7 +442,7 @@ const ProfileScreen = ({ navigation, route }) => {
       isVerified: updatedUser.isVerified ?? updatedUser.is_verified,
       isActive: updatedUser.isActive ?? updatedUser.is_active,
       authProvider: updatedUser.authProvider || updatedUser.auth_provider || '',
-      profilePicture: updatedUser.profilePicture || updatedUser.profile_picture || ''
+      profilePicture: updatedUser.profilePicture || updatedUser.profile_picture || '',
     };
     await storage.setItemAsync('userProfile', JSON.stringify(normalized));
   };
@@ -440,14 +507,14 @@ const ProfileScreen = ({ navigation, route }) => {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           firstName: nextFirstName,
           lastName: nextLastName,
           email: nextEmail,
-          phone: nextPhone
-        })
+          phone: nextPhone,
+        }),
       });
 
       const raw = await response.text();
@@ -464,7 +531,7 @@ const ProfileScreen = ({ navigation, route }) => {
       await persistUpdatedUser(updatedUser);
       setIsEditingPersonalInfo(false);
     } catch (err) {
-      setPersonalInfoError(getFriendlyError(err, t));
+      setPersonalInfoError(err.message || t('screens.client.profilescreen.erreurLorsDeLaMiseAJour'));
     } finally {
       setSavingPersonalInfo(false);
     }
@@ -476,7 +543,7 @@ const ProfileScreen = ({ navigation, route }) => {
     try {
       await Linking.openURL(url);
     } catch (error) {
-      Alert.alert(t("screens.client.profilescreen.erreur"), getFriendlyError(error, t));
+      Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.impossibleDouvrirLeDocument'));
     }
   }, [identityDocument?.documentUrl]);
 
@@ -484,7 +551,7 @@ const ProfileScreen = ({ navigation, route }) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: identityMimeTypes,
-        copyToCacheDirectory: true
+        copyToCacheDirectory: true,
       });
 
       if (result?.canceled) return;
@@ -497,7 +564,7 @@ const ProfileScreen = ({ navigation, route }) => {
       if (!uri) return;
 
       if (!identityMimeTypes.includes(mimeType)) {
-        Alert.alert(t("screens.client.profilescreen.formatNonAutorise"), t("screens.client.profilescreen.choisissezUnFichierPdfOuUneImage"));
+        Alert.alert('Format non autorisé', 'Choisissez un fichier PDF ou une image (JPG, PNG, WEBP).');
         return;
       }
 
@@ -510,16 +577,16 @@ const ProfileScreen = ({ navigation, route }) => {
           uri,
           name,
           type: mimeType,
-          file: asset?.file || null
-        }
+          file: asset?.file || null,
+        },
       });
       setIdentityDocument(uploaded);
       setIdentityAlertShown(false);
       if ((uploaded?.status || '').toLowerCase() === 'rejected' && uploaded?.ocrResult?.verificationReason) {
-        Alert.alert(t("screens.client.profilescreen.documentRejete"), uploaded.ocrResult.verificationReason);
+        Alert.alert('Document rejeté', uploaded.ocrResult.verificationReason);
       }
     } catch (error) {
-      Alert.alert(t("screens.client.profilescreen.erreur"), getFriendlyError(error, t));
+      Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.impossibleDeTeleverserLaCarteDidentite'));
     } finally {
       setIdentityBusy(false);
     }
@@ -527,17 +594,21 @@ const ProfileScreen = ({ navigation, route }) => {
 
   const deleteIdentityDocument = useCallback(async () => {
     if (!identityDocument?.id) return;
+    if (accountVerified || identityVerified) {
+      Alert.alert('Document verrouillé', 'Votre carte d’identité est vérifiée et ne peut plus être supprimée.');
+      return;
+    }
     try {
       setIdentityBusy(true);
       await deleteDocument({ token, documentId: identityDocument.id });
       setIdentityDocument(null);
       setIdentityAlertShown(false);
     } catch (error) {
-      Alert.alert(t("screens.client.profilescreen.erreur"), getFriendlyError(error, t));
+      Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.suppressionImpossible'));
     } finally {
       setIdentityBusy(false);
     }
-  }, [identityDocument?.id, token]);
+  }, [accountVerified, identityDocument?.id, identityVerified, token]);
   const pickAndUploadProfilePicture = async () => {
     const effectiveToken = token || (await storage.getItemAsync('userToken')) || '';
     if (!effectiveToken) {
@@ -559,7 +630,7 @@ const ProfileScreen = ({ navigation, route }) => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7
+        quality: 0.7,
       });
       if (result.canceled) return;
 
@@ -571,7 +642,7 @@ const ProfileScreen = ({ navigation, route }) => {
 
       const filename = uri.split('/').pop() || `profile_${Date.now()}.jpg`;
       const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
-      const type = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+      const type = ext === 'png' ? 'image/png' : (ext === 'webp' ? 'image/webp' : 'image/jpeg');
 
       const form = new FormData();
       form.append('image', { uri, name: filename, type });
@@ -579,7 +650,7 @@ const ProfileScreen = ({ navigation, route }) => {
       const response = await fetch(API_ENDPOINTS.AUTH.PROFILE_PICTURE, {
         method: 'POST',
         headers: { Authorization: `Bearer ${effectiveToken}` },
-        body: form
+        body: form,
       });
 
       const data = await response.json().catch(() => ({}));
@@ -592,7 +663,7 @@ const ProfileScreen = ({ navigation, route }) => {
       }
     } catch (err) {
       setLocalProfilePictureUri('');
-      setPersonalInfoError(getFriendlyError(err, t));
+      setPersonalInfoError(err.message || 'Upload echoue');
     } finally {
       setPhotoLoading(false);
     }
@@ -609,7 +680,7 @@ const ProfileScreen = ({ navigation, route }) => {
       setPersonalInfoError('');
       const response = await fetch(API_ENDPOINTS.AUTH.PROFILE_PICTURE, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${effectiveToken}` }
+        headers: { Authorization: `Bearer ${effectiveToken}` },
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data?.error || 'Suppression echouee');
@@ -620,7 +691,7 @@ const ProfileScreen = ({ navigation, route }) => {
         await persistUpdatedUser(nextUser);
       }
     } catch (err) {
-      setPersonalInfoError(getFriendlyError(err, t));
+      setPersonalInfoError(err.message || 'Suppression echouee');
     } finally {
       setPhotoLoading(false);
     }
@@ -658,13 +729,13 @@ const ProfileScreen = ({ navigation, route }) => {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${effectiveToken}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           currentPassword: isGoogleOnly ? '' : nextCurrentPassword,
           newPassword: nextNewPassword,
-          confirmPassword: nextConfirmPassword
-        })
+          confirmPassword: nextConfirmPassword,
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -674,9 +745,9 @@ const ProfileScreen = ({ navigation, route }) => {
 
       await persistUpdatedUser(data?.user || null);
       closePasswordEditor();
-      Alert.alert(t("screens.client.profilescreen.motDePasseMisAJour"), t("screens.client.profilescreen.votreMotDePasseAEteModifie"));
+      Alert.alert('Mot de passe mis a jour', 'Votre mot de passe a ete modifie avec succes.');
     } catch (err) {
-      setChangePasswordError(getFriendlyError(err, t));
+      setChangePasswordError(err.message || 'Impossible de changer le mot de passe');
     } finally {
       setChangePasswordLoading(false);
     }
@@ -686,13 +757,13 @@ const ProfileScreen = ({ navigation, route }) => {
     if (!token) {
       const msg = 'Session expirée. Reconnectez-vous puis réessayez.';
       setPersonalInfoError(msg);
-      Alert.alert(t("screens.client.profilescreen.configurerStripe"), msg);
+      Alert.alert('Configurer Stripe', msg);
       return;
     }
     if (!profile?.id) {
       const msg = 'Utilisateur introuvable. Rechargez la page.';
       setPersonalInfoError(msg);
-      Alert.alert(t("screens.client.profilescreen.configurerStripe"), msg);
+      Alert.alert('Configurer Stripe', msg);
       return;
     }
 
@@ -702,8 +773,8 @@ const ProfileScreen = ({ navigation, route }) => {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -724,17 +795,17 @@ const ProfileScreen = ({ navigation, route }) => {
       const statusResponse = await fetch(API_ENDPOINTS.PAYMENTS.CONNECT_STATUS(profile.id), {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
       if (statusResponse.ok) {
         const status = await statusResponse.json();
         setConnectStatus(status || null);
       }
     } catch (e) {
-      const msg = getFriendlyError(e, t);
+      const msg = e.message || 'Impossible de configurer Stripe';
       setPersonalInfoError(msg);
-      Alert.alert(t("screens.client.profilescreen.configurerStripe"), msg);
+      Alert.alert('Configurer Stripe', msg);
     } finally {
       setConnectLoading(false);
     }
@@ -746,6 +817,19 @@ const ProfileScreen = ({ navigation, route }) => {
   };
 
   const closeInfoPage = () => setActiveInfoPage(null);
+  const currentLanguage = getLanguageMeta(i18n.language);
+
+  const handleLanguageChange = async (language) => {
+    if (!language || language === currentLanguage.code || changingLanguage) return;
+    try {
+      setChangingLanguage(true);
+      await setAppLanguage(language);
+    } catch {
+      Alert.alert(t('screens.client.profilescreen.erreur'), t('common.errors.languageChange'));
+    } finally {
+      setChangingLanguage(false);
+    }
+  };
 
   const openSupportEmail = async () => {
     const subject = encodeURIComponent('Support Rentify');
@@ -759,9 +843,9 @@ const ProfileScreen = ({ navigation, route }) => {
 
   const openStoreReview = async () => {
     if (!PLAY_STORE_REVIEW_URL) {
-      Alert.alert(t("screens.client.profilescreen.lienPlayStoreAAjouter"), t("screens.client.profilescreen.leFormulaireEstPretAjoutezExpoPublic")
-
-
+      Alert.alert(
+        "Lien Play Store a ajouter",
+        "Le formulaire est pret. Ajoutez EXPO_PUBLIC_PLAY_STORE_REVIEW_URL quand l'application sera publiee."
       );
       return;
     }
@@ -774,23 +858,23 @@ const ProfileScreen = ({ navigation, route }) => {
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.overlay}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <Text style={[styles.title, { fontSize: fontSize.title }]}>{t("screens.client.profilescreen.profil")}</Text>
+            <Text style={[styles.title, { fontSize: fontSize.title }]}>{t('screens.client.profilescreen.profil')}</Text>
 
             <View style={styles.profileCard}>
               <TouchableOpacity
                 style={styles.avatar}
                 onPress={() => {
-                  if (profilePicture) openPhotoSheet();else
-                  pickAndUploadProfilePicture();
+                  if (profilePicture) openPhotoSheet();
+                  else pickAndUploadProfilePicture();
                 }}
                 disabled={photoLoading}
-                activeOpacity={0.85}>
-                
-                {profilePicture ?
-                <Image source={{ uri: profilePicture }} style={styles.avatarImage} /> :
-
-                <Text style={styles.avatarText}>{initial}</Text>
-                }
+                activeOpacity={0.85}
+              >
+                {profilePicture ? (
+                  <Image source={{ uri: profilePicture }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{initial}</Text>
+                )}
                 <View style={styles.avatarEditPill}>
                   <Ionicons name="camera-outline" size={16} color="#fff" />
                 </View>
@@ -798,10 +882,10 @@ const ProfileScreen = ({ navigation, route }) => {
               <View style={styles.profileInfo}>
                 <Text style={[styles.profileName, { fontSize: fontSize.profileName }]} numberOfLines={1}>{fullName}</Text>
                 <Text style={[styles.profilePhone, { fontSize: fontSize.profilePhone }]} numberOfLines={1}>{profile?.phone || profile?.email || '-'}</Text>
-                {isGoogleConnected && <Text style={styles.googleBadge} numberOfLines={1}>{t("screens.client.profilescreen.compteGoogleConnecte")}</Text>}
+                {isGoogleConnected && <Text style={styles.googleBadge} numberOfLines={1}>{t('screens.client.profilescreen.compteGoogleConnecte')}</Text>}
                 {!!personalInfoError && <Text style={styles.errorText}>{personalInfoError}</Text>}
                 {!!error && <Text style={styles.errorText}>{error}</Text>}
-                {loading && <Text style={styles.loadingText}>{t("screens.client.profilescreen.chargement")}</Text>}
+                {loading && <Text style={styles.loadingText}>{t('screens.client.profilescreen.chargement')}</Text>}
               </View>
               <TouchableOpacity style={styles.editBtn} onPress={openPersonalInfoEditor}>
                 <Ionicons name="pencil-outline" size={16} color="#d6dbff" />
@@ -811,17 +895,17 @@ const ProfileScreen = ({ navigation, route }) => {
             <Modal visible={photoSheetVisible} transparent animationType="fade" onRequestClose={() => setPhotoSheetVisible(false)}>
               <Pressable style={styles.modalBackdrop} onPress={() => setPhotoSheetVisible(false)} />
               <View style={styles.sheet}>
-                <Text style={styles.sheetTitle}>{t("screens.client.profilescreen.photoDeProfil")}</Text>
+                <Text style={styles.sheetTitle}>{t('screens.client.profilescreen.photoDeProfil')}</Text>
                 <TouchableOpacity
                   style={styles.sheetRow}
                   onPress={() => {
                     setPhotoSheetVisible(false);
                     setTimeout(() => setPhotoViewerVisible(true), 120);
                   }}
-                  disabled={!profilePicture}>
-                  
+                  disabled={!profilePicture}
+                >
                   <Ionicons name="eye-outline" size={18} color={profilePicture ? '#d6dbff' : '#6c739e'} />
-                  <Text style={[styles.sheetRowText, !profilePicture && styles.sheetRowTextDisabled]}>{t("screens.client.profilescreen.voir")}</Text>
+                  <Text style={[styles.sheetRowText, !profilePicture && styles.sheetRowTextDisabled]}>{t('screens.client.profilescreen.voir')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.sheetRow}
@@ -829,10 +913,10 @@ const ProfileScreen = ({ navigation, route }) => {
                     setPhotoSheetVisible(false);
                     await pickAndUploadProfilePicture();
                   }}
-                  disabled={photoLoading}>
-                  
+                  disabled={photoLoading}
+                >
                   <Ionicons name="image-outline" size={18} color="#d6dbff" />
-                  <Text style={styles.sheetRowText}>{t("screens.client.profilescreen.remplacer")}</Text>
+                  <Text style={styles.sheetRowText}>{t('screens.client.profilescreen.remplacer')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.sheetRow}
@@ -840,14 +924,14 @@ const ProfileScreen = ({ navigation, route }) => {
                     setPhotoSheetVisible(false);
                     await removeProfilePicture();
                   }}
-                  disabled={!profilePicture || photoLoading}>
-                  
+                  disabled={!profilePicture || photoLoading}
+                >
                   <Ionicons name="trash-outline" size={18} color={profilePicture ? '#ff7b89' : '#6c739e'} />
-                  <Text style={[styles.sheetRowText, { color: profilePicture ? '#ff7b89' : '#6c739e' }]}>{t("screens.client.profilescreen.supprimer")}</Text>
+                  <Text style={[styles.sheetRowText, { color: profilePicture ? '#ff7b89' : '#6c739e' }]}>{t('screens.client.profilescreen.supprimer')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.sheetRow, { marginTop: 6 }]} onPress={() => setPhotoSheetVisible(false)}>
                   <Ionicons name="close" size={18} color="#d6dbff" />
-                  <Text style={styles.sheetRowText}>{t("screens.client.profilescreen.annuler")}</Text>
+                  <Text style={styles.sheetRowText}>{t('screens.client.profilescreen.annuler')}</Text>
                 </TouchableOpacity>
               </View>
             </Modal>
@@ -865,431 +949,434 @@ const ProfileScreen = ({ navigation, route }) => {
               <Pressable style={styles.modalBackdrop} onPress={closePasswordEditor} />
               <View style={styles.sheet}>
                 <View style={styles.sheetHeaderRow}>
-                  <Text style={styles.sheetTitle}>{t("screens.client.profilescreen.changerLeMotDePasse")}</Text>
+                  <Text style={styles.sheetTitle}>{t('screens.client.profilescreen.changerLeMotDePasse')}</Text>
                   <TouchableOpacity onPress={() => setShowPasswordFields((value) => !value)} style={styles.sheetIconButton}>
                     <Ionicons name={showPasswordFields ? 'eye-off-outline' : 'eye-outline'} size={18} color="#d6dbff" />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.passwordSheetNote}>
-                  {isGoogleOnly ?
-                  'Votre compte utilise Google. Definissez un mot de passe pour activer la connexion classique.' :
-                  'Saisissez votre mot de passe actuel, puis choisissez un nouveau mot de passe.'}
+                  {isGoogleOnly
+                    ? 'Votre compte utilise Google. Definissez un mot de passe pour activer la connexion classique.'
+                    : 'Saisissez votre mot de passe actuel, puis choisissez un nouveau mot de passe.'}
                 </Text>
-                {!isGoogleOnly &&
-                <>
-                    <Text style={[styles.inputLabel, { marginTop: 10 }]}>{t("screens.client.profilescreen.motDePasseActuel")}</Text>
+                {!isGoogleOnly && (
+                  <>
+                    <Text style={[styles.inputLabel, { marginTop: 10 }]}>Mot de passe actuel</Text>
                     <TextInput
-                    style={styles.input}
-                    value={changePasswordCurrent}
-                    onChangeText={setChangePasswordCurrent}
-                    secureTextEntry={!showPasswordFields}
-                    placeholder={t("screens.client.profilescreen.motDePasseActuel")}
-                    placeholderTextColor="#7d83b0"
-                    autoCapitalize="none" />
-                  
+                      style={styles.input}
+                      value={changePasswordCurrent}
+                      onChangeText={setChangePasswordCurrent}
+                      secureTextEntry={!showPasswordFields}
+                      placeholder="Mot de passe actuel"
+                      placeholderTextColor="#7d83b0"
+                      autoCapitalize="none"
+                    />
                   </>
-                }
-                <Text style={[styles.inputLabel, { marginTop: 10 }]}>{t("screens.client.profilescreen.nouveauMotDePasse")}</Text>
+                )}
+                <Text style={[styles.inputLabel, { marginTop: 10 }]}>Nouveau mot de passe</Text>
                 <TextInput
                   style={styles.input}
                   value={changePasswordNew}
                   onChangeText={setChangePasswordNew}
                   secureTextEntry={!showPasswordFields}
-                  placeholder={t("screens.client.profilescreen.nouveauMotDePasse")}
+                  placeholder="Nouveau mot de passe"
                   placeholderTextColor="#7d83b0"
-                  autoCapitalize="none" />
-                
-                <Text style={[styles.inputLabel, { marginTop: 10 }]}>{t("screens.client.profilescreen.confirmerLeMotDePasse")}</Text>
+                  autoCapitalize="none"
+                />
+                <Text style={[styles.inputLabel, { marginTop: 10 }]}>Confirmer le mot de passe</Text>
                 <TextInput
                   style={styles.input}
                   value={changePasswordConfirm}
                   onChangeText={setChangePasswordConfirm}
                   secureTextEntry={!showPasswordFields}
-                  placeholder={t("screens.client.profilescreen.confirmerLeMotDePasse")}
+                  placeholder="Confirmer le mot de passe"
                   placeholderTextColor="#7d83b0"
-                  autoCapitalize="none" />
-                
+                  autoCapitalize="none"
+                />
                 {!!changePasswordError && <Text style={styles.errorText}>{changePasswordError}</Text>}
                 <View style={styles.editActions}>
                   <TouchableOpacity style={styles.cancelBtn} onPress={closePasswordEditor} disabled={changePasswordLoading}>
-                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>{t("screens.client.profilescreen.annuler")}</Text>
+                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>{t('screens.client.profilescreen.annuler')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.saveBtn} onPress={savePasswordChange} disabled={changePasswordLoading}>
                     <Text style={[styles.saveBtnText, { fontSize: fontSize.editText }]} numberOfLines={1}>
-                      {changePasswordLoading ? 'Enregistrement...' : isGoogleOnly ? 'Definir' : 'Changer'}
+                      {changePasswordLoading ? t('screens.client.profilescreen.enregistrement') : (isGoogleOnly ? t('screens.client.profilescreen.definir') : t('screens.client.profilescreen.changer'))}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </Modal>
 
-            <SettingsModal visible={activeInfoPage === 'privacy'} title={t("screens.client.profilescreen.confidentialiteSecurite")} onClose={closeInfoPage}>
+            <SettingsModal visible={activeInfoPage === 'privacy'} title="Confidentialite & Securite" onClose={closeInfoPage}>
               <InfoLine
                 icon="lock-closed-outline"
-                title={t("screens.client.profilescreen.compteProtege")}
-                text={t("screens.client.profilescreen.votreMotDePasseEstChiffreCote")} />
-              
+                title="Compte protege"
+                text="Votre mot de passe est chiffre cote serveur et les actions sensibles demandent une session connectee."
+              />
               <InfoLine
                 icon="shield-checkmark-outline"
-                title={t("screens.client.profilescreen.verification")}
-                text={t("screens.client.profilescreen.lesComptesDocumentsEtVoituresPeuventEtre")} />
-              
+                title="Verification"
+                text="Les comptes, documents et voitures peuvent etre verifies avant validation pour limiter les faux profils."
+              />
               <InfoLine
                 icon="card-outline"
-                title={t("screens.client.profilescreen.paiements")}
-                text={t("screens.client.profilescreen.lesPaiementsCartePassentParStripeLes")} />
-              
+                title="Paiements"
+                text="Les paiements carte passent par Stripe. Les owners configurent leur compte de versement depuis leur profil."
+              />
               <InfoLine
                 icon="qr-code-outline"
-                title={t("screens.client.profilescreen.remiseDuVehicule")}
-                text={t("screens.client.profilescreen.lePickupEtLeRetourUtilisentUn")} />
-              
+                title="Remise du vehicule"
+                text="Le pickup et le retour utilisent un code ou QR code afin de confirmer clairement chaque etape."
+              />
               <InfoLine
                 icon="eye-off-outline"
-                title={t("screens.client.profilescreen.donneesVisibles")}
-                text={t("screens.client.profilescreen.lesAutresUtilisateursVoientUniquementLesInformations")} />
-              
+                title="Donnees visibles"
+                text="Les autres utilisateurs voient uniquement les informations utiles a la reservation: nom, contact, voiture, reservation et avis."
+              />
             </SettingsModal>
 
-            <SettingsModal visible={activeInfoPage === 'help'} title={t("screens.client.profilescreen.centreDaide")} onClose={closeInfoPage}>
-              <Text style={styles.pageIntro}>{t("screens.client.profilescreen.notreEquipePeutAiderPourLesReservations")}
-
+            <SettingsModal visible={activeInfoPage === 'help'} title="Centre d'aide" onClose={closeInfoPage}>
+              <Text style={styles.pageIntro}>
+                Notre equipe peut aider pour les reservations, paiements, documents, annonces, pickup, retour et remboursements.
               </Text>
               <TouchableOpacity style={styles.contactButton} onPress={openSupportEmail}>
                 <Ionicons name="mail-outline" size={18} color="#fff" />
                 <View style={styles.contactButtonTextWrap}>
-                  <Text style={styles.contactButtonLabel}>{t("screens.client.profilescreen.email")}</Text>
+                  <Text style={styles.contactButtonLabel}>Email</Text>
                   <Text style={styles.contactButtonValue}>{COMPANY_SUPPORT_EMAIL}</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity style={styles.contactButton} onPress={openSupportPhone}>
                 <Ionicons name="call-outline" size={18} color="#fff" />
                 <View style={styles.contactButtonTextWrap}>
-                  <Text style={styles.contactButtonLabel}>{t("screens.client.profilescreen.telephone")}</Text>
+                  <Text style={styles.contactButtonLabel}>Telephone</Text>
                   <Text style={styles.contactButtonValue}>{COMPANY_SUPPORT_PHONE}</Text>
                 </View>
               </TouchableOpacity>
               <InfoLine
                 icon="chatbubble-ellipses-outline"
-                title={t("screens.client.profilescreen.messagerie")}
-                text={t("screens.client.profilescreen.pourUneReservationPreciseUtilisezAussiLe")} />
-              
+                title="Messagerie"
+                text="Pour une reservation precise, utilisez aussi le chat avec l'autre utilisateur afin de garder l'historique."
+              />
               <InfoLine
                 icon="alert-circle-outline"
-                title={t("screens.client.profilescreen.litige")}
-                text={t("screens.client.profilescreen.enCasDeProblemeAvecUneLocation")} />
-              
+                title="Litige"
+                text="En cas de probleme avec une location, ouvrez la reservation concernee et signalez le souci depuis les actions disponibles."
+              />
             </SettingsModal>
 
-            <SettingsModal visible={activeInfoPage === 'about'} title={t("screens.client.profilescreen.aProposDeRentify")} onClose={closeInfoPage}>
-              <Text style={styles.pageIntro}>{t("screens.client.profilescreen.rentifyEstUneApplicationDeLocationDe")}
-
+            <SettingsModal visible={activeInfoPage === 'about'} title="A propos de Rentify" onClose={closeInfoPage}>
+              <Text style={styles.pageIntro}>
+                Rentify est une application de location de voitures entre clients et owners, pensee pour gerer toute la location depuis une seule interface.
               </Text>
               <InfoLine
                 icon="car-sport-outline"
-                title={t("screens.client.profilescreen.annoncesDeVoitures")}
-                text={t("screens.client.profilescreen.lesOwnersAjoutentLeursVoituresPhotosDisponibilites")} />
-              
+                title="Annonces de voitures"
+                text="Les owners ajoutent leurs voitures, photos, disponibilites, prix par jour, semaine ou mois, et frais de livraison."
+              />
               <InfoLine
                 icon="calendar-outline"
-                title={t("screens.client.profilescreen.reservations")}
-                text={t("screens.client.profilescreen.lesClientsChoisissentLesDatesLeMode")} />
-              
+                title="Reservations"
+                text="Les clients choisissent les dates, le mode de recuperation, puis suivent le statut de la reservation."
+              />
               <InfoLine
                 icon="cash-outline"
-                title={t("screens.client.profilescreen.paiements")}
-                text={t("screens.client.profilescreen.rentifyGereLesPaiementsCarteLesPaiements")} />
-              
+                title="Paiements"
+                text="Rentify gere les paiements carte, les paiements cash, les statuts de paiement, remboursements et factures."
+              />
               <InfoLine
                 icon="star-outline"
-                title={t("screens.client.profilescreen.avisEtFavoris")}
-                text={t("screens.client.profilescreen.lesClientsPeuventGarderLeursVoituresFavorites")} />
-              
+                title="Avis et favoris"
+                text="Les clients peuvent garder leurs voitures favorites et laisser un avis apres une location terminee."
+              />
               <InfoLine
                 icon="notifications-outline"
-                title={t("screens.client.profilescreen.notificationsEtMessages")}
-                text={t("screens.client.profilescreen.lapplicationInclutLesNotificationsLhistoriqueUneInbox")} />
-              
+                title="Notifications et messages"
+                text="L'application inclut les notifications, l'historique, une inbox et un chat entre utilisateurs."
+              />
               <InfoLine
                 icon="settings-outline"
-                title={t("screens.client.profilescreen.version")}
-                text={t("screens.client.profilescreen.rentifyV100")} />
-              
+                title="Version"
+                text="Rentify v1.0.0"
+              />
             </SettingsModal>
 
-            <SettingsModal visible={activeInfoPage === 'rate'} title={t("screens.client.profilescreen.evaluerLapplication")} onClose={closeInfoPage}>
-              <Text style={styles.pageIntro}>{t("screens.client.profilescreen.votreAvisNousAideAAmeliorerRentify")}
-
+            <SettingsModal visible={activeInfoPage === 'rate'} title="Evaluer l'application" onClose={closeInfoPage}>
+              <Text style={styles.pageIntro}>
+                Votre avis nous aide a ameliorer Rentify. Ce formulaire est pret pour envoyer vers le Play Store lorsque le lien sera branche.
               </Text>
-              <Text style={styles.ratingLabel}>{t("screens.client.profilescreen.votreNote")}</Text>
+              <Text style={styles.ratingLabel}>Votre note</Text>
               <View style={styles.ratingStars}>
-                {[1, 2, 3, 4, 5].map((value) =>
-                <TouchableOpacity key={value} style={styles.ratingStarButton} onPress={() => setRatingValue(value)}>
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <TouchableOpacity key={value} style={styles.ratingStarButton} onPress={() => setRatingValue(value)}>
                     <Ionicons
-                    name={value <= ratingValue ? 'star' : 'star-outline'}
-                    size={30}
-                    color={value <= ratingValue ? '#ffd166' : '#7d83b0'} />
-                  
+                      name={value <= ratingValue ? 'star' : 'star-outline'}
+                      size={30}
+                      color={value <= ratingValue ? '#ffd166' : '#7d83b0'}
+                    />
                   </TouchableOpacity>
-                )}
+                ))}
               </View>
-              <Text style={styles.ratingLabel}>{t("screens.client.profilescreen.votreCommentaire")}</Text>
+              <Text style={styles.ratingLabel}>Votre commentaire</Text>
               <TextInput
                 style={styles.ratingInput}
                 value={ratingComment}
                 onChangeText={setRatingComment}
                 multiline
                 textAlignVertical="top"
-                placeholder={t("screens.client.profilescreen.ditesNousCeQuiMarcheBienOu")}
-                placeholderTextColor="#7d83b0" />
-              
+                placeholder="Dites-nous ce qui marche bien ou ce qu'on doit ameliorer..."
+                placeholderTextColor="#7d83b0"
+              />
               <TouchableOpacity style={styles.primaryWideButton} onPress={openStoreReview}>
                 <Ionicons name="logo-google-playstore" size={18} color="#fff" />
-                <Text style={styles.primaryWideButtonText}>{t("screens.client.profilescreen.envoyerVersLePlayStore")}</Text>
+                <Text style={styles.primaryWideButtonText}>Envoyer vers le Play Store</Text>
               </TouchableOpacity>
             </SettingsModal>
 
-            <SettingsModal visible={activeInfoPage === 'notifications'} title={t("screens.client.profilescreen.notifications")} onClose={closeInfoPage}>
+            <SettingsModal visible={activeInfoPage === 'notifications'} title="Notifications" onClose={closeInfoPage}>
               <InfoLine
                 icon="notifications-outline"
-                title={t("screens.client.profilescreen.reservations")}
-                text={t("screens.client.profilescreen.recevezLesChangementsDeStatutConfirmationsAnnulations")} />
-              
+                title="Reservations"
+                text="Recevez les changements de statut, confirmations, annulations et rappels importants."
+              />
               <InfoLine
                 icon="chatbubble-outline"
-                title={t("screens.client.profilescreen.messages")}
-                text={t("screens.client.profilescreen.lesNotificationsDeMessagesVousAidentA")} />
-              
+                title="Messages"
+                text="Les notifications de messages vous aident a repondre rapidement pendant une location."
+              />
               <InfoLine
                 icon="time-outline"
-                title={t("screens.client.profilescreen.pickupEtRetour")}
-                text={t("screens.client.profilescreen.rentifyPeutVousRappelerLesEtapesDe")} />
-              
+                title="Pickup et retour"
+                text="Rentify peut vous rappeler les etapes de recuperation et de retour du vehicule."
+              />
             </SettingsModal>
 
             <SettingsModal visible={activeInfoPage === 'language'} title={t('screens.client.profilescreen.langue')} onClose={closeInfoPage}>
-              <InfoLine
-                icon="globe-outline"
-                title={t('screens.client.profilescreen.langueActuelle')}
-                text={currentLanguage.nativeLabel} />
-              
               <View style={styles.languageOptions}>
                 {supportedLanguages.map((language) => {
-                  const selected = currentLanguage.code === language.code;
+                  const isActive = language.code === currentLanguage.code;
                   return (
                     <TouchableOpacity
                       key={language.code}
-                      style={[styles.languageOption, selected && styles.languageOptionSelected]}
-                      onPress={() => changeLanguage(language.code)}>
-                      
-                      <View style={styles.languageOptionLeft}>
-                        <View style={[styles.languageCodeBadge, selected && styles.languageCodeBadgeSelected]}>
-                          <Text style={[styles.languageCodeText, selected && styles.languageCodeTextSelected]}>
-                            {language.code.toUpperCase()}
-                          </Text>
-                        </View>
-                        <View style={styles.languageOptionTextWrap}>
-                          <Text style={styles.languageOptionTitle}>{language.nativeLabel}</Text>
-                          <Text style={styles.languageOptionSubtitle}>{language.label}</Text>
-                        </View>
+                      style={[styles.languageOption, isActive && styles.languageOptionActive]}
+                      onPress={() => handleLanguageChange(language.code)}
+                      disabled={changingLanguage}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.languageCodeBadge, isActive && styles.languageCodeBadgeActive]}>
+                        <Text style={[styles.languageCodeText, isActive && styles.languageCodeTextActive]}>
+                          {language.code.charAt(0).toUpperCase() + language.code.slice(1)}
+                        </Text>
                       </View>
-                      <Ionicons
-                        name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={20}
-                        color={selected ? '#21d4a7' : '#7d83b0'} />
-                      
-                    </TouchableOpacity>);
-
+                      <View style={styles.languageOptionTextWrap}>
+                        <Text style={[styles.languageOptionTitle, isActive && styles.languageOptionTitleActive]}>
+                          {language.nativeLabel}
+                        </Text>
+                        <Text style={styles.languageOptionSubtitle}>{language.label}</Text>
+                      </View>
+                      {isActive ? (
+                        <Ionicons name="checkmark-circle" size={20} color="#8f6cff" />
+                      ) : (
+                        <Ionicons name="ellipse-outline" size={20} color="#7d83b0" />
+                      )}
+                    </TouchableOpacity>
+                  );
                 })}
               </View>
             </SettingsModal>
 
-            {isEditingPersonalInfo &&
-            <View style={styles.editCard}>
-                <Text style={styles.editTitle}>{t("screens.client.profilescreen.informationsPersonnelles")}</Text>
-                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>{t("screens.client.profilescreen.prenom")}</Text>
+            {isEditingPersonalInfo && (
+              <View style={styles.editCard}>
+                <Text style={styles.editTitle}>{t('screens.client.profilescreen.informationsPersonnelles')}</Text>
+                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Prenom</Text>
                 <TextInput
-                style={[styles.input, { fontSize: fontSize.input }]}
-                value={editFirstName}
-                onChangeText={setEditFirstName}
-                autoCapitalize="words"
-                placeholder={t("screens.client.profilescreen.votrePrenom")}
-                placeholderTextColor="#7d83b0" />
-              
-                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>{t("screens.client.profilescreen.nom")}</Text>
+                  style={[styles.input, { fontSize: fontSize.input }]}
+                  value={editFirstName}
+                  onChangeText={setEditFirstName}
+                  autoCapitalize="words"
+                  placeholder="Votre prenom"
+                  placeholderTextColor="#7d83b0"
+                />
+                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Nom</Text>
                 <TextInput
-                style={[styles.input, { fontSize: fontSize.input }]}
-                value={editLastName}
-                onChangeText={setEditLastName}
-                autoCapitalize="words"
-                placeholder={t("screens.client.profilescreen.votreNom")}
-                placeholderTextColor="#7d83b0" />
-              
-                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>{t("screens.client.profilescreen.email")}</Text>
+                  style={[styles.input, { fontSize: fontSize.input }]}
+                  value={editLastName}
+                  onChangeText={setEditLastName}
+                  autoCapitalize="words"
+                  placeholder="Votre nom"
+                  placeholderTextColor="#7d83b0"
+                />
+                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Email</Text>
                 <TextInput
-                style={[styles.input, { fontSize: fontSize.input }]}
-                value={editEmail}
-                onChangeText={setEditEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholder={t("screens.client.profilescreen.exampleMailCom")}
-                placeholderTextColor="#7d83b0" />
-              
-                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>{t("screens.client.profilescreen.telephone")}</Text>
+                  style={[styles.input, { fontSize: fontSize.input }]}
+                  value={editEmail}
+                  onChangeText={setEditEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholder="example@mail.com"
+                  placeholderTextColor="#7d83b0"
+                />
+                <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Telephone</Text>
                 <TextInput
-                style={[styles.input, { fontSize: fontSize.input }]}
-                value={editPhone}
-                onChangeText={setEditPhone}
-                keyboardType="phone-pad"
-                placeholder="+213..."
-                placeholderTextColor="#7d83b0" />
-              
+                  style={[styles.input, { fontSize: fontSize.input }]}
+                  value={editPhone}
+                  onChangeText={setEditPhone}
+                  keyboardType="phone-pad"
+                  placeholder="+213..."
+                  placeholderTextColor="#7d83b0"
+                />
                 {!!personalInfoError && <Text style={styles.errorText}>{personalInfoError}</Text>}
                 <View style={styles.editActions}>
                   <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditingPersonalInfo(false)}>
-                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>{t("screens.client.profilescreen.annuler")}</Text>
+                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>{t('screens.client.profilescreen.annuler')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.saveBtn} onPress={savePersonalInfo} disabled={savingPersonalInfo}>
                     <Text style={[styles.saveBtnText, { fontSize: fontSize.editText }]} numberOfLines={1}>
-                      {savingPersonalInfo ? 'Enregistrement...' : 'Enregistrer'}
+                      {savingPersonalInfo ? t('screens.client.profilescreen.enregistrement') : t('screens.client.profilescreen.enregistrer')}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
-            }
+            )}
 
             <View style={styles.statsRow}>
-              {isOwner ?
-              <>
-                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.cars)} label={t("screens.client.profilescreen.cars")} />
-                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.listings)} label={t("screens.client.profilescreen.listings")} />
-                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.reservations)} label={t("screens.client.profilescreen.reservations")} />
-                </> :
-
-              <>
-                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.favorites)} label={t("screens.client.profilescreen.favoris")} />
-                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.reservations)} label={t("screens.client.profilescreen.reservations")} />
-                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.reviews)} label={t("screens.client.profilescreen.avis")} />
+              {isOwner ? (
+                <>
+                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.cars)} label="Cars" />
+                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.listings)} label="Listings" />
+                  <StatCard value={ownerStatsLoading ? '...' : String(ownerStats.reservations)} label="Reservations" />
                 </>
-              }
+              ) : (
+                <>
+                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.favorites)} label="Favoris" />
+                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.reservations)} label="Reservations" />
+                  <StatCard value={clientStatsLoading ? '...' : String(clientStats.reviews)} label="Avis" />
+                </>
+              )}
             </View>
 
-            {isOwner ?
-            <View style={styles.identityCard}>
+            {isOwner ? (
+              <View style={styles.identityCard}>
                 <View style={styles.identityHeader}>
                   <View style={styles.identityIcon}>
                     <Ionicons name="id-card-outline" size={20} color="#8f6cff" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.identityTitle}>{t("screens.client.profilescreen.carteDidentite")}</Text>
-                    <Text style={styles.identitySubtitle}>{t("screens.client.profilescreen.obligatoirePourPublierUnVehiculeOuUne")}</Text>
+                    <Text style={styles.identityTitle}>Carte d'identité</Text>
+                    <Text style={styles.identitySubtitle}>Obligatoire pour publier un véhicule ou une annonce</Text>
                   </View>
                   <View style={[styles.identityBadge, { backgroundColor: identityStatus.bg }]}>
-                    <Text style={[styles.identityBadgeText, { color: identityStatus.tone }]}>{t(identityStatus.labelKey)}</Text>
+                    <Text style={[styles.identityBadgeText, { color: identityStatus.tone }]}>{identityStatus.label}</Text>
                   </View>
                 </View>
 
                 {!!identityError && <Text style={styles.identityError}>{identityError}</Text>}
-                {identityLoading ?
-              <View style={styles.identityLoader}>
+                {identityLoading ? (
+                  <View style={styles.identityLoader}>
                     <ActivityIndicator size="small" color="#8f6cff" />
-                  </View> :
-
-              <>
+                  </View>
+                ) : (
+                  <>
                     <Text style={styles.identityName} numberOfLines={1}>
                       {identityDocument?.documentUrl ? identityDocument.documentUrl.split('/').pop() : 'Aucun document soumis'}
                     </Text>
                     <Text style={styles.identityHint}>
-                      {identityVerified ?
-                  'Votre carte est approuvée. Vous pouvez publier.' :
-                  identityDocument?.status === 'rejected' ?
-                  'Votre carte est rejetée. Téléversez une nouvelle version.' :
-                  'Vous ne pouvez pas publier tant que la carte n’est pas validée.'}
+                      {identityVerified
+                        ? 'Votre carte est approuvée. Vous pouvez publier.'
+                        : identityDocument?.status === 'rejected'
+                          ? 'Votre carte est rejetée. Téléversez une nouvelle version.'
+                          : 'Vous ne pouvez pas publier tant que la carte n’est pas validée.'}
                     </Text>
                     {identityReason ? <Text style={styles.identityReason}>{identityReason}</Text> : null}
 
                     <View style={styles.identityActions}>
                       <TouchableOpacity style={styles.identityActionBtn} onPress={identityDocument?.documentUrl ? openIdentityDocument : pickIdentityDocument} disabled={identityBusy}>
                         <Ionicons name="eye-outline" size={16} color="#dce2ff" />
-                        <Text style={styles.identityActionText}>{t("screens.client.profilescreen.voir")}</Text>
+                        <Text style={styles.identityActionText}>Voir</Text>
                       </TouchableOpacity>
-                      {!identityVerified ?
-                  <TouchableOpacity style={[styles.identityActionBtn, styles.identityPrimaryBtn]} onPress={pickIdentityDocument} disabled={identityBusy}>
+                      {!identityVerified ? (
+                        <TouchableOpacity style={[styles.identityActionBtn, styles.identityPrimaryBtn]} onPress={pickIdentityDocument} disabled={identityBusy}>
                           <Ionicons name={identityDocument?.documentUrl ? 'create-outline' : 'cloud-upload-outline'} size={16} color="#fff" />
-                          <Text style={styles.identityActionPrimaryText}>{identityDocument?.documentUrl ? t("screens.client.profilescreen.remplacer") : 'Téléverser'}</Text>
-                        </TouchableOpacity> :
-                  null}
-                      {identityDocument?.id ?
-                  <TouchableOpacity style={styles.identityActionBtn} onPress={deleteIdentityDocument} disabled={identityBusy}>
+                          <Text style={styles.identityActionPrimaryText}>
+                            {identityBusy
+                        ? t('screens.client.profilescreen.chargement')
+                              : identityDocument?.documentUrl
+                                ? t('screens.client.profilescreen.remplacer')
+                                : t('screens.client.profilescreen.televerser')}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      {identityDocument?.id && !accountVerified && !identityVerified ? (
+                        <TouchableOpacity style={styles.identityActionBtn} onPress={deleteIdentityDocument} disabled={identityBusy}>
                           <Ionicons name="trash-outline" size={16} color="#ff7b89" />
-                          <Text style={styles.identityActionDangerText}>{t("screens.client.profilescreen.supprimer")}</Text>
-                        </TouchableOpacity> :
-                  null}
+                          <Text style={styles.identityActionDangerText}>{t('screens.client.profilescreen.supprimer')}</Text>
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
                   </>
-              }
-              </View> :
-            null}
+                )}
+              </View>
+            ) : null}
 
-            <Text style={styles.sectionTitle}>{t("screens.client.profilescreen.monCompte")}</Text>
+            <Text style={styles.sectionTitle}>{t('screens.client.profilescreen.monCompte')}</Text>
             <SectionCard
               items={[
-              { action: 'personalInfo', label: t("screens.client.profilescreen.informationsPersonnelles"), icon: 'person-outline' },
-              { action: 'password', label: isGoogleOnly ? 'Definir un mot de passe' : 'Changer mot de passe', icon: 'key-outline' },
-              ...(isOwner ? [{
-                action: 'stripe',
-                label: connectLoading ?
-                'Ouverture...' :
-                connectStatus?.cardPaymentsAvailable ? 'Mettre a jour Stripe' : t("screens.client.profilescreen.configurerStripe"),
-                icon: 'cash-outline'
-              }] : [])]
-              }
+                { action: 'personalInfo', label: t('screens.client.profilescreen.informationsPersonnelles'), icon: 'person-outline' },
+                { action: 'password', label: isGoogleOnly ? t('screens.client.profilescreen.definirUnMotDePasse') : t('screens.client.profilescreen.changerMotDePasse'), icon: 'key-outline' },
+                ...(isOwner ? [{
+                  action: 'stripe',
+                  label: connectLoading
+                    ? 'Ouverture...'
+                    : (connectStatus?.cardPaymentsAvailable ? 'Mettre a jour Stripe' : 'Configurer Stripe'),
+                  icon: 'cash-outline',
+                }] : []),
+              ]}
               onItemPress={(item) => {
                 if (item.action === 'personalInfo') openPersonalInfoEditor();
                 if (item.action === 'password') openPasswordEditor();
                 if (item.action === 'stripe' && !connectLoading) configureStripePayouts();
-              }} />
-            
+              }}
+            />
 
-            <Text style={styles.sectionTitle}>{t("screens.client.profilescreen.preferences")}</Text>
+            <Text style={styles.sectionTitle}>{t('screens.client.profilescreen.preferences')}</Text>
             <SectionCard
               items={[
-              { action: 'language', label: t('screens.client.profilescreen.langue'), icon: 'globe-outline' },
-              { action: 'notifications', label: t("screens.client.profilescreen.notifications"), icon: 'notifications-outline' },
-              { action: 'privacy', label: t("screens.client.profilescreen.confidentialiteSecurite"), icon: 'shield-checkmark-outline' }]
-              }
+                { action: 'language', label: t('screens.client.profilescreen.langue'), icon: 'globe-outline' },
+                { action: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
+                { action: 'privacy', label: t('screens.client.profilescreen.confidentialiteSecurite'), icon: 'shield-checkmark-outline' },
+              ]}
               onItemPress={(item) => {
                 if (item.action) setActiveInfoPage(item.action);
-              }} />
-            
+              }}
+            />
 
-            <Text style={styles.sectionTitle}>{t("screens.client.profilescreen.aideSupport")}</Text>
+            <Text style={styles.sectionTitle}>{t('screens.client.profilescreen.aideSupport')}</Text>
             <SectionCard
               items={[
-              { action: 'help', label: t("screens.client.profilescreen.centreDaide"), icon: 'help-circle-outline' },
-              { action: 'about', label: t("screens.client.profilescreen.aProposDeRentify"), icon: 'information-circle-outline' },
-              { action: 'rate', label: t("screens.client.profilescreen.evaluerLapplication"), icon: 'star-outline' }]
-              }
+                { action: 'help', label: "Centre d'aide", icon: 'help-circle-outline' },
+                { action: 'about', label: 'A propos de Rentify', icon: 'information-circle-outline' },
+                { action: 'rate', label: "Evaluer l'application", icon: 'star-outline' },
+              ]}
               onItemPress={(item) => {
                 if (item.action) setActiveInfoPage(item.action);
-              }} />
-            
+              }}
+            />
 
             <TouchableOpacity
               style={styles.logoutButton}
-              onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })}>
-              
+              onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })}
+            >
               <Ionicons name="log-out-outline" size={18} color="#ff4f5e" />
-              <Text style={[styles.logoutText, { fontSize: fontSize.logout }]}>{t("screens.client.profilescreen.seDeconnecter")}</Text>
+              <Text style={[styles.logoutText, { fontSize: fontSize.logout }]}>{t('screens.client.profilescreen.seDeconnecter')}</Text>
             </TouchableOpacity>
 
-            <Text style={styles.version}>{t("screens.client.profilescreen.rentifyV100")}</Text>
+            <Text style={styles.version}>Rentify v1.0.0</Text>
           </ScrollView>
           {isOwner && <OwnerBottomNavigation navigation={navigation} route={route} active="profile" />}
         </SafeAreaView>
       </ImageBackground>
-    </View>);
-
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -1305,7 +1392,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(23, 26, 54, 0.9)',
     padding: 16,
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   avatar: {
     width: 78,
@@ -1316,7 +1403,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#5b73ff',
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)'
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   avatarEditPill: {
@@ -1335,7 +1422,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 6
+    elevation: 6,
   },
   avatarText: { color: '#fff', fontWeight: '700', fontSize: appFont(17) },
   profileInfo: { flex: 1, marginLeft: 12 },
@@ -1352,7 +1439,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(143, 108, 255, 0.6)',
     color: '#e8e4ff',
     fontSize: appFont(12),
-    fontWeight: '700'
+    fontWeight: '700',
   },
   loadingText: { color: '#b4b9dc', marginTop: 6, fontSize: appFont(13) },
   errorText: { color: '#ff7b89', marginTop: 6, fontSize: appFont(13) },
@@ -1362,7 +1449,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(31, 35, 67, 0.9)'
+    backgroundColor: 'rgba(31, 35, 67, 0.9)',
   },
   editCard: {
     borderRadius: 16,
@@ -1370,7 +1457,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(145, 152, 229, 0.2)',
     backgroundColor: 'rgba(23, 26, 54, 0.92)',
     padding: 14,
-    marginTop: 10
+    marginTop: 10,
   },
   editTitle: { color: '#f2f4ff', fontSize: appFont(15), fontWeight: '700', marginBottom: 10 },
   inputLabel: { color: '#9da4cd', fontSize: appFont(13), marginBottom: 6, marginTop: 4 },
@@ -1382,7 +1469,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: appFont(14)
+    fontSize: appFont(14),
   },
   editActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12, gap: 10 },
   cancelBtn: {
@@ -1390,14 +1477,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(145, 152, 229, 0.4)',
     paddingHorizontal: 12,
-    paddingVertical: 9
+    paddingVertical: 9,
   },
   cancelBtnText: { color: '#c5caef', fontWeight: '600', fontSize: appFont(13) },
   saveBtn: {
     borderRadius: 10,
     backgroundColor: '#8f6cff',
     paddingHorizontal: 12,
-    paddingVertical: 9
+    paddingVertical: 9,
   },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: appFont(13) },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 18 },
@@ -1408,7 +1495,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(145, 152, 229, 0.2)',
     backgroundColor: 'rgba(23, 26, 54, 0.9)',
     paddingVertical: 14,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   statValue: { color: '#8f6cff', fontSize: appFont(18), fontWeight: '700' },
   statLabel: { color: '#9da4cd', marginTop: 6, fontSize: appFont(13) },
@@ -1419,27 +1506,27 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 8,
     marginTop: 8,
-    marginLeft: 2
+    marginLeft: 2,
   },
   sectionCard: {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(145, 152, 229, 0.2)',
     backgroundColor: 'rgba(23, 26, 54, 0.92)',
-    marginBottom: 10
+    marginBottom: 10,
   },
   rowItem: {
     minHeight: 58,
     paddingHorizontal: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
   pageModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.62)',
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
   },
   pageModal: {
     maxHeight: '86%',
@@ -1449,14 +1536,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderColor: 'rgba(145, 152, 229, 0.22)',
     backgroundColor: 'rgba(16, 19, 43, 0.99)',
-    paddingTop: 12
+    paddingTop: 12,
   },
   pageModalHeader: {
     minHeight: 46,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   },
   pageModalTitle: { color: '#f2f4ff', fontSize: appFont(17), fontWeight: '800', flex: 1, paddingRight: 10 },
   pageModalClose: {
@@ -1467,14 +1554,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(31, 35, 67, 0.95)',
     borderWidth: 1,
-    borderColor: 'rgba(145, 152, 229, 0.18)'
+    borderColor: 'rgba(145, 152, 229, 0.18)',
   },
   pageModalContent: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 26 },
   pageIntro: {
     color: '#c7ccef',
     fontSize: appFont(13.5),
     lineHeight: 20,
-    marginBottom: 12
+    marginBottom: 12,
   },
   infoLine: {
     flexDirection: 'row',
@@ -1484,7 +1571,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(145, 152, 229, 0.18)',
     backgroundColor: 'rgba(23, 26, 54, 0.82)',
     padding: 12,
-    marginBottom: 10
+    marginBottom: 10,
   },
   infoLineIcon: {
     width: 34,
@@ -1493,44 +1580,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(56, 45, 120, 0.55)',
-    marginRight: 10
+    marginRight: 10,
   },
   infoLineBody: { flex: 1, minWidth: 0 },
   infoLineTitle: { color: '#eef1ff', fontSize: appFont(13.5), fontWeight: '800', marginBottom: 4 },
   infoLineText: { color: '#aeb5df', fontSize: appFont(12.5), lineHeight: 18 },
-  languageOptions: { gap: 10 },
+  languageOptions: {
+    marginTop: 4,
+  },
   languageOption: {
-    minHeight: 62,
+    minHeight: 58,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(145, 152, 229, 0.18)',
     backgroundColor: 'rgba(23, 26, 54, 0.82)',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
   },
-  languageOptionSelected: {
-    borderColor: 'rgba(33, 212, 167, 0.45)',
-    backgroundColor: 'rgba(33, 212, 167, 0.1)'
+  languageOptionActive: {
+    borderColor: 'rgba(143, 108, 255, 0.72)',
+    backgroundColor: 'rgba(143, 108, 255, 0.16)',
   },
-  languageOptionLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 },
   languageCodeBadge: {
-    width: 42,
-    height: 36,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(56, 45, 120, 0.55)',
-    marginRight: 10
+    backgroundColor: 'rgba(12, 15, 37, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.18)',
+    marginRight: 10,
   },
-  languageCodeBadgeSelected: { backgroundColor: 'rgba(33, 212, 167, 0.18)' },
-  languageCodeText: { color: '#cfd4ff', fontSize: appFont(12), fontWeight: '900' },
-  languageCodeTextSelected: { color: '#8effdd' },
-  languageOptionTextWrap: { flex: 1, minWidth: 0 },
+  languageCodeBadgeActive: {
+    backgroundColor: 'rgba(143, 108, 255, 0.28)',
+    borderColor: 'rgba(143, 108, 255, 0.72)',
+  },
+  languageCodeText: { color: '#b8bee6', fontSize: appFont(11.5), fontWeight: '900' },
+  languageCodeTextActive: { color: '#fff' },
+  languageOptionTextWrap: { flex: 1, minWidth: 0, paddingRight: 10 },
   languageOptionTitle: { color: '#eef1ff', fontSize: appFont(14), fontWeight: '800' },
-  languageOptionSubtitle: { color: '#aeb5df', fontSize: appFont(12.5), marginTop: 2 },
+  languageOptionTitleActive: { color: '#fff' },
+  languageOptionSubtitle: { color: '#9da4cd', fontSize: appFont(12), marginTop: 3 },
   contactButton: {
     minHeight: 58,
     borderRadius: 14,
@@ -1540,7 +1635,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 10
+    marginBottom: 10,
   },
   contactButtonTextWrap: { flex: 1, minWidth: 0 },
   contactButtonLabel: { color: '#fff', fontSize: appFont(12), fontWeight: '700', opacity: 0.86 },
@@ -1549,14 +1644,14 @@ const styles = StyleSheet.create({
   ratingStars: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14
+    marginBottom: 14,
   },
   ratingStarButton: {
     width: 42,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 3
+    marginRight: 3,
   },
   ratingInput: {
     minHeight: 116,
@@ -1569,7 +1664,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     fontSize: appFont(14),
     lineHeight: 20,
-    marginBottom: 12
+    marginBottom: 12,
   },
   primaryWideButton: {
     minHeight: 50,
@@ -1579,7 +1674,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 9,
-    paddingHorizontal: 12
+    paddingHorizontal: 12,
   },
   primaryWideButtonText: { color: '#fff', fontSize: appFont(14), fontWeight: '800' },
   sheet: {
@@ -1591,7 +1686,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(145, 152, 229, 0.22)',
     backgroundColor: 'rgba(23, 26, 54, 0.98)',
-    padding: 12
+    padding: 12,
   },
   sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle: { color: '#f2f4ff', fontSize: appFont(15), fontWeight: '800', marginBottom: 8 },
@@ -1604,7 +1699,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(12, 15, 37, 0.75)',
     borderWidth: 1,
     borderColor: 'rgba(145, 152, 229, 0.18)',
-    marginBottom: 8
+    marginBottom: 8,
   },
   passwordSheetNote: { color: '#b4b9dc', fontSize: appFont(12.5), lineHeight: 18, marginBottom: 4 },
   sheetRow: {
@@ -1617,7 +1712,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(12, 15, 37, 0.75)',
     borderWidth: 1,
     borderColor: 'rgba(145, 152, 229, 0.18)',
-    marginTop: 8
+    marginTop: 8,
   },
   sheetRowText: { color: '#eef1ff', fontSize: appFont(13), fontWeight: '700' },
   sheetRowTextDisabled: { color: '#6c739e' },
@@ -1633,7 +1728,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(56, 45, 120, 0.55)',
-    marginRight: 10
+    marginRight: 10,
   },
   rowLabel: { color: '#eef1ff', fontSize: appFont(15), fontWeight: '500', flexShrink: 1 },
   logoutButton: {
@@ -1646,7 +1741,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8
+    gap: 8,
   },
   logoutText: { color: '#ff4f5e', fontSize: appFont(15), fontWeight: '700' },
   version: { textAlign: 'center', color: '#7f84ae', fontSize: appFont(12), marginTop: 14, marginBottom: 8 },
@@ -1656,7 +1751,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(145, 152, 229, 0.2)',
     backgroundColor: 'rgba(23, 26, 54, 0.92)',
     padding: 14,
-    marginBottom: 14
+    marginBottom: 14,
   },
   identityHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   identityIcon: {
@@ -1665,7 +1760,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(143,108,255,0.12)'
+    backgroundColor: 'rgba(143,108,255,0.12)',
   },
   identityTitle: { color: '#f2f4ff', fontSize: appFont(15), fontWeight: '700' },
   identitySubtitle: { color: '#9da4cd', marginTop: 3, fontSize: appFont(12), lineHeight: 17 },
@@ -1673,7 +1768,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    marginLeft: 8
+    marginLeft: 8,
   },
   identityBadgeText: { fontSize: appFont(11), fontWeight: '800' },
   identityError: { color: '#ff7b89', marginTop: 10, fontSize: appFont(12) },
@@ -1691,15 +1786,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(145, 152, 229, 0.18)'
+    borderColor: 'rgba(145, 152, 229, 0.18)',
   },
   identityPrimaryBtn: {
     backgroundColor: '#8f6cff',
-    borderColor: 'rgba(143,108,255,0.5)'
+    borderColor: 'rgba(143,108,255,0.5)',
   },
   identityActionText: { color: '#dce2ff', fontSize: appFont(12), fontWeight: '700' },
   identityActionPrimaryText: { color: '#fff', fontSize: appFont(12), fontWeight: '700' },
-  identityActionDangerText: { color: '#ff7b89', fontSize: appFont(12), fontWeight: '700' }
+  identityActionDangerText: { color: '#ff7b89', fontSize: appFont(12), fontWeight: '700' },
 });
 
 export default ProfileScreen;

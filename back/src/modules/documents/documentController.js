@@ -135,6 +135,15 @@ const buildOcrRecordPayload = (documentId, verificationResult) => ({
   verificationReason: verificationResult.verificationReason,
 });
 
+const sortDocumentsByRecency = (documents = []) =>
+  [...documents].sort((a, b) => {
+    const aTime = new Date(a?.updatedAt || a?.createdAt || 0).getTime();
+    const bTime = new Date(b?.updatedAt || b?.createdAt || 0).getTime();
+    return bTime - aTime;
+  });
+
+const findLatestDocument = (documents = []) => sortDocumentsByRecency(documents)[0] || null;
+
 export const getAllDocuments = async (req, res) => {
   try {
     const parsedFilters = documentFiltersSchema.parse({
@@ -306,14 +315,30 @@ export const uploadDocumentHandler = async (req, res) => {
       type: 'upload',
     });
 
-    // insert in database 
-    const createdDocument = await createDocument({
+    const existingDocuments = sortDocumentsByRecency(await getDocuments({
+      userId,
+      carId,
+      companyId,
+      documentType,
+    }));
+
+    const existingDocument = findLatestDocument(existingDocuments);
+    const baseDocumentPayload = {
       userId,
       carId,
       companyId,
       documentType,
       documentUrl: uploadResult.secure_url,
-    });
+    };
+
+    let createdDocument = existingDocument
+      ? await updateDocument(existingDocument.id, {
+        ...baseDocumentPayload,
+        status: 'manual_review',
+        reviewedBy: null,
+        reviewedAt: null,
+      })
+      : await createDocument(baseDocumentPayload);
 
     let verificationResult = {
       status: 'manual_review',

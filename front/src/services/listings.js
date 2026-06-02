@@ -20,18 +20,25 @@ export const toUiListing = (item) => {
 
   return {
     id: item.id,
+    carId: item.carId || item.car_id || item?.car?.id || null,
     brand: item.car?.brand || 'N/A',
     model: item.car?.model || 'N/A',
     year: item.car?.year || '-',
     category: item.title || 'Vehicule',
+    title: item.title || 'Vehicule',
     city: item.city || '',
+    country: item.country || '',
     image: pickListingImage(item),
     images: carImages,
     car: item.car || null,
     pricePerDay: item.pricePerDay ?? 0,
+    pricePerWeek: item.pricePerWeek ?? 0,
+    pricePerMonth: item.pricePerMonth ?? 0,
     pickupAddress: item.pickupAddress ?? item.pickup_address ?? '',
     deliveryFee: item.deliveryFee ?? item.delivery_fee ?? 0,
     available: Boolean(item.isActive),
+    availableFrom: item.availableFrom ?? item.available_from ?? null,
+    availableTo: item.availableTo ?? item.available_to ?? null,
     fuel: item.car?.fuelType || 'N/A',
     transmission: item.car?.transmission || 'N/A',
     seats: item.car?.seats || '-',
@@ -46,14 +53,29 @@ export const toUiListing = (item) => {
 export const getListings = async () => {
   try {
     console.log(' Fetching listings from API...');
-    const data = await fetchJson('/api/listings?limit=50&sort_order=asc');
-    
-    if (!data.items) {
-      console.warn('No items returned from API. Response:', data);
+    const pageSize = 100;
+    let page = 1;
+    let totalPages = 1;
+    const rawListings = [];
+
+    do {
+      const data = await fetchJson(`/api/listings?limit=${pageSize}&sort_order=asc&page=${page}`);
+
+      if (!data.items) {
+        console.warn('No items returned from API. Response:', data);
+        return [];
+      }
+
+      rawListings.push(...data.items);
+      totalPages = Number(data?.pagination?.totalPages || page);
+      page += 1;
+    } while (page <= totalPages);
+
+    if (!rawListings.length) {
       return [];
     }
-    
-    const listings = (data.items || []).map(toUiListing);
+
+    const listings = rawListings.map(toUiListing);
     console.log(`Successfully loaded ${listings.length} listings`);
     return listings;
   } catch (error) {

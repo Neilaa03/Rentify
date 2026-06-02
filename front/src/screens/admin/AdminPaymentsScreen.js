@@ -3,10 +3,11 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
-import { Button, Card, Row, ScreenHeader, SearchBox, StatCard, StatusBadge } from '../../components/admin/AdminUI';import { useTranslation } from "react-i18next";
-import { getFriendlyError } from '../../utils/friendlyError';
+import { AdminLogoutButton, Button, Card, Row, ScreenHeader, SearchBox, StatCard, StatusBadge } from '../../components/admin/AdminUI';
+import { useTranslation } from 'react-i18next';
 
-export default function AdminPaymentsScreen({ navigation, route }) {const { t } = useTranslation();
+export default function AdminPaymentsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState('');
   const [rows, setRows] = useState([]);
   const [analytics, setAnalytics] = useState(null);
@@ -21,40 +22,40 @@ export default function AdminPaymentsScreen({ navigation, route }) {const { t } 
       setAnalytics(data.analytics || null);
       setError('');
     } catch (e) {
-      setError(getFriendlyError(e, t));
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {load();}, []);
+  useEffect(() => { load(); }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ScreenHeader kicker="ADMIN PANEL" title={t("screens.admin.adminpaymentsscreen.payments")} />
+        <ScreenHeader kicker="ADMIN PANEL" title={t('screens.admin.adminpaymentsscreen.payments')} rightAction={<AdminLogoutButton navigation={navigation} />} />
         <View style={styles.topActions}>
-          <Button label={t("screens.admin.adminpaymentsscreen.reports")} type="ghost" onPress={() => navigation.navigate('AdminReports', route?.params || {})} />
+          <Button label={t('screens.admin.adminpaymentsscreen.reports')} type="ghost" onPress={() => navigation.navigate('AdminReports', route?.params || {})} />
         </View>
-        <SearchBox value={status} onChangeText={setStatus} placeholder={t("screens.admin.adminpaymentsscreen.statusFilter")} />
-        <Button label={t("screens.admin.adminpaymentsscreen.search")} onPress={load} />
+        <SearchBox value={status} onChangeText={setStatus} placeholder={t('screens.admin.adminpaymentsscreen.statusFilter')} />
+        <Button label={t('screens.admin.adminpaymentsscreen.search')} onPress={load} />
         <ScrollView contentContainerStyle={styles.content}>
-          {analytics ? <View style={styles.grid}><StatCard label={t("screens.admin.adminpaymentsscreen.failed")} value={analytics.failed} /><StatCard label={t("screens.admin.adminpaymentsscreen.revenue")} value={`€${analytics.grossRevenue}`} /></View> : null}
-          {loading ? <Text style={styles.muted}>{t("screens.admin.adminpaymentsscreen.loading")}</Text> : null}
+          {analytics ? <View style={styles.grid}><StatCard label={t('screens.admin.adminpaymentsscreen.failed')} value={analytics.failed} /><StatCard label={t('screens.admin.adminpaymentsscreen.revenue')} value={`€${analytics.grossRevenue}`} /></View> : null}
+          {loading ? <Text style={styles.muted}>{t('screens.admin.adminpaymentsscreen.loading')}</Text> : null}
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           <Card>
-            {rows.map((p) =>
-            <View key={p.id}>
+            {rows.map((p) => (
+              <View key={p.id}>
                 <Row title={`${p.id.slice(0, 8)} - €${p.amount}`} subtitle={p.payment_method || 'card'} right={<StatusBadge status={p.status} />} />
-                {['completed', 'paid'].includes(p.status) ? <Button label={t("screens.admin.adminpaymentsscreen.refund")} type="danger" onPress={async () => {await adminApi.refund({ paymentId: p.id, reason: 'Admin refund' });load();}} /> : null}
+                {['completed', 'paid'].includes(p.status) ? <Button label={t('screens.admin.adminpaymentsscreen.refund')} type="danger" onPress={async () => { await adminApi.refund({ paymentId: p.id, reason: 'Admin refund' }); load(); }} /> : null}
               </View>
-            )}
+            ))}
           </Card>
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="more" />
-    </SafeAreaView>);
-
+    </SafeAreaView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -64,5 +65,5 @@ const styles = StyleSheet.create({
   muted: { color: '#aab1dd' },
   error: { color: '#ff7f90', marginBottom: 8 },
   grid: { flexDirection: 'row', justifyContent: 'space-between' },
-  topActions: { flexDirection: 'row', marginBottom: 8 }
+  topActions: { flexDirection: 'row', marginBottom: 8 },
 });

@@ -3,9 +3,12 @@ import { Alert, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, Touchab
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
-import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
-import { getFriendlyError } from '../../utils/friendlyError';
+import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
+import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
+import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
+
+const tabs = ['Tous', 'En attente', 'Verifies', 'Rejetes'];
 
 const norm = (v) => String(v || '').toLowerCase();
 
@@ -24,6 +27,13 @@ const statusTone = (status) => {
   if (s.includes('manual_review')) return styles.review;
   return styles.wait;
 };
+
+const isVerifiedDocument = (status) => {
+  const s = norm(status);
+  return s.includes('approve') || s.includes('verif');
+};
+
+const isRejectedDocument = (status) => norm(status).includes('reject');
 
 const normalizeDocUrl = (url) => {
   if (!url) return '';
@@ -47,15 +57,10 @@ const buildFallbackUrls = (url) => {
   return [...new Set(list)];
 };
 
-export default function AdminCarsScreen({ navigation, route }) {const { t } = useTranslation();
-  const tabs = [
-    { id: 'all', label: t("common.legacyHome.all") },
-    { id: 'pending', label: t("screens.admin.admincarsscreen.enAttente") },
-    { id: 'verified', label: t("screens.admin.admincarsscreen.verifies") },
-    { id: 'rejected', label: t("screens.admin.admincarsscreen.rejetes") }
-  ];
+export default function AdminCarsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('Tous');
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -63,6 +68,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
   const [detailsByCar, setDetailsByCar] = useState({});
   const [selectedCar, setSelectedCar] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [reviewingDocId, setReviewingDocId] = useState(null);
 
   const load = async () => {
     try {
@@ -71,13 +77,13 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       setCars(data.data || []);
       setError('');
     } catch (e) {
-      setError(getFriendlyError(e, t));
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {load();}, []);
+  useEffect(() => { load(); }, []);
 
   const carsWithMeta = useMemo(() => {
     return (cars || []).map((c) => {
@@ -87,7 +93,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
         ...c,
         ownerName,
         carStatus,
-        displayName: `${c.brand || ''} ${c.model || ''}`.trim() || t("screens.owner.carformscreen.vehicule")
+        displayName: `${c.brand || ''} ${c.model || ''}`.trim() || 'Vehicule',
       };
     });
   }, [cars]);
@@ -97,9 +103,9 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
     let verified = 0;
     let rejected = 0;
     carsWithMeta.forEach((c) => {
-      if (c.carStatus.includes('approve')) verified += 1;else
-      if (c.carStatus.includes('reject')) rejected += 1;else
-      pending += 1;
+      if (c.carStatus.includes('approve')) verified += 1;
+      else if (c.carStatus.includes('reject')) rejected += 1;
+      else pending += 1;
     });
     return { pending, verified, rejected };
   }, [carsWithMeta]);
@@ -107,14 +113,14 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
   const grouped = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filtered = carsWithMeta.filter((c) => {
-      const matchesStatus = activeTab === 'all' ||
-      activeTab === 'pending' && c.carStatus.includes('pending') ||
-      activeTab === 'verified' && c.carStatus.includes('approve') ||
-      activeTab === 'rejected' && c.carStatus.includes('reject');
-      const matchesSearch = !term ||
-      c.ownerName.toLowerCase().includes(term) ||
-      c.displayName.toLowerCase().includes(term) ||
-      String(c.registration_number || '').toLowerCase().includes(term);
+      const matchesStatus = activeTab === 'Tous'
+        || (activeTab === 'En attente' && c.carStatus.includes('pending'))
+        || (activeTab === 'Verifies' && c.carStatus.includes('approve'))
+        || (activeTab === 'Rejetes' && c.carStatus.includes('reject'));
+      const matchesSearch = !term
+        || c.ownerName.toLowerCase().includes(term)
+        || c.displayName.toLowerCase().includes(term)
+        || String(c.registration_number || '').toLowerCase().includes(term);
       return matchesStatus && matchesSearch;
     });
 
@@ -130,13 +136,14 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
   const openCarDocuments = async (car) => {
     setSelectedCar(car);
     setModalVisible(true);
+    setReviewingDocId(null);
 
     if (detailsByCar[car.id]) return;
     try {
       const details = await adminApi.carDetails(car.id);
       setDetailsByCar((prev) => ({ ...prev, [car.id]: details }));
     } catch (e) {
-      Alert.alert(t("screens.admin.admincarsscreen.erreur"), getFriendlyError(e, t));
+      Alert.alert(t('screens.admin.admincarsscreen.erreur'), e.message || t('screens.admin.admincarsscreen.impossibleDeChargerLesDocuments'));
     }
   };
 
@@ -149,14 +156,16 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
   const resolveDocs = (carId) => {
     const d = detailsByCar[carId];
     const docs = d?.documents || [];
-    return docs.map((doc, idx) => ({
-      id: doc.id || `${carId}-${idx}`,
-      type: doc.document_type || doc.type || 'Document',
-      status: doc.status || 'pending',
-      url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
-      uploadedAt: doc.created_at || doc.updated_at || '',
-      ocrResult: doc.ocr_result || doc.ocrResult || null
-    }));
+    return docs
+      .filter((doc) => !isRejectedDocument(doc.status))
+      .map((doc, idx) => ({
+        id: doc.id || `${carId}-${idx}`,
+        type: doc.document_type || doc.type || 'Document',
+        status: doc.status || 'pending',
+        url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
+        uploadedAt: doc.created_at || doc.updated_at || '',
+        ocrResult: doc.ocr_result || doc.ocrResult || null,
+      }));
   };
 
   const reviewDocument = async (documentId, status) => {
@@ -164,17 +173,38 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
 
     try {
       await adminApi.updateDocument(documentId, { status });
+      setReviewingDocId(null);
+      setDetailsByCar((prev) => {
+        const current = prev[selectedCar.id];
+        if (!current?.documents) return prev;
+
+        const nextDocuments = status === 'rejected'
+          ? current.documents.filter((doc) => String(doc.id) !== String(documentId))
+          : current.documents.map((doc) => (
+            String(doc.id) === String(documentId)
+              ? { ...doc, status }
+              : doc
+          ));
+
+        return {
+          ...prev,
+          [selectedCar.id]: {
+            ...current,
+            documents: nextDocuments,
+          },
+        };
+      });
       await refreshCarDetails(selectedCar.id);
       await load();
     } catch (e) {
-      Alert.alert(t("screens.admin.admincarsscreen.erreur"), getFriendlyError(e, t));
+      Alert.alert(t('screens.admin.admincarsscreen.erreur'), e.message || t('screens.admin.admincarsscreen.miseAJourDuDocumentImpossible'));
     }
   };
 
   const openDocument = async (url) => {
     const candidates = buildFallbackUrls(url);
     if (!candidates.length) {
-      Alert.alert(t("screens.admin.admincarsscreen.documentIndisponible"), t("screens.admin.admincarsscreen.ceDocumentNaPasDeLienExploitable"));
+      Alert.alert(t('screens.admin.admincarsscreen.documentIndisponible'), t('screens.admin.admincarsscreen.ceDocumentNaPasDeLienExploitable'));
       return;
     }
 
@@ -190,7 +220,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       }
     }
 
-    Alert.alert(t("screens.admin.admincarsscreen.ouvertureImpossible"), getFriendlyError(lastErr, t));
+    Alert.alert(t('screens.admin.admincarsscreen.ouvertureImpossible'), lastErr?.message || t('screens.admin.admincarsscreen.leDocumentNePeutPasEtreOuvert'));
   };
 
   const updateCarStatus = async (carId, status) => {
@@ -199,7 +229,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       await load();
       setModalVisible(false);
     } catch (e) {
-      Alert.alert(t("screens.admin.admincarsscreen.erreur"), getFriendlyError(e, t));
+      Alert.alert(t('screens.admin.admincarsscreen.erreur'), e.message || t('screens.admin.admincarsscreen.miseAJourImpossible'));
     }
   };
 
@@ -209,39 +239,44 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>{t("screens.admin.admincarsscreen.documents")}</Text>
+        <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
+          <ScreenHeader title={t('screens.admin.admincarsscreen.documents')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
-        <View style={styles.statsRow}>
-          <TopStat value={stats.pending} label={t("screens.admin.admincarsscreen.enAttente")} tone="amber" />
-          <TopStat value={stats.verified} label={t("screens.admin.admincarsscreen.verifies")} tone="green" />
-          <TopStat value={stats.rejected} label={t("screens.admin.admincarsscreen.rejetes")} tone="red" />
-        </View>
+          <View style={styles.statsRow}>
+            <TopStat value={stats.pending} label={t('screens.admin.admincarsscreen.enAttente')} tone="amber" icon="time-outline" />
+            <TopStat value={stats.verified} label={t('screens.admin.admincarsscreen.verifies')} tone="green" icon="checkmark-circle-outline" />
+            <TopStat value={stats.rejected} label={t('screens.admin.admincarsscreen.rejetes')} tone="red" icon="close-circle-outline" />
+          </View>
 
-        <View style={styles.searchWrap}>
-          <Ionicons name="search-outline" size={16} color="#8a91bf" />
-          <TextInput value={search} onChangeText={setSearch} placeholder={t("screens.admin.admincarsscreen.typeProprietaire")} placeholderTextColor="#7078ab" style={styles.searchInput} />
-        </View>
+          <View style={styles.searchWrap}>
+            <Ionicons name="search-outline" size={16} color="#8a91bf" />
+            <TextInput value={search} onChangeText={setSearch} placeholder={t('screens.admin.admincarsscreen.typeProprietaire')} placeholderTextColor="#7078ab" style={styles.searchInput} />
+          </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow}>
-          {tabs.map((tab) =>
-          <TouchableOpacity key={tab.id} style={[styles.filterChip, activeTab === tab.id && styles.filterChipActive]} onPress={() => setActiveTab(tab.id)}>
-              <Text style={[styles.filterText, activeTab === tab.id && styles.filterTextActive]}>{tab.label}</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filtersRow}
+            contentContainerStyle={styles.filtersRowContent}
+          >
+            {tabs.map((tab) => (
+              <TouchableOpacity key={tab} style={[styles.filterChip, activeTab === tab && styles.filterChipActive]} onPress={() => setActiveTab(tab)}>
+                <Text style={[styles.filterText, activeTab === tab && styles.filterTextActive]}>{t(`screens.admin.admincarsscreen.tabs.${tab}`, { defaultValue: tab })}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-        <Text style={styles.countText}>{visibleDocCount}{t("screens.admin.admincarsscreen.vehiculesAVerifier")}</Text>
+          <Text style={styles.countText}>{visibleDocCount} {t('screens.admin.admincarsscreen.vehiculesAVerifier')}</Text>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
-          {grouped.map((group) =>
-          <View key={group.ownerName} style={styles.groupCard}>
+          {grouped.map((group) => (
+            <View key={group.ownerName} style={styles.groupCard}>
               <Text style={styles.groupTitle}>{group.ownerName}</Text>
               {group.cars.map((car) => {
-              const loadedDetails = detailsByCar[car.id];
-              const docsCount = loadedDetails?.documents?.length;
-              return (
-                <View key={car.id} style={styles.docItem}>
+                const loadedDetails = detailsByCar[car.id];
+                const docsCount = loadedDetails ? resolveDocs(car.id).length : undefined;
+                return (
+                  <View key={car.id} style={styles.docItem}>
                     <View style={styles.docLeft}>
                       <View style={styles.docIcon}><Ionicons name="car-sport-outline" size={16} color="#a8b0e2" /></View>
                       <View style={{ flex: 1 }}>
@@ -253,15 +288,15 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
                     <View style={{ alignItems: 'flex-end', gap: 8 }}>
                       <Text style={[styles.statusText, statusTone(car.carStatus)]}>{statusLabel(car.carStatus)}</Text>
                       <TouchableOpacity style={styles.viewBtn} onPress={() => openCarDocuments(car)}>
-                        <Text style={styles.viewBtnText}>{t("screens.admin.admincarsscreen.voirDocs")}</Text>
+                      <Text style={styles.viewBtnText}>{t('screens.admin.admincarsscreen.voirDocs')}</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>);
-
-            })}
+                  </View>
+                );
+              })}
             </View>
-          )}
-          {loading ? <Text style={styles.loading}>{t("screens.admin.admincarsscreen.chargement")}</Text> : null}
+          ))}
+          {loading ? <Text style={styles.loading}>{t('screens.admin.admincarsscreen.chargement')}</Text> : null}
         </ScrollView>
       </View>
 
@@ -270,7 +305,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>{selectedCar?.displayName || t("screens.admin.admincarsscreen.documents")}</Text>
+                <Text style={styles.modalTitle}>{selectedCar?.displayName || 'Documents'}</Text>
                 <Text style={styles.modalSub}>{selectedCar?.ownerName || ''}</Text>
               </View>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -279,23 +314,23 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
             </View>
 
             <ScrollView contentContainerStyle={{ paddingBottom: 10 }}>
-              {selectedCar && !detailsByCar[selectedCar.id] ? <Text style={styles.loading}>{t("screens.admin.admincarsscreen.chargementDesDocuments")}</Text> : null}
+              {selectedCar && !detailsByCar[selectedCar.id] ? <Text style={styles.loading}>{t('screens.admin.admincarsscreen.chargementDesDocuments')}</Text> : null}
 
-              {selectedCar && detailsByCar[selectedCar.id] && modalDocs.length === 0 ?
-              <Text style={styles.error}>{t("screens.admin.admincarsscreen.aucunDocumentTrouvePourCeVehicule")}</Text> :
-              null}
+              {selectedCar && detailsByCar[selectedCar.id] && modalDocs.length === 0 ? (
+                <Text style={styles.error}>{t('screens.admin.admincarsscreen.aucunDocumentTrouvePourCeVehicule')}</Text>
+              ) : null}
 
-              {modalDocs.map((doc) =>
-              <View key={doc.id} style={styles.modalDocRow}>
+              {modalDocs.map((doc) => (
+                <View key={doc.id} style={styles.modalDocRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalDocType}>{doc.type}</Text>
                     <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
                     <Text style={styles.modalDocDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString(getCurrentLocale()) : ''}</Text>
-                    {doc.ocrResult ?
-                  <View style={styles.ocrBox}>
-                        <Text style={styles.ocrLabel}>{t("screens.admin.admincarsscreen.ocr")}</Text>
+                    {doc.ocrResult ? (
+                      <View style={styles.ocrBox}>
+                        <Text style={styles.ocrLabel}>{t('screens.admin.admincarsscreen.ocr')}</Text>
                         <Text style={styles.ocrText}>
-                          {doc.ocrResult.verification_reason || 'Aucune raison fournie'}
+                          {doc.ocrResult.verification_reason || t('screens.admin.admincarsscreen.aucuneRaisonFournie')}
                         </Text>
                         <Text style={styles.ocrMeta}>
                           {`Statut OCR: ${statusLabel(doc.ocrResult.verification_status)}`}
@@ -306,30 +341,58 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
                         {doc.ocrResult.extracted_full_name ? <Text style={styles.ocrMeta}>{`Nom: ${doc.ocrResult.extracted_full_name}`}</Text> : null}
                         {doc.ocrResult.extracted_document_number ? <Text style={styles.ocrMeta}>{`Numero: ${doc.ocrResult.extracted_document_number}`}</Text> : null}
                         {doc.ocrResult.extracted_expiration_date ? <Text style={styles.ocrMeta}>{`Expiration: ${doc.ocrResult.extracted_expiration_date}`}</Text> : null}
-                      </View> :
-
-                  <Text style={styles.ocrEmpty}>{t("screens.admin.admincarsscreen.aucunResultatOcrDisponible")}</Text>
-                  }
+                      </View>
+                    ) : (
+                      <Text style={styles.ocrEmpty}>{t('screens.admin.admincarsscreen.aucunResultatOcrDisponible')}</Text>
+                    )}
                     <View style={styles.docActionsRow}>
-                      <TouchableOpacity
-                      style={[styles.docActionBtn, styles.docRejectBtn]}
-                      onPress={() => reviewDocument(doc.id, 'rejected')}>
-                      
-                        <Text style={styles.docActionText}>{t("screens.admin.admincarsscreen.rejeter")}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                      style={[styles.docActionBtn, styles.docAcceptBtn]}
-                      onPress={() => reviewDocument(doc.id, 'approved')}>
-                      
-                        <Text style={styles.docActionText}>{t("screens.admin.admincarsscreen.accepter")}</Text>
-                      </TouchableOpacity>
+                      {isVerifiedDocument(doc.status) ? (
+                        reviewingDocId === doc.id ? (
+                          <>
+                            <TouchableOpacity
+                              style={[styles.docActionBtn, styles.docRejectBtn]}
+                              onPress={() => reviewDocument(doc.id, 'rejected')}
+                            >
+                              <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.rejeter')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.docActionBtn, styles.docDiscardBtn]}
+                              onPress={() => setReviewingDocId(null)}
+                            >
+                              <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.annuler')}</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <TouchableOpacity
+                            style={[styles.docActionBtn, styles.docReviewBtn, styles.docActionBtnFull]}
+                            onPress={() => setReviewingDocId(doc.id)}
+                          >
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.changerEtat')}</Text>
+                          </TouchableOpacity>
+                        )
+                      ) : (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.docActionBtn, styles.docRejectBtn]}
+                            onPress={() => reviewDocument(doc.id, 'rejected')}
+                          >
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.rejeter')}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.docActionBtn, styles.docAcceptBtn]}
+                            onPress={() => reviewDocument(doc.id, 'approved')}
+                          >
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.accepter')}</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
                     </View>
                   </View>
                   <TouchableOpacity style={styles.modalBtn} onPress={() => openDocument(doc.url)}>
-                    <Text style={styles.modalBtnText}>{t("screens.admin.admincarsscreen.voir")}</Text>
+                    <Text style={styles.modalBtnText}>{t('screens.admin.admincarsscreen.voir')}</Text>
                   </TouchableOpacity>
                 </View>
-              )}
+              ))}
             </ScrollView>
 
           </View>
@@ -337,39 +400,46 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       </Modal>
 
       <AdminBottomNavigation navigation={navigation} route={route} active="documents" />
-    </SafeAreaView>);
-
+    </SafeAreaView>
+  );
 }
 
-function TopStat({ value, label, tone }) {
+function TopStat({ value, label, tone, icon }) {
   const bg = tone === 'green' ? 'rgba(0,208,132,0.14)' : tone === 'red' ? 'rgba(255,77,109,0.14)' : 'rgba(255,176,32,0.14)';
   const border = tone === 'green' ? '#0f7f5d' : tone === 'red' ? '#923249' : '#8b641a';
   const color = tone === 'green' ? '#00d084' : tone === 'red' ? '#ff4d6d' : '#ffb020';
   return (
     <View style={[styles.topCard, { backgroundColor: bg, borderColor: border }]}> 
-      <Text style={[styles.topValue, { color }]}>{value}</Text>
+      <View style={styles.topStatRow}>
+        <Ionicons name={icon || 'ellipse'} size={14} color={color} />
+        <Text style={[styles.topValue, { color }]}>{value}</Text>
+      </View>
       <Text style={[styles.topLabel, { color }]}>{label}</Text>
-    </View>);
-
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#070a1f' },
   container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#070a1f' },
+  pageScroll: { flex: 1 },
+  pageContent: { paddingBottom: 92 },
   title: { color: '#f2f4ff', fontSize: 36, fontWeight: '800', marginTop: 10, marginBottom: 14 },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  topCard: { width: '32%', borderWidth: 1, borderRadius: 12, paddingVertical: 9, alignItems: 'center' },
-  topValue: { fontSize: 22, fontWeight: '800' },
-  topLabel: { fontSize: 12, marginTop: 2 },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, marginTop: 12 },
+  topCard: { width: '31%', borderWidth: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center' },
+  topStatRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  topValue: { fontSize: 20, fontWeight: '800' },
+  topLabel: { fontSize: 11, marginTop: 2 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7, minHeight: 42, marginTop: 12 },
   searchInput: { flex: 1, color: '#dce1ff' },
-  filtersRow: { marginTop: 12, marginBottom: 8, maxHeight: 42 },
+  filtersRow: { marginTop: 12, marginBottom: 12 },
+  filtersRowContent: { paddingVertical: 6, paddingRight: 8 },
   filterChip: { backgroundColor: '#171d44', borderRadius: 99, borderWidth: 1, borderColor: '#2d3360', paddingHorizontal: 14, height: 34, justifyContent: 'center', marginRight: 8 },
   filterChipActive: { backgroundColor: '#8f7dff', borderColor: '#8f7dff' },
   filterText: { color: '#9299c8', fontWeight: '700' },
   filterTextActive: { color: '#fff' },
   countText: { color: '#7d84b1', marginTop: 2, marginBottom: 8 },
-  content: { paddingBottom: 92 },
+  content: { paddingTop: 0 },
   groupCard: { backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2b315c', borderRadius: 15, padding: 12, marginBottom: 10 },
   groupTitle: { color: '#9da7e0', fontWeight: '800', marginBottom: 8 },
   docItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#2b315c', borderRadius: 12, padding: 10, marginBottom: 8, backgroundColor: '#0b1030' },
@@ -407,5 +477,8 @@ const styles = StyleSheet.create({
   docActionBtn: { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1 },
   docRejectBtn: { backgroundColor: 'rgba(255,77,109,0.16)', borderColor: '#8f3247' },
   docAcceptBtn: { backgroundColor: 'rgba(0,208,132,0.16)', borderColor: '#197c5c' },
-  docActionText: { color: '#fff', fontWeight: '800' }
+  docReviewBtn: { backgroundColor: 'rgba(143,157,255,0.16)', borderColor: '#8f9dff' },
+  docDiscardBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: '#4a5392' },
+  docActionBtnFull: { flex: 1 },
+  docActionText: { color: '#fff', fontWeight: '800' },
 });

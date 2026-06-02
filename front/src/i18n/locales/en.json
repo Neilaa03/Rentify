@@ -35,7 +35,15 @@
       "languageChange": "Unable to change language. Please try again."
     },
     "calendar": {
-      "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+      "weekdays": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ]
     },
     "cash": "Cash",
     "daPerDayCompact": " DZD/day",
@@ -44,6 +52,9 @@
   },
   "components": {
     "admin": {
+      "adminui": {
+        "seDeconnecter": "Sign out"
+      },
       "adminbottomnavigation": {
         "tableauDeBord": "Dashboard",
         "comptes": "Accounts",
@@ -75,7 +86,9 @@
         "supprimer": "Delete"
       },
       "listingcard": {
-        "indisponible": "Unavailable"
+        "indisponible": "Unavailable",
+        "offers": "{{count}} offers",
+        "matchingOffers": "{{matching}}/{{total}} offers"
       },
       "reservationcard": {
         "text": "→",
@@ -143,12 +156,25 @@
         "typeProprietaire": "Type, owner...",
         "vehiculesAVerifier": "vehicles to verify",
         "voirDocs": "View docs",
+        "impossibleDeChargerLesDocuments": "Unable to load documents",
+        "miseAJourDuDocumentImpossible": "Unable to update document",
+        "miseAJourImpossible": "Update failed",
+        "leDocumentNePeutPasEtreOuvert": "The document cannot be opened on this device.",
+        "tabs": {
+          "Tous": "All",
+          "En attente": "Pending",
+          "Verifies": "Verified",
+          "Rejetes": "Rejected"
+        },
         "chargement": "Loading...",
         "chargementDesDocuments": "Loading documents...",
         "aucunDocumentTrouvePourCeVehicule": "No document found for this vehicle.",
         "ocr": "OCR",
+        "aucuneRaisonFournie": "No reason provided",
         "aucunResultatOcrDisponible": "No OCR result available.",
         "rejeter": "Reject",
+        "annuler": "Cancel",
+        "changerEtat": "Change status",
         "accepter": "Accept",
         "voir": "View"
       },
@@ -188,6 +214,21 @@
         "resolu": "Resolved",
         "cloture": "Closed",
         "text": "->",
+        "tabs": {
+          "Tous": "All",
+          "Ouverts": "Open",
+          "En cours": "In progress",
+          "Resolus": "Resolved",
+          "Clotures": "Closed"
+        },
+        "statuses": {
+          "Ouverts": "Open",
+          "En cours": "In progress",
+          "Resolus": "Resolved",
+          "Clotures": "Closed"
+        },
+        "compte": "Account",
+        "aucuneDescription": "No description.",
         "cloturer": "Close",
         "resoudre": "Resolve",
         "chargement": "Loading..."
@@ -199,6 +240,14 @@
         "inscriptions": "Signups",
         "reservations": "Reservations",
         "paiements": "Payments",
+        "tabs": {
+          "Tout": "All",
+          "Inscriptions": "Signups",
+          "Reservations": "Reservations",
+          "Documents": "Documents",
+          "Paiements": "Payments"
+        },
+        "evenement": "Event",
         "chargement": "Loading..."
       },
       "adminusersscreen": {
@@ -209,6 +258,24 @@
         "comptesUtilisateurs": "User accounts",
         "rechercher": "Search...",
         "comptes": "accounts",
+        "erreur": "Error",
+        "impossibleDeChargerLesDocuments": "Unable to load documents",
+        "miseAJourDuDocumentImpossible": "Unable to update document",
+        "impossibleDouvrirLeDocument": "Unable to open document",
+        "filters": {
+          "all": "All",
+          "owner": "Owners",
+          "company": "Companies",
+          "client": "Individuals"
+        },
+        "voirDocs": "View docs",
+        "verifie": "Verified",
+        "enAttente": "Pending",
+        "chargementDesDocuments": "Loading documents...",
+        "aucunDocumentTrouvePourCetUtilisateur": "No document found for this user.",
+        "voir": "View",
+        "rejeter": "Reject",
+        "accepter": "Accept",
         "chargement": "Loading..."
       }
     },
@@ -391,6 +458,12 @@
         "ajouteTonNumero": "Add your phone number",
         "pourFaciliterLesReservationsEtLeContact": "To make reservations and contact easier.",
         "definirMonNumero": "Set my phone number",
+        "lieuVilleOuQuartier": "Place, city or neighborhood",
+        "dates": "Dates",
+        "toutEffacer": "Clear all",
+        "choisisUnePeriode": "Choose a period",
+        "reinitialiser": "Reset",
+        "appliquer": "Apply",
         "filtrer": "Filter:",
         "trier": "Sort:",
         "chargementDesVehicules": "Loading vehicles...",
@@ -411,7 +484,8 @@
         "retour": "Return",
         "aPartirDe": "from",
         "daJour": "DZD/day",
-        "avis": "reviews)",
+        "avis": "reviews",
+        "avisTitle": "Reviews",
         "places": "Seats",
         "carburant": "Fuel",
         "boite": "Gearbox",
@@ -421,10 +495,15 @@
         "aucunAvisPourLeMoment": "No reviews yet.",
         "recuperation": "Pickup",
         "livraison": "Delivery:",
+        "villesDisponibles": "Available cities",
+        "ville": "City",
+        "villeDeRetrait": "Pickup city",
         "prixParJour": "Price per day",
         "reserver": "Book",
+        "reserverACity": "Book in {{city}}",
         "indisponible": "Unavailable",
-        "verifie": "Verified"
+        "verifie": "Verified",
+        "proprietaire": "Owner"
       },
       "profilescreen": {
         "verifie": "Verified",
@@ -519,7 +598,18 @@
         "monCompte": "MY ACCOUNT",
         "preferences": "PREFERENCES",
         "aideSupport": "HELP & SUPPORT",
-        "seDeconnecter": "Sign out"
+        "seDeconnecter": "Sign out",
+        "erreurLorsDeLaMiseAJour": "Error while updating",
+        "impossibleDouvrirLeDocument": "Unable to open document",
+        "impossibleDeTeleverserLaCarteDidentite": "Unable to upload the ID card",
+        "suppressionImpossible": "Deletion failed",
+        "enregistrement": "Saving...",
+        "definir": "Set",
+        "changer": "Change",
+        "enregistrer": "Save",
+        "televerser": "Upload",
+        "definirUnMotDePasse": "Set a password",
+        "changerMotDePasse": "Change password"
       }
     },
     "handover": {
@@ -720,10 +810,27 @@
       "listingsscreen": {
         "supprimer": "Delete",
         "erreur": "Error",
+        "mesAnnonces": "My listings",
+        "toutes": "All",
+        "publiees": "Published",
+        "nonPubliees": "Unpublished",
+        "recentes": "Recent",
+        "voitureAz": "Car A-Z",
+        "voitureZa": "Car Z-A",
+        "voiture": "Car",
+        "erreurChargementAnnonces": "Unable to load listings",
+        "confirmerSuppressionAnnonce": "Are you sure you want to delete \"{{title}}\"?",
+        "annuler": "Cancel",
         "impossibleDeSupprimerLannonceReessayezPlusTard": "Unable to delete the listing. Please try again later.",
         "publicationBloquee": "Publishing blocked",
         "vousDevezValiderCarteGriseAssuranceEt": "Registration card, insurance, and technical inspection must be validated before publishing.",
         "aucuneAnnonce": "No listing.",
+        "aucuneAnnonceNeCorrespondACesFiltres": "No listing matches these filters.",
+        "toutesLesVoitures": "All cars",
+        "depulier": "Unpublish",
+        "depublier": "Unpublish",
+        "publier": "Publish",
+        "filtrerParVoiture": "Filter by car",
         "daJour": "DZD / day",
         "modifier": "Edit"
       },
@@ -803,6 +910,7 @@
         "authentificationRequiseVeuillezVousConnecter": "Authentication required. Please sign in.",
         "reservationCreee": "Reservation created",
         "votreReservationEstEnAttenteDePaiement": "Your reservation is pending payment. Please complete payment within 24 hours to confirm it, otherwise it will be automatically cancelled.",
+        "impossibleDeCreerLaReservation": "Unable to create the reservation",
         "uneErreurEstSurvenue": "An error occurred",
         "selectionnerLesDates": "Select dates",
         "daJour": "DZD/day",
@@ -821,7 +929,9 @@
         "estime": "Estimated",
         "da": "DA",
         "reinitialiser": "Reset",
-        "annuler": "Cancel"
+        "annuler": "Cancel",
+        "confirmer": "Confirm",
+        "reserver": "Book"
       },
       "reservationdetailsscreen": {
         "stripeIsNotSupportedOnWeb": "Stripe is not supported on web",
