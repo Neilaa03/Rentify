@@ -19,7 +19,7 @@ import InboxScreen from '../../screens/messages/InboxScreen';
 import UnreadNotificationsScreen from '../../screens/notifications/UnreadNotificationsScreen';
 import NotificationsHistoryScreen from '../../screens/notifications/NotificationsHistoryScreen';
 import ChatScreen from '../../screens/messages/ChatScreen';
-import { FavoritesProvider } from '../../contexts/FavoritesContext';
+import { FavoritesProvider } from '../../contexts/FavoritesContext';import { useTranslation } from "react-i18next";
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -32,43 +32,43 @@ function HomeTabStack() {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
-      <Stack.Screen 
-        name="ListingDetails" 
+      <Stack.Screen
+        name="ListingDetails"
         component={ListingDetailsScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-      <Stack.Screen 
-        name="ReservationDatePicker" 
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
+      <Stack.Screen
+        name="ReservationDatePicker"
         component={ReservationDatePickerScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-      <Stack.Screen 
-        name="ReservationDetails" 
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
+      <Stack.Screen
+        name="ReservationDetails"
         component={ReservationDetailsScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
       <Stack.Screen
         name="NotificationScreen"
         component={UnreadNotificationsScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
       <Stack.Screen
         name="NotificationsHistory"
         component={NotificationsHistoryScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
        <Stack.Screen
         name="PickupCode"
         component={HandoverCodeScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
       <Stack.Screen
         name="ReturnVerify"
         component={HandoverVerifyScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-    </Stack.Navigator>
-  );
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
+    </Stack.Navigator>);
+
 }
 
 // Stack for Favorites tab
@@ -78,28 +78,28 @@ function FavoritesTabStack() {
       <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
-      <Stack.Screen 
-        name="ListingDetailsFromFavorites" 
+      <Stack.Screen
+        name="ListingDetailsFromFavorites"
         component={ListingDetailsScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-      <Stack.Screen 
-        name="ReservationDatePickerFromFavorites" 
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
+      <Stack.Screen
+        name="ReservationDatePickerFromFavorites"
         component={ReservationDatePickerScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
       <Stack.Screen
         name="PickupCode"
         component={HandoverCodeScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
       <Stack.Screen
         name="ReturnVerify"
         component={HandoverVerifyScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-    </Stack.Navigator>
-  );
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
+    </Stack.Navigator>);
+
 }
 
 // Stack for Reservations tab
@@ -112,20 +112,20 @@ function ReservationsTabStack() {
       <Stack.Screen
         name="ReservationDatePickerFromReservations"
         component={ReservationDatePickerScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-      <Stack.Screen 
-        name="ReservationDetailsFromReservations" 
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
+      <Stack.Screen
+        name="ReservationDetailsFromReservations"
         component={ReservationDetailsScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
       <Stack.Screen
         name="PickupCode"
         component={HandoverCodeScreen}
-        options={{ tabBarStyle: { display: 'none' } }}
-      />
-    </Stack.Navigator>
-  );
+        options={{ tabBarStyle: { display: 'none' } }} />
+      
+    </Stack.Navigator>);
+
 }
 
 // Stack for Profile tab
@@ -135,12 +135,12 @@ function ProfileTabStack() {
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
-    </Stack.Navigator>
-  );
+    </Stack.Navigator>);
+
 }
 
 // Client Navigation Component
-export function ClientNavigation() {
+export function ClientNavigation() {const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const bottomOffset = 2;
 
@@ -155,7 +155,7 @@ export function ClientNavigation() {
     position: 'absolute',
     bottom: bottomOffset + (insets?.bottom || 0),
     left: 0,
-    right: 0,
+    right: 0
   };
 
   return (
@@ -181,110 +181,110 @@ export function ClientNavigation() {
           tabBarActiveTintColor: COLORS.primary,
           tabBarInactiveTintColor: '#8a90b8',
           tabBarShowLabel: false,
-          tabBarStyle: defaultTabBarStyle,
-        })}
-      >
-      <Tab.Screen 
-        name="HomeTab" 
-        component={HomeTabStack}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [
+          tabBarStyle: defaultTabBarStyle
+        })}>
+        
+      <Tab.Screen
+          name="HomeTab"
+          component={HomeTabStack}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
                   {
                     name: 'HomeTab',
-                    state: { routes: [{ name: 'Home' }] },
-                  },
-                ],
-              })
-            );
-          },
-        })}
-        options={({ route }) => {
-          const routeName = getFocusedRouteNameFromRoute(route);
-          const hide = routeName && routeName !== 'Home';
-          return { tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
-        }}
-      />
-      <Tab.Screen 
-        name="FavoritesTab" 
-        component={FavoritesTabStack}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [
+                    state: { routes: [{ name: 'Home' }] }
+                  }]
+
+                })
+              );
+            }
+          })}
+          options={({ route }) => {
+            const routeName = getFocusedRouteNameFromRoute(route);
+            const hide = routeName && routeName !== 'Home';
+            return { tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+          }} />
+        
+      <Tab.Screen
+          name="FavoritesTab"
+          component={FavoritesTabStack}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
                   {
                     name: 'FavoritesTab',
-                    state: { routes: [{ name: 'Favorites' }] },
-                  },
-                ],
-              })
-            );
-          },
-        })}
-        options={({ route }) => {
-          const routeName = getFocusedRouteNameFromRoute(route);
-          const hide = routeName && routeName !== 'Favorites';
-          return {tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
-        }}
-      />
-      <Tab.Screen 
-        name="ReservationsTab" 
-        component={ReservationsTabStack}
-        listeners={({ navigation, route }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [
+                    state: { routes: [{ name: 'Favorites' }] }
+                  }]
+
+                })
+              );
+            }
+          })}
+          options={({ route }) => {
+            const routeName = getFocusedRouteNameFromRoute(route);
+            const hide = routeName && routeName !== 'Favorites';
+            return { tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+          }} />
+        
+      <Tab.Screen
+          name="ReservationsTab"
+          component={ReservationsTabStack}
+          listeners={({ navigation, route }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
                   {
                     name: 'ReservationsTab',
-                    state: { routes: [{ name: 'ReservationsList' }] },
-                  },
-                ],
-              })
-            );
-          },
-        })}
-        options={({ route }) => {
-          const routeName = getFocusedRouteNameFromRoute(route);
-          const hide = routeName && routeName !== 'ReservationsList';
-          return { tabBarLabel: 'Réservations', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
-        }}
-      />
-      <Tab.Screen 
-        name="ProfileTab" 
-        component={ProfileTabStack}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [
+                    state: { routes: [{ name: 'ReservationsList' }] }
+                  }]
+
+                })
+              );
+            }
+          })}
+          options={({ route }) => {
+            const routeName = getFocusedRouteNameFromRoute(route);
+            const hide = routeName && routeName !== 'ReservationsList';
+            return { tabBarLabel: t("components.navigation.agencybottomnavigation.reservations"), tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+          }} />
+        
+      <Tab.Screen
+          name="ProfileTab"
+          component={ProfileTabStack}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault();
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [
                   {
                     name: 'ProfileTab',
-                    state: { routes: [{ name: 'Profile' }] },
-                  },
-                ],
-              })
-            );
-          },
-        })}
-        options={({ route }) => {
-          const routeName = getFocusedRouteNameFromRoute(route);
-          const hide = routeName && routeName !== 'Profile';
-          return { tabBarLabel: 'Profil', tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
-        }}
-      />
+                    state: { routes: [{ name: 'Profile' }] }
+                  }]
+
+                })
+              );
+            }
+          })}
+          options={({ route }) => {
+            const routeName = getFocusedRouteNameFromRoute(route);
+            const hide = routeName && routeName !== 'Profile';
+            return { tabBarLabel: t("components.navigation.agencybottomnavigation.profil"), tabBarStyle: hide ? { display: 'none' } : defaultTabBarStyle };
+          }} />
+        
     </Tab.Navigator>
-    </FavoritesProvider>
-  );
+    </FavoritesProvider>);
+
 }

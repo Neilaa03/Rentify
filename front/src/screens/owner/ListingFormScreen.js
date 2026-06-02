@@ -6,24 +6,40 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  View } from
+'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { fetchJson } from '../../services/api';
 import {
   createOwnerListing,
-  updateOwnerListing,
-} from '../../services/owner';
-import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
+  updateOwnerListing } from
+'../../services/owner';
+import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';import { useTranslation } from "react-i18next";
+import { getLanguageMeta } from '../../i18n';
+import { getFriendlyError } from '../../utils/friendlyError';
 
 LocaleConfig.locales.fr = {
   monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
   monthNamesShort: ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'],
   dayNames: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
   dayNamesShort: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
-  today: "Aujourd'hui",
+  today: "Aujourd'hui"
+};
+LocaleConfig.locales.en = {
+  monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  today: 'Today'
+};
+LocaleConfig.locales.ar = {
+  monthNames: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+  monthNamesShort: ['ينا', 'فبر', 'مار', 'أبر', 'ماي', 'يون', 'يول', 'أغس', 'سبت', 'أكت', 'نوف', 'ديس'],
+  dayNames: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+  dayNamesShort: ['أحد', 'اثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+  today: 'اليوم'
 };
 LocaleConfig.defaultLocale = 'fr';
 
@@ -42,9 +58,9 @@ const buildRangeMarks = (startDate, endDate) => {
       [startDate]: {
         customStyles: {
           container: { backgroundColor: '#cf62ff', borderRadius: 16 },
-          text: { color: '#fff', fontWeight: '700' },
-        },
-      },
+          text: { color: '#fff', fontWeight: '700' }
+        }
+      }
     };
   }
 
@@ -58,8 +74,8 @@ const buildRangeMarks = (startDate, endDate) => {
     marks[key] = {
       customStyles: {
         container: { backgroundColor: isEdge ? '#cf62ff' : '#7f69ea', borderRadius: 16 },
-        text: { color: '#fff', fontWeight: '700' },
-      },
+        text: { color: '#fff', fontWeight: '700' }
+      }
     };
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -67,7 +83,8 @@ const buildRangeMarks = (startDate, endDate) => {
   return marks;
 };
 
-const OwnerListingFormScreen = ({ navigation, route }) => {
+const OwnerListingFormScreen = ({ navigation, route }) => {const { t, i18n } = useTranslation();
+  LocaleConfig.defaultLocale = getLanguageMeta(i18n.language).code;
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || 'create';
@@ -93,7 +110,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
     country: listing?.country || 'Algeria',
     description: listing?.description || '',
     availableFrom: listing?.availableFrom || '',
-    availableTo: listing?.availableTo || '',
+    availableTo: listing?.availableTo || ''
   });
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -112,12 +129,12 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
   const canSubmit = useMemo(() => {
     const common = Boolean(
       form.title.trim() &&
-        form.pricePerDay &&
-        form.pickupAddress.trim() &&
-        form.city.trim() &&
-        form.country.trim() &&
-        form.availableFrom &&
-        form.availableTo
+      form.pricePerDay &&
+      form.pickupAddress.trim() &&
+      form.city.trim() &&
+      form.country.trim() &&
+      form.availableFrom &&
+      form.availableTo
     );
 
     if (isCreateListingOnly) return Boolean(common && form.carId);
@@ -138,8 +155,8 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
         deliveryFee: Number(form.deliveryFee || 0),
         availableFrom: form.availableFrom,
         availableTo: form.availableTo,
-        isActive: false,
-      },
+        isActive: false
+      }
     });
   };
 
@@ -157,22 +174,22 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
         deliveryFee: Number(form.deliveryFee || 0),
         availableFrom: form.availableFrom,
         availableTo: form.availableTo,
-        isActive: false,
-      },
+        isActive: false
+      }
     });
   };
 
   const submit = async () => {
-    if (!canSubmit) return Alert.alert('Champs requis', 'Veuillez remplir les champs obligatoires.');
+    if (!canSubmit) return Alert.alert(t("screens.owner.listingformscreen.champsRequis"), t("screens.owner.listingformscreen.veuillezRemplirLesChampsObligatoires"));
 
     setIsSubmitting(true);
     try {
-      if (isCreateListingOnly) await submitCreateListingOnly();
-      else await submitEdit();
+      if (isCreateListingOnly) await submitCreateListingOnly();else
+      await submitEdit();
 
       navigation.navigate('OwnerListings', { token, user });
     } catch (error) {
-      Alert.alert('Erreur', error.message || 'Sauvegarde impossible');
+      Alert.alert(t("screens.owner.listingformscreen.erreur"), getFriendlyError(error, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -212,41 +229,41 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          {isCreateListingOnly ? (
-            <>
-              <Text style={styles.sectionTitle}>Vehicule</Text>
+          {isCreateListingOnly ?
+          <>
+              <Text style={styles.sectionTitle}>{t("screens.owner.listingformscreen.vehicule")}</Text>
               <View style={styles.optionRow}>
-                {cars.map((car) => (
-                  <TouchableOpacity key={car.id} style={[styles.optionPill, form.carId === car.id && styles.optionPillActive]} onPress={() => setField('carId', car.id)}>
+                {cars.map((car) =>
+              <TouchableOpacity key={car.id} style={[styles.optionPill, form.carId === car.id && styles.optionPillActive]} onPress={() => setField('carId', car.id)}>
                     <Text style={[styles.optionText, form.carId === car.id && styles.optionTextActive]}>{car.brand} {car.model}</Text>
                   </TouchableOpacity>
-                ))}
+              )}
               </View>
-            </>
-          ) : null}
+            </> :
+          null}
 
-          <Text style={styles.sectionTitle}>Tarification & Localisation</Text>
-          <Text style={styles.label}>Titre annonce *</Text>
+          <Text style={styles.sectionTitle}>{t("screens.owner.listingformscreen.tarificationLocalisation")}</Text>
+          <Text style={styles.label}>{t("screens.owner.listingformscreen.titreAnnonce")}</Text>
           <TextInput style={styles.input} value={form.title} onChangeText={(v) => setField('title', v)} />
 
           <View style={styles.twoCols}>
-            <View style={styles.col}><Text style={styles.label}>Prix / jour (DA) *</Text><TextInput style={styles.input} keyboardType="numeric" value={form.pricePerDay} onChangeText={(v) => setField('pricePerDay', v)} /></View>
-            <View style={styles.col}><Text style={styles.label}>Ville *</Text><TextInput style={styles.input} value={form.city} onChangeText={(v) => setField('city', v)} /></View>
+            <View style={styles.col}><Text style={styles.label}>{t("screens.owner.listingformscreen.prixJourDa")}</Text><TextInput style={styles.input} keyboardType="numeric" value={form.pricePerDay} onChangeText={(v) => setField('pricePerDay', v)} /></View>
+            <View style={styles.col}><Text style={styles.label}>{t("screens.owner.listingformscreen.ville")}</Text><TextInput style={styles.input} value={form.city} onChangeText={(v) => setField('city', v)} /></View>
           </View>
 
-          <Text style={styles.label}>Adresse de recuperation (chez vous / agence) *</Text>
-          <TextInput style={styles.input} value={form.pickupAddress} onChangeText={(v) => setField('pickupAddress', v)} placeholder="Ex: 12 Rue ..., Alger" placeholderTextColor="#9aa3d8" />
+          <Text style={styles.label}>{t("screens.owner.listingformscreen.adresseDeRecuperationChezVousAgence")}</Text>
+          <TextInput style={styles.input} value={form.pickupAddress} onChangeText={(v) => setField('pickupAddress', v)} placeholder={t("screens.owner.listingformscreen.ex12RueAlger")} placeholderTextColor="#9aa3d8" />
 
-          <Text style={styles.label}>Frais de livraison (DA)</Text>
+          <Text style={styles.label}>{t("screens.owner.listingformscreen.fraisDeLivraisonDa")}</Text>
           <TextInput style={styles.input} keyboardType="numeric" value={form.deliveryFee} onChangeText={(v) => setField('deliveryFee', v)} placeholder="0" placeholderTextColor="#9aa3d8" />
 
-          <Text style={styles.label}>Pays *</Text>
+          <Text style={styles.label}>{t("screens.owner.listingformscreen.pays")}</Text>
           <TextInput style={styles.input} value={form.country} onChangeText={(v) => setField('country', v)} />
 
-          <Text style={styles.label}>Description *</Text>
+          <Text style={styles.label}>{t("screens.owner.listingformscreen.description")}</Text>
           <TextInput style={[styles.input, styles.textArea]} multiline value={form.description} onChangeText={(v) => setField('description', v)} />
 
-          <Text style={styles.label}>Selectionnez vos dates *</Text>
+          <Text style={styles.label}>{t("screens.owner.listingformscreen.selectionnezVosDates")}</Text>
           <TouchableOpacity style={styles.dateInput} onPress={() => setIsRangeCalendarOpen((prev) => !prev)}>
             <Text style={form.availableFrom ? styles.dateValue : styles.datePlaceholder}>
               {form.availableFrom ? `${form.availableFrom} -> ${form.availableTo || '...'}` : 'Choisir la periode'}
@@ -254,47 +271,47 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
             <Ionicons name="calendar-outline" size={18} color="#cfd3ff" />
           </TouchableOpacity>
 
-          {isRangeCalendarOpen ? (
-            <View style={styles.datePickerWrap}>
+          {isRangeCalendarOpen ?
+          <View style={styles.datePickerWrap}>
               <View style={styles.legendRow}>
-                <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#cf62ff' }]} /><Text style={styles.legendText}>Selection</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#2f3568' }]} /><Text style={styles.legendText}>Indisponible</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#cf62ff' }]} /><Text style={styles.legendText}>{t("screens.owner.listingformscreen.selection")}</Text></View>
+                <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#2f3568' }]} /><Text style={styles.legendText}>{t("screens.owner.listingformscreen.indisponible")}</Text></View>
               </View>
 
               <Calendar
-                markingType="custom"
-                markedDates={markedDates}
-                onDayPress={handleRangeDayPress}
-                firstDay={1}
-                monthFormat={'MMMM yyyy'}
-                current={form.availableFrom || undefined}
-                theme={{
-                  backgroundColor: 'transparent',
-                  calendarBackground: 'transparent',
-                  textSectionTitleColor: '#e4e8ff',
-                  monthTextColor: '#fff',
-                  dayTextColor: '#fff',
-                  todayTextColor: '#cf62ff',
-                  arrowColor: '#cf62ff',
-                  textMonthFontSize: 30 / 1.6,
-                  textMonthFontWeight: '700',
-                  textDayHeaderFontSize: 15,
-                  textDayHeaderFontWeight: '700',
-                  'stylesheet.day.basic': {
-                    base: {
-                      width: 42,
-                      height: 42,
-                      borderRadius: 14,
-                      backgroundColor: '#2f3568',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    },
-                  },
-                }}
-              />
+              markingType="custom"
+              markedDates={markedDates}
+              onDayPress={handleRangeDayPress}
+              firstDay={1}
+              monthFormat={'MMMM yyyy'}
+              current={form.availableFrom || undefined}
+              theme={{
+                backgroundColor: 'transparent',
+                calendarBackground: 'transparent',
+                textSectionTitleColor: '#e4e8ff',
+                monthTextColor: '#fff',
+                dayTextColor: '#fff',
+                todayTextColor: '#cf62ff',
+                arrowColor: '#cf62ff',
+                textMonthFontSize: 30 / 1.6,
+                textMonthFontWeight: '700',
+                textDayHeaderFontSize: 15,
+                textDayHeaderFontWeight: '700',
+                'stylesheet.day.basic': {
+                  base: {
+                    width: 42,
+                    height: 42,
+                    borderRadius: 14,
+                    backgroundColor: '#2f3568',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }
+                }
+              }} />
+            
               <Text style={styles.hint}>{isSelectingEndDate ? 'Selectionnez la date de fin.' : 'Periode selectionnee.'}</Text>
-            </View>
-          ) : null}
+            </View> :
+          null}
 
           <TouchableOpacity style={[styles.submitBtn, (!canSubmit || isSubmitting) && styles.submitBtnDisabled]} onPress={submit} disabled={!canSubmit || isSubmitting}>
             <Text style={styles.submitText}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</Text>
@@ -302,8 +319,8 @@ const OwnerListingFormScreen = ({ navigation, route }) => {
         </ScrollView>
       </View>
       <OwnerBottomNavigation navigation={navigation} route={route} active="add" />
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 };
 
 const styles = StyleSheet.create({
@@ -334,7 +351,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   dateValue: { color: '#fff' },
   datePlaceholder: { color: '#8389b6' },
@@ -345,18 +362,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(146,151,214,0.35)',
     backgroundColor: '#1b245b',
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 8
   },
   legendRow: { flexDirection: 'row', gap: 10, marginBottom: 8, paddingHorizontal: 8 },
   legendItem: {
     flexDirection: 'row', alignItems: 'center', borderRadius: 999, borderWidth: 1,
-    borderColor: 'rgba(186,192,241,0.35)', backgroundColor: '#2a3269', paddingHorizontal: 12, paddingVertical: 7,
+    borderColor: 'rgba(186,192,241,0.35)', backgroundColor: '#2a3269', paddingHorizontal: 12, paddingVertical: 7
   },
   legendDot: { width: 10, height: 10, borderRadius: 999, marginRight: 8 },
   legendText: { color: '#e7ebff', fontWeight: '700', fontSize: 12 },
   submitBtn: { marginTop: 16, borderRadius: 12, backgroundColor: '#8f7dff', alignItems: 'center', paddingVertical: 13 },
   submitBtnDisabled: { opacity: 0.5 },
-  submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  submitText: { color: '#fff', fontWeight: '700', fontSize: 16 }
 });
 
 export default OwnerListingFormScreen;

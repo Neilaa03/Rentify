@@ -25,6 +25,8 @@ import storage from '../../utils/storage';
 import { appFont } from '../../utils/responsive';
 import { deleteDocument, getUserDocuments, uploadUserDocument } from '../../services/owner';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
+import { getLanguageMeta, setAppLanguage, supportedLanguages } from '../../i18n';
 
 const profileFont = (width, regular, small, verySmall = small) => {
   if (width <= 340) return verySmall;
@@ -129,6 +131,7 @@ const pickLatestDocument = (documents = []) =>
     })[0] || null;
 
 const ProfileScreen = ({ navigation, route }) => {
+  const { t, i18n } = useTranslation();
   const { width } = useWindowDimensions();
   const [profile, setProfile] = useState(route?.params?.user || null);
   const [loading, setLoading] = useState(false);
@@ -172,6 +175,7 @@ const ProfileScreen = ({ navigation, route }) => {
   const [activeInfoPage, setActiveInfoPage] = useState(null);
   const [ratingValue, setRatingValue] = useState(5);
   const [ratingComment, setRatingComment] = useState('');
+  const [changingLanguage, setChangingLanguage] = useState(false);
 
   const [token, setToken] = useState(route?.params?.token || '');
   const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
@@ -395,7 +399,7 @@ const ProfileScreen = ({ navigation, route }) => {
     const first = profile?.first_name || profile?.firstName || '';
     const last = profile?.last_name || profile?.lastName || '';
     const value = `${first} ${last}`.trim();
-    return value || 'Utilisateur';
+    return value || t('common.unknownUser');
   }, [profile]);
 
   const initial = (profile?.first_name?.[0] || profile?.firstName?.[0] || profile?.email?.[0] || 'U').toUpperCase();
@@ -527,7 +531,7 @@ const ProfileScreen = ({ navigation, route }) => {
       await persistUpdatedUser(updatedUser);
       setIsEditingPersonalInfo(false);
     } catch (err) {
-      setPersonalInfoError(err.message || 'Erreur lors de la mise a jour');
+      setPersonalInfoError(err.message || t('screens.client.profilescreen.erreurLorsDeLaMiseAJour'));
     } finally {
       setSavingPersonalInfo(false);
     }
@@ -539,7 +543,7 @@ const ProfileScreen = ({ navigation, route }) => {
     try {
       await Linking.openURL(url);
     } catch (error) {
-      Alert.alert('Erreur', error.message || 'Impossible d’ouvrir le document');
+      Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.impossibleDouvrirLeDocument'));
     }
   }, [identityDocument?.documentUrl]);
 
@@ -582,7 +586,7 @@ const ProfileScreen = ({ navigation, route }) => {
         Alert.alert('Document rejeté', uploaded.ocrResult.verificationReason);
       }
     } catch (error) {
-      Alert.alert('Erreur', error.message || 'Impossible de téléverser la carte d’identité');
+      Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.impossibleDeTeleverserLaCarteDidentite'));
     } finally {
       setIdentityBusy(false);
     }
@@ -600,7 +604,7 @@ const ProfileScreen = ({ navigation, route }) => {
       setIdentityDocument(null);
       setIdentityAlertShown(false);
     } catch (error) {
-      Alert.alert('Erreur', error.message || 'Suppression impossible');
+      Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.suppressionImpossible'));
     } finally {
       setIdentityBusy(false);
     }
@@ -813,6 +817,19 @@ const ProfileScreen = ({ navigation, route }) => {
   };
 
   const closeInfoPage = () => setActiveInfoPage(null);
+  const currentLanguage = getLanguageMeta(i18n.language);
+
+  const handleLanguageChange = async (language) => {
+    if (!language || language === currentLanguage.code || changingLanguage) return;
+    try {
+      setChangingLanguage(true);
+      await setAppLanguage(language);
+    } catch {
+      Alert.alert(t('screens.client.profilescreen.erreur'), t('common.errors.languageChange'));
+    } finally {
+      setChangingLanguage(false);
+    }
+  };
 
   const openSupportEmail = async () => {
     const subject = encodeURIComponent('Support Rentify');
@@ -841,7 +858,7 @@ const ProfileScreen = ({ navigation, route }) => {
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.overlay}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <Text style={[styles.title, { fontSize: fontSize.title }]}>Profil</Text>
+            <Text style={[styles.title, { fontSize: fontSize.title }]}>{t('screens.client.profilescreen.profil')}</Text>
 
             <View style={styles.profileCard}>
               <TouchableOpacity
@@ -865,10 +882,10 @@ const ProfileScreen = ({ navigation, route }) => {
               <View style={styles.profileInfo}>
                 <Text style={[styles.profileName, { fontSize: fontSize.profileName }]} numberOfLines={1}>{fullName}</Text>
                 <Text style={[styles.profilePhone, { fontSize: fontSize.profilePhone }]} numberOfLines={1}>{profile?.phone || profile?.email || '-'}</Text>
-                {isGoogleConnected && <Text style={styles.googleBadge} numberOfLines={1}>Compte Google connecté</Text>}
+                {isGoogleConnected && <Text style={styles.googleBadge} numberOfLines={1}>{t('screens.client.profilescreen.compteGoogleConnecte')}</Text>}
                 {!!personalInfoError && <Text style={styles.errorText}>{personalInfoError}</Text>}
                 {!!error && <Text style={styles.errorText}>{error}</Text>}
-                {loading && <Text style={styles.loadingText}>Chargement...</Text>}
+                {loading && <Text style={styles.loadingText}>{t('screens.client.profilescreen.chargement')}</Text>}
               </View>
               <TouchableOpacity style={styles.editBtn} onPress={openPersonalInfoEditor}>
                 <Ionicons name="pencil-outline" size={16} color="#d6dbff" />
@@ -878,7 +895,7 @@ const ProfileScreen = ({ navigation, route }) => {
             <Modal visible={photoSheetVisible} transparent animationType="fade" onRequestClose={() => setPhotoSheetVisible(false)}>
               <Pressable style={styles.modalBackdrop} onPress={() => setPhotoSheetVisible(false)} />
               <View style={styles.sheet}>
-                <Text style={styles.sheetTitle}>Photo de profil</Text>
+                <Text style={styles.sheetTitle}>{t('screens.client.profilescreen.photoDeProfil')}</Text>
                 <TouchableOpacity
                   style={styles.sheetRow}
                   onPress={() => {
@@ -888,7 +905,7 @@ const ProfileScreen = ({ navigation, route }) => {
                   disabled={!profilePicture}
                 >
                   <Ionicons name="eye-outline" size={18} color={profilePicture ? '#d6dbff' : '#6c739e'} />
-                  <Text style={[styles.sheetRowText, !profilePicture && styles.sheetRowTextDisabled]}>Voir</Text>
+                  <Text style={[styles.sheetRowText, !profilePicture && styles.sheetRowTextDisabled]}>{t('screens.client.profilescreen.voir')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.sheetRow}
@@ -899,7 +916,7 @@ const ProfileScreen = ({ navigation, route }) => {
                   disabled={photoLoading}
                 >
                   <Ionicons name="image-outline" size={18} color="#d6dbff" />
-                  <Text style={styles.sheetRowText}>Remplacer</Text>
+                  <Text style={styles.sheetRowText}>{t('screens.client.profilescreen.remplacer')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.sheetRow}
@@ -910,11 +927,11 @@ const ProfileScreen = ({ navigation, route }) => {
                   disabled={!profilePicture || photoLoading}
                 >
                   <Ionicons name="trash-outline" size={18} color={profilePicture ? '#ff7b89' : '#6c739e'} />
-                  <Text style={[styles.sheetRowText, { color: profilePicture ? '#ff7b89' : '#6c739e' }]}>Supprimer</Text>
+                  <Text style={[styles.sheetRowText, { color: profilePicture ? '#ff7b89' : '#6c739e' }]}>{t('screens.client.profilescreen.supprimer')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.sheetRow, { marginTop: 6 }]} onPress={() => setPhotoSheetVisible(false)}>
                   <Ionicons name="close" size={18} color="#d6dbff" />
-                  <Text style={styles.sheetRowText}>Annuler</Text>
+                  <Text style={styles.sheetRowText}>{t('screens.client.profilescreen.annuler')}</Text>
                 </TouchableOpacity>
               </View>
             </Modal>
@@ -932,7 +949,7 @@ const ProfileScreen = ({ navigation, route }) => {
               <Pressable style={styles.modalBackdrop} onPress={closePasswordEditor} />
               <View style={styles.sheet}>
                 <View style={styles.sheetHeaderRow}>
-                  <Text style={styles.sheetTitle}>Changer le mot de passe</Text>
+                  <Text style={styles.sheetTitle}>{t('screens.client.profilescreen.changerLeMotDePasse')}</Text>
                   <TouchableOpacity onPress={() => setShowPasswordFields((value) => !value)} style={styles.sheetIconButton}>
                     <Ionicons name={showPasswordFields ? 'eye-off-outline' : 'eye-outline'} size={18} color="#d6dbff" />
                   </TouchableOpacity>
@@ -979,11 +996,11 @@ const ProfileScreen = ({ navigation, route }) => {
                 {!!changePasswordError && <Text style={styles.errorText}>{changePasswordError}</Text>}
                 <View style={styles.editActions}>
                   <TouchableOpacity style={styles.cancelBtn} onPress={closePasswordEditor} disabled={changePasswordLoading}>
-                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>Annuler</Text>
+                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>{t('screens.client.profilescreen.annuler')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.saveBtn} onPress={savePasswordChange} disabled={changePasswordLoading}>
                     <Text style={[styles.saveBtnText, { fontSize: fontSize.editText }]} numberOfLines={1}>
-                      {changePasswordLoading ? 'Enregistrement...' : (isGoogleOnly ? 'Definir' : 'Changer')}
+                      {changePasswordLoading ? t('screens.client.profilescreen.enregistrement') : (isGoogleOnly ? t('screens.client.profilescreen.definir') : t('screens.client.profilescreen.changer'))}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1134,22 +1151,43 @@ const ProfileScreen = ({ navigation, route }) => {
               />
             </SettingsModal>
 
-            <SettingsModal visible={activeInfoPage === 'language'} title="Langue" onClose={closeInfoPage}>
-              <InfoLine
-                icon="globe-outline"
-                title="Langue actuelle"
-                text="Francais"
-              />
-              <InfoLine
-                icon="construct-outline"
-                title="A venir"
-                text="Le changement de langue pourra etre branche quand l'application aura plusieurs traductions."
-              />
+            <SettingsModal visible={activeInfoPage === 'language'} title={t('screens.client.profilescreen.langue')} onClose={closeInfoPage}>
+              <View style={styles.languageOptions}>
+                {supportedLanguages.map((language) => {
+                  const isActive = language.code === currentLanguage.code;
+                  return (
+                    <TouchableOpacity
+                      key={language.code}
+                      style={[styles.languageOption, isActive && styles.languageOptionActive]}
+                      onPress={() => handleLanguageChange(language.code)}
+                      disabled={changingLanguage}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.languageCodeBadge, isActive && styles.languageCodeBadgeActive]}>
+                        <Text style={[styles.languageCodeText, isActive && styles.languageCodeTextActive]}>
+                          {language.code.charAt(0).toUpperCase() + language.code.slice(1)}
+                        </Text>
+                      </View>
+                      <View style={styles.languageOptionTextWrap}>
+                        <Text style={[styles.languageOptionTitle, isActive && styles.languageOptionTitleActive]}>
+                          {language.nativeLabel}
+                        </Text>
+                        <Text style={styles.languageOptionSubtitle}>{language.label}</Text>
+                      </View>
+                      {isActive ? (
+                        <Ionicons name="checkmark-circle" size={20} color="#8f6cff" />
+                      ) : (
+                        <Ionicons name="ellipse-outline" size={20} color="#7d83b0" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </SettingsModal>
 
             {isEditingPersonalInfo && (
               <View style={styles.editCard}>
-                <Text style={styles.editTitle}>Informations personnelles</Text>
+                <Text style={styles.editTitle}>{t('screens.client.profilescreen.informationsPersonnelles')}</Text>
                 <Text style={[styles.inputLabel, { fontSize: fontSize.editText }]}>Prenom</Text>
                 <TextInput
                   style={[styles.input, { fontSize: fontSize.input }]}
@@ -1190,11 +1228,11 @@ const ProfileScreen = ({ navigation, route }) => {
                 {!!personalInfoError && <Text style={styles.errorText}>{personalInfoError}</Text>}
                 <View style={styles.editActions}>
                   <TouchableOpacity style={styles.cancelBtn} onPress={() => setIsEditingPersonalInfo(false)}>
-                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>Annuler</Text>
+                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>{t('screens.client.profilescreen.annuler')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.saveBtn} onPress={savePersonalInfo} disabled={savingPersonalInfo}>
                     <Text style={[styles.saveBtnText, { fontSize: fontSize.editText }]} numberOfLines={1}>
-                      {savingPersonalInfo ? 'Enregistrement...' : 'Enregistrer'}
+                      {savingPersonalInfo ? t('screens.client.profilescreen.enregistrement') : t('screens.client.profilescreen.enregistrer')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1261,17 +1299,17 @@ const ProfileScreen = ({ navigation, route }) => {
                           <Ionicons name={identityDocument?.documentUrl ? 'create-outline' : 'cloud-upload-outline'} size={16} color="#fff" />
                           <Text style={styles.identityActionPrimaryText}>
                             {identityBusy
-                              ? 'Chargement...'
+                        ? t('screens.client.profilescreen.chargement')
                               : identityDocument?.documentUrl
-                                ? 'Remplacer'
-                                : 'Téléverser'}
+                                ? t('screens.client.profilescreen.remplacer')
+                                : t('screens.client.profilescreen.televerser')}
                           </Text>
                         </TouchableOpacity>
                       ) : null}
                       {identityDocument?.id && !accountVerified && !identityVerified ? (
                         <TouchableOpacity style={styles.identityActionBtn} onPress={deleteIdentityDocument} disabled={identityBusy}>
                           <Ionicons name="trash-outline" size={16} color="#ff7b89" />
-                          <Text style={styles.identityActionDangerText}>Supprimer</Text>
+                          <Text style={styles.identityActionDangerText}>{t('screens.client.profilescreen.supprimer')}</Text>
                         </TouchableOpacity>
                       ) : null}
                     </View>
@@ -1280,11 +1318,11 @@ const ProfileScreen = ({ navigation, route }) => {
               </View>
             ) : null}
 
-            <Text style={styles.sectionTitle}>MON COMPTE</Text>
+            <Text style={styles.sectionTitle}>{t('screens.client.profilescreen.monCompte')}</Text>
             <SectionCard
               items={[
-                { action: 'personalInfo', label: 'Informations personnelles', icon: 'person-outline' },
-                { action: 'password', label: isGoogleOnly ? 'Definir un mot de passe' : 'Changer mot de passe', icon: 'key-outline' },
+                { action: 'personalInfo', label: t('screens.client.profilescreen.informationsPersonnelles'), icon: 'person-outline' },
+                { action: 'password', label: isGoogleOnly ? t('screens.client.profilescreen.definirUnMotDePasse') : t('screens.client.profilescreen.changerMotDePasse'), icon: 'key-outline' },
                 ...(isOwner ? [{
                   action: 'stripe',
                   label: connectLoading
@@ -1300,19 +1338,19 @@ const ProfileScreen = ({ navigation, route }) => {
               }}
             />
 
-            <Text style={styles.sectionTitle}>PREFERENCES</Text>
+            <Text style={styles.sectionTitle}>{t('screens.client.profilescreen.preferences')}</Text>
             <SectionCard
               items={[
-                { action: 'language', label: 'Langue', icon: 'globe-outline' },
+                { action: 'language', label: t('screens.client.profilescreen.langue'), icon: 'globe-outline' },
                 { action: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
-                { action: 'privacy', label: 'Confidentialite & Securite', icon: 'shield-checkmark-outline' },
+                { action: 'privacy', label: t('screens.client.profilescreen.confidentialiteSecurite'), icon: 'shield-checkmark-outline' },
               ]}
               onItemPress={(item) => {
                 if (item.action) setActiveInfoPage(item.action);
               }}
             />
 
-            <Text style={styles.sectionTitle}>AIDE & SUPPORT</Text>
+            <Text style={styles.sectionTitle}>{t('screens.client.profilescreen.aideSupport')}</Text>
             <SectionCard
               items={[
                 { action: 'help', label: "Centre d'aide", icon: 'help-circle-outline' },
@@ -1329,7 +1367,7 @@ const ProfileScreen = ({ navigation, route }) => {
               onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })}
             >
               <Ionicons name="log-out-outline" size={18} color="#ff4f5e" />
-              <Text style={[styles.logoutText, { fontSize: fontSize.logout }]}>Se deconnecter</Text>
+              <Text style={[styles.logoutText, { fontSize: fontSize.logout }]}>{t('screens.client.profilescreen.seDeconnecter')}</Text>
             </TouchableOpacity>
 
             <Text style={styles.version}>Rentify v1.0.0</Text>
@@ -1547,6 +1585,47 @@ const styles = StyleSheet.create({
   infoLineBody: { flex: 1, minWidth: 0 },
   infoLineTitle: { color: '#eef1ff', fontSize: appFont(13.5), fontWeight: '800', marginBottom: 4 },
   infoLineText: { color: '#aeb5df', fontSize: appFont(12.5), lineHeight: 18 },
+  languageOptions: {
+    marginTop: 4,
+  },
+  languageOption: {
+    minHeight: 58,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.18)',
+    backgroundColor: 'rgba(23, 26, 54, 0.82)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  languageOptionActive: {
+    borderColor: 'rgba(143, 108, 255, 0.72)',
+    backgroundColor: 'rgba(143, 108, 255, 0.16)',
+  },
+  languageCodeBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(12, 15, 37, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.18)',
+    marginRight: 10,
+  },
+  languageCodeBadgeActive: {
+    backgroundColor: 'rgba(143, 108, 255, 0.28)',
+    borderColor: 'rgba(143, 108, 255, 0.72)',
+  },
+  languageCodeText: { color: '#b8bee6', fontSize: appFont(11.5), fontWeight: '900' },
+  languageCodeTextActive: { color: '#fff' },
+  languageOptionTextWrap: { flex: 1, minWidth: 0, paddingRight: 10 },
+  languageOptionTitle: { color: '#eef1ff', fontSize: appFont(14), fontWeight: '800' },
+  languageOptionTitleActive: { color: '#fff' },
+  languageOptionSubtitle: { color: '#9da4cd', fontSize: appFont(12), marginTop: 3 },
   contactButton: {
     minHeight: 58,
     borderRadius: 14,

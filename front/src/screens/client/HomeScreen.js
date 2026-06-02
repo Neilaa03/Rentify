@@ -11,6 +11,8 @@ import { getListings } from '../../services/listings';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import storage from '../../utils/storage';
 import { parseLocalDate, formatLocalYmd } from '../../utils/reservationUtils';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
@@ -18,7 +20,7 @@ const formatDateLabel = (value) => {
     if (!value) return '';
     const parsed = parseLocalDate(value);
     if (!parsed) return value;
-    return parsed.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    return parsed.toLocaleDateString(getCurrentLocale(), { day: '2-digit', month: 'short' });
 };
 
 const getListingSearchText = (listing) => [
@@ -77,10 +79,11 @@ const sortListingsForDisplay = (items) => [...items].sort((a, b) => {
 });
 
 const HomeScreen = ({ navigation, route }) => {
-    const [activeTab, setActiveTab] = useState('Accueil');
+    const { t } = useTranslation();
+    const [activeTab, setActiveTab] = useState('home');
     const [searchValue, setSearchValue] = useState('');
-    const [activeFilter, setActiveFilter] = useState('Tous');
-    const [activeSort, setActiveSort] = useState('Populaire');
+    const [activeFilter, setActiveFilter] = useState('all');
+    const [activeSort, setActiveSort] = useState('popular');
     const [listings, setListings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -89,13 +92,20 @@ const HomeScreen = ({ navigation, route }) => {
     const [phoneReminderDismissedThisSession, setPhoneReminderDismissedThisSession] = useState(false);
 
     const filterOptions = [
-        'Tous',
-        'Boîte: Auto',
-        'Boîte: Manuelle',
-        'Carburant: Essence',
-        'Carburant: Diesel',
+        { id: 'all', label: t('common.legacyHome.all') },
+        { id: 'auto', label: t('common.legacyHome.gearboxAuto') },
+        { id: 'manual', label: t('common.legacyHome.gearboxManual') },
+        { id: 'gasoline', label: t('common.legacyHome.fuelGasoline') },
+        { id: 'diesel', label: t('common.legacyHome.fuelDiesel') },
     ];
-    const sortOptions = ['Populaire', 'Prix ↑', 'Prix ↓', 'Note'];
+    const sortOptions = [
+        { id: 'popular', label: t('common.legacyHome.popular') },
+        { id: 'priceAsc', label: t('common.legacyHome.priceAsc') },
+        { id: 'priceDesc', label: t('common.legacyHome.priceDesc') },
+        { id: 'rating', label: t('common.legacyHome.rating') },
+    ];
+    const activeFilterLabel = filterOptions.find((option) => option.id === activeFilter)?.label || filterOptions[0].label;
+    const activeSortLabel = sortOptions.find((option) => option.id === activeSort)?.label || sortOptions[0].label;
     const [showFilterOptions, setShowFilterOptions] = useState(false);
     const [showSortOptions, setShowSortOptions] = useState(false);
     const [placeValue, setPlaceValue] = useState('');
@@ -110,7 +120,7 @@ const HomeScreen = ({ navigation, route }) => {
             const data = await getListings();
             setListings(data);
         } catch (err) {
-            setError(err.message || 'Impossible de charger les annonces');
+            setError(err.message || t('common.legacyHome.loadListingsError'));
         } finally {
             setIsLoading(false);
         }
@@ -261,11 +271,11 @@ const HomeScreen = ({ navigation, route }) => {
                         getListingCityText(offer).includes(normalizedPlace);
 
                     const filterMatch =
-                        activeFilter === 'Tous' ||
-                        (activeFilter === 'Boîte: Auto' && normalizeText(offer.transmission) === 'auto') ||
-                        (activeFilter === 'Boîte: Manuelle' && normalizeText(offer.transmission) === 'manuelle') ||
-                        (activeFilter === 'Carburant: Essence' && normalizeText(offer.fuel) === 'essence') ||
-                        (activeFilter === 'Carburant: Diesel' && normalizeText(offer.fuel) === 'diesel');
+                        activeFilter === 'all' ||
+                        (activeFilter === 'auto' && normalizeText(offer.transmission) === 'auto') ||
+                        (activeFilter === 'manual' && normalizeText(offer.transmission) === 'manuelle') ||
+                        (activeFilter === 'gasoline' && normalizeText(offer.fuel) === 'essence') ||
+                        (activeFilter === 'diesel' && normalizeText(offer.fuel) === 'diesel');
 
                     const dateMatch = matchesDateRange(offer, startDate, endDate);
                     return searchMatch && placeMatch && filterMatch && dateMatch;
@@ -275,7 +285,7 @@ const HomeScreen = ({ navigation, route }) => {
                 const sortedVisibleOffers = sortListingsForDisplay(visibleOffers.length > 0 ? visibleOffers : group.offers);
                 const selectedOffer = sortedVisibleOffers[0] || group.offers[0];
 
-                if (!selectedOffer || offersMatchingCriteria.length === 0 && (normalizedSearch.length > 0 || normalizedPlace.length > 0 || startDate || endDate || activeFilter !== 'Tous')) {
+                if (!selectedOffer || offersMatchingCriteria.length === 0 && (normalizedSearch.length > 0 || normalizedPlace.length > 0 || startDate || endDate || activeFilter !== 'all')) {
                     return null;
                 }
 
@@ -298,9 +308,9 @@ const HomeScreen = ({ navigation, route }) => {
             .sort((a, b) => {
                 const aOffer = a.selectedOffer || {};
                 const bOffer = b.selectedOffer || {};
-                if (activeSort === 'Prix ↑') return (aOffer.pricePerDay || 0) - (bOffer.pricePerDay || 0);
-                if (activeSort === 'Prix ↓') return (bOffer.pricePerDay || 0) - (aOffer.pricePerDay || 0);
-                if (activeSort === 'Note') return (bOffer.rating || 0) - (aOffer.rating || 0);
+                if (activeSort === 'priceAsc') return (aOffer.pricePerDay || 0) - (bOffer.pricePerDay || 0);
+                if (activeSort === 'priceDesc') return (bOffer.pricePerDay || 0) - (aOffer.pricePerDay || 0);
+                if (activeSort === 'rating') return (bOffer.rating || 0) - (aOffer.rating || 0);
                 return (bOffer.rating || 0) - (aOffer.rating || 0);
             });
     }, [listings, searchValue, placeValue, activeFilter, activeSort, startDate, endDate]);
@@ -314,14 +324,14 @@ const HomeScreen = ({ navigation, route }) => {
               >
                 <SafeAreaView style={styles.overlay}>
                     <View style={styles.header}>
-                        <Text style={styles.logo}>Tous les véhicules</Text>
+                        <Text style={styles.logo}>{t('screens.client.homescreen.tousLesVehicules')}</Text>
                         <View style={styles.headerRight}>
                             <NotificationIconButton navigation={navigation} style={styles.notificationButton} iconSize={24} />
                             <MessageIconButton navigation={navigation} style={styles.logoutButton} iconSize={24} />
                         </View>
                     </View>
 
-                    <ScrollView 
+                    <ScrollView
                         style={styles.content}
                         contentContainerStyle={styles.contentContainer}
                         showsVerticalScrollIndicator={false}
@@ -333,7 +343,7 @@ const HomeScreen = ({ navigation, route }) => {
                                     <TextInput
                                         value={placeValue}
                                         onChangeText={setPlaceValue}
-                                        placeholder="Lieu, ville ou quartier"
+                                        placeholder={t('screens.client.homescreen.lieuVilleOuQuartier')}
                                         placeholderTextColor="#7c82ab"
                                         style={styles.filterInput}
                                     />
@@ -349,7 +359,7 @@ const HomeScreen = ({ navigation, route }) => {
                                             ? endDate
                                                 ? `${formatDateLabel(startDate)} → ${formatDateLabel(endDate)}`
                                                 : `${formatDateLabel(startDate)} ...`
-                                            : 'Dates'}
+                                            : t('screens.client.homescreen.dates')}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -386,14 +396,14 @@ const HomeScreen = ({ navigation, route }) => {
                                         }}
                                         activeOpacity={0.8}
                                     >
-                                        <Text style={styles.clearFiltersButtonText}>Tout effacer</Text>
+                                            <Text style={styles.clearFiltersButtonText}>{t('screens.client.homescreen.toutEffacer')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
 
                             {showDatePicker && (
                                 <View style={styles.datePickerCard}>
-                                    <Text style={styles.datePickerTitle}>Choisis une période</Text>
+                                    <Text style={styles.datePickerTitle}>{t('screens.client.homescreen.choisisUnePeriode')}</Text>
                                     <CustomCalendar
                                         onDayPress={handleCalendarDayPress}
                                         markedDates={markedDates}
@@ -410,14 +420,14 @@ const HomeScreen = ({ navigation, route }) => {
                                             }}
                                             activeOpacity={0.85}
                                         >
-                                            <Text style={styles.datePickerActionGhostText}>Réinitialiser</Text>
+                                            <Text style={styles.datePickerActionGhostText}>{t('screens.client.homescreen.reinitialiser')}</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={styles.datePickerActionPrimary}
                                             onPress={() => setShowDatePicker(false)}
                                             activeOpacity={0.85}
                                         >
-                                            <Text style={styles.datePickerActionPrimaryText}>Appliquer</Text>
+                                            <Text style={styles.datePickerActionPrimaryText}>{t('screens.client.homescreen.appliquer')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -432,8 +442,8 @@ const HomeScreen = ({ navigation, route }) => {
                                             <Ionicons name="call-outline" size={16} color="#fff" />
                                         </View>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={styles.reminderTitle}>Ajoute ton numero</Text>
-                                            <Text style={styles.reminderSubtitle}>Pour faciliter les reservations et le contact.</Text>
+                                            <Text style={styles.reminderTitle}>{t('screens.client.homescreen.ajouteTonNumero')}</Text>
+                                            <Text style={styles.reminderSubtitle}>{t('screens.client.homescreen.pourFaciliterLesReservationsEtLeContact')}</Text>
                                         </View>
                                     </View>
                                     <TouchableOpacity onPress={dismissPhoneReminder} style={styles.reminderDismiss} accessibilityRole="button">
@@ -441,7 +451,7 @@ const HomeScreen = ({ navigation, route }) => {
                                     </TouchableOpacity>
                                 </View>
                                 <TouchableOpacity onPress={goToPhoneInProfile} style={styles.reminderAction} activeOpacity={0.85}>
-                                    <Text style={styles.reminderActionText}>Definir mon numero</Text>
+                                    <Text style={styles.reminderActionText}>{t('screens.client.homescreen.definirMonNumero')}</Text>
                                     <Ionicons name="chevron-forward" size={16} color="#fff" />
                                 </TouchableOpacity>
                             </View>
@@ -458,23 +468,23 @@ const HomeScreen = ({ navigation, route }) => {
                                     activeOpacity={0.85}
                                 >
                                     <Ionicons name="funnel-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.actionButtonText}>Filtrer: {activeFilter}</Text>
+                                    <Text style={styles.actionButtonText}>{t('screens.client.homescreen.filtrer')} {activeFilterLabel}</Text>
                                 </TouchableOpacity>
                                 {showFilterOptions && (
                                     <View style={styles.dropdown}>
                                         {filterOptions.map((option) => {
-                                            const isActive = option === activeFilter;
+                                            const isActive = option.id === activeFilter;
                                             return (
                                                 <TouchableOpacity
-                                                    key={option}
+                                                    key={option.id}
                                                     style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
                                                     onPress={() => {
-                                                        setActiveFilter(option);
+                                                        setActiveFilter(option.id);
                                                         setShowFilterOptions(false);
                                                     }}
                                                 >
                                                     <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
-                                                        {option}
+                                                        {option.label}
                                                     </Text>
                                                 </TouchableOpacity>
                                             );
@@ -493,23 +503,23 @@ const HomeScreen = ({ navigation, route }) => {
                                     activeOpacity={0.85}
                                 >
                                     <Ionicons name="swap-vertical-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.actionButtonText}>Trier: {activeSort}</Text>
+                                    <Text style={styles.actionButtonText}>{t('screens.client.homescreen.trier')} {activeSortLabel}</Text>
                                 </TouchableOpacity>
                                 {showSortOptions && (
                                     <View style={styles.dropdown}>
                                         {sortOptions.map((option) => {
-                                            const isActive = option === activeSort;
+                                            const isActive = option.id === activeSort;
                                             return (
                                                 <TouchableOpacity
-                                                    key={option}
+                                                    key={option.id}
                                                     style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
                                                     onPress={() => {
-                                                        setActiveSort(option);
+                                                        setActiveSort(option.id);
                                                         setShowSortOptions(false);
                                                     }}
                                                 >
                                                     <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
-                                                        {option}
+                                                        {option.label}
                                                     </Text>
                                                 </TouchableOpacity>
                                             );
@@ -521,15 +531,15 @@ const HomeScreen = ({ navigation, route }) => {
 
                         {isLoading && (
                             <View style={styles.emptyState}>
-                                <Text style={styles.emptyTitle}>Chargement des vehicules...</Text>
+                                <Text style={styles.emptyTitle}>{t('screens.client.homescreen.chargementDesVehicules')}</Text>
                             </View>
                         )}
                         {!isLoading && error ? (
                             <View style={styles.emptyState}>
-                                <Text style={styles.emptyTitle}>Erreur</Text>
+                                <Text style={styles.emptyTitle}>{t('screens.client.homescreen.erreur')}</Text>
                                 <Text style={styles.emptySubtitle}>{error}</Text>
                                 <TouchableOpacity style={styles.retryButton} onPress={loadListings}>
-                                    <Text style={styles.retryButtonText}>Reessayer</Text>
+                                    <Text style={styles.retryButtonText}>{t('screens.client.homescreen.reessayer')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : null}
@@ -547,8 +557,8 @@ const HomeScreen = ({ navigation, route }) => {
                         ))}
                         {!isLoading && !error && groupedListings.length === 0 && (
                             <View style={styles.emptyState}>
-                                <Text style={styles.emptyTitle}>Aucun véhicule trouvé</Text>
-                                <Text style={styles.emptySubtitle}>Essaie une autre recherche ou un autre filtre.</Text>
+                                <Text style={styles.emptyTitle}>{t('screens.client.homescreen.aucunVehiculeTrouve')}</Text>
+                                <Text style={styles.emptySubtitle}>{t('screens.client.homescreen.essaieUneAutreRechercheOuUnAutre')}</Text>
                             </View>
                         )}
                         <View style={{ height: 8 }} />
@@ -562,8 +572,8 @@ const HomeScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     background: { flex: 1 },
-    overlay: { 
-        flex: 1, 
+    overlay: {
+        flex: 1,
         paddingHorizontal: 16,
         backgroundColor: 'rgba(2,3,14,0.62)',
     },

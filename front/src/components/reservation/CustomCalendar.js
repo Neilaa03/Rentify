@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
+import { getCurrentLocale } from '../../i18n';
 
 const CustomCalendar = ({
   onDayPress,
@@ -9,10 +11,12 @@ const CustomCalendar = ({
   minDate = null,
   maxDate = null,
   disabledDates = [],
-  locale = 'fr-FR',
+  locale = getCurrentLocale(),
   startFromMonday = true,
 }) => {
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const activeLocale = locale || getCurrentLocale();
 
   const disabledDatesSet = useMemo(() => {
     if (!disabledDates) return new Set();
@@ -95,12 +99,16 @@ const CustomCalendar = ({
   };
 
   const days = renderCalendarDays();
+  const weekDays = t('common.calendar.weekdays', { returnObjects: true });
+  const safeWeekDays = Array.isArray(weekDays) && weekDays.length === 7
+    ? weekDays
+    : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const dayLabels = startFromMonday
-    ? ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-    : ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    ? safeWeekDays
+    : [safeWeekDays[6], ...safeWeekDays.slice(0, 6)];
 
   const monthYearLabel = capitalize(
-    currentDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+    currentDate.toLocaleDateString(activeLocale, { month: 'long', year: 'numeric' })
   );
 
   return (

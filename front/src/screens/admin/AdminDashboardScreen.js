@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
 const toneColor = {
   blue: '#58a6ff',
@@ -13,9 +15,10 @@ const toneColor = {
   red: '#ff4d6d',
 };
 
-const formatDA = (value) => `${Number(value || 0).toLocaleString('fr-FR')} DA`;
+const formatDA = (value) => `${Number(value || 0).toLocaleString(getCurrentLocale())} DA`;
 
 export default function AdminDashboardScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const [state, setState] = useState({ loading: true, error: '', data: null });
 
   useEffect(() => {
@@ -34,29 +37,29 @@ export default function AdminDashboardScreen({ navigation, route }) {
   }, [state.data]);
 
   const quickActions = [
-    { key: 'docs', title: 'Docs en attente', value: counters.docsPending, tone: 'amber', icon: 'document-text-outline', to: 'AdminCars' },
-    { key: 'reports', title: 'Signalements ouverts', value: counters.reportsOpen, tone: 'red', icon: 'flag-outline', to: 'AdminReports' },
-    { key: 'users', title: 'Comptes a verifier', value: Math.max(0, counters.users - 1), tone: 'blue', icon: 'people-outline', to: 'AdminUsers' },
-    { key: 'activity', title: 'Comptes signales', value: counters.reportsOpen, tone: 'green', icon: 'alert-circle-outline', to: 'AdminReservations' },
+    { key: 'docs', title: t('screens.admin.admindashboardscreen.docsEnAttente'), value: counters.docsPending, tone: 'amber', icon: 'document-text-outline', to: 'AdminCars' },
+    { key: 'reports', title: t('screens.admin.admindashboardscreen.signalementsOuverts'), value: counters.reportsOpen, tone: 'red', icon: 'flag-outline', to: 'AdminReports' },
+    { key: 'users', title: t('screens.admin.admindashboardscreen.comptesAVerifier'), value: Math.max(0, counters.users - 1), tone: 'blue', icon: 'people-outline', to: 'AdminUsers' },
+    { key: 'activity', title: t('screens.admin.admindashboardscreen.comptesSignales'), value: counters.reportsOpen, tone: 'green', icon: 'alert-circle-outline', to: 'AdminReservations' },
   ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ScreenHeader kicker="ADMINISTRATION" title="Tableau de bord" rightAction={<AdminLogoutButton navigation={navigation} />} />
+        <ScreenHeader kicker={t('screens.admin.admindashboardscreen.administration')} title={t('screens.admin.admindashboardscreen.tableauDeBord')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {!!state.error ? <Text style={styles.error}>{state.error}</Text> : null}
           <View style={styles.alertBox}>
             <Ionicons name="warning-outline" size={16} color={toneColor.amber} />
-            <Text style={styles.alertText}>{counters.docsPending} documents en attente · {counters.reportsOpen} signalements ouverts</Text>
+            <Text style={styles.alertText}>{counters.docsPending} {t('screens.admin.admindashboardscreen.documentsEnAttente')} {counters.reportsOpen} {t('screens.admin.admindashboardscreen.signalementsOuverts2')}</Text>
           </View>
 
           <View style={styles.grid}>
-            <StatCard icon="people-outline" value={counters.users} label="Utilisateurs" sub="proprietaires" tone="blue" />
-            <StatCard icon="trending-up-outline" value={formatDA(counters.revenue)} label="Revenus totaux" sub="reservations" tone="green" />
-            <StatCard icon="document-text-outline" value={counters.docsPending} label="Docs en attente" sub="a verifier" tone="amber" />
-            <StatCard icon="flag-outline" value={counters.reportsOpen} label="Signalements" sub="en cours" tone="red" />
+            <StatCard icon="people-outline" value={counters.users} label={t('screens.admin.admindashboardscreen.utilisateurs')} sub="proprietaires" tone="blue" />
+            <StatCard icon="trending-up-outline" value={formatDA(counters.revenue)} label={t('screens.admin.admindashboardscreen.revenusTotaux')} sub="reservations" tone="green" />
+            <StatCard icon="document-text-outline" value={counters.docsPending} label={t('screens.admin.admindashboardscreen.docsEnAttente')} sub="a verifier" tone="amber" />
+            <StatCard icon="flag-outline" value={counters.reportsOpen} label={t('screens.admin.admindashboardscreen.signalements')} sub="en cours" tone="red" />
           </View>
 
           {/* <Text style={styles.sectionTitle}>Actions rapides</Text>
@@ -73,14 +76,14 @@ export default function AdminDashboardScreen({ navigation, route }) {
           </View> */}
 
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Resume de la plateforme</Text>
-            <SummaryLine label="Comptes verifies" value={Math.max(0, counters.users - counters.docsPending)} tone="green" />
-            <SummaryLine label="Comptes en attente" value={counters.docsPending} tone="amber" />
-            <SummaryLine label="Comptes signales" value={counters.reportsOpen} tone="red" />
-            <SummaryLine label="Comptes suspendus" value={0} tone="blue" />
+            <Text style={styles.summaryTitle}>{t('screens.admin.admindashboardscreen.resumeDeLaPlateforme')}</Text>
+            <SummaryLine label={t('screens.admin.admindashboardscreen.comptesVerifies')} value={Math.max(0, counters.users - counters.docsPending)} tone="green" />
+            <SummaryLine label={t('screens.admin.admindashboardscreen.comptesEnAttente')} value={counters.docsPending} tone="amber" />
+            <SummaryLine label={t('screens.admin.admindashboardscreen.comptesSignales')} value={counters.reportsOpen} tone="red" />
+            <SummaryLine label={t('screens.admin.admindashboardscreen.comptesSuspendus')} value={0} tone="blue" />
           </View>
 
-          {state.loading ? <Text style={styles.loading}>Chargement...</Text> : null}
+          {state.loading ? <Text style={styles.loading}>{t('screens.admin.admindashboardscreen.chargement')}</Text> : null}
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="dashboard" />

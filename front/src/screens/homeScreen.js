@@ -3,16 +3,18 @@ import { StyleSheet, View, Text, ImageBackground, TouchableOpacity, ScrollView, 
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../constants/colors';
 import ListingCard from '../components/cards/ListingCard';
 import { getListings } from '../services/listings';
 import { getNotificationUnreadCount } from '../services/notifications';
 
 const HomeScreen = ({ navigation, route }) => {
-    const [activeTab, setActiveTab] = useState('Accueil');
+    const { t } = useTranslation();
+    const [activeTab, setActiveTab] = useState('home');
     const [searchValue, setSearchValue] = useState('');
-    const [activeFilter, setActiveFilter] = useState('Tous');
-    const [activeSort, setActiveSort] = useState('Populaire');
+    const [activeFilter, setActiveFilter] = useState('all');
+    const [activeSort, setActiveSort] = useState('popular');
     const [listings, setListings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -20,13 +22,20 @@ const HomeScreen = ({ navigation, route }) => {
     const [notificationLoading, setNotificationLoading] = useState(false);
 
     const filterOptions = [
-        'Tous',
-        'Boîte: Auto',
-        'Boîte: Manuelle',
-        'Carburant: Essence',
-        'Carburant: Diesel',
+        { id: 'all', label: t('common.legacyHome.all') },
+        { id: 'auto', label: t('common.legacyHome.gearboxAuto') },
+        { id: 'manual', label: t('common.legacyHome.gearboxManual') },
+        { id: 'gasoline', label: t('common.legacyHome.fuelGasoline') },
+        { id: 'diesel', label: t('common.legacyHome.fuelDiesel') },
     ];
-    const sortOptions = ['Populaire', 'Prix ↑', 'Prix ↓', 'Note'];
+    const sortOptions = [
+        { id: 'popular', label: t('common.legacyHome.popular') },
+        { id: 'priceAsc', label: t('common.legacyHome.priceAsc') },
+        { id: 'priceDesc', label: t('common.legacyHome.priceDesc') },
+        { id: 'rating', label: t('common.legacyHome.rating') },
+    ];
+    const activeFilterLabel = filterOptions.find((option) => option.id === activeFilter)?.label || filterOptions[0].label;
+    const activeSortLabel = sortOptions.find((option) => option.id === activeSort)?.label || sortOptions[0].label;
     const [showFilterOptions, setShowFilterOptions] = useState(false);
     const [showSortOptions, setShowSortOptions] = useState(false);
 
@@ -37,7 +46,7 @@ const HomeScreen = ({ navigation, route }) => {
             const data = await getListings();
             setListings(data);
         } catch (err) {
-            setError(err.message || 'Impossible de charger les annonces');
+            setError(err.message || t('common.legacyHome.loadListingsError'));
         } finally {
             setIsLoading(false);
         }
@@ -74,18 +83,18 @@ const HomeScreen = ({ navigation, route }) => {
                 `${listing.brand} ${listing.model} ${listing.city}`.toLowerCase().includes(normalizedSearch);
 
             const matchFilter =
-                activeFilter === 'Tous' ||
-                (activeFilter === 'Boîte: Auto' && listing.transmission.toLowerCase() === 'auto') ||
-                (activeFilter === 'Boîte: Manuelle' && listing.transmission.toLowerCase() === 'manuelle') ||
-                (activeFilter === 'Carburant: Essence' && listing.fuel.toLowerCase() === 'essence') ||
-                (activeFilter === 'Carburant: Diesel' && listing.fuel.toLowerCase() === 'diesel');
+                activeFilter === 'all' ||
+                (activeFilter === 'auto' && listing.transmission.toLowerCase() === 'auto') ||
+                (activeFilter === 'manual' && listing.transmission.toLowerCase() === 'manuelle') ||
+                (activeFilter === 'gasoline' && listing.fuel.toLowerCase() === 'essence') ||
+                (activeFilter === 'diesel' && listing.fuel.toLowerCase() === 'diesel');
 
             return matchSearch && matchFilter;
         })
         .sort((a, b) => {
-            if (activeSort === 'Prix ↑') return a.pricePerDay - b.pricePerDay;
-            if (activeSort === 'Prix ↓') return b.pricePerDay - a.pricePerDay;
-            if (activeSort === 'Note') return b.rating - a.rating;
+            if (activeSort === 'priceAsc') return a.pricePerDay - b.pricePerDay;
+            if (activeSort === 'priceDesc') return b.pricePerDay - a.pricePerDay;
+            if (activeSort === 'rating') return b.rating - a.rating;
             return b.rating - a.rating;
         }), [listings, searchValue, activeFilter, activeSort]);
 
@@ -98,7 +107,7 @@ const HomeScreen = ({ navigation, route }) => {
             >
                 <SafeAreaView style={styles.overlay}>
                     <View style={styles.header}>
-                        <Text style={styles.logo}>Tous les véhicules</Text>
+                        <Text style={styles.logo}>{t('common.legacyHome.allVehicles')}</Text>
                         <View style={styles.headerRight}>
                             <TouchableOpacity
                                 style={styles.notificationButton}
@@ -135,7 +144,7 @@ const HomeScreen = ({ navigation, route }) => {
                             <TextInput
                                 value={searchValue}
                                 onChangeText={setSearchValue}
-                                placeholder="Rechercher une voiture ou une ville"
+                                placeholder={t('common.legacyHome.searchPlaceholder')}
                                 placeholderTextColor="#7c82ab"
                                 style={styles.searchInput}
                             />
@@ -152,23 +161,23 @@ const HomeScreen = ({ navigation, route }) => {
                                     activeOpacity={0.85}
                                 >
                                     <Ionicons name="funnel-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.actionButtonText}>Filtrer: {activeFilter}</Text>
+                                    <Text style={styles.actionButtonText}>{t('common.legacyHome.filter')}: {activeFilterLabel}</Text>
                                 </TouchableOpacity>
                                 {showFilterOptions && (
                                     <View style={styles.dropdown}>
                                         {filterOptions.map((option) => {
-                                            const isActive = option === activeFilter;
+                                            const isActive = option.id === activeFilter;
                                             return (
                                                 <TouchableOpacity
-                                                    key={option}
+                                                    key={option.id}
                                                     style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
                                                     onPress={() => {
-                                                        setActiveFilter(option);
+                                                        setActiveFilter(option.id);
                                                         setShowFilterOptions(false);
                                                     }}
                                                 >
                                                     <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
-                                                        {option}
+                                                        {option.label}
                                                     </Text>
                                                 </TouchableOpacity>
                                             );
@@ -187,23 +196,23 @@ const HomeScreen = ({ navigation, route }) => {
                                     activeOpacity={0.85}
                                 >
                                     <Ionicons name="swap-vertical-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.actionButtonText}>Trier: {activeSort}</Text>
+                                    <Text style={styles.actionButtonText}>{t('common.legacyHome.sort')}: {activeSortLabel}</Text>
                                 </TouchableOpacity>
                                 {showSortOptions && (
                                     <View style={styles.dropdown}>
                                         {sortOptions.map((option) => {
-                                            const isActive = option === activeSort;
+                                            const isActive = option.id === activeSort;
                                             return (
                                                 <TouchableOpacity
-                                                    key={option}
+                                                    key={option.id}
                                                     style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
                                                     onPress={() => {
-                                                        setActiveSort(option);
+                                                        setActiveSort(option.id);
                                                         setShowSortOptions(false);
                                                     }}
                                                 >
                                                     <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
-                                                        {option}
+                                                        {option.label}
                                                     </Text>
                                                 </TouchableOpacity>
                                             );
@@ -215,15 +224,15 @@ const HomeScreen = ({ navigation, route }) => {
 
                         {isLoading && (
                             <View style={styles.emptyState}>
-                                <Text style={styles.emptyTitle}>Chargement des vehicules...</Text>
+                                <Text style={styles.emptyTitle}>{t('common.legacyHome.loadingVehicles')}</Text>
                             </View>
                         )}
                         {!isLoading && error ? (
                             <View style={styles.emptyState}>
-                                <Text style={styles.emptyTitle}>Erreur</Text>
+                                <Text style={styles.emptyTitle}>{t('common.legacyHome.error')}</Text>
                                 <Text style={styles.emptySubtitle}>{error}</Text>
                                 <TouchableOpacity style={styles.retryButton} onPress={loadListings}>
-                                    <Text style={styles.retryButtonText}>Reessayer</Text>
+                                    <Text style={styles.retryButtonText}>{t('common.legacyHome.retry')}</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : null}
@@ -236,8 +245,8 @@ const HomeScreen = ({ navigation, route }) => {
                         ))}
                         {!isLoading && !error && filteredListings.length === 0 && (
                             <View style={styles.emptyState}>
-                                <Text style={styles.emptyTitle}>Aucun véhicule trouvé</Text>
-                                <Text style={styles.emptySubtitle}>Essaie une autre recherche ou un autre filtre.</Text>
+                                <Text style={styles.emptyTitle}>{t('common.legacyHome.noVehicleFound')}</Text>
+                                <Text style={styles.emptySubtitle}>{t('common.legacyHome.tryAnotherSearch')}</Text>
                             </View>
                         )}
                         <View style={{ height: 8 }} />

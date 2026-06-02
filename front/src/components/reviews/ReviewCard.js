@@ -1,25 +1,28 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import RatingStars from './RatingStars';
+import { getCurrentLocale } from '../../i18n';
 
 const ReviewCard = ({ review }) => {
+  const { t, i18n } = useTranslation();
   const fullName = useMemo(() => {
     const firstName = review?.reviewer?.firstName || '';
     const lastName = review?.reviewer?.lastName || '';
     const name = `${firstName} ${lastName}`.trim();
-    return name || 'Utilisateur';
-  }, [review]);
+    return name || t('common.unknownUser');
+  }, [review, t]);
 
   const createdAt = useMemo(() => {
     const raw = review?.createdAt;
     if (!raw) return null;
     try {
-      return new Date(raw).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' });
+      return new Date(raw).toLocaleDateString(getCurrentLocale(), { year: 'numeric', month: 'short', day: 'numeric' });
     } catch (_e) {
       return null;
     }
-  }, [review]);
+  }, [review, i18n.language]);
 
   return (
     <View style={styles.card}>

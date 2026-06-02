@@ -6,44 +6,46 @@ import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, Badge, SectionTitle } from '../../components/agency/AgencyPrimitives';
 import { getAgencyDocuments } from '../../services/agency';
-import { deleteDocument, uploadDocument } from '../../services/owner';
+import { deleteDocument, uploadDocument } from '../../services/owner';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const requiredCompanyDocs = [
-  {
-    key: 'business_registration',
-    label: 'Registre de commerce',
-    subtitle: 'Document légal de l’entreprise',
-    icon: 'business-outline',
-    uploadType: 'business_registration',
-  },
-  {
-    key: 'nif',
-    label: 'NIF / NIS',
-    subtitle: 'Numéro fiscal de l’agence',
-    icon: 'hash-outline',
-    uploadType: 'nif',
-  },
-  {
-    key: 'manager_identity',
-    label: "Carte d'identité du gérant",
-    subtitle: 'Identité du responsable légal',
-    icon: 'person-outline',
-    uploadType: 'identity_card',
-  },
-  {
-    key: 'professional_insurance',
-    label: 'Assurance professionnelle',
-    subtitle: 'Couverture légale de l’activité',
-    icon: 'shield-checkmark-outline',
-    uploadType: 'professional_insurance',
-  },
-];
+{
+  key: 'business_registration',
+  labelKey: 'screens.agency.agencydocumentsscreen.registreDeCommerce',
+  subtitleKey: 'screens.agency.agencydocumentsscreen.documentLegalDeLentreprise',
+  icon: 'business-outline',
+  uploadType: 'business_registration'
+},
+{
+  key: 'nif',
+  labelKey: 'screens.agency.agencydocumentsscreen.nifNis',
+  subtitleKey: 'screens.agency.agencydocumentsscreen.numeroFiscalDeLagence',
+  icon: 'hash-outline',
+  uploadType: 'nif'
+},
+{
+  key: 'manager_identity',
+  labelKey: 'screens.agency.agencydocumentsscreen.carteDidentiteDuGerant',
+  subtitleKey: 'screens.agency.agencydocumentsscreen.identiteDuResponsableLegal',
+  icon: 'person-outline',
+  uploadType: 'identity_card'
+},
+{
+  key: 'professional_insurance',
+  labelKey: 'screens.agency.agencydocumentsscreen.assuranceProfessionnelle',
+  subtitleKey: 'screens.agency.agencydocumentsscreen.couvertureLegaleDeLactivite',
+  icon: 'shield-checkmark-outline',
+  uploadType: 'professional_insurance'
+}];
+
 
 const statusMeta = {
-  VERIFIED: { label: 'Vérifié', tone: 'green', icon: 'checkmark-circle-outline' },
-  REJECTED: { label: 'Rejeté', tone: 'red', icon: 'close-circle-outline' },
-  PENDING: { label: 'En vérification', tone: 'amber', icon: 'time-outline' },
-  MISSING: { label: 'Manquant', tone: 'neutral', icon: 'alert-circle-outline' },
+  VERIFIED: { labelKey: 'screens.agency.agencydocumentsscreen.verifie', tone: 'green', icon: 'checkmark-circle-outline' },
+  REJECTED: { labelKey: 'screens.agency.agencydocumentsscreen.rejete', tone: 'red', icon: 'close-circle-outline' },
+  PENDING: { labelKey: 'screens.agency.agencydocumentsscreen.enVerification', tone: 'amber', icon: 'time-outline' },
+  MISSING: { labelKey: 'screens.agency.agencydocumentsscreen.manquant', tone: 'neutral', icon: 'alert-circle-outline' }
 };
 
 const getStatusMeta = (status) => statusMeta[status] || statusMeta.MISSING;
@@ -51,13 +53,13 @@ const getStatusMeta = (status) => statusMeta[status] || statusMeta.MISSING;
 const normalize = (value) => String(value || '').trim();
 
 const pickDocument = (documents, { type, companyId, userId, carId }) =>
-  (documents || []).find((doc) => {
-    if (doc.documentType !== type) return false;
-    if (userId) return doc.userId === userId;
-    if (companyId) return doc.companyId === companyId;
-    if (carId) return doc.carId === carId;
-    return true;
-  }) || null;
+(documents || []).find((doc) => {
+  if (doc.documentType !== type) return false;
+  if (userId) return doc.userId === userId;
+  if (companyId) return doc.companyId === companyId;
+  if (carId) return doc.carId === carId;
+  return true;
+}) || null;
 
 const buildDocStatus = (doc, fallback = null) => {
   if (!doc) return fallback || 'MISSING';
@@ -71,7 +73,7 @@ const formatDate = (value) => {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('fr-FR');
+  return date.toLocaleDateString(getCurrentLocale());
 };
 
 const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
@@ -94,7 +96,7 @@ const buildFallbackName = (documentType, mimeType) => {
   return `${documentType}.jpg`;
 };
 
-const RequirementCard = ({ item, status, fileLabel, doc, busy = false, onPress, onUpload, onView, onDelete }) => {
+const RequirementCard = ({ item, status, fileLabel, doc, busy = false, onPress, onUpload, onView, onDelete }) => {const { t } = useTranslation();
   const meta = getStatusMeta(status);
   const canUpload = Boolean(item.uploadType && onUpload && status !== 'VERIFIED');
   const handleView = onView || (doc?.documentUrl ? () => Linking.openURL(doc.documentUrl) : null);
@@ -112,10 +114,10 @@ const RequirementCard = ({ item, status, fileLabel, doc, busy = false, onPress, 
       <View style={styles.requirementBody}>
         <View style={styles.requirementTopRow}>
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <Text style={styles.requirementTitle}>{item.label}</Text>
-            <Text style={styles.requirementSubtitle}>{item.subtitle}</Text>
+            <Text style={styles.requirementTitle}>{t(item.labelKey)}</Text>
+            <Text style={styles.requirementSubtitle}>{t(item.subtitleKey)}</Text>
           </View>
-          <Badge label={meta.label} toneKey={meta.tone} icon={meta.icon} />
+          <Badge label={t(meta.labelKey)} toneKey={meta.tone} icon={meta.icon} />
         </View>
 
         <View style={styles.requirementDivider} />
@@ -124,59 +126,59 @@ const RequirementCard = ({ item, status, fileLabel, doc, busy = false, onPress, 
           {fileLabel || 'Aucun document soumis'}
         </Text>
         <Text style={styles.requirementHint}>
-          {status === 'VERIFIED'
-            ? 'Document vérifié et verrouillé'
-            : status === 'REJECTED'
-              ? 'Document refusé, une nouvelle version est attendue'
-              : status === 'PENDING'
-                ? 'Document soumis, en attente de vérification'
-                : 'Document obligatoire non soumis'}
+          {status === 'VERIFIED' ?
+          'Document vérifié et verrouillé' :
+          status === 'REJECTED' ?
+          'Document refusé, une nouvelle version est attendue' :
+          status === 'PENDING' ?
+          'Document soumis, en attente de vérification' :
+          'Document obligatoire non soumis'}
         </Text>
 
-        {hasOcr ? (
-          <View style={[styles.ocrBlock, status === 'REJECTED' && styles.ocrBlockRejected, status === 'VERIFIED' && styles.ocrBlockVerified]}>
+        {hasOcr ?
+        <View style={[styles.ocrBlock, status === 'REJECTED' && styles.ocrBlockRejected, status === 'VERIFIED' && styles.ocrBlockVerified]}>
             <Text style={styles.ocrLabel}>
-              {status === 'VERIFIED' ? 'Document vérifié' : status === 'REJECTED' ? 'Document rejeté' : 'Contrôle OCR'}
+              {status === 'VERIFIED' ? 'Document vérifié' : status === 'REJECTED' ? t("screens.client.profilescreen.documentRejete") : 'Contrôle OCR'}
             </Text>
-            {ocrReason ? <Text style={styles.ocrReason}>{ocrReason}</Text> : <Text style={styles.ocrReasonMuted}>Aucune raison fournie.</Text>}
+            {ocrReason ? <Text style={styles.ocrReason}>{ocrReason}</Text> : <Text style={styles.ocrReasonMuted}>{t("screens.agency.agencydocumentsscreen.aucuneRaisonFournie")}</Text>}
             <Text style={styles.ocrMeta}>{`Statut OCR: ${ocrStatus || 'N/A'}`}</Text>
             <Text style={styles.ocrMeta}>{`Confiance: ${ocrConfidence != null ? `${Number(ocrConfidence).toFixed(1)}%` : 'N/A'}`}</Text>
             {reviewedAt ? <Text style={styles.ocrMeta}>{`Révisé le: ${reviewedAt}`}</Text> : null}
-          </View>
-        ) : null}
+          </View> :
+        null}
 
-        {(canUpload || canView || canDelete) ? (
-          <View style={styles.actionRow}>
-            {canUpload ? (
-              <TouchableOpacity style={[styles.actionBtn, styles.primaryBtn, busy && styles.actionBtnDisabled]} onPress={onUpload} disabled={busy}>
-                {busy ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Ionicons name={status === 'MISSING' ? 'cloud-upload-outline' : 'create-outline'} size={14} color="#fff" />
-                )}
-                <Text style={[styles.actionBtnText, busy && styles.actionBtnTextDisabled]}>{status === 'MISSING' ? 'Téléverser' : 'Mettre à jour'}</Text>
-              </TouchableOpacity>
-            ) : null}
-            {canView ? (
-              <TouchableOpacity style={[styles.actionBtn, busy && styles.actionBtnDisabled]} onPress={handleView} disabled={busy}>
+        {canUpload || canView || canDelete ?
+        <View style={styles.actionRow}>
+            {canUpload ?
+          <TouchableOpacity style={[styles.actionBtn, styles.primaryBtn, busy && styles.actionBtnDisabled]} onPress={onUpload} disabled={busy}>
+                {busy ?
+            <ActivityIndicator size="small" color="#fff" /> :
+
+            <Ionicons name={status === 'MISSING' ? 'cloud-upload-outline' : 'create-outline'} size={14} color="#fff" />
+            }
+                <Text style={[styles.actionBtnText, busy && styles.actionBtnTextDisabled]}>{status === 'MISSING' ? 'Téléverser' : t("screens.owner.reservationdetailsscreen.mettreAJour")}</Text>
+              </TouchableOpacity> :
+          null}
+            {canView ?
+          <TouchableOpacity style={[styles.actionBtn, busy && styles.actionBtnDisabled]} onPress={handleView} disabled={busy}>
                 <Ionicons name="eye-outline" size={14} color="#D9DFFF" />
-                <Text style={[styles.actionBtnTextSecondary, busy && styles.actionBtnTextDisabled]}>Voir</Text>
-              </TouchableOpacity>
-            ) : null}
-            {canDelete ? (
-              <TouchableOpacity style={[styles.actionBtn, busy && styles.actionBtnDisabled]} onPress={onDelete} disabled={busy}>
+                <Text style={[styles.actionBtnTextSecondary, busy && styles.actionBtnTextDisabled]}>{t("screens.agency.agencydocumentsscreen.voir")}</Text>
+              </TouchableOpacity> :
+          null}
+            {canDelete ?
+          <TouchableOpacity style={[styles.actionBtn, busy && styles.actionBtnDisabled]} onPress={onDelete} disabled={busy}>
                 <Ionicons name="trash-outline" size={14} color="#FF8FA3" />
-                <Text style={[styles.actionBtnTextDanger, busy && styles.actionBtnTextDisabled]}>Supprimer</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        ) : null}
+                <Text style={[styles.actionBtnTextDanger, busy && styles.actionBtnTextDisabled]}>{t("screens.agency.agencydocumentsscreen.supprimer")}</Text>
+              </TouchableOpacity> :
+          null}
+          </View> :
+        null}
       </View>
-    </TouchableOpacity>
-  );
+    </TouchableOpacity>);
+
 };
 
-export default function AgencyDocumentsScreen({ navigation, route }) {
+export default function AgencyDocumentsScreen({ navigation, route }) {const { t } = useTranslation();
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -184,7 +186,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
     loading: true,
     refreshing: false,
     error: '',
-    data: null,
+    data: null
   });
   const [busyKey, setBusyKey] = useState('');
   const [, setStagedDocuments] = useState({});
@@ -199,7 +201,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
       const data = await getAgencyDocuments({ token });
       setState((prev) => ({ ...prev, loading: false, refreshing: false, error: '', data }));
     } catch (error) {
-      setState((prev) => ({ ...prev, loading: false, refreshing: false, error: error.message || 'Impossible de charger les documents' }));
+      setState((prev) => ({ ...prev, loading: false, refreshing: false, error: getFriendlyError(error, t) }));
     }
   }, [token]);
 
@@ -220,21 +222,21 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
   const agencyDocs = useMemo(() => documents.filter((doc) => doc.companyId || doc.userId), [documents]);
 
   const companyCards = useMemo(() => requiredCompanyDocs.map((item) => {
-    const lookup = item.uploadType === 'identity_card'
-      ? { type: item.uploadType, userId: managerId, companyId: null, carId: null }
-      : { type: item.uploadType, companyId: agency.id, userId: null, carId: null };
+    const lookup = item.uploadType === 'identity_card' ?
+    { type: item.uploadType, userId: managerId, companyId: null, carId: null } :
+    { type: item.uploadType, companyId: agency.id, userId: null, carId: null };
 
     const doc = pickDocument(agencyDocs, lookup) || pickDocument(agencyDocs, {
       type: item.key,
       companyId: item.uploadType === 'identity_card' ? null : agency.id,
       userId: item.uploadType === 'identity_card' ? managerId : null,
-      carId: null,
+      carId: null
     });
     const status = buildDocStatus(doc);
 
-    const fileLabel = doc?.documentUrl
-      ? doc.documentUrl.split('/').pop()
-      : '';
+    const fileLabel = doc?.documentUrl ?
+    doc.documentUrl.split('/').pop() :
+    '';
 
     return { item, status, fileLabel, doc };
   }), [agency.id, agencyDocs, managerId]);
@@ -244,28 +246,28 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
     try {
       await Linking.openURL(doc.documentUrl);
     } catch (error) {
-      Alert.alert('Erreur', error.message || 'Impossible d’ouvrir le document');
+      Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), getFriendlyError(error, t));
     }
   }, []);
 
   const selectAndUpload = useCallback(async (item) => {
     if (!item.uploadType) {
-      Alert.alert('Document non téléversable', 'Ce document est lié aux informations de profil et n’a pas encore de fichier téléversable.');
+      Alert.alert(t("screens.agency.agencydocumentsscreen.documentNonTeleversable"), t("screens.agency.agencydocumentsscreen.ceDocumentEstLieAuxInformationsDe"));
       return;
     }
     if (item.uploadType === 'identity_card' && !managerId) {
-      Alert.alert('Erreur', 'ID utilisateur manquant. Veuillez vous reconnecter.');
+      Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), t("screens.agency.agencydocumentsscreen.idUtilisateurManquantVeuillezVousReconnecter"));
       return;
     }
 
     if (!agency?.id && item.uploadType !== 'identity_card') {
-      Alert.alert('Erreur', 'ID agence manquant. Veuillez réessayer.');
+      Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), t("screens.agency.agencydocumentsscreen.idAgenceManquantVeuillezReessayer"));
       return;
     }
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: allowedMimeTypes,
-        copyToCacheDirectory: true,
+        copyToCacheDirectory: true
       });
 
       if (result?.canceled) return;
@@ -279,7 +281,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
       if (!uri) return;
 
       if (!allowedMimeTypes.includes(mimeType)) {
-        Alert.alert('Format non autorisé', 'Choisissez un fichier PDF ou une image (JPG, PNG, WEBP).');
+        Alert.alert(t("screens.agency.agencydocumentsscreen.formatNonAutorise"), t("screens.agency.agencydocumentsscreen.choisissezUnFichierPdfOuUneImage"));
         return;
       }
 
@@ -287,7 +289,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
         uri,
         name,
         mimeType,
-        file: asset?.file || null,
+        file: asset?.file || null
       };
 
       setStagedDocuments((prev) => ({ ...prev, [item.key]: staged }));
@@ -296,7 +298,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
       console.log('Starting upload with:', {
         documentType: item.uploadType,
         userId: item.uploadType === 'identity_card' ? managerId : undefined,
-        companyId: item.uploadType === 'identity_card' ? undefined : agency.id,
+        companyId: item.uploadType === 'identity_card' ? undefined : agency.id
       });
 
       await uploadDocument({
@@ -306,18 +308,17 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
           uri: staged.uri,
           name: staged.name,
           type: staged.mimeType,
-          file: staged.file,
+          file: staged.file
         },
         ownerKey: item.uploadType === 'identity_card' ? 'userId' : 'companyId',
-        ownerValue: item.uploadType === 'identity_card' ? managerId : agency.id,
+        ownerValue: item.uploadType === 'identity_card' ? managerId : agency.id
       });
 
       console.log('Upload completed, reloading documents');
       await load();
     } catch (error) {
       console.error('Document upload error:', error);
-      const errorMessage = error?.message || error?.error || JSON.stringify(error) || 'Impossible de téléverser le document';
-      Alert.alert('Erreur', errorMessage);
+      Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), getFriendlyError(error, t, 'common.errors.upload'));
     } finally {
       setStagedDocuments((prev) => {
         const updated = { ...prev };
@@ -330,27 +331,27 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
 
   const removeDocument = useCallback((doc, item) => {
     if (!doc?.id) return;
-    Alert.alert(
-      'Supprimer le document',
-      `Voulez-vous supprimer "${item.label}" ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setBusyKey(item.key);
-              await deleteDocument({ token, documentId: doc.id });
-              await load();
-            } catch (error) {
-              Alert.alert('Erreur', error.message || 'Suppression impossible');
-            } finally {
-              setBusyKey('');
-            }
-          },
-        },
-      ]
+    Alert.alert(t("screens.agency.agencydocumentsscreen.supprimerLeDocument"),
+
+    t('screens.agency.agencydocumentsscreen.confirmerSuppressionDocument', { document: t(item.labelKey) }),
+    [
+    { text: t("screens.agency.agencyprofilescreen.annuler"), style: 'cancel' },
+    {
+      text: t("screens.agency.agencydocumentsscreen.supprimer"),
+      style: 'destructive',
+      onPress: async () => {
+        try {
+          setBusyKey(item.key);
+          await deleteDocument({ token, documentId: doc.id });
+          await load();
+        } catch (error) {
+          Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), getFriendlyError(error, t));
+        } finally {
+          setBusyKey('');
+        }
+      }
+    }]
+
     );
   }, [load, token]);
 
@@ -363,35 +364,35 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
           <View style={styles.page}>
           <View style={styles.headerSpacer} />
 
-          {state.loading ? (
-            <View style={styles.centered}>
+          {state.loading ?
+              <View style={styles.centered}>
               <ActivityIndicator size="large" color="#A78BFF" />
-            </View>
-          ) : (
-            <ScrollView
-              refreshControl={<RefreshControl refreshing={state.refreshing} onRefresh={onRefresh} tintColor="#A78BFF" />}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.content}
-            >
+            </View> :
+
+              <ScrollView
+                refreshControl={<RefreshControl refreshing={state.refreshing} onRefresh={onRefresh} tintColor="#A78BFF" />}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.content}>
+                
               <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('AgencyProfile', { token, user })}>
                   <Ionicons name="chevron-back" size={20} color="#fff" />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.kicker}>DOCUMENTS</Text>
-                  <Text style={styles.title}>Documents de l’agence</Text>
-                  <Text style={styles.subtitle}>Suivi des documents de l’entreprise</Text>
+                  <Text style={styles.kicker}>{t("screens.agency.agencydocumentsscreen.documents")}</Text>
+                  <Text style={styles.title}>{t("screens.agency.agencydocumentsscreen.documentsDeLagence")}</Text>
+                  <Text style={styles.subtitle}>{t("screens.agency.agencydocumentsscreen.suiviDesDocumentsDeLentreprise")}</Text>
                 </View>
               </View>
 
               {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
 
               <SectionTitle
-                title="Dossiers obligatoires"
-                subtitle="Chaque document requis est affiché avec son état actuel"
-              />
+                  title={t("screens.agency.agencydocumentsscreen.dossiersObligatoires")}
+                  subtitle={t("screens.agency.agencydocumentsscreen.chaqueDocumentRequisEstAfficheAvecSon")} />
+                
               <View style={styles.sectionList}>
-                {companyCards.map(({ item, status, fileLabel, doc }) => (
+                {companyCards.map(({ item, status, fileLabel, doc }) =>
                   <RequirementCard
                     key={item.key}
                     item={item}
@@ -408,19 +409,19 @@ export default function AgencyDocumentsScreen({ navigation, route }) {
                     }}
                     onUpload={item.uploadType ? () => selectAndUpload(item) : null}
                     onView={doc?.documentUrl ? () => openDocument(doc) : null}
-                    onDelete={doc?.id ? () => removeDocument(doc, item) : null}
-                  />
-                ))}
+                    onDelete={doc?.id ? () => removeDocument(doc, item) : null} />
+
+                  )}
               </View>
             </ScrollView>
-          )}
+              }
           </View>
           </View>
           <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
         </SafeAreaView>
       </ImageBackground>
-    </View>
-  );
+    </View>);
+
 }
 
 const styles = StyleSheet.create({
@@ -440,7 +441,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 2
   },
   kicker: { color: '#8E95BF', fontSize: 11, fontWeight: '900', letterSpacing: 1.3, marginBottom: 4 },
   title: { color: '#fff', fontSize: 28, fontWeight: '900' },
@@ -456,7 +457,7 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: 'rgba(14,15,26,0.96)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   requirementIcon: {
     width: 40,
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.04)'
   },
   requirementBody: { flex: 1, minWidth: 0 },
   requirementTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
@@ -474,7 +475,7 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.08)',
     marginTop: 12,
-    marginBottom: 10,
+    marginBottom: 10
   },
   requirementFile: { color: '#DCE2FF', fontWeight: '800', fontSize: 12 },
   requirementMissing: { color: '#FFB347' },
@@ -485,15 +486,15 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   ocrBlockRejected: {
     backgroundColor: 'rgba(255,23,68,0.08)',
-    borderColor: 'rgba(255,23,68,0.24)',
+    borderColor: 'rgba(255,23,68,0.24)'
   },
   ocrBlockVerified: {
     backgroundColor: 'rgba(0,230,118,0.08)',
-    borderColor: 'rgba(0,230,118,0.24)',
+    borderColor: 'rgba(0,230,118,0.24)'
   },
   ocrLabel: { color: '#DCE2FF', fontWeight: '900', fontSize: 12, marginBottom: 6 },
   ocrReason: { color: '#F5F7FF', fontSize: 12, lineHeight: 17, fontWeight: '700' },
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 12,
+    marginTop: 12
   },
   actionBtn: {
     flexDirection: 'row',
@@ -514,14 +515,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(255,255,255,0.08)'
   },
   primaryBtn: {
     backgroundColor: 'rgba(124,77,255,0.82)',
-    borderColor: 'rgba(124,77,255,0.35)',
+    borderColor: 'rgba(124,77,255,0.35)'
   },
   actionBtnDisabled: {
-    opacity: 0.5,
+    opacity: 0.5
   },
   actionBtnText: { color: '#fff', fontWeight: '900', fontSize: 12 },
   actionBtnTextSecondary: { color: '#D9DFFF', fontWeight: '900', fontSize: 12 },
@@ -531,5 +532,5 @@ const styles = StyleSheet.create({
   footerCard: { padding: 16, marginBottom: 14 },
   footerStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   footerStat: { color: '#D9DFFF', fontWeight: '800', fontSize: 12 },
-  footerHint: { color: '#97A0C7', marginTop: 8, fontSize: 12, lineHeight: 18 },
+  footerHint: { color: '#97A0C7', marginTop: 8, fontSize: 12, lineHeight: 18 }
 });

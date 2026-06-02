@@ -12,8 +12,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  View } from
+'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
@@ -27,8 +27,10 @@ import {
   updateOwnerListing,
   uploadCarDocument,
   uploadCarImage,
-  deleteDocument,
-} from '../../services/owner';
+  deleteDocument } from
+'../../services/owner';import { useTranslation } from "react-i18next";
+import { getLanguageMeta } from '../../i18n';
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const fuelOptions = ['Essence', 'Diesel', 'Hybride', 'Electrique'];
 const transmissionOptions = ['Automatique', 'Manuelle'];
@@ -38,7 +40,21 @@ LocaleConfig.locales.fr = {
   monthNamesShort: ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'],
   dayNames: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
   dayNamesShort: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
-  today: "Aujourd'hui",
+  today: "Aujourd'hui"
+};
+LocaleConfig.locales.en = {
+  monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  today: 'Today'
+};
+LocaleConfig.locales.ar = {
+  monthNames: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+  monthNamesShort: ['ينا', 'فبر', 'مار', 'أبر', 'ماي', 'يون', 'يول', 'أغس', 'سبت', 'أكت', 'نوف', 'ديس'],
+  dayNames: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+  dayNamesShort: ['أحد', 'اثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+  today: 'اليوم'
 };
 LocaleConfig.defaultLocale = 'fr';
 
@@ -50,11 +66,11 @@ const toYmd = (date) => {
 };
 
 const allowedDocumentMimeTypes = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-];
+'application/pdf',
+'image/jpeg',
+'image/png',
+'image/webp'];
+
 
 const inferDocumentMimeType = (file) => {
   const explicit = String(file?.mimeType || '').toLowerCase();
@@ -74,9 +90,9 @@ const buildRangeMarks = (startDate, endDate) => {
       [startDate]: {
         customStyles: {
           container: { backgroundColor: '#cf62ff', borderRadius: 16 },
-          text: { color: '#fff', fontWeight: '700' },
-        },
-      },
+          text: { color: '#fff', fontWeight: '700' }
+        }
+      }
     };
   }
 
@@ -90,8 +106,8 @@ const buildRangeMarks = (startDate, endDate) => {
     marks[key] = {
       customStyles: {
         container: { backgroundColor: isEdge ? '#cf62ff' : '#7f69ea', borderRadius: 16 },
-        text: { color: '#fff', fontWeight: '700' },
-      },
+        text: { color: '#fff', fontWeight: '700' }
+      }
     };
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -128,7 +144,8 @@ const guessDocumentFilename = ({ url, type }) => {
   }
 };
 
-const OwnerCarFormScreen = ({ navigation, route }) => {
+const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTranslation();
+  LocaleConfig.defaultLocale = getLanguageMeta(i18n.language).code;
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || 'create';
@@ -151,7 +168,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       name: label,
       status: doc?.status || (doc?.documentUrl ? 'pending' : 'missing'),
       documentUrl: doc?.documentUrl || '',
-      ocrResult: doc?.ocrResult || doc?.ocr_result || null,
+      ocrResult: doc?.ocrResult || doc?.ocr_result || null
     };
   };
 
@@ -182,43 +199,43 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     availableFrom: listing?.availableFrom || '',
     availableTo: listing?.availableTo || '',
     documents: {
-      carte_grise: getPrefillDocument('carte_grise', 'Carte grise'),
-      insurance: getPrefillDocument('insurance', 'Assurance'),
-      technical_control: getPrefillDocument('technical_control', 'Controle technique'),
+      carte_grise: getPrefillDocument('carte_grise', t("screens.owner.carformscreen.carteGrise")),
+      insurance: getPrefillDocument('insurance', t("screens.owner.carformscreen.assurance")),
+      technical_control: getPrefillDocument('technical_control', 'Controle technique')
     },
     images:
-      prefill?.images?.map((img, index) => ({
-        id: img.id,
-        uri: img.image_url || img.imageUrl,
-        isPrimary: img.is_primary || index === 0,
-        isUploaded: true,
-      })) || [],
-    imageUrls: [],
+    prefill?.images?.map((img, index) => ({
+      id: img.id,
+      uri: img.image_url || img.imageUrl,
+      isPrimary: img.is_primary || index === 0,
+      isUploaded: true
+    })) || [],
+    imageUrls: []
   });
 
   const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const setDocumentField = (documentType, value) =>
-    setForm((prev) => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        [documentType]: value,
-      },
-    }));
+  setForm((prev) => ({
+    ...prev,
+    documents: {
+      ...prev.documents,
+      [documentType]: value
+    }
+  }));
 
   const getStatusText = (status) => {
     switch (status) {
       case 'approved':
         return 'Validé';
       case 'rejected':
-        return 'Rejeté';
+        return t("screens.agency.agencydocumentsscreen.rejete");
       case 'manual_review':
         return 'En révision';
       case 'pending':
-        return 'En attente';
+        return t("screens.admin.admincarsscreen.enAttente");
       default:
-        return 'Manquant';
+        return t("screens.agency.agencydocumentsscreen.manquant");
     }
   };
 
@@ -255,9 +272,9 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
   const handleDocumentPress = async (type) => {
     const document = form.documents[type];
     const candidateUrl =
-      (typeof document?.documentUrl === 'string' && document.documentUrl.trim()) ||
-      (typeof document?.uri === 'string' && document.uri.trim()) ||
-      '';
+    typeof document?.documentUrl === 'string' && document.documentUrl.trim() ||
+    typeof document?.uri === 'string' && document.uri.trim() ||
+    '';
 
     if (!candidateUrl) {
       await pickDocument(type);
@@ -269,7 +286,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       try {
         await Linking.openURL(candidateUrl);
       } catch (_error) {
-        Alert.alert('Erreur', 'Impossible d’ouvrir ce document local.');
+        Alert.alert(t("screens.owner.carformscreen.erreur"), t("screens.owner.carformscreen.impossibleDouvrirCeDocumentLocal"));
       }
       return;
     }
@@ -278,7 +295,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       await Linking.openURL(candidateUrl);
     } catch (error) {
       console.warn('Document open failed', error);
-      Alert.alert('Erreur', 'Impossible d’ouvrir ce document.');
+      Alert.alert(t("screens.owner.carformscreen.erreur"), t("screens.owner.carformscreen.impossibleDouvrirCeDocument"));
     }
   };
 
@@ -288,7 +305,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       try {
         await deleteDocument({ token, documentId: document.id });
       } catch (error) {
-        Alert.alert('Erreur', error.message || 'Suppression impossible');
+        Alert.alert(t("screens.owner.carformscreen.erreur"), getFriendlyError(error, t));
         return;
       }
     }
@@ -298,45 +315,45 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       uri: '',
       name: document?.name || type,
       status: 'missing',
-      documentUrl: '',
+      documentUrl: ''
     });
   };
 
-    const pickDocument = async (type) => {
-        try {
-            const result = await DocumentPicker.getDocumentAsync({
-                type: allowedDocumentMimeTypes,
-                copyToCacheDirectory: true,
-            });
+  const pickDocument = async (type) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: allowedDocumentMimeTypes,
+        copyToCacheDirectory: true
+      });
 
-            if (result?.canceled) return;
+      if (result?.canceled) return;
 
-            const asset = Array.isArray(result?.assets) ? result.assets[0] : result;
-            const uri = asset?.uri;
-            const name = asset?.name;
-            const mimeType = asset?.mimeType || asset?.type;
+      const asset = Array.isArray(result?.assets) ? result.assets[0] : result;
+      const uri = asset?.uri;
+      const name = asset?.name;
+      const mimeType = asset?.mimeType || asset?.type;
 
-            if (!uri || !name) return;
+      if (!uri || !name) return;
 
-            const isValidMime = allowedDocumentMimeTypes.includes(mimeType);
-            if (!isValidMime) {
-              return Alert.alert('Format non autorisé', 'Choisissez un fichier PDF ou une image (JPG, PNG, WEBP).');
-            }
+      const isValidMime = allowedDocumentMimeTypes.includes(mimeType);
+      if (!isValidMime) {
+        return Alert.alert(t("screens.owner.carformscreen.formatNonAutorise"), t("screens.owner.carformscreen.choisissezUnFichierPdfOuUneImage"));
+      }
 
-            setStagedDocuments((prev) => ({
-                ...prev,
-                [type]: {
-                    uri,
-                    name,
-                    mimeType,
-                    file: asset?.file || null,
-                },
-            }));
-        } catch (error) {
-            console.error('Document picker error:', error);
-            Alert.alert('Erreur', 'Impossible de sélectionner le document.');
+      setStagedDocuments((prev) => ({
+        ...prev,
+        [type]: {
+          uri,
+          name,
+          mimeType,
+          file: asset?.file || null
         }
-    };
+      }));
+    } catch (error) {
+      console.error('Document picker error:', error);
+      Alert.alert(t("screens.owner.carformscreen.erreur"), t("screens.owner.carformscreen.impossibleDeSelectionnerLeDocument"));
+    }
+  };
 
   const confirmDocumentUpload = async (type) => {
     const staged = stagedDocuments[type];
@@ -345,39 +362,39 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const targetCarId = car?.id || form?.carId || null;
 
     if (!targetCarId) {
-        setDocumentField(type, {
+      setDocumentField(type, {
         ...form.documents[type],
         uri: staged.uri,
         name: staged.name,
         mimeType: staged.mimeType,
         file: staged.file || null,
-        status: 'pending',
+        status: 'pending'
       });
       setStagedDocuments((prev) => {
         const updated = { ...prev };
         delete updated[type];
         return updated;
       });
-      Alert.alert(
-        'Document prêt',
-        'Le document est prêt et sera envoyé quand vous cliquerez sur Enregistrer le véhicule.'
+      Alert.alert(t("screens.owner.carformscreen.documentPret"), t("screens.owner.carformscreen.leDocumentEstPretEtSeraEnvoye")
+
+
       );
       return;
     }
 
     try {
       setIsSubmitting(true);
-        const uploaded = await uploadCarDocument({
-          token,
-          carId: targetCarId,
-          documentType: type,
-          file: {
-            uri: staged.uri,
-            name: staged.name || `${type}.pdf`,
-            type: inferDocumentMimeType(staged),
-            file: staged.file || null,
-          },
-        });
+      const uploaded = await uploadCarDocument({
+        token,
+        carId: targetCarId,
+        documentType: type,
+        file: {
+          uri: staged.uri,
+          name: staged.name || `${type}.pdf`,
+          type: inferDocumentMimeType(staged),
+          file: staged.file || null
+        }
+      });
 
       setDocumentField(type, {
         ...form.documents[type],
@@ -387,11 +404,11 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         name: staged.name,
         mimeType: staged.mimeType,
         status: uploaded?.status || 'pending',
-        ocrResult: uploaded?.ocrResult || uploaded?.ocr_result || form.documents[type]?.ocrResult || null,
+        ocrResult: uploaded?.ocrResult || uploaded?.ocr_result || form.documents[type]?.ocrResult || null
       });
 
       if ((uploaded?.status || 'pending') === 'rejected' && uploaded?.ocrResult?.verificationReason) {
-        Alert.alert('Document rejeté', uploaded.ocrResult.verificationReason);
+        Alert.alert(t("screens.owner.carformscreen.documentRejete"), uploaded.ocrResult.verificationReason);
       }
 
       setStagedDocuments((prev) => {
@@ -400,7 +417,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         return updated;
       });
     } catch (error) {
-      Alert.alert('Erreur', error.message || 'Upload du document impossible');
+      Alert.alert(t("screens.owner.carformscreen.erreur"), getFriendlyError(error, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -415,13 +432,13 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
   };
 
   const addImageField = () =>
-    setForm((prev) => ({ ...prev, imageUrls: [...prev.imageUrls, ''] }));
+  setForm((prev) => ({ ...prev, imageUrls: [...prev.imageUrls, ''] }));
 
   const removeImageField = (index) =>
-    setForm((prev) => ({
-      ...prev,
-      imageUrls: prev.imageUrls.filter((_, idx) => idx !== index),
-    }));
+  setForm((prev) => ({
+    ...prev,
+    imageUrls: prev.imageUrls.filter((_, idx) => idx !== index)
+  }));
 
   useEffect(() => {
     if (!isCreateListingOnly) return;
@@ -438,22 +455,22 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     if (isCarForm) {
       return Boolean(
         form.brand.trim() &&
-          form.model.trim() &&
-          form.year &&
-          form.fuelType &&
-          form.transmission &&
-          form.seats
+        form.model.trim() &&
+        form.year &&
+        form.fuelType &&
+        form.transmission &&
+        form.seats
       );
     }
 
     const common = Boolean(
       form.title.trim() &&
-        form.pricePerDay &&
-        form.pickupAddress.trim() &&
-        form.city.trim() &&
-        form.country.trim() &&
-        form.availableFrom &&
-        form.availableTo
+      form.pricePerDay &&
+      form.pickupAddress.trim() &&
+      form.city.trim() &&
+      form.country.trim() &&
+      form.availableFrom &&
+      form.availableTo
     );
 
     if (isCreateListingOnly) return Boolean(common && form.carId);
@@ -465,13 +482,13 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
 
     return Boolean(
       common &&
-        form.brand.trim() &&
-        form.model.trim() &&
-        form.year &&
-        form.fuelType &&
-        form.transmission &&
-        form.seats &&
-        hasAllDocuments
+      form.brand.trim() &&
+      form.model.trim() &&
+      form.year &&
+      form.fuelType &&
+      form.transmission &&
+      form.seats &&
+      hasAllDocuments
     );
   }, [form, isCreateCarAndListing, isCreateListingOnly, isCarForm]);
 
@@ -489,129 +506,129 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         deliveryFee: Number(form.deliveryFee || 0),
         availableFrom: form.availableFrom,
         availableTo: form.availableTo,
-        isActive: false,
-      },
+        isActive: false
+      }
     });
   };
 
-    const pickImages = async () => {
-        if (form.images.length >= 3) {
-            return Alert.alert(
-                'Limite atteinte',
-                'Maximum 3 photos'
-            );
-        }
+  const pickImages = async () => {
+    if (form.images.length >= 3) {
+      return Alert.alert(t("screens.owner.carformscreen.limiteAtteinte"), t("screens.owner.carformscreen.maximum3Photos")
 
-        const result =
-            await ImagePicker.launchImageLibraryAsync({
-                mediaTypes:
-                    ImagePicker.MediaTypeOptions.Images,
-                quality: 0.7,
-                allowsMultipleSelection: true,
-                selectionLimit: 3 - form.images.length,
-            });
 
-        if (!result.canceled) {
-            const newImages = result.assets.map(
-                (asset, index) => ({
-                    uri: asset.uri,
-                    isPrimary:
-                        form.images.length === 0 && index === 0,
-                    isUploaded: false,
-                })
-            );
+      );
+    }
 
-            setForm(prev => ({
-                ...prev,
-                images: [...prev.images, ...newImages],
-            }));
-        }
-    };
+    const result =
+    await ImagePicker.launchImageLibraryAsync({
+      mediaTypes:
+      ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      allowsMultipleSelection: true,
+      selectionLimit: 3 - form.images.length
+    });
+
+    if (!result.canceled) {
+      const newImages = result.assets.map(
+        (asset, index) => ({
+          uri: asset.uri,
+          isPrimary:
+          form.images.length === 0 && index === 0,
+          isUploaded: false
+        })
+      );
+
+      setForm((prev) => ({
+        ...prev,
+        images: [...prev.images, ...newImages]
+      }));
+    }
+  };
 
   const createCarExtras = async (carId) => {
     const existingDocumentUrls = {
       carte_grise: prefill?.documents?.find((doc) => doc.documentType === 'carte_grise')?.documentUrl,
       insurance: prefill?.documents?.find((doc) => doc.documentType === 'insurance')?.documentUrl,
-      technical_control: prefill?.documents?.find((doc) => doc.documentType === 'technical_control')?.documentUrl,
+      technical_control: prefill?.documents?.find((doc) => doc.documentType === 'technical_control')?.documentUrl
     };
 
     const existingImageUrls = new Set(prefill?.images?.map((image) => image.imageUrl) || []);
 
     const uploadDocuments = Object.entries(form.documents)
-      //.filter(([, document]) => document?.uri?.trim())
-      .filter(([, document]) => Boolean(document?.uri))
-      .filter(([, document]) => {
-        const isRemoteUrl = typeof document?.uri === 'string' && document.uri.startsWith('http');
-        return !(document?.id && isRemoteUrl);
-      })
-      .filter(( [documentType, document] ) => document.uri !== existingDocumentUrls[documentType])
-      .map(async ([documentType, document]) => {
-        const isRemoteUrl = typeof document.uri === 'string' && document.uri.startsWith('http');
+    //.filter(([, document]) => document?.uri?.trim())
+    .filter(([, document]) => Boolean(document?.uri)).
+    filter(([, document]) => {
+      const isRemoteUrl = typeof document?.uri === 'string' && document.uri.startsWith('http');
+      return !(document?.id && isRemoteUrl);
+    }).
+    filter(([documentType, document]) => document.uri !== existingDocumentUrls[documentType]).
+    map(async ([documentType, document]) => {
+      const isRemoteUrl = typeof document.uri === 'string' && document.uri.startsWith('http');
 
-        if (isRemoteUrl) {
-          const created = await createCarDocument({
-            token,
-            payload: {
-              carId,
-              documentType,
-              documentUrl: document.uri.trim(),
-            },
-          });
-          return { documentType, uploaded: created };
-        }
-
-        //   setForm(prev => ({
-        //       ...prev,
-        //       documents: {
-        //           ...prev.documents,
-        //           [documentType]: {
-        //               ...prev.documents[documentType],
-        //               uri: uploadedDoc.documentUrl,
-        //           },
-        //       },
-        //   }));
-
-        const uploaded = await uploadCarDocument({
+      if (isRemoteUrl) {
+        const created = await createCarDocument({
           token,
-          carId,
-          documentType,
-          file: {
-            uri: document.uri,
-            name: document.name || `${documentType}.pdf`,
-            type: document.mimeType || 'application/octet-stream',
-            file: document.file || null,
-          },
+          payload: {
+            carId,
+            documentType,
+            documentUrl: document.uri.trim()
+          }
         });
-        return { documentType, uploaded };
-      });
+        return { documentType, uploaded: created };
+      }
 
-    const uploadImages = form.images
-      .filter((image) => image?.uri && !existingImageUrls.has(image.uri))
-      .map((image, index) => {
-        const isRemoteUrl = typeof image.uri === 'string' && image.uri.startsWith('http');
+      //   setForm(prev => ({
+      //       ...prev,
+      //       documents: {
+      //           ...prev.documents,
+      //           [documentType]: {
+      //               ...prev.documents[documentType],
+      //               uri: uploadedDoc.documentUrl,
+      //           },
+      //       },
+      //   }));
 
-        if (image.isUploaded && isRemoteUrl) {
-          return createCarImage({
-            token,
-            payload: {
-              carId,
-              imageUrl: image.uri,
-              isPrimary: image.isPrimary,
-            },
-          });
+      const uploaded = await uploadCarDocument({
+        token,
+        carId,
+        documentType,
+        file: {
+          uri: document.uri,
+          name: document.name || `${documentType}.pdf`,
+          type: document.mimeType || 'application/octet-stream',
+          file: document.file || null
         }
-
-        return uploadCarImage({
-          token,
-          carId,
-          file: {
-            uri: image.uri,
-            name: image.name || `car-image-${carId}-${index}.jpg`,
-            type: image.mimeType || 'image/jpeg',
-          },
-          isPrimary: image.isPrimary,
-        });
       });
+      return { documentType, uploaded };
+    });
+
+    const uploadImages = form.images.
+    filter((image) => image?.uri && !existingImageUrls.has(image.uri)).
+    map((image, index) => {
+      const isRemoteUrl = typeof image.uri === 'string' && image.uri.startsWith('http');
+
+      if (image.isUploaded && isRemoteUrl) {
+        return createCarImage({
+          token,
+          payload: {
+            carId,
+            imageUrl: image.uri,
+            isPrimary: image.isPrimary
+          }
+        });
+      }
+
+      return uploadCarImage({
+        token,
+        carId,
+        file: {
+          uri: image.uri,
+          name: image.name || `car-image-${carId}-${index}.jpg`,
+          type: image.mimeType || 'image/jpeg'
+        },
+        isPrimary: image.isPrimary
+      });
+    });
 
     const uploadedDocuments = await Promise.all(uploadDocuments);
     await Promise.all(uploadImages);
@@ -629,13 +646,13 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
             ...nextDocuments[documentType],
             id: uploadedId || nextDocuments[documentType]?.id,
             uri: uploadedUrl,
-            documentUrl: uploadedUrl,
+            documentUrl: uploadedUrl
           };
         }
 
         return {
           ...prev,
-          documents: nextDocuments,
+          documents: nextDocuments
         };
       });
     }
@@ -658,8 +675,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         mileage: form.mileage ? Number(form.mileage) : undefined,
         seats: Number(form.seats),
         registrationNumber: form.registrationNumber.trim(),
-        description: form.description.trim(),
-      },
+        description: form.description.trim()
+      }
     });
 
     const carId = newCar?.id;
@@ -686,8 +703,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         mileage: form.mileage ? Number(form.mileage) : undefined,
         seats: Number(form.seats),
         registrationNumber: form.registrationNumber.trim(),
-        description: form.description.trim(),
-      },
+        description: form.description.trim()
+      }
     });
 
     const carId = updatedCar?.id || car.id;
@@ -706,8 +723,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         transmission: form.transmission,
         mileage: form.mileage ? Number(form.mileage) : 0,
         seats: Number(form.seats),
-        description: form.description.trim(),
-      },
+        description: form.description.trim()
+      }
     });
 
     const carId = newCar?.id;
@@ -728,8 +745,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         deliveryFee: Number(form.deliveryFee || 0),
         availableFrom: form.availableFrom,
         availableTo: form.availableTo,
-        isActive: false,
-      },
+        isActive: false
+      }
     });
   };
 
@@ -747,28 +764,28 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         deliveryFee: Number(form.deliveryFee || 0),
         availableFrom: form.availableFrom,
         availableTo: form.availableTo,
-        isActive: false,
-      },
+        isActive: false
+      }
     });
   };
 
   const submit = async () => {
-    if (!canSubmit) return Alert.alert('Champs requis', 'Veuillez remplir les champs obligatoires.');
+    if (!canSubmit) return Alert.alert(t("screens.owner.carformscreen.champsRequis"), t("screens.owner.carformscreen.veuillezRemplirLesChampsObligatoires"));
 
     if (Object.keys(stagedDocuments).length > 0) {
-      return Alert.alert(
-        'Documents en attente',
-        'Veuillez confirmer ou annuler les documents en attente avant de continuer.'
+      return Alert.alert(t("screens.owner.carformscreen.documentsEnAttente"), t("screens.owner.carformscreen.veuillezConfirmerOuAnnulerLesDocumentsEn")
+
+
       );
     }
 
     setIsSubmitting(true);
     try {
-      if (isCreateCar) await submitCreateCar();
-      else if (isEditCar) await submitUpdateCar();
-      else if (isCreateCarAndListing) await submitCreate();
-      else if (isCreateListingOnly) await submitCreateListingOnly();
-      else await submitEdit();
+      if (isCreateCar) await submitCreateCar();else
+      if (isEditCar) await submitUpdateCar();else
+      if (isCreateCarAndListing) await submitCreate();else
+      if (isCreateListingOnly) await submitCreateListingOnly();else
+      await submitEdit();
 
       if (isCarForm) {
         navigation.navigate('OwnerCars', { token, user });
@@ -777,7 +794,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Submit error:', error);
-      Alert.alert('Erreur', error.message || 'Sauvegarde impossible');
+      Alert.alert(t("screens.owner.carformscreen.erreur"), getFriendlyError(error, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -812,228 +829,228 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><Ionicons name="chevron-back" size={22} color="#fff" /></TouchableOpacity>
-          <Text style={styles.headerTitle}>{isCreateCarAndListing ? 'Publier un véhicule' : isCreateCar ? 'Ajouter un véhicule' : isCreateListingOnly ? 'Nouvelle annonce' : isEditCar ? 'Modifier le véhicule' : 'Modifier annonce'}</Text>
-          {isEditCar && car?.id ? (
-            <TouchableOpacity
-              onPress={() => navigation.navigate('OwnerCarReviews', { token, carId: car.id, car })}
-              style={styles.iconBtn}
-              activeOpacity={0.85}
-            >
+          <Text style={styles.headerTitle}>{isCreateCarAndListing ? 'Publier un véhicule' : isCreateCar ? t("screens.owner.carsscreen.ajouterUnVehicule") : isCreateListingOnly ? 'Nouvelle annonce' : isEditCar ? 'Modifier le véhicule' : 'Modifier annonce'}</Text>
+          {isEditCar && car?.id ?
+          <TouchableOpacity
+            onPress={() => navigation.navigate('OwnerCarReviews', { token, carId: car.id, car })}
+            style={styles.iconBtn}
+            activeOpacity={0.85}>
+            
               <Ionicons name="chatbubbles-outline" size={20} color="#fff" />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.iconBtn} />
-          )}
+            </TouchableOpacity> :
+
+          <View style={styles.iconBtn} />
+          }
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          {isCreateListingOnly ? (
-            <>
-              <Text style={styles.sectionTitle}>Vehicule</Text>
+          {isCreateListingOnly ?
+          <>
+              <Text style={styles.sectionTitle}>{t("screens.owner.carformscreen.vehicule")}</Text>
               <View style={styles.optionRow}>
-                {cars.map((car) => (
-                  <TouchableOpacity key={car.id} style={[styles.optionPill, form.carId === car.id && styles.optionPillActive]} onPress={() => setField('carId', car.id)}>
+                {cars.map((car) =>
+              <TouchableOpacity key={car.id} style={[styles.optionPill, form.carId === car.id && styles.optionPillActive]} onPress={() => setField('carId', car.id)}>
                     <Text style={[styles.optionText, form.carId === car.id && styles.optionTextActive]}>{car.brand} {car.model}</Text>
                   </TouchableOpacity>
-                ))}
+              )}
               </View>
-            </>
-          ) : null}
+            </> :
+          null}
 
-          {(isCarForm || isCreateCarAndListing) ? (
-            <>
-              <Text style={styles.sectionTitle}>Photos du véhicule</Text>
-              <Text style={styles.helpText}>Touchez une image pour la définir comme image principale.</Text>
+          {isCarForm || isCreateCarAndListing ?
+          <>
+              <Text style={styles.sectionTitle}>{t("screens.owner.carformscreen.photosDuVehicule")}</Text>
+              <Text style={styles.helpText}>{t("screens.owner.carformscreen.touchezUneImagePourLaDefinirComme")}</Text>
 
               <View style={styles.imagesGrid}>
-                {form.images.map((image, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.imageCard,
-                      image.isPrimary && styles.primaryImageCard,
-                    ]}
-                    onPress={() => {
-                      setForm((prev) => ({
-                        ...prev,
-                        images: prev.images.map((img, idx) => ({
-                          ...img,
-                          isPrimary: idx === index,
-                        })),
-                      }));
-                    }}
-                  >
+                {form.images.map((image, index) =>
+              <TouchableOpacity
+                key={index}
+                style={[
+                styles.imageCard,
+                image.isPrimary && styles.primaryImageCard]
+                }
+                onPress={() => {
+                  setForm((prev) => ({
+                    ...prev,
+                    images: prev.images.map((img, idx) => ({
+                      ...img,
+                      isPrimary: idx === index
+                    }))
+                  }));
+                }}>
+                
                     <Image source={{ uri: image.uri }} style={styles.previewImage} />
 
-                    {image.isPrimary ? (
-                      <View style={styles.primaryBadge}>
-                        <Text style={styles.primaryText}>Principale</Text>
+                    {image.isPrimary ?
+                <View style={styles.primaryBadge}>
+                        <Text style={styles.primaryText}>{t("screens.owner.carformscreen.principale")}</Text>
+                      </View> :
+
+                <View style={styles.secondaryBadge}>
+                        <Text style={styles.secondaryText}>{t("screens.owner.carformscreen.definirPrincipale")}</Text>
                       </View>
-                    ) : (
-                      <View style={styles.secondaryBadge}>
-                        <Text style={styles.secondaryText}>Définir principale</Text>
-                      </View>
-                    )}
+                }
 
                     <TouchableOpacity
-                      style={styles.deleteImageBtn}
-                      onPress={() => {
-                        setForm((prev) => {
-                          const updatedImages = prev.images.filter((_, idx) => idx !== index);
-                          if (!updatedImages.some((img) => img.isPrimary) && updatedImages.length > 0) {
-                            updatedImages[0].isPrimary = true;
-                          }
-                          return {
-                            ...prev,
-                            images: updatedImages,
-                          };
-                        });
-                      }}
-                    >
+                  style={styles.deleteImageBtn}
+                  onPress={() => {
+                    setForm((prev) => {
+                      const updatedImages = prev.images.filter((_, idx) => idx !== index);
+                      if (!updatedImages.some((img) => img.isPrimary) && updatedImages.length > 0) {
+                        updatedImages[0].isPrimary = true;
+                      }
+                      return {
+                        ...prev,
+                        images: updatedImages
+                      };
+                    });
+                  }}>
+                  
                       <Ionicons name="trash" size={16} color="#fff" />
                     </TouchableOpacity>
                   </TouchableOpacity>
-                ))}
+              )}
 
-                {form.images.length < 3 && (
-                  <TouchableOpacity style={styles.addImageCard} onPress={pickImages}>
+                {form.images.length < 3 &&
+              <TouchableOpacity style={styles.addImageCard} onPress={pickImages}>
                     <Ionicons name="add" size={32} color="#8f7dff" />
                   </TouchableOpacity>
-                )}
+              }
               </View>
 
-              <Text style={styles.sectionTitle}>{isCarForm ? (isEditCar ? 'Modifier le véhicule' : 'Ajouter un véhicule') : 'Informations générales'}</Text>
+              <Text style={styles.sectionTitle}>{isCarForm ? isEditCar ? 'Modifier le véhicule' : t("screens.owner.carsscreen.ajouterUnVehicule") : 'Informations générales'}</Text>
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
-                  <Text style={styles.label}>Marque *</Text>
+                  <Text style={styles.label}>{t("screens.owner.carformscreen.marque")}</Text>
                   <TextInput style={styles.input} value={form.brand} onChangeText={(v) => setField('brand', v)} />
                 </View>
                 <View style={styles.col}>
-                  <Text style={styles.label}>Modèle *</Text>
+                  <Text style={styles.label}>{t("screens.owner.carformscreen.modele")}</Text>
                   <TextInput style={styles.input} value={form.model} onChangeText={(v) => setField('model', v)} />
                 </View>
               </View>
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
-                  <Text style={styles.label}>Année *</Text>
+                  <Text style={styles.label}>{t("screens.owner.carformscreen.annee")}</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={form.year} onChangeText={(v) => setField('year', v)} />
                 </View>
                 <View style={styles.col}>
-                  <Text style={styles.label}>Couleur</Text>
+                  <Text style={styles.label}>{t("screens.owner.carformscreen.couleur")}</Text>
                   <TextInput style={styles.input} value={form.color} onChangeText={(v) => setField('color', v)} />
                 </View>
               </View>
 
-              <Text style={styles.label}>Carburant *</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.carburant")}</Text>
               <View style={styles.optionRow}>
-                {fuelOptions.map((fuel) => (
-                  <TouchableOpacity
-                    key={fuel}
-                    style={[styles.optionPill, form.fuelType === fuel && styles.optionPillActive]}
-                    onPress={() => setField('fuelType', fuel)}
-                  >
+                {fuelOptions.map((fuel) =>
+              <TouchableOpacity
+                key={fuel}
+                style={[styles.optionPill, form.fuelType === fuel && styles.optionPillActive]}
+                onPress={() => setField('fuelType', fuel)}>
+                
                     <Text style={[styles.optionText, form.fuelType === fuel && styles.optionTextActive]}>{fuel}</Text>
                   </TouchableOpacity>
-                ))}
+              )}
               </View>
 
-              <Text style={styles.label}>Boîte *</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.boite")}</Text>
               <View style={styles.optionRow}>
-                {transmissionOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option}
-                    style={[styles.optionPill, form.transmission === option && styles.optionPillActive]}
-                    onPress={() => setField('transmission', option)}
-                  >
+                {transmissionOptions.map((option) =>
+              <TouchableOpacity
+                key={option}
+                style={[styles.optionPill, form.transmission === option && styles.optionPillActive]}
+                onPress={() => setField('transmission', option)}>
+                
                     <Text style={[styles.optionText, form.transmission === option && styles.optionTextActive]}>{option}</Text>
                   </TouchableOpacity>
-                ))}
+              )}
               </View>
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
-                  <Text style={styles.label}>Places *</Text>
+                  <Text style={styles.label}>{t("screens.owner.carformscreen.places")}</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={form.seats} onChangeText={(v) => setField('seats', v)} />
                 </View>
                 <View style={styles.col}>
-                  <Text style={styles.label}>Kilométrage</Text>
+                  <Text style={styles.label}>{t("screens.owner.carformscreen.kilometrage")}</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={form.mileage} onChangeText={(v) => setField('mileage', v)} />
                 </View>
               </View>
 
-              <Text style={styles.label}>Immatriculation</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.immatriculation")}</Text>
               <TextInput style={styles.input} value={form.registrationNumber} onChangeText={(v) => setField('registrationNumber', v)} />
 
-              <Text style={styles.label}>Description</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.description")}</Text>
               <TextInput style={[styles.input, styles.textArea]} multiline value={form.description} onChangeText={(v) => setField('description', v)} />
 
-              <Text style={styles.sectionTitle}>Documents du véhicule</Text>
+              <Text style={styles.sectionTitle}>{t("screens.owner.carformscreen.documentsDuVehicule")}</Text>
               <View style={styles.documentsContainer}>
                 {[
-                  {
-                    key: 'carte_grise',
-                    label: 'Carte grise',
-                  },
-                  {
-                    key: 'insurance',
-                    label: 'Assurance',
-                  },
-                  {
-                    key: 'technical_control',
-                    label: 'Contrôle technique',
-                  },
-                ].map((doc) => {
-                  const document = form.documents[doc.key] || {};
-                  const staged = stagedDocuments[doc.key];
+              {
+                key: 'carte_grise',
+                label: t("screens.owner.carformscreen.carteGrise")
+              },
+              {
+                key: 'insurance',
+                label: t("screens.owner.carformscreen.assurance")
+              },
+              {
+                key: 'technical_control',
+                label: t("screens.owner.carformscreen.controleTechnique")
+              }].
+              map((doc) => {
+                const document = form.documents[doc.key] || {};
+                const staged = stagedDocuments[doc.key];
 
-                  if (staged) {
-                    return (
-                      <View key={doc.key} style={styles.documentCard}>
+                if (staged) {
+                  return (
+                    <View key={doc.key} style={styles.documentCard}>
                         <Ionicons
-                          name="document-text-outline"
-                          size={24}
-                          color="#ffb347"
-                        />
+                        name="document-text-outline"
+                        size={24}
+                        color="#ffb347" />
+                      
                         <View style={{ flex: 1 }}>
                           <Text style={styles.docTitle}>{doc.label}</Text>
                           <Text style={styles.docName} numberOfLines={1}>
                             {staged.name}
                           </Text>
-                          <Text style={{ fontSize: 12, color: '#ffb347', marginTop: 4 }}>
-                            Nouveau fichier (non enregistré)
-                          </Text>
+                          <Text style={{ fontSize: 12, color: '#ffb347', marginTop: 4 }}>{t("screens.owner.carformscreen.nouveauFichierNonEnregistre")}
+
+                        </Text>
                         </View>
                         <View style={styles.documentActions}>
                           <TouchableOpacity
-                            style={[styles.documentActionBtn, { backgroundColor: 'rgba(46, 204, 113, 0.2)' }]}
-                            onPress={() => confirmDocumentUpload(doc.key)}
-                          >
+                          style={[styles.documentActionBtn, { backgroundColor: 'rgba(46, 204, 113, 0.2)' }]}
+                          onPress={() => confirmDocumentUpload(doc.key)}>
+                          
                             <Ionicons name="checkmark-outline" size={18} color="#2ecc71" />
                           </TouchableOpacity>
                           <TouchableOpacity
-                            style={[styles.documentActionBtn, { backgroundColor: 'rgba(255, 107, 107, 0.2)' }]}
-                            onPress={() => cancelDocumentUpload(doc.key)}
-                          >
+                          style={[styles.documentActionBtn, { backgroundColor: 'rgba(255, 107, 107, 0.2)' }]}
+                          onPress={() => cancelDocumentUpload(doc.key)}>
+                          
                             <Ionicons name="close-outline" size={18} color="#ff6b6b" />
                           </TouchableOpacity>
                         </View>
-                      </View>
-                    );
-                  }
+                      </View>);
 
-                  return (
-                    <TouchableOpacity
-                      key={doc.key}
-                      style={styles.documentCard}
-                      onPress={() => handleDocumentPress(doc.key)}
-                    >
+                }
+
+                return (
+                  <TouchableOpacity
+                    key={doc.key}
+                    style={styles.documentCard}
+                    onPress={() => handleDocumentPress(doc.key)}>
+                    
                       <Ionicons
-                        name="document-text-outline"
-                        size={24}
-                        color="#8f7dff"
-                      />
+                      name="document-text-outline"
+                      size={24}
+                      color="#8f7dff" />
+                    
 
                       <View style={{ flex: 1 }}>
                         <Text style={styles.docTitle}>{doc.label}</Text>
@@ -1041,97 +1058,97 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
                           {document.uri ? document.name : 'Ajouter un document'}
                         </Text>
                         <View
-                          style={[
-                            styles.docStatusBadge,
-                            { backgroundColor: getStatusColor(document.status) },
-                          ]}
-                        >
+                        style={[
+                        styles.docStatusBadge,
+                        { backgroundColor: getStatusColor(document.status) }]
+                        }>
+                        
                           <Text style={styles.docStatusText}>
                             {getStatusText(document.status)}
                           </Text>
                         </View>
-                        {getDocumentReason(document) ? (
-                          <Text style={styles.docReasonText} numberOfLines={2}>
+                        {getDocumentReason(document) ?
+                      <Text style={styles.docReasonText} numberOfLines={2}>
                             {getDocumentReason(document)}
-                          </Text>
-                        ) : null}
+                          </Text> :
+                      null}
                       </View>
 
                       <View style={styles.documentActions}>
-                        {document.uri ? (
-                          <>
+                        {document.uri ?
+                      <>
                             <TouchableOpacity
-                              style={styles.documentActionBtn}
-                              onPress={() => pickDocument(doc.key)}
-                            >
+                          style={styles.documentActionBtn}
+                          onPress={() => pickDocument(doc.key)}>
+                          
                               <Ionicons name="create-outline" size={18} color="#8f7dff" />
                             </TouchableOpacity>
                             <TouchableOpacity
-                              style={styles.documentActionBtn}
-                              onPress={() => handleDocumentDelete(doc.key)}
-                            >
+                          style={styles.documentActionBtn}
+                          onPress={() => handleDocumentDelete(doc.key)}>
+                          
                               <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
                             </TouchableOpacity>
-                          </>
-                        ) : (
-                          <TouchableOpacity
-                            style={styles.documentActionBtn}
-                            onPress={() => pickDocument(doc.key)}
-                          >
+                          </> :
+
+                      <TouchableOpacity
+                        style={styles.documentActionBtn}
+                        onPress={() => pickDocument(doc.key)}>
+                        
                             <Ionicons name="cloud-upload-outline" size={18} color="#8f7dff" />
                           </TouchableOpacity>
-                        )}
+                      }
                       </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </>
-          ) : null}
+                    </TouchableOpacity>);
 
-          {!isCarForm ? (
-            <>
-              <Text style={styles.sectionTitle}>Tarification & Localisation</Text>
-              <Text style={styles.label}>Titre annonce *</Text>
+              })}
+              </View>
+            </> :
+          null}
+
+          {!isCarForm ?
+          <>
+              <Text style={styles.sectionTitle}>{t("screens.owner.carformscreen.tarificationLocalisation")}</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.titreAnnonce")}</Text>
               <TextInput style={styles.input} value={form.title} onChangeText={(v) => setField('title', v)} />
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
-                  <Text style={styles.label}>Prix / jour (DA) *</Text>
+                  <Text style={styles.label}>{t("screens.owner.carformscreen.prixJourDa")}</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={form.pricePerDay} onChangeText={(v) => setField('pricePerDay', v)} />
                 </View>
                 <View style={styles.col}>
-                  <Text style={styles.label}>Ville *</Text>
+                  <Text style={styles.label}>{t("screens.owner.carformscreen.ville")}</Text>
                   <TextInput style={styles.input} value={form.city} onChangeText={(v) => setField('city', v)} />
                 </View>
               </View>
 
-              <Text style={styles.label}>Adresse de recuperation (chez vous / agence) *</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.adresseDeRecuperationChezVousAgence")}</Text>
               <TextInput
-                style={styles.input}
-                value={form.pickupAddress}
-                onChangeText={(v) => setField('pickupAddress', v)}
-                placeholder="Ex: 12 Rue ..., Alger"
-                placeholderTextColor="#9aa3d8"
-              />
+              style={styles.input}
+              value={form.pickupAddress}
+              onChangeText={(v) => setField('pickupAddress', v)}
+              placeholder={t("screens.owner.carformscreen.ex12RueAlger")}
+              placeholderTextColor="#9aa3d8" />
+            
 
-              <Text style={styles.label}>Frais de livraison (DA)</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.fraisDeLivraisonDa")}</Text>
               <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={form.deliveryFee}
-                onChangeText={(v) => setField('deliveryFee', v)}
-                placeholder="0"
-                placeholderTextColor="#9aa3d8"
-              />
+              style={styles.input}
+              keyboardType="numeric"
+              value={form.deliveryFee}
+              onChangeText={(v) => setField('deliveryFee', v)}
+              placeholder="0"
+              placeholderTextColor="#9aa3d8" />
+            
 
-              <Text style={styles.label}>Pays *</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.pays")}</Text>
               <TextInput style={styles.input} value={form.country} onChangeText={(v) => setField('country', v)} />
 
-              <Text style={styles.label}>Description *</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.description2")}</Text>
               <TextInput style={[styles.input, styles.textArea]} multiline value={form.description} onChangeText={(v) => setField('description', v)} />
 
-              <Text style={styles.label}>Selectionnez vos dates *</Text>
+              <Text style={styles.label}>{t("screens.owner.carformscreen.selectionnezVosDates")}</Text>
               <TouchableOpacity style={styles.dateInput} onPress={() => setIsRangeCalendarOpen((prev) => !prev)}>
                 <Text style={form.availableFrom ? styles.dateValue : styles.datePlaceholder}>
                   {form.availableFrom ? `${form.availableFrom} -> ${form.availableTo || '...'}` : 'Choisir la periode'}
@@ -1139,57 +1156,57 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
                 <Ionicons name="calendar-outline" size={18} color="#cfd3ff" />
               </TouchableOpacity>
 
-              {isRangeCalendarOpen ? (
-                <View style={styles.datePickerWrap}>
+              {isRangeCalendarOpen ?
+            <View style={styles.datePickerWrap}>
                   <View style={styles.legendRow}>
-                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#cf62ff' }]} /><Text style={styles.legendText}>Selection</Text></View>
-                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#2f3568' }]} /><Text style={styles.legendText}>Indisponible</Text></View>
+                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#cf62ff' }]} /><Text style={styles.legendText}>{t("screens.owner.carformscreen.selection")}</Text></View>
+                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#2f3568' }]} /><Text style={styles.legendText}>{t("screens.owner.carformscreen.indisponible")}</Text></View>
                   </View>
 
                   <Calendar
-                    markingType="custom"
-                    markedDates={markedDates}
-                    onDayPress={handleRangeDayPress}
-                    firstDay={1}
-                    monthFormat={'MMMM yyyy'}
-                    current={form.availableFrom || undefined}
-                    theme={{
-                      backgroundColor: 'transparent',
-                      calendarBackground: 'transparent',
-                      textSectionTitleColor: '#e4e8ff',
-                      monthTextColor: '#fff',
-                      dayTextColor: '#fff',
-                      todayTextColor: '#cf62ff',
-                      arrowColor: '#cf62ff',
-                      textMonthFontSize: 30 / 1.6,
-                      textMonthFontWeight: '700',
-                      textDayHeaderFontSize: 15,
-                      textDayHeaderFontWeight: '700',
-                      'stylesheet.day.basic': {
-                        base: {
-                          width: 42,
-                          height: 42,
-                          borderRadius: 14,
-                          backgroundColor: '#2f3568',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        },
-                      },
-                    }}
-                  />
+                markingType="custom"
+                markedDates={markedDates}
+                onDayPress={handleRangeDayPress}
+                firstDay={1}
+                monthFormat={'MMMM yyyy'}
+                current={form.availableFrom || undefined}
+                theme={{
+                  backgroundColor: 'transparent',
+                  calendarBackground: 'transparent',
+                  textSectionTitleColor: '#e4e8ff',
+                  monthTextColor: '#fff',
+                  dayTextColor: '#fff',
+                  todayTextColor: '#cf62ff',
+                  arrowColor: '#cf62ff',
+                  textMonthFontSize: 30 / 1.6,
+                  textMonthFontWeight: '700',
+                  textDayHeaderFontSize: 15,
+                  textDayHeaderFontWeight: '700',
+                  'stylesheet.day.basic': {
+                    base: {
+                      width: 42,
+                      height: 42,
+                      borderRadius: 14,
+                      backgroundColor: '#2f3568',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }
+                  }
+                }} />
+              
                   <Text style={styles.hint}>{isSelectingEndDate ? 'Selectionnez la date de fin.' : 'Periode selectionnee.'}</Text>
-                </View>
-              ) : null}
-            </>
-          ) : null}
+                </View> :
+            null}
+            </> :
+          null}
 
           <TouchableOpacity style={[styles.submitBtn, (!canSubmit || isSubmitting) && styles.submitBtnDisabled]} onPress={submit} disabled={!canSubmit || isSubmitting}>
             <Text style={styles.submitText}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 };
 
 // Debug: Log if updateOwnerCar is available on mount
@@ -1210,7 +1227,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.06)'
   },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
   content: { paddingBottom: 24 },
@@ -1226,7 +1243,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(21,23,58,0.9)',
     color: '#fff',
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 12
   },
   textArea: { minHeight: 92, textAlignVertical: 'top' },
   imageRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
@@ -1237,7 +1254,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.08)'
   },
   addImageButton: {
     flexDirection: 'row',
@@ -1247,7 +1264,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 8
   },
   addImageButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   hint: { color: '#bfc5ed', marginTop: 8, marginBottom: 4, lineHeight: 20 },
@@ -1257,7 +1274,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(146,151,214,0.3)',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 8
   },
   optionPillActive: { backgroundColor: 'rgba(143,125,255,0.22)', borderColor: '#8f7dff' },
   optionText: { color: '#aeb4dc', fontWeight: '500' },
@@ -1271,7 +1288,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   dateValue: { color: '#fff' },
   datePlaceholder: { color: '#8389b6' },
@@ -1282,7 +1299,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(146,151,214,0.35)',
     backgroundColor: '#1b245b',
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 8
   },
   legendRow: { flexDirection: 'row', gap: 10, marginBottom: 8, paddingHorizontal: 8 },
   legendItem: {
@@ -1293,7 +1310,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(186,192,241,0.35)',
     backgroundColor: '#2a3269',
     paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingVertical: 7
   },
   legendDot: { width: 10, height: 10, borderRadius: 999, marginRight: 8 },
   legendText: { color: '#e7ebff', fontWeight: '700', fontSize: 12 },
@@ -1308,7 +1325,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'transparent'
   },
   primaryImageCard: { borderColor: '#8f7dff' },
   previewImage: { width: '100%', height: '100%' },
@@ -1321,7 +1338,7 @@ const styles = StyleSheet.create({
     borderColor: '#8f7dff',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(143,125,255,0.08)',
+    backgroundColor: 'rgba(143,125,255,0.08)'
   },
   deleteImageBtn: {
     position: 'absolute',
@@ -1332,7 +1349,7 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 999,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   primaryBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: '#8f7dff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   primaryText: { color: '#fff', fontSize: 11, fontWeight: '700' },
@@ -1343,7 +1360,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(143,125,255,0.85)',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
+    borderRadius: 999
   },
   secondaryText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   documentsContainer: { gap: 12, marginTop: 10 },
@@ -1355,7 +1372,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.25)',
+    borderColor: 'rgba(146,151,214,0.25)'
   },
   docTitle: { color: '#fff', fontWeight: '700' },
   docName: { color: '#aeb4dc', marginTop: 4, maxWidth: 160 },
@@ -1369,6 +1386,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
+    backgroundColor: 'rgba(255,255,255,0.08)'
+  }
 });

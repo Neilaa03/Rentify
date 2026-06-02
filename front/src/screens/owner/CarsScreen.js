@@ -7,17 +7,17 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
-} from 'react-native';
+  Alert } from
+'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { fetchJson } from '../../services/api';
 import { deleteOwnerCar } from '../../services/owner';
 import CarCard from '../../components/cards/CarCard';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
-import AppBackground from '../../components/layout/AppBackground';
+import AppBackground from '../../components/layout/AppBackground';import { useTranslation } from "react-i18next";
 
-const OwnerCarsScreen = ({ navigation, route }) => {
+const OwnerCarsScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -35,7 +35,7 @@ const OwnerCarsScreen = ({ navigation, route }) => {
 
     try {
       const data = await fetchJson('/api/cars/my', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }
       });
       setCars(Array.isArray(data) ? data : []);
       setError('');
@@ -62,30 +62,30 @@ const OwnerCarsScreen = ({ navigation, route }) => {
       token,
       user,
       mode: 'edit_car',
-      car,
+      car
     });
   };
 
   const handleDeleteCar = (car) => {
-    Alert.alert(
-      'Supprimer le véhicule',
-      `Êtes-vous sûr de vouloir supprimer le véhicule "${car.brand} ${car.model}" ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteOwnerCar({ token, carId: car.id });
-              loadCars();
-            } catch (err) {
-              console.error(err);
-              Alert.alert('Erreur', 'Impossible de supprimer le véhicule. Réessayez plus tard.');
-            }
-          },
-        },
-      ]
+    Alert.alert(t("screens.owner.carsscreen.supprimerLeVehicule"),
+
+    `Êtes-vous sûr de vouloir supprimer le véhicule "${car.brand} ${car.model}" ?`,
+    [
+    { text: t("screens.agency.agencyprofilescreen.annuler"), style: 'cancel' },
+    {
+      text: t("components.cards.carcard.supprimer"),
+      style: 'destructive',
+      onPress: async () => {
+        try {
+          await deleteOwnerCar({ token, carId: car.id });
+          loadCars();
+        } catch (err) {
+          console.error(err);
+          Alert.alert(t("screens.owner.carsscreen.erreur"), t("screens.owner.carsscreen.impossibleDeSupprimerLeVehiculeReessayezPlus"));
+        }
+      }
+    }]
+
     );
   };
 
@@ -93,37 +93,37 @@ const OwnerCarsScreen = ({ navigation, route }) => {
     navigation.navigate('OwnerCarForm', {
       token,
       user,
-      mode: 'create_car',
+      mode: 'create_car'
     });
   };
 
-  const renderCarCard = ({ item }) => (
-    <CarCard
-      car={item}
-      onPress={() => handleEditCar(item)}
-      onEdit={() => handleEditCar(item)}
-      onDelete={() => handleDeleteCar(item)}
-      onReviewsPress={() => navigation.navigate('OwnerCarReviews', { token, carId: item.id, car: item })}
-    />
-  );
+  const renderCarCard = ({ item }) =>
+  <CarCard
+    car={item}
+    onPress={() => handleEditCar(item)}
+    onEdit={() => handleEditCar(item)}
+    onDelete={() => handleDeleteCar(item)}
+    onReviewsPress={() => navigation.navigate('OwnerCarReviews', { token, carId: item.id, car: item })} />;
 
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
+
+
+  const renderEmptyState = () =>
+  <View style={styles.emptyContainer}>
       <Ionicons name="car" size={64} color={COLORS.lightGray} />
-      <Text style={styles.emptyTitle}>Aucun véhicule</Text>
-      <Text style={styles.emptySubtitle}>
-        Ajoutez votre premier véhicule pour commencer
-      </Text>
+      <Text style={styles.emptyTitle}>{t("screens.owner.carsscreen.aucunVehicule")}</Text>
+      <Text style={styles.emptySubtitle}>{t("screens.owner.carsscreen.ajoutezVotrePremierVehiculePourCommencer")}
+
+    </Text>
       <TouchableOpacity
-        style={styles.addButton}
-        onPress={handleAddCar}
-      >
+      style={styles.addButton}
+      onPress={handleAddCar}>
+      
         <Ionicons name="add" size={24} color="#fff" />
-        <Text style={styles.addButtonText}>Ajouter un véhicule</Text>
+        <Text style={styles.addButtonText}>{t("screens.owner.carsscreen.ajouterUnVehicule")}</Text>
       </TouchableOpacity>
-    </View>
-  );
+    </View>;
+
 
   if (isLoading) {
     return (
@@ -131,60 +131,60 @@ const OwnerCarsScreen = ({ navigation, route }) => {
         <ActivityIndicator
           size="large"
           color={COLORS.primary}
-          style={styles.loader}
-        />
-      </AppBackground>
-    );
+          style={styles.loader} />
+        
+      </AppBackground>);
+
   }
 
   return (
     <AppBackground>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mes voitures</Text>
+        <Text style={styles.headerTitle}>{t("screens.owner.carsscreen.mesVoitures")}</Text>
         <TouchableOpacity
           style={styles.addIconButton}
-          onPress={handleAddCar}
-        >
+          onPress={handleAddCar}>
+          
           <Ionicons name="add" size={24} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
 
-      {error ? (
-        <View style={styles.errorContainer}>
+      {error ?
+      <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
-            style={styles.retryButton}
-            onPress={loadCars}
-          >
-            <Text style={styles.retryButtonText}>Réessayer</Text>
+          style={styles.retryButton}
+          onPress={loadCars}>
+          
+            <Text style={styles.retryButtonText}>{t("screens.owner.carsscreen.reessayer")}</Text>
           </TouchableOpacity>
-        </View>
-      ) : cars.length === 0 ? (
-        renderEmptyState()
-      ) : (
-        <FlatList
-          data={cars}
-          renderItem={renderCarCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={COLORS.primary}
-            />
-          }
-        />
-      )}
+        </View> :
+      cars.length === 0 ?
+      renderEmptyState() :
+
+      <FlatList
+        data={cars}
+        renderItem={renderCarCard}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={COLORS.primary} />
+
+        } />
+
+      }
       <OwnerBottomNavigation navigation={navigation} route={route} active="cars" />
-    </AppBackground>
-  );
+    </AppBackground>);
+
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'transparent'
   },
   header: {
     flexDirection: 'row',
@@ -193,12 +193,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderColor,
+    borderBottomColor: COLORS.borderColor
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.text,
+    color: COLORS.text
   },
   addIconButton: {
     width: 40,
@@ -206,11 +206,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: COLORS.lightGray,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   listContent: {
     padding: 16,
-    paddingBottom: 96,
+    paddingBottom: 96
   },
   carCard: {
     backgroundColor: COLORS.cardBackground,
@@ -218,16 +218,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.borderColor,
+    borderColor: COLORS.borderColor
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: 180,
+    height: 180
   },
   carImage: {
     width: '100%',
-    height: '100%',
+    height: '100%'
   },
   onlineBadge: {
     position: 'absolute',
@@ -236,64 +236,64 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 20,
+    borderRadius: 20
   },
   onlineText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   contentContainer: {
     padding: 14,
-    gap: 12,
+    gap: 12
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'flex-start'
   },
   titleSection: {
-    flex: 1,
+    flex: 1
   },
   carName: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.text,
+    color: COLORS.text
   },
   carSubtitle: {
     fontSize: 13,
     color: COLORS.gray,
-    marginTop: 4,
+    marginTop: 4
   },
   price: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: COLORS.primary
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 16,
+    gap: 16
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 6
   },
   statText: {
     fontSize: 13,
-    color: COLORS.gray,
+    color: COLORS.gray
   },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 8
   },
   disponibleText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.text
   },
   toggleSwitch: {
     width: 48,
@@ -301,18 +301,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#4f8cff',
     padding: 2,
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   toggleActive: {
     width: 24,
     height: 24,
     borderRadius: 12,
     backgroundColor: '#10b981',
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-end'
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 10
   },
   editButton: {
     flex: 1,
@@ -322,12 +322,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     paddingVertical: 10,
     borderRadius: 8,
-    gap: 6,
+    gap: 6
   },
   editText: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   deleteButton: {
     flex: 1,
@@ -338,30 +338,30 @@ const styles = StyleSheet.create({
     borderColor: '#ff5a5a',
     paddingVertical: 10,
     borderRadius: 8,
-    gap: 6,
+    gap: 6
   },
   deleteText: {
     color: '#ff5a5a',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 32
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: COLORS.text,
-    marginTop: 16,
+    marginTop: 16
   },
   emptySubtitle: {
     fontSize: 14,
     color: COLORS.gray,
     marginTop: 8,
-    textAlign: 'center',
+    textAlign: 'center'
   },
   addButton: {
     flexDirection: 'row',
@@ -372,40 +372,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 8,
     marginTop: 24,
-    gap: 8,
+    gap: 8
   },
   addButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 32
   },
   errorText: {
     fontSize: 16,
     color: COLORS.error,
-    textAlign: 'center',
+    textAlign: 'center'
   },
   retryButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    marginTop: 16,
+    marginTop: 16
   },
   retryButtonText: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   loader: {
     flex: 1,
-    justifyContent: 'center',
-  },
+    justifyContent: 'center'
+  }
 });
 
 export default OwnerCarsScreen;

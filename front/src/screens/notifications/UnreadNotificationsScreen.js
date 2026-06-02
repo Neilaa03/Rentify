@@ -5,8 +5,8 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
+  ActivityIndicator } from
+'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,17 +14,18 @@ import {
   getNotifications,
   getNotificationUnreadCount,
   markNotificationAsRead,
-  markAllNotificationsAsRead,
-} from '../../services/notifications';
+  markAllNotificationsAsRead } from
+'../../services/notifications';
 import storage from '../../utils/storage';
-import { API_ENDPOINTS } from '../../constants/api';
+import { API_ENDPOINTS } from '../../constants/api';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
-const NotificationRow = ({ item, onPress }) => (
-  <TouchableOpacity
-    style={[styles.notificationRow, !item.is_read && styles.unreadNotification]}
-    onPress={() => onPress(item)}
-    activeOpacity={0.85}
-  >
+const NotificationRow = ({ item, onPress }) =>
+<TouchableOpacity
+  style={[styles.notificationRow, !item.is_read && styles.unreadNotification]}
+  onPress={() => onPress(item)}
+  activeOpacity={0.85}>
+  
     <View style={styles.notificationHeader}>
       <Text style={[styles.notificationTitle, !item.is_read && styles.notificationTitleUnread]}>
         {item.title}
@@ -33,10 +34,10 @@ const NotificationRow = ({ item, onPress }) => (
     </View>
     <Text style={styles.notificationMessage}>{item.message}</Text>
     <Text style={styles.notificationDate}>{new Date(item.created_at).toLocaleString()}</Text>
-  </TouchableOpacity>
-);
+  </TouchableOpacity>;
 
-const UnreadNotificationsScreen = ({ navigation, route }) => {
+
+const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -52,8 +53,8 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {
       const response = await fetch(API_ENDPOINTS.RESERVATIONS.GET(reservationId), {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       });
       if (!response.ok) return;
 
@@ -64,7 +65,7 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {
         reservation,
         listing,
         token,
-        user,
+        user
       });
     } catch (err) {
       console.warn('Error loading owner reservation from notification:', err);
@@ -76,13 +77,13 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {
     setError('');
     try {
       const [items, count] = await Promise.all([
-        getNotifications({ filter: 'unread' }),
-        getNotificationUnreadCount(),
-      ]);
+      getNotifications({ filter: 'unread' }),
+      getNotificationUnreadCount()]
+      );
       setNotifications(Array.isArray(items) ? items : []);
       setUnreadCount(Number(count) || 0);
     } catch (err) {
-      setError(err.message || 'Impossible de charger les notifications');
+      setError(getFriendlyError(err, t));
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +102,7 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {
   const handleNotificationPress = async (notification) => {
     try {
       await markNotificationAsRead(notification.id);
-      setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n)));
+      setNotifications((prev) => prev.map((n) => n.id === notification.id ? { ...n, is_read: true } : n));
       setUnreadCount((prev) => Math.max(0, prev - (notification.is_read ? 0 : 1)));
     } catch (err) {
       console.warn('Error marking notification as read:', err);
@@ -110,11 +111,11 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {
     const { type, data } = notification;
 
     if (
-      type === 'reservation_created' ||
-      type === 'reservation_confirmed' ||
-      type === 'reservation_rejected' ||
-      type === 'payment_success'
-    ) {
+    type === 'reservation_created' ||
+    type === 'reservation_confirmed' ||
+    type === 'reservation_rejected' ||
+    type === 'payment_success')
+    {
       const reservationId = data?.reservationId;
       if (reservationId) {
         if (isOwner) {
@@ -137,7 +138,7 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {
       setNotifications([]);
       setUnreadCount(0);
     } catch (err) {
-      setError(err.message || 'Impossible de marquer toutes les notifications comme lues');
+      setError(getFriendlyError(err, t));
     }
   };
 
@@ -153,43 +154,43 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {
             <TouchableOpacity
               onPress={() => navigation.navigate('NotificationsHistory', { user })}
               style={styles.iconButton}
-              activeOpacity={0.85}
-            >
+              activeOpacity={0.85}>
+              
               <Ionicons name="time-outline" size={22} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllButton} activeOpacity={0.85}>
-              <Text style={styles.markAllText}>Tout lire</Text>
+              <Text style={styles.markAllText}>{t("screens.notifications.unreadnotificationsscreen.toutLire")}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
+        {isLoading ?
+        <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#8f6cff" />
-          </View>
-        ) : error ? (
-          <View style={styles.loadingContainer}>
+          </View> :
+        error ?
+        <View style={styles.loadingContainer}>
             <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={notifications}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <NotificationRow item={item} onPress={handleNotificationPress} />}
-            contentContainerStyle={notifications.length === 0 ? styles.emptyListContainer : styles.listContainer}
-            ListEmptyComponent={() => (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyTitle}>Aucune notification non lue</Text>
-                <Text style={styles.emptySubtitle}>Vous êtes à jour.</Text>
+          </View> :
+
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <NotificationRow item={item} onPress={handleNotificationPress} />}
+          contentContainerStyle={notifications.length === 0 ? styles.emptyListContainer : styles.listContainer}
+          ListEmptyComponent={() =>
+          <View style={styles.emptyState}>
+                <Text style={styles.emptyTitle}>{t("screens.notifications.unreadnotificationsscreen.aucuneNotificationNonLue")}</Text>
+                <Text style={styles.emptySubtitle}>{t("screens.notifications.unreadnotificationsscreen.vousEtesAJour")}</Text>
               </View>
-            )}
-            refreshing={isLoading}
-            onRefresh={handleRefresh}
-          />
-        )}
+          }
+          refreshing={isLoading}
+          onRefresh={handleRefresh} />
+
+        }
       </SafeAreaView>
-    </View>
-  );
+    </View>);
+
 };
 
 const styles = StyleSheet.create({
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: 'rgba(23, 26, 54, 0.92)',
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 12
   },
   unreadNotification: { borderWidth: 1, borderColor: '#8f6cff' },
   notificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   errorText: { color: '#ff7b89', textAlign: 'center' },
   emptyState: { alignItems: 'center', marginTop: 50 },
   emptyTitle: { color: '#f6f8ff', fontSize: 16, fontWeight: '700', marginBottom: 8 },
-  emptySubtitle: { color: '#8e95bf', textAlign: 'center' },
+  emptySubtitle: { color: '#8e95bf', textAlign: 'center' }
 });
 
 export default UnreadNotificationsScreen;

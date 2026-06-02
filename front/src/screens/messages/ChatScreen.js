@@ -29,7 +29,8 @@ const getNativeSaveModules = () => {
 import { getCurrentUserProfile } from '../../services/authSession';
 import { getThread, markThreadRead, sendMessage, uploadChatImage } from '../../services/messages';
 import { getSocket } from '../../services/socketClient';
-import { buildApiUrl } from '../../services/api';
+import { buildApiUrl } from '../../services/api';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const displayNameFor = (user) => {
   const first = (user?.firstName || user?.first_name || '').trim();
@@ -52,8 +53,8 @@ const isSameDay = (a, b) => {
   return (
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+    a.getDate() === b.getDate());
+
 };
 
 const formatDayLabel = (iso) => {
@@ -107,12 +108,12 @@ const initialsFor = (user) => {
 
 const avatarUriFor = (user) => {
   const raw =
-    user?.profilePicture ||
-    user?.profile_picture ||
-    user?.avatar ||
-    user?.avatarUrl ||
-    user?.photoUrl ||
-    '';
+  user?.profilePicture ||
+  user?.profile_picture ||
+  user?.avatar ||
+  user?.avatarUrl ||
+  user?.photoUrl ||
+  '';
   const uri = String(raw || '').trim();
   if (!uri) return null;
   if (/^https?:\/\//i.test(uri)) return uri;
@@ -120,7 +121,7 @@ const avatarUriFor = (user) => {
   return buildApiUrl(path);
 };
 
-const ChatScreen = ({ navigation, route }) => {
+const ChatScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const otherUserId = route?.params?.otherUserId;
   const otherUser = route?.params?.otherUser || { id: otherUserId };
   const isNewConversation = Boolean(route?.params?.isNewConversation);
@@ -155,10 +156,10 @@ const ChatScreen = ({ navigation, route }) => {
     try {
       listRef.current?.scrollToEnd?.({ animated: true });
     } catch (_err) {
-      // ignore
-    }
-  }, []);
 
+
+      // ignore
+    }}, []);
   const load = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -172,11 +173,11 @@ const ChatScreen = ({ navigation, route }) => {
       const updated = await markThreadRead({ otherUserId });
       const ids = new Set((updated || []).map((m) => m?.id).filter(Boolean));
       if (ids.size) {
-        setMessages((prev) => prev.map((m) => (ids.has(m?.id) ? { ...m, isRead: true } : m)));
+        setMessages((prev) => prev.map((m) => ids.has(m?.id) ? { ...m, isRead: true } : m));
       }
       setTimeout(scrollToEnd, 50);
     } catch (e) {
-      setError(e?.message || 'Impossible de charger la discussion');
+      setError(getFriendlyError(e, t));
     } finally {
       setIsLoading(false);
     }
@@ -204,8 +205,8 @@ const ChatScreen = ({ navigation, route }) => {
       const onNewMessage = async (msg) => {
         if (!msg) return;
         const involvesThisThread =
-          (msg.senderId === otherUserId && msg.receiverId === me?.id) ||
-          (msg.senderId === me?.id && msg.receiverId === otherUserId);
+        msg.senderId === otherUserId && msg.receiverId === me?.id ||
+        msg.senderId === me?.id && msg.receiverId === otherUserId;
         if (!involvesThisThread) return;
 
         appendMessage(msg);
@@ -215,7 +216,7 @@ const ChatScreen = ({ navigation, route }) => {
             const updated = await markThreadRead({ otherUserId });
             const ids = new Set((updated || []).map((m) => m?.id).filter(Boolean));
             if (ids.size) {
-              setMessages((prev) => prev.map((m) => (ids.has(m?.id) ? { ...m, isRead: true } : m)));
+              setMessages((prev) => prev.map((m) => ids.has(m?.id) ? { ...m, isRead: true } : m));
             }
           } catch (_err) {}
         }
@@ -225,13 +226,13 @@ const ChatScreen = ({ navigation, route }) => {
 
       const onMessageRead = (updated) => {
         if (!updated?.id) return;
-        setMessages((prev) => prev.map((m) => (m?.id === updated.id ? { ...m, isRead: true } : m)));
+        setMessages((prev) => prev.map((m) => m?.id === updated.id ? { ...m, isRead: true } : m));
       };
 
       const onThreadRead = (payload) => {
         const ids = payload?.messageIds;
         if (!Array.isArray(ids) || ids.length === 0) return;
-        setMessages((prev) => prev.map((m) => (ids.includes(m?.id) ? { ...m, isRead: true } : m)));
+        setMessages((prev) => prev.map((m) => ids.includes(m?.id) ? { ...m, isRead: true } : m));
       };
 
       const onTyping = (payload) => {
@@ -281,10 +282,10 @@ const ChatScreen = ({ navigation, route }) => {
       const socket = await getSocket();
       socket.emit('typing', { to: otherUserId, isTyping });
     } catch (_err) {
-      // ignore
-    }
-  }, [otherUserId]);
 
+
+      // ignore
+    }}, [otherUserId]);
   const onChangeText = useCallback((next) => {
     setText(next);
     sendTyping(next.trim().length > 0);
@@ -319,12 +320,12 @@ const ChatScreen = ({ navigation, route }) => {
         appendMessage(saved);
         setTimeout(scrollToEnd, 30);
       } catch (e) {
-        Alert.alert('Upload failed', e?.message || 'Unable to upload image');
+        Alert.alert(t("screens.messages.chatscreen.uploadFailed"), getFriendlyError(e, t, 'common.errors.upload'));
       } finally {
         setIsUploadingImage(false);
       }
     },
-    [appendMessage, otherUserId, scrollToEnd],
+    [appendMessage, otherUserId, scrollToEnd]
   );
 
   const pickFromCamera = useCallback(async () => {
@@ -333,7 +334,7 @@ const ChatScreen = ({ navigation, route }) => {
       if (!perm?.granted) return;
       const res = await ImagePicker.launchCameraAsync({
         quality: 0.8,
-        allowsEditing: true,
+        allowsEditing: true
       });
       const asset = res?.assets?.[0];
       if (res?.canceled || !asset?.uri) return;
@@ -348,7 +349,7 @@ const ChatScreen = ({ navigation, route }) => {
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaType?.Images ? [ImagePicker.MediaType.Images] : ImagePicker.MediaTypeOptions.Images,
         quality: 0.85,
-        allowsEditing: true,
+        allowsEditing: true
       });
       const asset = res?.assets?.[0];
       if (res?.canceled || !asset?.uri) return;
@@ -358,11 +359,11 @@ const ChatScreen = ({ navigation, route }) => {
 
   const onPressCamera = useCallback(() => {
     if (isUploadingImage) return;
-    Alert.alert('Send a photo', 'Choose a source', [
-      { text: 'Camera', onPress: pickFromCamera },
-      { text: 'Gallery', onPress: pickFromGallery },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    Alert.alert(t("screens.messages.chatscreen.sendAPhoto"), t("screens.messages.chatscreen.chooseASource"), [
+    { text: 'Camera', onPress: pickFromCamera },
+    { text: 'Gallery', onPress: pickFromGallery },
+    { text: 'Cancel', style: 'cancel' }]
+    );
   }, [isUploadingImage, pickFromCamera, pickFromGallery]);
 
   const openImage = useCallback(async (url) => {
@@ -402,15 +403,15 @@ const ChatScreen = ({ navigation, route }) => {
       const { FileSystem, FileSystemLegacy, MediaLibrary, Sharing } = getNativeSaveModules();
       const dlLib = FileSystemLegacy || FileSystem;
       if (!dlLib) {
-        Alert.alert(
-          'Missing dependency',
-          'Install required packages: expo-file-system, then restart the app.',
+        Alert.alert(t("screens.messages.chatscreen.missingDependency"), t("screens.messages.chatscreen.installRequiredPackagesExpoFileSystemThen")
+
+
         );
         return;
       }
 
       const filename = `rentify_${Date.now()}.jpg`;
-      const cacheDir = (dlLib.cacheDirectory || dlLib.documentDirectory || '');
+      const cacheDir = dlLib.cacheDirectory || dlLib.documentDirectory || '';
       const target = `${cacheDir}${filename}`;
       const dl = await dlLib.downloadAsync(url, target);
 
@@ -422,17 +423,17 @@ const ChatScreen = ({ navigation, route }) => {
         if (hasFullAccess) {
           try {
             const asset = await MediaLibrary.createAssetAsync(dl.uri);
-            await MediaLibrary.createAlbumAsync('Rentify', asset, false).catch(() => {});
+            await MediaLibrary.createAlbumAsync(t("screens.client.landingscreen.rentify"), asset, false).catch(() => {});
             const info = await MediaLibrary.getAssetInfoAsync(asset).catch(() => null);
             if (info?.localUri || info?.uri) {
-              Alert.alert('Saved', 'Image saved to your Photos.');
+              Alert.alert(t("screens.messages.chatscreen.saved"), t("screens.messages.chatscreen.imageSavedToYourPhotos"));
               return;
             }
           } catch (_e) {
+
+
             // fallback to share sheet
-          }
-        }
-      }
+          }}}
 
       // Expo Go fallback on Android: use Storage Access Framework to save to a user-chosen folder.
       const saf = FileSystem?.StorageAccessFramework;
@@ -442,7 +443,7 @@ const ChatScreen = ({ navigation, route }) => {
           const destUri = await saf.createFileAsync(dirPerm.directoryUri, filename, 'image/jpeg');
           const base64 = await dlLib.readAsStringAsync(dl.uri, { encoding: dlLib.EncodingType.Base64 });
           await saf.writeAsStringAsync(destUri, base64, { encoding: dlLib.EncodingType.Base64 });
-          Alert.alert('Saved', 'Image saved to the selected folder.');
+          Alert.alert(t("screens.messages.chatscreen.saved"), t("screens.messages.chatscreen.imageSavedToTheSelectedFolder"));
           return;
         }
       }
@@ -452,12 +453,12 @@ const ChatScreen = ({ navigation, route }) => {
         return;
       }
 
-      Alert.alert(
-        'Save unavailable',
-        'To save images to Photos on Android, you may need a development build (Expo Go is limited).',
+      Alert.alert(t("screens.messages.chatscreen.saveUnavailable"), t("screens.messages.chatscreen.toSaveImagesToPhotosOnAndroid")
+
+
       );
     } catch (e) {
-      Alert.alert('Save failed', e?.message || 'Unable to save image');
+      Alert.alert(t("screens.messages.chatscreen.saveFailed"), getFriendlyError(e, t, 'common.errors.upload'));
     }
   }, []);
 
@@ -488,97 +489,97 @@ const ChatScreen = ({ navigation, route }) => {
 
       const prev = index > 0 ? messages[index - 1] : null;
       const showDay =
-        index === 0 ||
-        !isSameDay(toDate(prev?.createdAt), toDate(item?.createdAt));
+      index === 0 ||
+      !isSameDay(toDate(prev?.createdAt), toDate(item?.createdAt));
 
       const imageUrl = parseImageUrl(item?.message);
       const hasImageError = Boolean(imageUrl && item?.id && imageErrors?.[item.id]);
       return (
         <>
-          {showDay ? (
-            <View style={styles.dayRow}>
+          {showDay ?
+          <View style={styles.dayRow}>
               <View style={styles.dayPill}>
                 <Text style={styles.dayText}>{formatDayLabel(item?.createdAt)}</Text>
               </View>
-            </View>
-          ) : null}
+            </View> :
+          null}
 
           <View style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
-          {mine ? (
+          {mine ?
             <TouchableOpacity
               activeOpacity={0.9}
-              onPress={() => setExpandedMessageId((cur) => (cur === item?.id ? null : item?.id))}
-            >
+              onPress={() => setExpandedMessageId((cur) => cur === item?.id ? null : item?.id)}>
+              
               <LinearGradient
                 colors={[COLORS.secondary, COLORS.primary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={[styles.bubble, styles.bubbleMine]}
-              >
-                {imageUrl ? (
-                  <Pressable onPress={() => openImage(imageUrl)}>
-                    {hasImageError ? (
-                      <View style={[styles.image, styles.imageFallback]}>
+                style={[styles.bubble, styles.bubbleMine]}>
+                
+                {imageUrl ?
+                <Pressable onPress={() => openImage(imageUrl)}>
+                    {hasImageError ?
+                  <View style={[styles.image, styles.imageFallback]}>
                         <Ionicons name="image-outline" size={26} color="#fff" />
-                        <Text style={styles.imageFallbackText}>Tap to open</Text>
-                      </View>
-                    ) : (
-                      <Image
-                        source={{ uri: imageUrl }}
-                        style={styles.image}
-                        resizeMode="cover"
-                        onError={(e) => markImageError(item?.id, imageUrl, e?.nativeEvent)}
-                      />
-                    )}
-                  </Pressable>
-                ) : (
-                  <Text style={styles.bubbleTextMine}>{item?.message || ''}</Text>
-                )}
+                        <Text style={styles.imageFallbackText}>{t("screens.messages.chatscreen.tapToOpen")}</Text>
+                      </View> :
+
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.image}
+                    resizeMode="cover"
+                    onError={(e) => markImageError(item?.id, imageUrl, e?.nativeEvent)} />
+
+                  }
+                  </Pressable> :
+
+                <Text style={styles.bubbleTextMine}>{item?.message || ''}</Text>
+                }
               </LinearGradient>
-            </TouchableOpacity>
-          ) : (
+            </TouchableOpacity> :
+
             <TouchableOpacity
               activeOpacity={0.9}
-              onPress={() => setExpandedMessageId((cur) => (cur === item?.id ? null : item?.id))}
-            >
+              onPress={() => setExpandedMessageId((cur) => cur === item?.id ? null : item?.id)}>
+              
               <View style={[styles.bubble, styles.bubbleTheirs]}>
-                {imageUrl ? (
-                  <Pressable onPress={() => openImage(imageUrl)}>
-                    {hasImageError ? (
-                      <View style={[styles.image, styles.imageFallback]}>
+                {imageUrl ?
+                <Pressable onPress={() => openImage(imageUrl)}>
+                    {hasImageError ?
+                  <View style={[styles.image, styles.imageFallback]}>
                         <Ionicons name="image-outline" size={26} color="#fff" />
-                        <Text style={styles.imageFallbackText}>Tap to open</Text>
-                      </View>
-                    ) : (
-                      <Image
-                        source={{ uri: imageUrl }}
-                        style={styles.image}
-                        resizeMode="cover"
-                        onError={(e) => markImageError(item?.id, imageUrl, e?.nativeEvent)}
-                      />
-                    )}
-                  </Pressable>
-                ) : (
-                  <Text style={styles.bubbleTextTheirs}>{item?.message || ''}</Text>
-                )}
+                        <Text style={styles.imageFallbackText}>{t("screens.messages.chatscreen.tapToOpen")}</Text>
+                      </View> :
+
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.image}
+                    resizeMode="cover"
+                    onError={(e) => markImageError(item?.id, imageUrl, e?.nativeEvent)} />
+
+                  }
+                  </Pressable> :
+
+                <Text style={styles.bubbleTextTheirs}>{item?.message || ''}</Text>
+                }
               </View>
             </TouchableOpacity>
-          )}
-          {isLastOutgoing ? (
+            }
+          {isLastOutgoing ?
             <View style={styles.statusRow}>
               <Ionicons name={statusIcon} size={14} color={statusColor} />
-            </View>
-          ) : null}
-          {showTimestamp ? (
+            </View> :
+            null}
+          {showTimestamp ?
             <View style={[styles.timestampRow, mine ? styles.timestampRowMine : styles.timestampRowTheirs]}>
               <Text style={styles.timestampText}>{formatTimestampLabel(item?.createdAt)}</Text>
-            </View>
-          ) : null}
+            </View> :
+            null}
         </View>
-        </>
-      );
+        </>);
+
     },
-    [expandedMessageId, isNewConversation, lastOutgoingId, me?.id, messages],
+    [expandedMessageId, isNewConversation, lastOutgoingId, me?.id, messages]
   );
 
   return (
@@ -589,11 +590,11 @@ const ChatScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <View style={styles.headerLeft}>
           <View style={styles.headerAvatar}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.headerAvatarImage} />
-            ) : (
-              <Text style={styles.headerAvatarText}>{initialsFor(otherUser)}</Text>
-            )}
+            {avatarUri ?
+            <Image source={{ uri: avatarUri }} style={styles.headerAvatarImage} /> :
+
+            <Text style={styles.headerAvatarText}>{initialsFor(otherUser)}</Text>
+            }
           </View>
           <View style={styles.headerTitleWrap}>
             <Text style={styles.headerTitle} numberOfLines={1}>
@@ -608,31 +609,31 @@ const ChatScreen = ({ navigation, route }) => {
         </View>
       </View>
 
-      {isLoading ? (
-        <View style={styles.state}>
-          <Text style={styles.stateTitle}>Chargement...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.state}>
-          <Text style={styles.stateTitle}>Erreur</Text>
+      {isLoading ?
+      <View style={styles.state}>
+          <Text style={styles.stateTitle}>{t("screens.messages.chatscreen.chargement")}</Text>
+        </View> :
+      error ?
+      <View style={styles.state}>
+          <Text style={styles.stateTitle}>{t("screens.messages.chatscreen.erreur")}</Text>
           <Text style={styles.stateSubtitle}>{error}</Text>
-        </View>
-      ) : (
-        <KeyboardAvoidingView
-          style={styles.body}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-        >
+        </View> :
+
+      <KeyboardAvoidingView
+        style={styles.body}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}>
+        
           <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={keyForMessage}
-            contentContainerStyle={styles.list}
-            renderItem={renderItem}
-            onContentSizeChange={scrollToEnd}
-            ListFooterComponent={
-              isTypingOther ? (
-                <View style={[styles.bubbleRow, styles.bubbleRowTheirs]}>
+          ref={listRef}
+          data={messages}
+          keyExtractor={keyForMessage}
+          contentContainerStyle={styles.list}
+          renderItem={renderItem}
+          onContentSizeChange={scrollToEnd}
+          ListFooterComponent={
+          isTypingOther ?
+          <View style={[styles.bubbleRow, styles.bubbleRowTheirs]}>
                   <View style={[styles.bubble, styles.bubbleTheirs, styles.typingBubble]}>
                     <View style={styles.typingDots}>
                       <View style={[styles.typingDot, styles.typingDot1]} />
@@ -640,43 +641,43 @@ const ChatScreen = ({ navigation, route }) => {
                       <View style={[styles.typingDot, styles.typingDot3]} />
                     </View>
                   </View>
-                </View>
-              ) : null
-            }
-            ListEmptyComponent={
-              <View style={styles.empty}>
+                </View> :
+          null
+          }
+          ListEmptyComponent={
+          <View style={styles.empty}>
                 <Text style={styles.emptyTitle}>{isNewConversation ? 'Conversation non activée' : 'Nouveau chat'}</Text>
                 <Text style={styles.emptySubtitle}>
                   {isNewConversation ? 'Aucun message pour le moment. Envoie le premier.' : 'Envoie ton premier message.'}
                 </Text>
               </View>
-            }
-          />
+          } />
+        
 
           <View style={styles.composer}>
             <TouchableOpacity style={styles.iconBtn} activeOpacity={0.85} onPress={onPressCamera}>
-              {isUploadingImage ? (
-                <ActivityIndicator size="small" color="#d6dbff" />
-              ) : (
-                <Ionicons name="camera-outline" size={22} color="#d6dbff" />
-              )}
+              {isUploadingImage ?
+            <ActivityIndicator size="small" color="#d6dbff" /> :
+
+            <Ionicons name="camera-outline" size={22} color="#d6dbff" />
+            }
             </TouchableOpacity>
             <View style={styles.inputPill}>
               <TextInput
-                value={text}
-                onChangeText={onChangeText}
-                placeholder="Message..."
-                placeholderTextColor="rgba(214,219,255,0.55)"
-                style={styles.input}
-                multiline
-              />
+              value={text}
+              onChangeText={onChangeText}
+              placeholder={t("screens.messages.chatscreen.message")}
+              placeholderTextColor="rgba(214,219,255,0.55)"
+              style={styles.input}
+              multiline />
+            
               <TouchableOpacity style={styles.sendBtn} onPress={onSend} activeOpacity={0.85}>
                 <Ionicons name="arrow-up" size={18} color="#0f1228" />
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
-      )}
+      }
 
       <Modal visible={Boolean(viewerUrl)} transparent animationType="fade" onRequestClose={() => setViewerUrl(null)}>
         <View style={styles.viewerBackdrop}>
@@ -687,8 +688,8 @@ const ChatScreen = ({ navigation, route }) => {
                 pinchScale.setValue(1);
                 baseScale.setValue(1);
                 setViewerUrl(null);
-              }}
-            >
+              }}>
+              
               <Ionicons name="close" size={22} color="#fff" />
             </Pressable>
             <View style={{ flex: 1 }} />
@@ -697,44 +698,44 @@ const ChatScreen = ({ navigation, route }) => {
             </Pressable>
           </View>
           <Pressable style={styles.viewerBody} onPress={() => setViewerUrl(null)}>
-            {viewerUrl ? (
-              <PinchGestureHandler
-                onGestureEvent={Animated.event([{ nativeEvent: { scale: pinchScale } }], { useNativeDriver: true })}
-                onHandlerStateChange={(e) => {
-                  if (e.nativeEvent.state === State.END) {
-                    const next = Math.min(4, Math.max(1, (e.nativeEvent.scale || 1)));
-                    // baseScale = baseScale * next
-                    baseScale.stopAnimation((current) => {
-                      const merged = Math.min(4, Math.max(1, current * next));
-                      baseScale.setValue(merged);
-                    });
-                    pinchScale.setValue(1);
-                  }
-                }}
-              >
+            {viewerUrl ?
+            <PinchGestureHandler
+              onGestureEvent={Animated.event([{ nativeEvent: { scale: pinchScale } }], { useNativeDriver: true })}
+              onHandlerStateChange={(e) => {
+                if (e.nativeEvent.state === State.END) {
+                  const next = Math.min(4, Math.max(1, e.nativeEvent.scale || 1));
+                  // baseScale = baseScale * next
+                  baseScale.stopAnimation((current) => {
+                    const merged = Math.min(4, Math.max(1, current * next));
+                    baseScale.setValue(merged);
+                  });
+                  pinchScale.setValue(1);
+                }
+              }}>
+              
                 <Animated.View style={styles.viewerImageWrap}>
                   <Animated.Image
-                    source={{ uri: viewerUrl }}
-                    style={[
-                      styles.viewerImage,
-                      {
-                        transform: [
-                          {
-                            scale: Animated.multiply(pinchScale, baseScale),
-                          },
-                        ],
-                      },
-                    ]}
-                    resizeMode="contain"
-                  />
+                  source={{ uri: viewerUrl }}
+                  style={[
+                  styles.viewerImage,
+                  {
+                    transform: [
+                    {
+                      scale: Animated.multiply(pinchScale, baseScale)
+                    }]
+
+                  }]
+                  }
+                  resizeMode="contain" />
+                
                 </Animated.View>
-              </PinchGestureHandler>
-            ) : null}
+              </PinchGestureHandler> :
+            null}
           </Pressable>
         </View>
       </Modal>
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 };
 
 const styles = StyleSheet.create({
@@ -746,7 +747,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomColor: 'rgba(255,255,255,0.08)'
   },
   headerIcon: { padding: 8 },
   headerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
@@ -759,7 +760,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   headerAvatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   headerAvatarText: { color: '#d6dbff', fontWeight: '900', fontSize: 12 },
@@ -774,7 +775,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.10)'
   },
   dayText: { color: 'rgba(214,219,255,0.75)', fontWeight: '800', fontSize: 12 },
   bubbleRow: { marginBottom: 8, width: '100%' },
@@ -810,7 +811,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(15, 18, 40, 0.9)',
+    backgroundColor: 'rgba(15, 18, 40, 0.9)'
   },
   viewerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)' },
   viewerTop: {
@@ -818,7 +819,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-between'
   },
   viewerBtn: {
     width: 44,
@@ -826,7 +827,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.10)'
   },
   viewerBody: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 12 },
   viewerImageWrap: { flex: 1, width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
@@ -842,7 +843,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(145, 152, 229, 0.22)',
     backgroundColor: 'rgba(18, 21, 46, 0.95)',
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 10
   },
   input: {
     flex: 1,
@@ -851,7 +852,7 @@ const styles = StyleSheet.create({
     color: '#f2f4ff',
     paddingRight: 8,
     paddingVertical: 6,
-    fontSize: 15,
+    fontSize: 15
   },
   sendBtn: {
     width: 30,
@@ -859,11 +860,11 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: '#f2f4ff',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'center'
   },
   state: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   stateTitle: { color: '#f2f4ff', fontWeight: '900', fontSize: 15 },
-  stateSubtitle: { color: 'rgba(214,219,255,0.65)', textAlign: 'center', marginTop: 8 },
+  stateSubtitle: { color: 'rgba(214,219,255,0.65)', textAlign: 'center', marginTop: 8 }
 });
 
 export default ChatScreen;

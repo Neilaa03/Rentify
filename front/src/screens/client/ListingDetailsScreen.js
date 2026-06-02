@@ -8,8 +8,10 @@ import { useFavorites } from '../../contexts/FavoritesContext';
 import { API_ENDPOINTS } from '../../constants/api';
 import RatingStars from '../../components/reviews/RatingStars';
 import ReviewCard from '../../components/reviews/ReviewCard';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
-const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
+const formatPrice = (value) => `${Number(value || 0).toLocaleString(getCurrentLocale())} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const roundToHalf = (value) => Math.round(value * 2) / 2;
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
@@ -25,6 +27,7 @@ const SpecCard = ({ icon, value, label }) => (
 );
 
 const ListingDetailsScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const listing = route?.params?.listing;
   const groupedOffers = Array.isArray(route?.params?.groupedOffers) ? route.params.groupedOffers : [];
   const [activeIndex, setActiveIndex] = useState(0);
@@ -148,9 +151,9 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   if (!listing) {
     return (
       <SafeAreaView style={styles.fallbackContainer}>
-        <Text style={styles.fallbackTitle}>Détails indisponibles</Text>
+        <Text style={styles.fallbackTitle}>{t('screens.client.listingdetailsscreen.detailsIndisponibles')}</Text>
         <TouchableOpacity style={styles.fallbackButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.fallbackButtonText}>Retour</Text>
+          <Text style={styles.fallbackButtonText}>{t('screens.client.listingdetailsscreen.retour')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -220,9 +223,9 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               <Text style={styles.model}>{selectedOffer.model}</Text>
             </View>
             <View style={styles.priceBlock}>
-              <Text style={styles.priceLead}>a partir de</Text>
+              <Text style={styles.priceLead}>{t('screens.client.listingdetailsscreen.aPartirDe')}</Text>
               <Text style={styles.price}>{formatPrice(selectedOffer.pricePerDay)}</Text>
-              <Text style={styles.priceUnit}>DA/jour</Text>
+              <Text style={styles.priceUnit}>{t('screens.client.listingdetailsscreen.daJour')}</Text>
             </View>
           </View>
 
@@ -234,20 +237,22 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color="#F8B84E" />
               <Text style={styles.ratingText}>{selectedOffer.rating}</Text>
-              <Text style={styles.reviewsText}>({selectedOffer.reviewsCount} avis)</Text>
+              <Text style={styles.reviewsText}>
+                ({selectedOffer.reviewsCount} {t('screens.client.listingdetailsscreen.avis')})
+              </Text>
             </View>
           </View>
 
           <View style={styles.specsGrid}>
-            <SpecCard icon="people-outline" value={selectedOffer.seats} label="Places" />
-            <SpecCard icon="flash-outline" value={selectedOffer.fuel} label="Carburant" />
-            <SpecCard icon="settings-outline" value={selectedOffer.transmission} label="Boite" />
-            <SpecCard icon="pulse-outline" value={`${selectedOffer.mileageKm} km`} label="Kilometrage" />
+            <SpecCard icon="people-outline" value={selectedOffer.seats} label={t('screens.client.listingdetailsscreen.places')} />
+            <SpecCard icon="flash-outline" value={selectedOffer.fuel} label={t('screens.client.listingdetailsscreen.carburant')} />
+            <SpecCard icon="settings-outline" value={selectedOffer.transmission} label={t('screens.client.listingdetailsscreen.boite')} />
+            <SpecCard icon="pulse-outline" value={`${selectedOffer.mileageKm} km`} label={t('screens.client.listingdetailsscreen.kilometrage')} />
           </View>
 
           {canChooseCity ? (
             <>
-              <Text style={styles.sectionTitle}>Villes disponibles</Text>
+              <Text style={styles.sectionTitle}>{t('screens.client.listingdetailsscreen.villesDisponibles')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cityList}>
                 {cityOffers.map((offer) => {
                   const isActive = String(offer.id) === String(selectedOffer.id);
@@ -260,7 +265,7 @@ const ListingDetailsScreen = ({ navigation, route }) => {
                     >
                       <Ionicons name="location-outline" size={14} color={isActive ? '#fff' : '#bfc6ec'} />
                       <Text style={[styles.cityChipText, isActive && styles.cityChipTextActive]}>
-                        {offer.city || 'Ville'}
+                        {offer.city || t('screens.client.listingdetailsscreen.ville')}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -269,7 +274,7 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             </>
           ) : selectedOffer.city ? (
             <>
-              <Text style={styles.sectionTitle}>Ville de retrait</Text>
+              <Text style={styles.sectionTitle}>{t('screens.client.listingdetailsscreen.villeDeRetrait')}</Text>
               <View style={styles.singleCityCard}>
                 <Ionicons name="location-outline" size={14} color="#dce1ff" />
                 <Text style={styles.singleCityText}>{selectedOffer.city}</Text>
@@ -277,11 +282,15 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             </>
           ) : null}
 
-          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.sectionTitle}>{t('screens.client.listingdetailsscreen.description')}</Text>
           <Text style={styles.description}>{selectedOffer.description}</Text>
 
           <View style={styles.reviewsHeaderRow}>
-            <Text style={styles.sectionTitle}>{`Avis${reviewCount ? ` (${reviewCount})` : ''}`}</Text>
+            <Text style={styles.sectionTitle}>
+              {reviewCount
+                ? `${t('screens.client.listingdetailsscreen.avisTitle')} (${reviewCount})`
+                : t('screens.client.listingdetailsscreen.avisTitle')}
+            </Text>
             {reviewCount ? (
               <View style={styles.reviewsSummaryRight}>
                 <RatingStars rating={averageRatingRounded} />
@@ -293,7 +302,7 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           {reviewsLoading ? (
             <View style={styles.reviewsLoadingRow}>
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.reviewsLoadingText}>Chargement…</Text>
+              <Text style={styles.reviewsLoadingText}>{t('screens.client.listingdetailsscreen.chargement')}</Text>
             </View>
           ) : reviews.length ? (
             <>
@@ -329,26 +338,26 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               ) : null}
             </>
           ) : (
-            <Text style={styles.reviewsEmptyText}>Aucun avis pour le moment.</Text>
+            <Text style={styles.reviewsEmptyText}>{t('screens.client.listingdetailsscreen.aucunAvisPourLeMoment')}</Text>
           )}
 
-          <Text style={styles.sectionTitle}>Récupération</Text>
+          <Text style={styles.sectionTitle}>{t('screens.client.listingdetailsscreen.recuperation')}</Text>
           <View style={styles.pickupInfoCard}>
             <View style={styles.pickupInfoRow}>
               <Ionicons name="location-outline" size={16} color="#cfd3ff" />
-              <Text style={styles.pickupInfoText}>{selectedOffer.pickupAddress || 'Adresse non précisée'}</Text>
+              <Text style={styles.pickupInfoText}>{selectedOffer.pickupAddress || t('screens.reservations.reservationdatepickerscreen.adresseNonPrecisee')}</Text>
             </View>
             <View style={styles.pickupInfoRow}>
               <Ionicons name="car-outline" size={16} color="#cfd3ff" />
               <Text style={styles.pickupInfoText}>
-                Livraison: {Number(selectedOffer.deliveryFee || 0) > 0 ? `${Number(selectedOffer.deliveryFee).toLocaleString('fr-FR')} DA` : 'non disponible'}
+                {t('screens.client.listingdetailsscreen.livraison')} {Number(selectedOffer.deliveryFee || 0) > 0 ? `${Number(selectedOffer.deliveryFee).toLocaleString(getCurrentLocale())} DA` : t('common.unavailable')}
               </Text>
             </View>
           </View>
 
           <View style={styles.reservationCard}>
             <View style={styles.reservationInfo}>
-              <Text style={styles.reservationLabel}>Prix par jour</Text>
+              <Text style={styles.reservationLabel}>{t('screens.client.listingdetailsscreen.prixParJour')}</Text>
               <Text style={styles.reservationPrice}>{formatPrice(selectedOffer.pricePerDay)}</Text>
             </View>
             {selectedOffer.available ? (
@@ -360,13 +369,15 @@ const ListingDetailsScreen = ({ navigation, route }) => {
                   style={styles.reservationButton}
                 >
                   <Text style={styles.reservationButtonText}>
-                    {selectedOffer.city ? `Reserver à ${selectedOffer.city}` : 'Reserver'}
+                    {selectedOffer.city
+                      ? t('screens.client.listingdetailsscreen.reserverACity', { city: selectedOffer.city })
+                      : t('screens.client.listingdetailsscreen.reserver')}
                   </Text>
                 </LinearGradient>
               </TouchableOpacity>
             ) : (
               <View style={[styles.reservationButton, styles.reservationButtonDisabled]}>
-                <Text style={styles.reservationButtonText}>Indisponible</Text>
+                <Text style={styles.reservationButtonText}>{t('screens.client.listingdetailsscreen.indisponible')}</Text>
               </View>
             )}
           </View>
@@ -378,9 +389,9 @@ const ListingDetailsScreen = ({ navigation, route }) => {
               </View>
               <View>
                 <View style={styles.ownerNameRow}>
-                  <Text style={styles.ownerName}>{selectedOffer.owner?.name || 'Proprietaire'}</Text>
+                  <Text style={styles.ownerName}>{selectedOffer.owner?.name || t('screens.client.listingdetailsscreen.proprietaire')}</Text>
                   {selectedOffer.owner?.verified && (
-                    <Text style={styles.ownerVerified}>Verifie</Text>
+                    <Text style={styles.ownerVerified}>{t('screens.client.listingdetailsscreen.verifie')}</Text>
                   )}
                 </View>
                 <View style={styles.ownerLocationRow}>

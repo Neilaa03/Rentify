@@ -80,7 +80,6 @@ export const getListings = async () => {
     return listings;
   } catch (error) {
     console.error(' Error fetching listings:', error.message, error);
-    alert(`Failed to load listings: ${error.message}`);
     return [];
   }
 };

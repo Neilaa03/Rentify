@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
 const tabs = ['Tous', 'En attente', 'Verifies', 'Rejetes'];
 
@@ -56,6 +58,7 @@ const buildFallbackUrls = (url) => {
 };
 
 export default function AdminCarsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('Tous');
   const [cars, setCars] = useState([]);
@@ -140,7 +143,7 @@ export default function AdminCarsScreen({ navigation, route }) {
       const details = await adminApi.carDetails(car.id);
       setDetailsByCar((prev) => ({ ...prev, [car.id]: details }));
     } catch (e) {
-      Alert.alert('Erreur', e.message || 'Impossible de charger les documents');
+      Alert.alert(t('screens.admin.admincarsscreen.erreur'), e.message || t('screens.admin.admincarsscreen.impossibleDeChargerLesDocuments'));
     }
   };
 
@@ -194,14 +197,14 @@ export default function AdminCarsScreen({ navigation, route }) {
       await refreshCarDetails(selectedCar.id);
       await load();
     } catch (e) {
-      Alert.alert('Erreur', e.message || 'Mise à jour du document impossible');
+      Alert.alert(t('screens.admin.admincarsscreen.erreur'), e.message || t('screens.admin.admincarsscreen.miseAJourDuDocumentImpossible'));
     }
   };
 
   const openDocument = async (url) => {
     const candidates = buildFallbackUrls(url);
     if (!candidates.length) {
-      Alert.alert('Document indisponible', "Ce document n'a pas de lien exploitable.");
+      Alert.alert(t('screens.admin.admincarsscreen.documentIndisponible'), t('screens.admin.admincarsscreen.ceDocumentNaPasDeLienExploitable'));
       return;
     }
 
@@ -217,7 +220,7 @@ export default function AdminCarsScreen({ navigation, route }) {
       }
     }
 
-    Alert.alert('Ouverture impossible', lastErr?.message || 'Le document ne peut pas etre ouvert sur cet appareil.');
+    Alert.alert(t('screens.admin.admincarsscreen.ouvertureImpossible'), lastErr?.message || t('screens.admin.admincarsscreen.leDocumentNePeutPasEtreOuvert'));
   };
 
   const updateCarStatus = async (carId, status) => {
@@ -226,7 +229,7 @@ export default function AdminCarsScreen({ navigation, route }) {
       await load();
       setModalVisible(false);
     } catch (e) {
-      Alert.alert('Erreur', e.message || 'Mise a jour impossible');
+      Alert.alert(t('screens.admin.admincarsscreen.erreur'), e.message || t('screens.admin.admincarsscreen.miseAJourImpossible'));
     }
   };
 
@@ -237,17 +240,17 @@ export default function AdminCarsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
-          <ScreenHeader title="Documents" rightAction={<AdminLogoutButton navigation={navigation} />} />
+          <ScreenHeader title={t('screens.admin.admincarsscreen.documents')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
           <View style={styles.statsRow}>
-            <TopStat value={stats.pending} label="En attente" tone="amber" icon="time-outline" />
-            <TopStat value={stats.verified} label="Verifies" tone="green" icon="checkmark-circle-outline" />
-            <TopStat value={stats.rejected} label="Rejetes" tone="red" icon="close-circle-outline" />
+            <TopStat value={stats.pending} label={t('screens.admin.admincarsscreen.enAttente')} tone="amber" icon="time-outline" />
+            <TopStat value={stats.verified} label={t('screens.admin.admincarsscreen.verifies')} tone="green" icon="checkmark-circle-outline" />
+            <TopStat value={stats.rejected} label={t('screens.admin.admincarsscreen.rejetes')} tone="red" icon="close-circle-outline" />
           </View>
 
           <View style={styles.searchWrap}>
             <Ionicons name="search-outline" size={16} color="#8a91bf" />
-            <TextInput value={search} onChangeText={setSearch} placeholder="Type, proprietaire..." placeholderTextColor="#7078ab" style={styles.searchInput} />
+            <TextInput value={search} onChangeText={setSearch} placeholder={t('screens.admin.admincarsscreen.typeProprietaire')} placeholderTextColor="#7078ab" style={styles.searchInput} />
           </View>
 
           <ScrollView
@@ -258,12 +261,12 @@ export default function AdminCarsScreen({ navigation, route }) {
           >
             {tabs.map((tab) => (
               <TouchableOpacity key={tab} style={[styles.filterChip, activeTab === tab && styles.filterChipActive]} onPress={() => setActiveTab(tab)}>
-                <Text style={[styles.filterText, activeTab === tab && styles.filterTextActive]}>{tab}</Text>
+                <Text style={[styles.filterText, activeTab === tab && styles.filterTextActive]}>{t(`screens.admin.admincarsscreen.tabs.${tab}`, { defaultValue: tab })}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          <Text style={styles.countText}>{visibleDocCount} vehicules a verifier</Text>
+          <Text style={styles.countText}>{visibleDocCount} {t('screens.admin.admincarsscreen.vehiculesAVerifier')}</Text>
 
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           {grouped.map((group) => (
@@ -285,7 +288,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                     <View style={{ alignItems: 'flex-end', gap: 8 }}>
                       <Text style={[styles.statusText, statusTone(car.carStatus)]}>{statusLabel(car.carStatus)}</Text>
                       <TouchableOpacity style={styles.viewBtn} onPress={() => openCarDocuments(car)}>
-                        <Text style={styles.viewBtnText}>Voir docs</Text>
+                      <Text style={styles.viewBtnText}>{t('screens.admin.admincarsscreen.voirDocs')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -293,7 +296,7 @@ export default function AdminCarsScreen({ navigation, route }) {
               })}
             </View>
           ))}
-          {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
+          {loading ? <Text style={styles.loading}>{t('screens.admin.admincarsscreen.chargement')}</Text> : null}
         </ScrollView>
       </View>
 
@@ -311,10 +314,10 @@ export default function AdminCarsScreen({ navigation, route }) {
             </View>
 
             <ScrollView contentContainerStyle={{ paddingBottom: 10 }}>
-              {selectedCar && !detailsByCar[selectedCar.id] ? <Text style={styles.loading}>Chargement des documents...</Text> : null}
+              {selectedCar && !detailsByCar[selectedCar.id] ? <Text style={styles.loading}>{t('screens.admin.admincarsscreen.chargementDesDocuments')}</Text> : null}
 
               {selectedCar && detailsByCar[selectedCar.id] && modalDocs.length === 0 ? (
-                <Text style={styles.error}>Aucun document trouve pour ce vehicule.</Text>
+                <Text style={styles.error}>{t('screens.admin.admincarsscreen.aucunDocumentTrouvePourCeVehicule')}</Text>
               ) : null}
 
               {modalDocs.map((doc) => (
@@ -322,12 +325,12 @@ export default function AdminCarsScreen({ navigation, route }) {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalDocType}>{doc.type}</Text>
                     <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
-                    <Text style={styles.modalDocDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString('fr-FR') : ''}</Text>
+                    <Text style={styles.modalDocDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString(getCurrentLocale()) : ''}</Text>
                     {doc.ocrResult ? (
                       <View style={styles.ocrBox}>
-                        <Text style={styles.ocrLabel}>OCR</Text>
+                        <Text style={styles.ocrLabel}>{t('screens.admin.admincarsscreen.ocr')}</Text>
                         <Text style={styles.ocrText}>
-                          {doc.ocrResult.verification_reason || 'Aucune raison fournie'}
+                          {doc.ocrResult.verification_reason || t('screens.admin.admincarsscreen.aucuneRaisonFournie')}
                         </Text>
                         <Text style={styles.ocrMeta}>
                           {`Statut OCR: ${statusLabel(doc.ocrResult.verification_status)}`}
@@ -340,7 +343,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                         {doc.ocrResult.extracted_expiration_date ? <Text style={styles.ocrMeta}>{`Expiration: ${doc.ocrResult.extracted_expiration_date}`}</Text> : null}
                       </View>
                     ) : (
-                      <Text style={styles.ocrEmpty}>Aucun resultat OCR disponible.</Text>
+                      <Text style={styles.ocrEmpty}>{t('screens.admin.admincarsscreen.aucunResultatOcrDisponible')}</Text>
                     )}
                     <View style={styles.docActionsRow}>
                       {isVerifiedDocument(doc.status) ? (
@@ -350,13 +353,13 @@ export default function AdminCarsScreen({ navigation, route }) {
                               style={[styles.docActionBtn, styles.docRejectBtn]}
                               onPress={() => reviewDocument(doc.id, 'rejected')}
                             >
-                              <Text style={styles.docActionText}>Rejeter</Text>
+                              <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.rejeter')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={[styles.docActionBtn, styles.docDiscardBtn]}
                               onPress={() => setReviewingDocId(null)}
                             >
-                              <Text style={styles.docActionText}>Annuler</Text>
+                              <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.annuler')}</Text>
                             </TouchableOpacity>
                           </>
                         ) : (
@@ -364,7 +367,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                             style={[styles.docActionBtn, styles.docReviewBtn, styles.docActionBtnFull]}
                             onPress={() => setReviewingDocId(doc.id)}
                           >
-                            <Text style={styles.docActionText}>Changer etat</Text>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.changerEtat')}</Text>
                           </TouchableOpacity>
                         )
                       ) : (
@@ -373,20 +376,20 @@ export default function AdminCarsScreen({ navigation, route }) {
                             style={[styles.docActionBtn, styles.docRejectBtn]}
                             onPress={() => reviewDocument(doc.id, 'rejected')}
                           >
-                            <Text style={styles.docActionText}>Rejeter</Text>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.rejeter')}</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={[styles.docActionBtn, styles.docAcceptBtn]}
                             onPress={() => reviewDocument(doc.id, 'approved')}
                           >
-                            <Text style={styles.docActionText}>Accepter</Text>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.accepter')}</Text>
                           </TouchableOpacity>
                         </>
                       )}
                     </View>
                   </View>
                   <TouchableOpacity style={styles.modalBtn} onPress={() => openDocument(doc.url)}>
-                    <Text style={styles.modalBtnText}>Voir</Text>
+                    <Text style={styles.modalBtnText}>{t('screens.admin.admincarsscreen.voir')}</Text>
                   </TouchableOpacity>
                 </View>
               ))}

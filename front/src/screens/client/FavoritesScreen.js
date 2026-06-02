@@ -5,9 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import ListingCard from '../../components/cards/ListingCard';
 import { toUiListing } from '../../services/listings';
-import { useFavorites } from '../../contexts/FavoritesContext';
+import { useFavorites } from '../../contexts/FavoritesContext';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
-const FavoritesScreen = ({ navigation }) => {
+const FavoritesScreen = ({ navigation }) => {const { t } = useTranslation();
   const { refreshFavorites, isFavorite, toggleFavorite, favoriteIds } = useFavorites();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,7 @@ const FavoritesScreen = ({ navigation }) => {
       const mapped = (res?.items || []).map(toUiListing);
       setItems(mapped);
     } catch (err) {
-      setError(err.message || 'Impossible de charger les favoris');
+      setError(getFriendlyError(err, t));
     } finally {
       setLoading(false);
     }
@@ -40,23 +41,23 @@ const FavoritesScreen = ({ navigation }) => {
   );
 
   const content = useMemo(() => {
-    if (loading) return <Text style={styles.stateText}>Chargement...</Text>;
+    if (loading) return <Text style={styles.stateText}>{t("screens.client.favoritesscreen.chargement")}</Text>;
     if (error) return <Text style={styles.stateText}>{error}</Text>;
-    if (!visibleItems.length) return <Text style={styles.stateText}>Aucun favori pour le moment.</Text>;
+    if (!visibleItems.length) return <Text style={styles.stateText}>{t("screens.client.favoritesscreen.aucunFavoriPourLeMoment")}</Text>;
 
     return (
       <View style={styles.list}>
-        {visibleItems.map((listing) => (
-          <ListingCard
-            key={listing.id}
-            listing={listing}
-            isFavorite={isFavorite(listing.id)}
-            onToggleFavorite={() => toggleFavorite(listing.id)}
-            onPress={() => navigation.navigate('ListingDetailsFromFavorites', { listing })}
-          />
-        ))}
-      </View>
-    );
+        {visibleItems.map((listing) =>
+        <ListingCard
+          key={listing.id}
+          listing={listing}
+          isFavorite={isFavorite(listing.id)}
+          onToggleFavorite={() => toggleFavorite(listing.id)}
+          onPress={() => navigation.navigate('ListingDetailsFromFavorites', { listing })} />
+
+        )}
+      </View>);
+
   }, [error, isFavorite, loading, navigation, toggleFavorite, visibleItems]);
 
   return (
@@ -64,7 +65,7 @@ const FavoritesScreen = ({ navigation }) => {
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView style={styles.overlay}>
           <View style={styles.header}>
-            <Text style={styles.title}>Favoris</Text>
+            <Text style={styles.title}>{t("screens.client.favoritesscreen.favoris")}</Text>
             <TouchableOpacity style={styles.headerButton} onPress={load} activeOpacity={0.85}>
               <Ionicons name="refresh-outline" size={20} color="#fff" />
             </TouchableOpacity>
@@ -74,8 +75,8 @@ const FavoritesScreen = ({ navigation }) => {
           </ScrollView>
         </SafeAreaView>
       </ImageBackground>
-    </View>
-  );
+    </View>);
+
 };
 
 const styles = StyleSheet.create({
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 10,
-    paddingBottom: 6,
+    paddingBottom: 6
   },
   title: { color: '#fff', fontSize: 24, fontWeight: '800' },
   headerButton: {
@@ -98,11 +99,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(7, 9, 25, 0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.18)'
   },
   scrollContent: { paddingBottom: 120, paddingTop: 10 },
   list: { paddingBottom: 10 },
-  stateText: { color: '#cfd4ff', textAlign: 'center', paddingVertical: 24, fontWeight: '600' },
+  stateText: { color: '#cfd4ff', textAlign: 'center', paddingVertical: 24, fontWeight: '600' }
 });
 
 export default FavoritesScreen;

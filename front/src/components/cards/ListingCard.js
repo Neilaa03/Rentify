@@ -3,10 +3,10 @@ import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { appFont } from '../../utils/responsive';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
 const FALLBACK_IMAGE = 'https://picsum.photos/seed/listing-fallback/900/600';
-
-const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA/j`;
 
 const toImageUrl = (img) => {
   if (!img) return null;
@@ -15,6 +15,8 @@ const toImageUrl = (img) => {
 };
 
 const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite }) => {
+  const { t } = useTranslation();
+  const formatPrice = (value) => `${value.toLocaleString(getCurrentLocale())}${t('common.daPerDayCompact')}`;
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const scrollRef = useRef(null);
@@ -112,15 +114,15 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
           <View style={styles.imageTopRow}>
             {!selectedListing.available && (
               <View style={styles.unavailableBadge}>
-                <Text style={styles.unavailableText}>Indisponible</Text>
+                <Text style={styles.unavailableText}>{t('components.cards.listingcard.indisponible')}</Text>
               </View>
             )}
             {offerCount > 1 && (
               <View style={styles.offerBadge}>
                 <Text style={styles.offerBadgeText}>
                   {matchingOfferCount > 0 && matchingOfferCount < offerCount
-                    ? `${matchingOfferCount}/${offerCount} offres`
-                    : `${offerCount} offres`}
+                    ? t('components.cards.listingcard.matchingOffers', { matching: matchingOfferCount, total: offerCount })
+                    : t('components.cards.listingcard.offers', { count: offerCount })}
                 </Text>
               </View>
             )}

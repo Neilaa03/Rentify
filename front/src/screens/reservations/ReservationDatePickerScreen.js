@@ -27,8 +27,11 @@ import {
   isDateWithinAvailability,
   isDateReserved,
 } from '../../utils/reservationUtils';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
 const ReservationDatePickerScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const DELIVERY_ADDRESS_REGEX = /^\d+\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*\s+\d{4,5}\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*$/u;
   const {
     listing: initialListing,
@@ -93,7 +96,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     try {
       console.log('Initial listing:', initialListing);
       console.log('Fetching from:', API_ENDPOINTS.LISTINGS.GET(initialListing.id));
-      
+
       const token = await storage.getItemAsync('userToken');
       const response = await fetch(
         API_ENDPOINTS.LISTINGS.GET(initialListing.id),
@@ -103,11 +106,11 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           },
         }
       );
-      
+
       console.log('Listing fetch response status:', response.status);
       const data = await response.json();
       console.log('API returned data:', data);
-      
+
       if (data) {
         setListing((current) => ({
           ...current,
@@ -132,7 +135,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     } catch (error) {
       console.error('Error fetching listing details:', error);
     }
-    
+
     // Fetch calendar availability (blocked dates + listing dates)
     try {
       const availability = await fetchListingAvailability(initialListing.id);
@@ -179,24 +182,24 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     const dateStr = day.dateString;
     const pressedDate = parseLocalDate(dateStr);
     if (!pressedDate) return;
-    
+
     // Can't select past dates
     const todayLocal = new Date();
     todayLocal.setHours(0, 0, 0, 0);
     if (pressedDate < todayLocal) {
-      Alert.alert('Date invalide', 'Vous ne pouvez pas sélectionner une date passée');
+      Alert.alert(t('screens.reservations.reservationdatepickerscreen.dateInvalide'), t('screens.reservations.reservationdatepickerscreen.vousNePouvezPasSelectionnerUneDate'));
       return;
     }
 
     // Can't select reserved dates
     if (isDateReserved(dateStr, reservedDates)) {
-      Alert.alert('Date indisponible', 'Cette date est déjà réservée');
+      Alert.alert(t('screens.reservations.reservationdatepickerscreen.dateIndisponible'), t('screens.reservations.reservationdatepickerscreen.cetteDateEstDejaReservee'));
       return;
     }
 
     // Check if date is within listing's availability window
     if (!isDateWithinAvailability(dateStr, listing)) {
-      Alert.alert('Date indisponible', 'Cette date est en dehors de la période de disponibilité');
+      Alert.alert(t('screens.reservations.reservationdatepickerscreen.dateIndisponible'), t('screens.reservations.reservationdatepickerscreen.cetteDateEstEnDehorsDeLa'));
       return;
     }
 
@@ -205,7 +208,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
     } else if (!endDate) {
       const startLocal = parseLocalDate(startDate);
       if (startLocal && pressedDate < startLocal) {
-        Alert.alert('Erreur', 'La date de fin doit être après la date de début');
+        Alert.alert(t('screens.reservations.reservationdatepickerscreen.erreur'), t('screens.reservations.reservationdatepickerscreen.laDateDeFinDoitEtreApres'));
         return;
       }
       setEndDate(dateStr);
@@ -280,19 +283,19 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
 
   const handlePrimaryAction = async () => {
     if (!startDate || !endDate) {
-      Alert.alert('Erreur', 'Veuillez sélectionner une plage de dates');
+      Alert.alert(t('screens.reservations.reservationdatepickerscreen.erreur'), t('screens.reservations.reservationdatepickerscreen.veuillezSelectionnerUnePlageDeDates'));
       return;
     }
 
     if (pickupMethod === 'renter_delivery' && !deliveryAddress.trim()) {
-      Alert.alert('Adresse requise', 'Veuillez saisir votre adresse de livraison');
+      Alert.alert(t('screens.reservations.reservationdatepickerscreen.adresseRequise'), t('screens.reservations.reservationdatepickerscreen.veuillezSaisirVotreAdresseDeLivraison'));
       return;
     }
 
     if (pickupMethod === 'renter_delivery' && !DELIVERY_ADDRESS_REGEX.test(deliveryAddress.trim())) {
       Alert.alert(
-        'Adresse invalide',
-        'Le format attendu est: "12 Rue Exemple 16000 Alger".'
+        t('screens.reservations.reservationdatepickerscreen.adresseInvalide'),
+        t('screens.reservations.reservationdatepickerscreen.leFormatAttenduEst12RueExemple')
       );
       return;
     }
@@ -301,7 +304,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       setLoading(true);
       const token = await storage.getItemAsync('userToken');
       if (!token) {
-        Alert.alert('Erreur', 'Authentification requise. Veuillez vous connecter.');
+        Alert.alert(t('screens.reservations.reservationdatepickerscreen.erreur'), t('screens.reservations.reservationdatepickerscreen.authentificationRequiseVeuillezVousConnecter'));
         return;
       }
       const isEditFlow = !!reservationFromParams?.id;
@@ -348,18 +351,18 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           return;
         }
 
-        Alert.alert('Réservation créée', "Votre réservation est en attente de paiement. Merci d’effectuer le paiement sous 24 heures pour la confirmer, sinon elle sera automatiquement annulée.", [
+        Alert.alert(t('screens.reservations.reservationdatepickerscreen.reservationCreee'), t('screens.reservations.reservationdatepickerscreen.votreReservationEstEnAttenteDePaiement'), [
           {
             text: 'OK',
             onPress: () => goToReservationDetails(data),
           },
         ]);
       } else {
-        Alert.alert('Erreur', data.error || 'Impossible de créer la réservation');
+        Alert.alert(t('screens.reservations.reservationdatepickerscreen.erreur'), data.error || t('screens.reservations.reservationdatepickerscreen.impossibleDeCreerLaReservation'));
       }
     } catch (error) {
       console.error('Error saving reservation:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue');
+      Alert.alert(t('screens.reservations.reservationdatepickerscreen.erreur'), t('screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue'));
     } finally {
       setLoading(false);
     }
@@ -409,7 +412,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         >
           <Ionicons name="arrow-back" size={22} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sélectionner les dates</Text>
+        <Text style={styles.headerTitle}>{t('screens.reservations.reservationdatepickerscreen.selectionnerLesDates')}</Text>
         <View style={{ width: 50 }} />
       </SafeAreaView>
 
@@ -439,23 +442,23 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
               </View>
             )}
             <Text style={styles.carPrice}>
-              {(parseFloat(listing.price_per_day || listing.pricePerDay || 0)).toLocaleString('fr-FR')} DA/jour
+              {(parseFloat(listing.price_per_day || listing.pricePerDay || 0)).toLocaleString(getCurrentLocale())} {t('screens.reservations.reservationdatepickerscreen.daJour')}
             </Text>
           </View>
         </View>
 
         {/* Calendar */}
         <View style={styles.calendarSection}>
-          <Text style={styles.sectionTitle}>Sélectionnez vos dates</Text>
-          
+          <Text style={styles.sectionTitle}>{t('screens.reservations.reservationdatepickerscreen.selectionnezVosDates')}</Text>
+
           <View style={styles.legendContainer}>
             <View style={styles.legendChip}>
               <View style={[styles.legendDot, { backgroundColor: COLORS.primary }]} />
-              <Text style={styles.legendText}>Sélection</Text>
+              <Text style={styles.legendText}>{t('screens.reservations.reservationdatepickerscreen.selection')}</Text>
             </View>
             <View style={styles.legendChip}>
               <View style={[styles.legendDot, { backgroundColor: 'rgba(142, 149, 191, 0.6)' }]} />
-              <Text style={styles.legendText}>Indisponible</Text>
+              <Text style={styles.legendText}>{t('screens.reservations.reservationdatepickerscreen.indisponible')}</Text>
             </View>
           </View>
 
@@ -465,14 +468,14 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
             minDate={minDateStr}
             maxDate={maxDateStr}
             disabledDates={reservedDates}
-            locale="fr-FR"
+            locale={getCurrentLocale()}
             startFromMonday
           />
         </View>
 
         {listing ? (
           <View style={styles.pickupSection}>
-            <Text style={styles.pickupTitle}>Récupération</Text>
+            <Text style={styles.pickupTitle}>{t('screens.reservations.reservationdatepickerscreen.recuperation')}</Text>
             <View style={styles.pickupRow}>
               <TouchableOpacity
                 onPress={() => {
@@ -483,12 +486,12 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
                 activeOpacity={0.85}
               >
                 <Text style={[styles.pickupOptionText, pickupMethod === 'owner_place' && styles.pickupOptionTextActive]}>
-                  Chez le propriétaire
+                  {t('screens.reservations.reservationdatepickerscreen.chezLeProprietaire')}
                 </Text>
                 {listing?.pickupAddress ? (
                   <Text style={styles.pickupHint} numberOfLines={2}>{listing.pickupAddress}</Text>
                 ) : (
-                  <Text style={styles.pickupHint} numberOfLines={2}>Adresse non précisée</Text>
+                  <Text style={styles.pickupHint} numberOfLines={2}>{t('screens.reservations.reservationdatepickerscreen.adresseNonPrecisee')}</Text>
                 )}
               </TouchableOpacity>
 
@@ -510,10 +513,10 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
                     activeOpacity={0.85}
                   >
                     <Text style={[styles.pickupOptionText, pickupMethod === 'renter_delivery' && styles.pickupOptionTextActive]}>
-                      Livraison
+                      {t('screens.reservations.reservationdatepickerscreen.livraison')}
                     </Text>
                     <Text style={styles.pickupHint}>
-                      {deliveryAvailable ? `+${fee.toLocaleString('fr-FR')} DA` : 'Non disponible'}
+                      {deliveryAvailable ? `+${fee.toLocaleString(getCurrentLocale())} DA` : t('common.unavailable')}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -522,12 +525,12 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
 
             {pickupMethod === 'renter_delivery' ? (
               <View style={styles.deliveryInputWrap}>
-                <Text style={styles.deliveryLabel}>Adresse de livraison</Text>
+                <Text style={styles.deliveryLabel}>{t('screens.reservations.reservationdatepickerscreen.adresseDeLivraison')}</Text>
                 <TextInput
                   style={styles.deliveryInput}
                   value={deliveryAddress}
                   onChangeText={(value) => setDeliveryAddress(value)}
-                  placeholder="Ex: Rue..., Ville..."
+                  placeholder={t('screens.reservations.reservationdatepickerscreen.exRueVille')}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   multiline
                 />
@@ -539,37 +542,37 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         {/* Selected Dates Summary */}
         {(startDate || endDate) && (
           <View style={styles.summarySection}>
-            <Text style={styles.sectionTitle}>Résumé</Text>
-            
+            <Text style={styles.sectionTitle}>{t('screens.reservations.reservationdatepickerscreen.resume')}</Text>
+
             <View style={styles.dateRow}>
               <View style={styles.dateItem}>
-                <Text style={styles.dateLabel}>Départ</Text>
+                <Text style={styles.dateLabel}>{t('screens.reservations.reservationdatepickerscreen.depart')}</Text>
                 <Text style={styles.dateValue}>
                   {startDate
-                    ? (parseLocalDate(startDate)?.toLocaleDateString('fr-FR') || '-')
+                    ? (parseLocalDate(startDate)?.toLocaleDateString(getCurrentLocale()) || '-')
                     : '-'}
                 </Text>
               </View>
               <Ionicons name="arrow-forward" size={18} color={COLORS.textMuted} />
               <View style={styles.dateItem}>
-                <Text style={styles.dateLabel}>Retour</Text>
+                <Text style={styles.dateLabel}>{t('screens.reservations.reservationdatepickerscreen.retour')}</Text>
                 <Text style={styles.dateValue}>
-                  {endDate ? (parseLocalDate(endDate)?.toLocaleDateString('fr-FR') || '-') : '-'}
+                  {endDate ? (parseLocalDate(endDate)?.toLocaleDateString(getCurrentLocale()) || '-') : '-'}
                 </Text>
               </View>
             </View>
 
             {estimatedPrice > 0 && (
               <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>Estimé</Text>
+                <Text style={styles.priceLabel}>{t('screens.reservations.reservationdatepickerscreen.estime')}</Text>
                 <Text style={styles.priceValue}>
-                  {estimatedPrice.toLocaleString('fr-FR')} DA
+                  {estimatedPrice.toLocaleString(getCurrentLocale())} DA
                 </Text>
               </View>
             )}
 
             <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-              <Text style={styles.clearButtonText}>Réinitialiser</Text>
+              <Text style={styles.clearButtonText}>{t('screens.reservations.reservationdatepickerscreen.reinitialiser')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -581,7 +584,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           onPress={handleCancel}
           style={styles.cancelButton}
         >
-          <Text style={styles.cancelButtonText}>Annuler</Text>
+          <Text style={styles.cancelButtonText}>{t('screens.reservations.reservationdatepickerscreen.annuler')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handlePrimaryAction}
@@ -601,7 +604,9 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.reserveButtonText}>{reservationFromParams?.id ? 'Confirmer' : 'Réserver'}</Text>
+              <Text style={styles.reserveButtonText}>
+                {reservationFromParams?.id ? t('screens.reservations.reservationdatepickerscreen.confirmer') : t('screens.reservations.reservationdatepickerscreen.reserver')}
+              </Text>
             )}
           </LinearGradient>
         </TouchableOpacity>
