@@ -7,43 +7,45 @@ import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavi
 import { AgencyCard, Badge, SectionTitle } from '../../components/agency/AgencyPrimitives';
 import { getAgencyDocuments } from '../../services/agency';
 import { deleteDocument, uploadDocument } from '../../services/owner';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const requiredCompanyDocs = [
 {
   key: 'business_registration',
-  label: 'Registre de commerce',
-  subtitle: 'Document légal de l’entreprise',
+  labelKey: 'screens.agency.agencydocumentsscreen.registreDeCommerce',
+  subtitleKey: 'screens.agency.agencydocumentsscreen.documentLegalDeLentreprise',
   icon: 'business-outline',
   uploadType: 'business_registration'
 },
 {
   key: 'nif',
-  label: 'NIF / NIS',
-  subtitle: 'Numéro fiscal de l’agence',
+  labelKey: 'screens.agency.agencydocumentsscreen.nifNis',
+  subtitleKey: 'screens.agency.agencydocumentsscreen.numeroFiscalDeLagence',
   icon: 'hash-outline',
   uploadType: 'nif'
 },
 {
   key: 'manager_identity',
-  label: "Carte d'identité du gérant",
-  subtitle: 'Identité du responsable légal',
+  labelKey: 'screens.agency.agencydocumentsscreen.carteDidentiteDuGerant',
+  subtitleKey: 'screens.agency.agencydocumentsscreen.identiteDuResponsableLegal',
   icon: 'person-outline',
   uploadType: 'identity_card'
 },
 {
   key: 'professional_insurance',
-  label: 'Assurance professionnelle',
-  subtitle: 'Couverture légale de l’activité',
+  labelKey: 'screens.agency.agencydocumentsscreen.assuranceProfessionnelle',
+  subtitleKey: 'screens.agency.agencydocumentsscreen.couvertureLegaleDeLactivite',
   icon: 'shield-checkmark-outline',
   uploadType: 'professional_insurance'
 }];
 
 
 const statusMeta = {
-  VERIFIED: { label: 'Vérifié', tone: 'green', icon: 'checkmark-circle-outline' },
-  REJECTED: { label: 'Rejeté', tone: 'red', icon: 'close-circle-outline' },
-  PENDING: { label: 'En vérification', tone: 'amber', icon: 'time-outline' },
-  MISSING: { label: 'Manquant', tone: 'neutral', icon: 'alert-circle-outline' }
+  VERIFIED: { labelKey: 'screens.agency.agencydocumentsscreen.verifie', tone: 'green', icon: 'checkmark-circle-outline' },
+  REJECTED: { labelKey: 'screens.agency.agencydocumentsscreen.rejete', tone: 'red', icon: 'close-circle-outline' },
+  PENDING: { labelKey: 'screens.agency.agencydocumentsscreen.enVerification', tone: 'amber', icon: 'time-outline' },
+  MISSING: { labelKey: 'screens.agency.agencydocumentsscreen.manquant', tone: 'neutral', icon: 'alert-circle-outline' }
 };
 
 const getStatusMeta = (status) => statusMeta[status] || statusMeta.MISSING;
@@ -71,7 +73,7 @@ const formatDate = (value) => {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('fr-FR');
+  return date.toLocaleDateString(getCurrentLocale());
 };
 
 const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
@@ -112,10 +114,10 @@ const RequirementCard = ({ item, status, fileLabel, doc, busy = false, onPress, 
       <View style={styles.requirementBody}>
         <View style={styles.requirementTopRow}>
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <Text style={styles.requirementTitle}>{item.label}</Text>
-            <Text style={styles.requirementSubtitle}>{item.subtitle}</Text>
+            <Text style={styles.requirementTitle}>{t(item.labelKey)}</Text>
+            <Text style={styles.requirementSubtitle}>{t(item.subtitleKey)}</Text>
           </View>
-          <Badge label={meta.label} toneKey={meta.tone} icon={meta.icon} />
+          <Badge label={t(meta.labelKey)} toneKey={meta.tone} icon={meta.icon} />
         </View>
 
         <View style={styles.requirementDivider} />
@@ -199,7 +201,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
       const data = await getAgencyDocuments({ token });
       setState((prev) => ({ ...prev, loading: false, refreshing: false, error: '', data }));
     } catch (error) {
-      setState((prev) => ({ ...prev, loading: false, refreshing: false, error: error.message || 'Impossible de charger les documents' }));
+      setState((prev) => ({ ...prev, loading: false, refreshing: false, error: getFriendlyError(error, t) }));
     }
   }, [token]);
 
@@ -244,7 +246,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
     try {
       await Linking.openURL(doc.documentUrl);
     } catch (error) {
-      Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), error.message || 'Impossible d’ouvrir le document');
+      Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), getFriendlyError(error, t));
     }
   }, []);
 
@@ -316,8 +318,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
       await load();
     } catch (error) {
       console.error('Document upload error:', error);
-      const errorMessage = error?.message || error?.error || JSON.stringify(error) || 'Impossible de téléverser le document';
-      Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), errorMessage);
+      Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), getFriendlyError(error, t, 'common.errors.upload'));
     } finally {
       setStagedDocuments((prev) => {
         const updated = { ...prev };
@@ -332,7 +333,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
     if (!doc?.id) return;
     Alert.alert(t("screens.agency.agencydocumentsscreen.supprimerLeDocument"),
 
-    `Voulez-vous supprimer "${item.label}" ?`,
+    t('screens.agency.agencydocumentsscreen.confirmerSuppressionDocument', { document: t(item.labelKey) }),
     [
     { text: t("screens.agency.agencyprofilescreen.annuler"), style: 'cancel' },
     {
@@ -344,7 +345,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
           await deleteDocument({ token, documentId: doc.id });
           await load();
         } catch (error) {
-          Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), error.message || 'Suppression impossible');
+          Alert.alert(t("screens.agency.agencydocumentsscreen.erreur"), getFriendlyError(error, t));
         } finally {
           setBusyKey('');
         }

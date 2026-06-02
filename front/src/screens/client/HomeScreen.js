@@ -11,10 +11,10 @@ import { useFavorites } from '../../contexts/FavoritesContext';
 import storage from '../../utils/storage';import { useTranslation } from "react-i18next";
 
 const HomeScreen = ({ navigation, route }) => {const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('Accueil');
+  const [activeTab, setActiveTab] = useState('home');
   const [searchValue, setSearchValue] = useState('');
-  const [activeFilter, setActiveFilter] = useState(t("common.legacyHome.all"));
-  const [activeSort, setActiveSort] = useState(t("common.legacyHome.popular"));
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeSort, setActiveSort] = useState('popular');
   const [listings, setListings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -22,14 +22,21 @@ const HomeScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const [showPhoneReminder, setShowPhoneReminder] = useState(false);
   const [phoneReminderDismissedThisSession, setPhoneReminderDismissedThisSession] = useState(false);
 
-  const filterOptions = [t("common.legacyHome.all"), t("common.legacyHome.gearboxAuto"), t("common.legacyHome.gearboxManual"), t("common.legacyHome.fuelGasoline"), t("common.legacyHome.fuelDiesel")];
-
-
-
-
-
-
-  const sortOptions = [t("common.legacyHome.popular"), t("common.legacyHome.priceAsc"), t("common.legacyHome.priceDesc"), t("common.legacyHome.rating")];
+  const filterOptions = [
+    { id: 'all', label: t("common.legacyHome.all") },
+    { id: 'auto', label: t("common.legacyHome.gearboxAuto") },
+    { id: 'manual', label: t("common.legacyHome.gearboxManual") },
+    { id: 'gasoline', label: t("common.legacyHome.fuelGasoline") },
+    { id: 'diesel', label: t("common.legacyHome.fuelDiesel") }
+  ];
+  const sortOptions = [
+    { id: 'popular', label: t("common.legacyHome.popular") },
+    { id: 'priceAsc', label: t("common.legacyHome.priceAsc") },
+    { id: 'priceDesc', label: t("common.legacyHome.priceDesc") },
+    { id: 'rating', label: t("common.legacyHome.rating") }
+  ];
+  const activeFilterLabel = filterOptions.find((option) => option.id === activeFilter)?.label || filterOptions[0].label;
+  const activeSortLabel = sortOptions.find((option) => option.id === activeSort)?.label || sortOptions[0].label;
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [showSortOptions, setShowSortOptions] = useState(false);
 
@@ -100,18 +107,18 @@ const HomeScreen = ({ navigation, route }) => {const { t } = useTranslation();
     `${listing.brand} ${listing.model} ${listing.city}`.toLowerCase().includes(normalizedSearch);
 
     const matchFilter =
-    activeFilter === t("common.legacyHome.all") ||
-    activeFilter === t("common.legacyHome.gearboxAuto") && listing.transmission.toLowerCase() === 'auto' ||
-    activeFilter === t("common.legacyHome.gearboxManual") && listing.transmission.toLowerCase() === 'manuelle' ||
-    activeFilter === t("common.legacyHome.fuelGasoline") && listing.fuel.toLowerCase() === 'essence' ||
-    activeFilter === t("common.legacyHome.fuelDiesel") && listing.fuel.toLowerCase() === 'diesel';
+    activeFilter === 'all' ||
+    activeFilter === 'auto' && listing.transmission.toLowerCase() === 'auto' ||
+    activeFilter === 'manual' && listing.transmission.toLowerCase() === 'manuelle' ||
+    activeFilter === 'gasoline' && listing.fuel.toLowerCase() === 'essence' ||
+    activeFilter === 'diesel' && listing.fuel.toLowerCase() === 'diesel';
 
     return matchSearch && matchFilter;
   }).
   sort((a, b) => {
-    if (activeSort === t("common.legacyHome.priceAsc")) return a.pricePerDay - b.pricePerDay;
-    if (activeSort === t("common.legacyHome.priceDesc")) return b.pricePerDay - a.pricePerDay;
-    if (activeSort === t("common.legacyHome.rating")) return b.rating - a.rating;
+    if (activeSort === 'priceAsc') return a.pricePerDay - b.pricePerDay;
+    if (activeSort === 'priceDesc') return b.pricePerDay - a.pricePerDay;
+    if (activeSort === 'rating') return b.rating - a.rating;
     return b.rating - a.rating;
   }), [listings, searchValue, activeFilter, activeSort]);
 
@@ -181,23 +188,23 @@ const HomeScreen = ({ navigation, route }) => {const { t } = useTranslation();
                   activeOpacity={0.85}>
                   
                                     <Ionicons name="funnel-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.actionButtonText}>{t("screens.client.homescreen.filtrer")}{activeFilter}</Text>
+                                    <Text style={styles.actionButtonText}>{t("screens.client.homescreen.filtrer")}{activeFilterLabel}</Text>
                                 </TouchableOpacity>
                                 {showFilterOptions &&
                 <View style={styles.dropdown}>
                                         {filterOptions.map((option) => {
-                    const isActive = option === activeFilter;
+                    const isActive = option.id === activeFilter;
                     return (
                       <TouchableOpacity
-                        key={option}
+                        key={option.id}
                         style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
                         onPress={() => {
-                          setActiveFilter(option);
+                          setActiveFilter(option.id);
                           setShowFilterOptions(false);
                         }}>
                         
                                                     <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
-                                                        {option}
+                                                        {option.label}
                                                     </Text>
                                                 </TouchableOpacity>);
 
@@ -216,23 +223,23 @@ const HomeScreen = ({ navigation, route }) => {const { t } = useTranslation();
                   activeOpacity={0.85}>
                   
                                     <Ionicons name="swap-vertical-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.actionButtonText}>{t("screens.client.homescreen.trier")}{activeSort}</Text>
+                                    <Text style={styles.actionButtonText}>{t("screens.client.homescreen.trier")}{activeSortLabel}</Text>
                                 </TouchableOpacity>
                                 {showSortOptions &&
                 <View style={styles.dropdown}>
                                         {sortOptions.map((option) => {
-                    const isActive = option === activeSort;
+                    const isActive = option.id === activeSort;
                     return (
                       <TouchableOpacity
-                        key={option}
+                        key={option.id}
                         style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
                         onPress={() => {
-                          setActiveSort(option);
+                          setActiveSort(option.id);
                           setShowSortOptions(false);
                         }}>
                         
                                                     <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
-                                                        {option}
+                                                        {option.label}
                                                     </Text>
                                                 </TouchableOpacity>);
 

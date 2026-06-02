@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import ReservationCard from '../../components/cards/ReservationCard';import { useTranslation } from "react-i18next";
+import { getCurrentLocale } from '../../i18n';
 
 const ReservationsScreen = ({ navigation }) => {const { t } = useTranslation();
   const [reservations, setReservations] = useState([]);
@@ -140,7 +141,7 @@ const ReservationsScreen = ({ navigation }) => {const { t } = useTranslation();
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
+    return date.toLocaleDateString(getCurrentLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric'

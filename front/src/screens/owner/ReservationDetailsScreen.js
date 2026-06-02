@@ -18,6 +18,8 @@ import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
 import { getThread } from '../../services/messages';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const OwnerReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const reservationFromParams = route?.params?.reservation;
@@ -228,7 +230,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {const { t } = 
 
   const formatDate = (date) => {
     try {
-      return date.toLocaleDateString('fr-FR', {
+      return date.toLocaleDateString(getCurrentLocale(), {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -238,7 +240,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {const { t } = 
     }
   };
 
-  const formatPrice = (value) => Math.round(Number(value || 0)).toLocaleString('fr-FR');
+  const formatPrice = (value) => Math.round(Number(value || 0)).toLocaleString(getCurrentLocale());
 
   const getStatusLabel = (status) => {
     const labels = {
@@ -315,7 +317,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {const { t } = 
       const updated = json?.result || json;
       setReservationState((prev) => ({ ...(prev || reservation), ...(updated || {}), status: updated?.status || nextStatus }));
     } catch (e) {
-      Alert.alert(t("screens.owner.reservationdetailsscreen.erreur"), e?.message || t("screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue"));
+      Alert.alert(t("screens.owner.reservationdetailsscreen.erreur"), getFriendlyError(e, t));
     } finally {
       setLoading(false);
     }
@@ -359,7 +361,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {const { t } = 
       setPaymentInfo((prev) => prev ? { ...prev, status: 'completed' } : null);
       setReservationState((prev) => ({ ...(prev || reservation), status: 'confirmed' }));
     } catch (e) {
-      Alert.alert(t("screens.owner.reservationdetailsscreen.erreur"), e?.message || 'Impossible de confirmer le paiement');
+      Alert.alert(t("screens.owner.reservationdetailsscreen.erreur"), getFriendlyError(e, t, 'common.errors.payment'));
     } finally {
       setConfirmingPayment(false);
     }

@@ -77,7 +77,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {const { t } = useTransla
       if (res.ok) {
         setMessage(data?.message || 'Password reset successful. You can log in now.');
         setTimeout(() => {
-          navigation.reset({ index: 0, routes: [{ name: t("screens.auth.loginscreen.login"), params: { email: trimmedEmail } }] });
+          navigation.reset({ index: 0, routes: [{ name: 'Login', params: { email: trimmedEmail } }] });
         }, 700);
       } else if (data?.reason) {
         setError(friendlyReason(data.reason));

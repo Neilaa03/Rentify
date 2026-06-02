@@ -18,6 +18,8 @@ import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNaviga
 import MessageIconButton from '../../components/messaging/MessageIconButton';
 import NotificationIconButton from '../../components/notifications/NotificationIconButton';
 import AppBackground from '../../components/layout/AppBackground';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -66,7 +68,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
       const data = await getOwnerDashboardData({ token, ownerId: user.id });
       setDashboard(data);
     } catch (err) {
-      setError(err.message || 'Impossible de charger le tableau de bord');
+      setError(getFriendlyError(err, t));
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -144,7 +146,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
         setConnectStatus(status || null);
       }
     } catch (e) {
-      const msg = e.message || 'Impossible de configurer Stripe';
+      const msg = getFriendlyError(e, t);
       setError(msg);
       Alert.alert(t("screens.owner.dashboardscreen.configurerStripe"), msg);
     } finally {
@@ -192,7 +194,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
               <StatCard
               icon="cash-outline"
               title={t("screens.owner.dashboardscreen.revenusEstimes")}
-              value={`${dashboard.stats.estimatedRevenueDA.toLocaleString('fr-FR')} DA`} />
+              value={`${dashboard.stats.estimatedRevenueDA.toLocaleString(getCurrentLocale())} DA`} />
             
             </View>
 
@@ -229,13 +231,13 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
               <View style={styles.balanceRow}>
                 <View style={styles.balanceChip}>
                   <Text style={styles.balanceValue}>
-                    {Number(connectStatus?.pendingBalance || 0).toLocaleString('fr-FR')}{t("screens.owner.dashboardscreen.da")}
+                    {Number(connectStatus?.pendingBalance || 0).toLocaleString(getCurrentLocale())}{t("screens.owner.dashboardscreen.da")}
                 </Text>
                   <Text style={styles.balanceLabel}>{t("screens.owner.dashboardscreen.enAttente")}</Text>
                 </View>
                 <View style={styles.balanceChip}>
                   <Text style={styles.balanceValue}>
-                    {Number(connectStatus?.availableBalance || 0).toLocaleString('fr-FR')}{t("screens.owner.dashboardscreen.da")}
+                    {Number(connectStatus?.availableBalance || 0).toLocaleString(getCurrentLocale())}{t("screens.owner.dashboardscreen.da")}
                 </Text>
                   <Text style={styles.balanceLabel}>{t("screens.owner.dashboardscreen.disponible")}</Text>
                 </View>
@@ -275,7 +277,7 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
                     </View>
                     <View style={styles.rightActivity}>
                       <Text style={[styles.badge, { color: tone.color, backgroundColor: tone.bg }]}>{item.stateLabel}</Text>
-                      <Text style={styles.activityPrice}>{Number(item.pricePerDay || 0).toLocaleString('fr-FR')}{t("screens.owner.dashboardscreen.da")}</Text>
+                      <Text style={styles.activityPrice}>{Number(item.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("screens.owner.dashboardscreen.da")}</Text>
                     </View>
                   </View>);
 

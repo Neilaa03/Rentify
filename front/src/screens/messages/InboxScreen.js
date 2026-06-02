@@ -8,6 +8,7 @@ import { getConversations, getOwnerClientsExpanded } from '../../services/messag
 import { getCurrentUserProfile } from '../../services/authSession';
 import { getSocket } from '../../services/socketClient';
 import { buildApiUrl } from '../../services/api';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const initialsFor = (user) => {
   const first = (user?.firstName || user?.first_name || '').trim();
@@ -21,7 +22,7 @@ const displayNameFor = (user) => {
   const first = (user?.firstName || user?.first_name || '').trim();
   const last = (user?.lastName || user?.last_name || '').trim();
   const full = `${first} ${last}`.trim();
-  return full || user?.email || 'Utilisateur';
+  return full || user?.email || '';
 };
 
 const formatTime = (iso) => {
@@ -68,7 +69,7 @@ const InboxScreen = ({ navigation, route }) => {const { t } = useTranslation();
       const data = mode === 'owner_clients' ? await getOwnerClientsExpanded() : await getConversations();
       setItems(Array.isArray(data) ? data : []);
     } catch (e) {
-      if (!silent) setError(e?.message || 'Impossible de charger la messagerie');
+      if (!silent) setError(getFriendlyError(e, t));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);

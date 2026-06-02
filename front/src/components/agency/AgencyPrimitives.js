@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';import { useTranslation } from "react-i18next";
+import { getCurrentLocale } from '../../i18n';
 
 const toneMap = {
   blue: { fg: '#4f8cff', bg: 'rgba(79,140,255,0.14)', border: 'rgba(79,140,255,0.35)' },
@@ -149,7 +150,7 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t 
             <Text style={styles.vehicleTitle}>{item.brand} {item.model}</Text>
             <Text style={styles.vehicleSubtitle}>{item.year || '—'} · {item.transmission || '—'} · {item.seats || '—'}{t("components.agency.agencyprimitives.places")}</Text>
           </View>
-          <Text style={styles.vehiclePrice}>{Number(item.listing?.pricePerDay || item.pricePerDay || 0).toLocaleString('fr-FR')}{t("components.agency.agencyprimitives.daJ")}</Text>
+          <Text style={styles.vehiclePrice}>{Number(item.listing?.pricePerDay || item.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("components.agency.agencyprimitives.daJ")}</Text>
         </View>
 
         <View style={styles.vehicleStatsRow}>
@@ -201,7 +202,7 @@ export const RequestRow = ({ item }) => {const { t } = useTranslation();
             <Text style={styles.requestName}>{renterFirst} {renterLast}</Text>
             <Text style={styles.requestMeta}>{Number(item.renter?.rating || item.rating || 0).toFixed(1)}{t("components.agency.agencyprimitives.text5")}{vehicleLabel}</Text>
           </View>
-          <Text style={styles.requestPrice}>{Number(item.totalPrice || 0).toLocaleString('fr-FR')}{t("components.agency.agencyprimitives.da")}</Text>
+          <Text style={styles.requestPrice}>{Number(item.totalPrice || 0).toLocaleString(getCurrentLocale())}{t("components.agency.agencyprimitives.da")}</Text>
         </View>
         <Text style={styles.requestDates}>{item.startDate} → {item.endDate}</Text>
       </View>

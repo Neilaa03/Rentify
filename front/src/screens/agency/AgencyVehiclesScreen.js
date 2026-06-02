@@ -5,11 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, Badge, PillRow, SectionTitle, VehicleCard } from '../../components/agency/AgencyPrimitives';
 import { getAgencyVehicles, toggleAgencyVehicleVisibility } from '../../services/agency';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const statusFilters = [
-{ key: 'ALL', label: 'Tous' },
-{ key: 'AVAILABLE', label: 'En ligne' },
-{ key: 'HIDDEN', label: 'Hors ligne' }];
+{ key: 'ALL', labelKey: 'screens.agency.agencyvehiclesscreen.tous' },
+{ key: 'AVAILABLE', labelKey: 'screens.agency.agencyvehiclesscreen.enLigne' },
+{ key: 'HIDDEN', labelKey: 'screens.agency.agencyvehiclesscreen.horsLigne' }];
 
 
 const getSortValue = (item, sortKey) => {
@@ -42,7 +43,7 @@ export default function AgencyVehiclesScreen({ navigation, route }) {const { t }
       const data = await getAgencyVehicles({ token, status: state.status });
       setState((prev) => ({ ...prev, loading: false, refreshing: false, error: '', data }));
     } catch (error) {
-      setState((prev) => ({ ...prev, loading: false, refreshing: false, error: error.message || 'Impossible de charger la flotte' }));
+      setState((prev) => ({ ...prev, loading: false, refreshing: false, error: getFriendlyError(error, t) }));
     }
   }, [token, state.status]);
 
@@ -72,7 +73,7 @@ export default function AgencyVehiclesScreen({ navigation, route }) {const { t }
       await toggleAgencyVehicleVisibility({ token, vehicleId: vehicle.id });
       await load();
     } catch (error) {
-      Alert.alert(t("screens.agency.agencyvehiclesscreen.erreur"), error.message || 'Impossible de modifier la visibilité');
+      Alert.alert(t("screens.agency.agencyvehiclesscreen.erreur"), getFriendlyError(error, t));
     }
   };
 
@@ -118,7 +119,7 @@ export default function AgencyVehiclesScreen({ navigation, route }) {const { t }
                   right={
                   <TouchableOpacity style={styles.addButton} onPress={onAdd}>
                     <Ionicons name="add" size={16} color="#fff" />
-                    <Text style={styles.addButtonText}>{mode === 'listings' ? 'Ajouter une annonce' : t("screens.owner.carsscreen.ajouterUnVehicule")}</Text>
+                    <Text style={styles.addButtonText}>{mode === 'listings' ? t("screens.agency.agencyvehiclesscreen.ajouterUneAnnonce") : t("screens.owner.carsscreen.ajouterUnVehicule")}</Text>
                   </TouchableOpacity>
                   } />
                 
@@ -126,7 +127,7 @@ export default function AgencyVehiclesScreen({ navigation, route }) {const { t }
               {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
 
               <PillRow
-                  items={statusFilters}
+                  items={statusFilters.map((item) => ({ ...item, label: t(item.labelKey) }))}
                   activeKey={state.status}
                   onSelect={(status) => setState((prev) => ({ ...prev, status }))} />
                 

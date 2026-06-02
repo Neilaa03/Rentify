@@ -23,6 +23,8 @@ import PaymentMethodSelector from '../../components/payment/PaymentMethodSelecto
 import PaymentStatusDisplay from '../../components/payment/PaymentStatusDisplay';
 import ReviewCard from '../../components/reviews/ReviewCard';
 import ReviewForm from '../../components/reviews/ReviewForm';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const useStripeSafe = () => {
   if (Platform.OS === 'web') {
@@ -171,7 +173,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
           );
         } catch (error) {
           console.error('Cancel error:', error);
-          Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), error.message || t("screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue"));
+          Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), getFriendlyError(error, t));
         } finally {
           setActionLoading(null);
         }
@@ -565,7 +567,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
       }
     } catch (error) {
       console.error('Payment error:', error);
-      Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), error.message || 'Une erreur est survenue lors du paiement');
+      Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), getFriendlyError(error, t));
     } finally {
       setLoading(false);
     }
@@ -644,14 +646,14 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
       });
 
       if (initResult.error) {
-        throw new Error(initResult.error.message || 'Failed to initialize payment sheet');
+        throw new Error(initResult.getFriendlyError(error, t));
       }
 
       // Present PaymentSheet
       const result = await presentPaymentSheet();
       if (result.error) {
         setPaymentStatus('failed');
-        throw new Error(result.error.message || 'Payment failed');
+        throw new Error(result.getFriendlyError(error, t));
       }
 
       setPaymentStatus('processing');
@@ -760,7 +762,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
       setPaymentInfo((prev) => ({ ...(prev || {}), status: 'released' }));
       Alert.alert(t("screens.reservations.reservationdetailsscreen.succes"), t("screens.reservations.reservationdetailsscreen.laRemiseDuVehiculeAEteConfirmee"));
     } catch (error) {
-      Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), error.message || 'Impossible de confirmer la remise');
+      Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), getFriendlyError(error, t));
     }
   };
 
@@ -790,12 +792,12 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
       setPaymentInfo((prev) => ({ ...(prev || {}), status: 'disputed' }));
       Alert.alert(t("screens.reservations.reservationdetailsscreen.litigeEnregistre"), t("screens.reservations.reservationdetailsscreen.lePaiementResteBloqueJusquaLaResolution"));
     } catch (error) {
-      Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), error.message || 'Impossible de créer le litige');
+      Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), getFriendlyError(error, t));
     }
   };
 
-  const formatPrice = (value) => value.toLocaleString('fr-FR');
-  const formatDate = (date) => new Date(date).toLocaleDateString('fr-FR');
+  const formatPrice = (value) => value.toLocaleString(getCurrentLocale());
+  const formatDate = (date) => new Date(date).toLocaleDateString(getCurrentLocale());
 
   const rentalSubtotal = useMemo(() => {
     const computed = calculateReservationPrice(listing || {}, startRaw, endRaw, { deliveryFee: 0 });
@@ -881,7 +883,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
         Alert.alert(t("screens.reservations.reservationdetailsscreen.merci"), t("screens.reservations.reservationdetailsscreen.votreAvisAEteEnvoye"));
       } catch (e) {
         console.error('submitReview error:', e);
-        Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), e.message || t("screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue"));
+        Alert.alert(t("screens.reservations.reservationdetailsscreen.erreur"), getFriendlyError(e, t));
       } finally {
         setReviewSubmitting(false);
       }
@@ -1106,7 +1108,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
                 {totalDays > 1 ? 's' : ''}
               </Text>
               <Text style={styles.priceRowValue}>
-                {Math.round(rentalSubtotal).toLocaleString('fr-FR')}{t("screens.reservations.reservationdetailsscreen.da")}
+                {Math.round(rentalSubtotal).toLocaleString(getCurrentLocale())}{t("screens.reservations.reservationdetailsscreen.da")}
               </Text>
             </View>
 
@@ -1115,7 +1117,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
             <View style={styles.priceRow}>
               <Text style={styles.priceRowLabel}>{t("screens.reservations.reservationdetailsscreen.fraisDeLivraison")}</Text>
               <Text style={styles.priceRowValue}>
-                {Math.round(deliveryFee).toLocaleString('fr-FR')}{t("screens.reservations.reservationdetailsscreen.da")}
+                {Math.round(deliveryFee).toLocaleString(getCurrentLocale())}{t("screens.reservations.reservationdetailsscreen.da")}
               </Text>
             </View>
 
@@ -1124,7 +1126,7 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
             <View style={styles.priceRow}>
               <Text style={styles.priceRowLabel}>{t("screens.reservations.reservationdetailsscreen.fraisDeService")}</Text>
               <Text style={styles.priceRowValue}>
-                {serviceFee.toLocaleString('fr-FR')}{t("screens.reservations.reservationdetailsscreen.da")}
+                {serviceFee.toLocaleString(getCurrentLocale())}{t("screens.reservations.reservationdetailsscreen.da")}
               </Text>
             </View>
 

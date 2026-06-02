@@ -19,6 +19,8 @@ import {
 import { fetchJson } from '../../services/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import AppBackground from '../../components/layout/AppBackground';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -73,7 +75,7 @@ const OwnerListingsScreen = ({
           }}));
       setCarImages(images);
     } catch (err) {
-      setError(err.message || 'Erreur chargement annonces');
+      setError(getFriendlyError(err, t));
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -136,7 +138,7 @@ const OwnerListingsScreen = ({
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{title}</Text>
+          <Text style={styles.headerTitle}>{screenTitle}</Text>
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}>
@@ -179,7 +181,7 @@ const OwnerListingsScreen = ({
                       <Text style={[styles.badge, badgeStyle]}>{item.stateLabel}</Text>
                     </View>
 
-                    <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString('fr-FR')}{t("screens.owner.listingsscreen.daJour")}</Text>
+                    <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("screens.owner.listingsscreen.daJour")}</Text>
 
                     <View style={styles.actions}>
                       <TouchableOpacity

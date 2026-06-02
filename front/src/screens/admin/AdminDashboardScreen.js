@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const toneColor = {
   blue: '#58a6ff',
@@ -12,7 +14,7 @@ const toneColor = {
   red: '#ff4d6d'
 };
 
-const formatDA = (value) => `${Number(value || 0).toLocaleString('fr-FR')} DA`;
+const formatDA = (value) => `${Number(value || 0).toLocaleString(getCurrentLocale())} DA`;
 
 export default function AdminDashboardScreen({ navigation, route }) {const { t } = useTranslation();
   const [state, setState] = useState({ loading: true, error: '', data: null });
@@ -20,8 +22,8 @@ export default function AdminDashboardScreen({ navigation, route }) {const { t }
   useEffect(() => {
     adminApi.dashboard().
     then((data) => setState({ loading: false, error: '', data })).
-    catch((e) => setState({ loading: false, error: e.message, data: null }));
-  }, []);
+    catch((e) => setState({ loading: false, error: getFriendlyError(e, t), data: null }));
+  }, [t]);
 
   const counters = useMemo(() => {
     const totals = state.data?.totals || {};

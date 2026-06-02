@@ -2,15 +2,16 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';import { useTranslation } from "react-i18next";
+import { getCurrentLocale } from '../../i18n';
 
-const formatPrice = (value) => `${(value || 0).toLocaleString('fr-FR')} DA`;
+const formatPrice = (value) => `${(value || 0).toLocaleString(getCurrentLocale())} DA`;
 
 const formatDateRange = (from, to) => {
   try {
     const f = new Date(from);
     const t = new Date(to);
     const opts = { year: '2-digit', month: 'short', day: 'numeric' };
-    return `${f.toLocaleDateString('en-US', opts)} → ${t.toLocaleDateString('en-US', opts)}`;
+    return `${f.toLocaleDateString(getCurrentLocale(), opts)} → ${t.toLocaleDateString(getCurrentLocale(), opts)}`;
   } catch (e) {
     return '';
   }
@@ -20,7 +21,7 @@ const formatSingleDate = (value) => {
   try {
     const date = new Date(value);
     const opts = { year: '2-digit', month: 'short', day: 'numeric' };
-    return date.toLocaleDateString('en-US', opts);
+    return date.toLocaleDateString(getCurrentLocale(), opts);
   } catch (e) {
     return '';
   }

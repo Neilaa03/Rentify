@@ -27,6 +27,7 @@ import { appFont } from '../../utils/responsive';
 import { deleteDocument, getUserDocuments, uploadUserDocument } from '../../services/owner';
 import * as ImagePicker from 'expo-image-picker';
 import { getLanguageMeta, setAppLanguage, supportedLanguages } from '../../i18n';
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const profileFont = (width, regular, small, verySmall = small) => {
   if (width <= 340) return verySmall;
@@ -115,11 +116,11 @@ const inferIdentityMimeType = (file) => {
 
 const getIdentityStatusMeta = (status) => {
   const normalized = String(status || '').toLowerCase();
-  if (normalized === 'approved') return { label: 'Vérifié', tone: '#21d4a7', bg: 'rgba(33,212,167,0.12)' };
-  if (normalized === 'rejected') return { label: 'Rejeté', tone: '#ff6b6b', bg: 'rgba(255,107,107,0.12)' };
-  if (normalized === 'manual_review') return { label: 'En vérification', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
-  if (normalized === 'pending') return { label: 'En attente', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
-  return { label: 'Manquant', tone: '#9ca2cb', bg: 'rgba(255,255,255,0.05)' };
+  if (normalized === 'approved') return { labelKey: 'screens.agency.agencydocumentsscreen.verifie', tone: '#21d4a7', bg: 'rgba(33,212,167,0.12)' };
+  if (normalized === 'rejected') return { labelKey: 'screens.agency.agencydocumentsscreen.rejete', tone: '#ff6b6b', bg: 'rgba(255,107,107,0.12)' };
+  if (normalized === 'manual_review') return { labelKey: 'screens.agency.agencydocumentsscreen.enVerification', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
+  if (normalized === 'pending') return { labelKey: 'screens.owner.carsscreen.enAttente', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
+  return { labelKey: 'screens.agency.agencydocumentsscreen.manquant', tone: '#9ca2cb', bg: 'rgba(255,255,255,0.05)' };
 };
 
 const ProfileScreen = ({ navigation, route }) => {
@@ -181,7 +182,7 @@ const ProfileScreen = ({ navigation, route }) => {
     try {
       await setAppLanguage(language);
     } catch {
-      Alert.alert(t('screens.client.profilescreen.erreur'), 'Unable to change language.');
+      Alert.alert(t('screens.client.profilescreen.erreur'), t('common.errors.languageChange'));
     }
   };
 
@@ -228,7 +229,7 @@ const ProfileScreen = ({ navigation, route }) => {
         const next = data?.user || null;
         await persistUpdatedUser(next);
       } catch (err) {
-        setError(err.message || 'Unable to load profile');
+        setError(getFriendlyError(err, t));
       } finally {
         setLoading(false);
       }
@@ -463,7 +464,7 @@ const ProfileScreen = ({ navigation, route }) => {
       await persistUpdatedUser(updatedUser);
       setIsEditingPersonalInfo(false);
     } catch (err) {
-      setPersonalInfoError(err.message || 'Erreur lors de la mise a jour');
+      setPersonalInfoError(getFriendlyError(err, t));
     } finally {
       setSavingPersonalInfo(false);
     }
@@ -475,7 +476,7 @@ const ProfileScreen = ({ navigation, route }) => {
     try {
       await Linking.openURL(url);
     } catch (error) {
-      Alert.alert(t("screens.client.profilescreen.erreur"), error.message || 'Impossible d’ouvrir le document');
+      Alert.alert(t("screens.client.profilescreen.erreur"), getFriendlyError(error, t));
     }
   }, [identityDocument?.documentUrl]);
 
@@ -518,7 +519,7 @@ const ProfileScreen = ({ navigation, route }) => {
         Alert.alert(t("screens.client.profilescreen.documentRejete"), uploaded.ocrResult.verificationReason);
       }
     } catch (error) {
-      Alert.alert(t("screens.client.profilescreen.erreur"), error.message || 'Impossible de téléverser la carte d’identité');
+      Alert.alert(t("screens.client.profilescreen.erreur"), getFriendlyError(error, t));
     } finally {
       setIdentityBusy(false);
     }
@@ -532,7 +533,7 @@ const ProfileScreen = ({ navigation, route }) => {
       setIdentityDocument(null);
       setIdentityAlertShown(false);
     } catch (error) {
-      Alert.alert(t("screens.client.profilescreen.erreur"), error.message || 'Suppression impossible');
+      Alert.alert(t("screens.client.profilescreen.erreur"), getFriendlyError(error, t));
     } finally {
       setIdentityBusy(false);
     }
@@ -591,7 +592,7 @@ const ProfileScreen = ({ navigation, route }) => {
       }
     } catch (err) {
       setLocalProfilePictureUri('');
-      setPersonalInfoError(err.message || 'Upload echoue');
+      setPersonalInfoError(getFriendlyError(err, t));
     } finally {
       setPhotoLoading(false);
     }
@@ -619,7 +620,7 @@ const ProfileScreen = ({ navigation, route }) => {
         await persistUpdatedUser(nextUser);
       }
     } catch (err) {
-      setPersonalInfoError(err.message || 'Suppression echouee');
+      setPersonalInfoError(getFriendlyError(err, t));
     } finally {
       setPhotoLoading(false);
     }
@@ -675,7 +676,7 @@ const ProfileScreen = ({ navigation, route }) => {
       closePasswordEditor();
       Alert.alert(t("screens.client.profilescreen.motDePasseMisAJour"), t("screens.client.profilescreen.votreMotDePasseAEteModifie"));
     } catch (err) {
-      setChangePasswordError(err.message || 'Impossible de changer le mot de passe');
+      setChangePasswordError(getFriendlyError(err, t));
     } finally {
       setChangePasswordLoading(false);
     }
@@ -731,7 +732,7 @@ const ProfileScreen = ({ navigation, route }) => {
         setConnectStatus(status || null);
       }
     } catch (e) {
-      const msg = e.message || 'Impossible de configurer Stripe';
+      const msg = getFriendlyError(e, t);
       setPersonalInfoError(msg);
       Alert.alert(t("screens.client.profilescreen.configurerStripe"), msg);
     } finally {
@@ -1184,7 +1185,7 @@ const ProfileScreen = ({ navigation, route }) => {
                     <Text style={styles.identitySubtitle}>{t("screens.client.profilescreen.obligatoirePourPublierUnVehiculeOuUne")}</Text>
                   </View>
                   <View style={[styles.identityBadge, { backgroundColor: identityStatus.bg }]}>
-                    <Text style={[styles.identityBadgeText, { color: identityStatus.tone }]}>{identityStatus.label}</Text>
+                    <Text style={[styles.identityBadgeText, { color: identityStatus.tone }]}>{t(identityStatus.labelKey)}</Text>
                   </View>
                 </View>
 

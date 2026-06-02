@@ -30,6 +30,7 @@ import { getCurrentUserProfile } from '../../services/authSession';
 import { getThread, markThreadRead, sendMessage, uploadChatImage } from '../../services/messages';
 import { getSocket } from '../../services/socketClient';
 import { buildApiUrl } from '../../services/api';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const displayNameFor = (user) => {
   const first = (user?.firstName || user?.first_name || '').trim();
@@ -176,7 +177,7 @@ const ChatScreen = ({ navigation, route }) => {const { t } = useTranslation();
       }
       setTimeout(scrollToEnd, 50);
     } catch (e) {
-      setError(e?.message || 'Impossible de charger la discussion');
+      setError(getFriendlyError(e, t));
     } finally {
       setIsLoading(false);
     }
@@ -319,7 +320,7 @@ const ChatScreen = ({ navigation, route }) => {const { t } = useTranslation();
         appendMessage(saved);
         setTimeout(scrollToEnd, 30);
       } catch (e) {
-        Alert.alert(t("screens.messages.chatscreen.uploadFailed"), e?.message || 'Unable to upload image');
+        Alert.alert(t("screens.messages.chatscreen.uploadFailed"), getFriendlyError(e, t, 'common.errors.upload'));
       } finally {
         setIsUploadingImage(false);
       }
@@ -457,7 +458,7 @@ const ChatScreen = ({ navigation, route }) => {const { t } = useTranslation();
 
       );
     } catch (e) {
-      Alert.alert(t("screens.messages.chatscreen.saveFailed"), e?.message || 'Unable to save image');
+      Alert.alert(t("screens.messages.chatscreen.saveFailed"), getFriendlyError(e, t, 'common.errors.upload'));
     }
   }, []);
 

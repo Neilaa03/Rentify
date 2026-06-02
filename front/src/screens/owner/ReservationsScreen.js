@@ -23,8 +23,9 @@ const OwnerReservationsScreen = ({
   navigation,
   route,
   BottomNavigationComponent = OwnerBottomNavigation,
-  title = t("components.navigation.agencybottomnavigation.reservations")
+  title
 }) => {const { t } = useTranslation();
+  const screenTitle = title || t("components.navigation.agencybottomnavigation.reservations");
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -178,7 +179,7 @@ const OwnerReservationsScreen = ({
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView edges={['top', 'left', 'right']} style={[styles.overlay, { flex: 1 }]}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>{title}</Text>
+            <Text style={styles.headerTitle}>{screenTitle}</Text>
             <View style={{ width: 44 }} />
           </View>
 

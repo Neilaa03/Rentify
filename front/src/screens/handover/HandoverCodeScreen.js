@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import storage from '../../utils/storage';
 import { API_ENDPOINTS } from '../../constants/api';
 import { COLORS } from '../../constants/colors';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const formatCountdown = (ms) => {
   if (!Number.isFinite(ms) || ms <= 0) return '00:00';
@@ -78,7 +79,7 @@ const HandoverCodeScreen = ({ navigation, route }) => {const { t } = useTranslat
       setPayload(data);
       setVerifiedAt(null);
     } catch (e) {
-      Alert.alert(t("screens.handover.handovercodescreen.erreur"), e.message || t("screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue"));
+      Alert.alert(t("screens.handover.handovercodescreen.erreur"), getFriendlyError(e, t));
     } finally {
       setLoading(false);
     }

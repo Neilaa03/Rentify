@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import ListingCard from '../../components/cards/ListingCard';
 import { toUiListing } from '../../services/listings';
 import { useFavorites } from '../../contexts/FavoritesContext';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const FavoritesScreen = ({ navigation }) => {const { t } = useTranslation();
   const { refreshFavorites, isFavorite, toggleFavorite, favoriteIds } = useFavorites();
@@ -27,7 +28,7 @@ const FavoritesScreen = ({ navigation }) => {const { t } = useTranslation();
       const mapped = (res?.items || []).map(toUiListing);
       setItems(mapped);
     } catch (err) {
-      setError(err.message || 'Impossible de charger les favoris');
+      setError(getFriendlyError(err, t));
     } finally {
       setLoading(false);
     }

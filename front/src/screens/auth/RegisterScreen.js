@@ -366,7 +366,7 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
 
                             <View style={styles.footer}>
                                 <Text style={styles.footerText}>{t("screens.auth.registerscreen.alreadyHaveAnAccount")}</Text>
-                                <TouchableOpacity onPress={() => navigation.navigate(t("screens.auth.loginscreen.login"))}>
+                                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                                     <Text style={styles.linkText}>{t("screens.auth.registerscreen.signIn")}</Text>
                                 </TouchableOpacity>
                             </View>

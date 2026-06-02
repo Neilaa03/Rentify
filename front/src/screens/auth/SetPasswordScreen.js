@@ -30,7 +30,7 @@ const SetPasswordScreen = ({ navigation, route }) => {const { t } = useTranslati
   const goNext = async () => {
     const t = token || (await storage.getItemAsync('userToken'));
     if (!t) {
-      navigation.reset({ index: 0, routes: [{ name: t("screens.auth.loginscreen.login") }] });
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
       return;
     }
 

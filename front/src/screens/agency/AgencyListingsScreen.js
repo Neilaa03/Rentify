@@ -18,6 +18,8 @@ import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavi
 import { AgencyCard, Badge, SectionTitle } from '../../components/agency/AgencyPrimitives';
 import { deleteOwnerListing, getOwnerListings, toggleListingPublication } from '../../services/owner';
 import { fetchJson } from '../../services/api';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -69,7 +71,7 @@ export default function AgencyListingsScreen({ navigation, route }) {const { t }
 
       setCarImages(images);
     } catch (err) {
-      setError(err.message || 'Erreur chargement annonces');
+      setError(getFriendlyError(err, t));
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -124,7 +126,7 @@ export default function AgencyListingsScreen({ navigation, route }) {const { t }
       });
       loadListings();
     } catch (err) {
-      Alert.alert(t("screens.agency.agencylistingsscreen.erreur"), err.message || 'Impossible de modifier la publication');
+      Alert.alert(t("screens.agency.agencylistingsscreen.erreur"), getFriendlyError(err, t));
     }
   };
 
@@ -192,7 +194,7 @@ export default function AgencyListingsScreen({ navigation, route }) {const { t }
                         <Text style={[styles.badge, badgeStyle]}>{item.stateLabel}</Text>
                       </View>
 
-                      <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString('fr-FR')}{t("screens.agency.agencylistingsscreen.daJour")}</Text>
+                      <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("screens.agency.agencylistingsscreen.daJour")}</Text>
 
                       <View style={styles.actions}>
                         <TouchableOpacity

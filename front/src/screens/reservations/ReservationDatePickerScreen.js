@@ -13,11 +13,13 @@ import {
 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
+import { getFriendlyError } from '../../utils/friendlyError';
 import CustomCalendar from '../../components/reservation/CustomCalendar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
+import { getCurrentLocale } from '../../i18n';
 import {
   parseLocalDate,
   formatLocalYmd,
@@ -349,7 +351,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {const { t } = us
         }]
         );
       } else {
-        Alert.alert(t("screens.reservations.reservationdatepickerscreen.erreur"), data.error || 'Impossible de créer la réservation');
+        Alert.alert(t("screens.reservations.reservationdatepickerscreen.erreur"), getFriendlyError(data?.error, t));
       }
     } catch (error) {
       console.error('Error saving reservation:', error);
@@ -433,7 +435,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {const { t } = us
               </View>
             }
             <Text style={styles.carPrice}>
-              {parseFloat(listing.price_per_day || listing.pricePerDay || 0).toLocaleString('fr-FR')}{t("screens.reservations.reservationdatepickerscreen.daJour")}
+              {parseFloat(listing.price_per_day || listing.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("screens.reservations.reservationdatepickerscreen.daJour")}
             </Text>
           </View>
         </View>
@@ -459,7 +461,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {const { t } = us
             minDate={minDateStr}
             maxDate={maxDateStr}
             disabledDates={reservedDates}
-            locale="fr-FR"
+            locale={getCurrentLocale()}
             startFromMonday />
           
         </View>
@@ -507,7 +509,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {const { t } = us
 
                   </Text>
                     <Text style={styles.pickupHint}>
-                      {deliveryAvailable ? `+${fee.toLocaleString('fr-FR')} DA` : 'Non disponible'}
+                      {deliveryAvailable ? `+${fee.toLocaleString(getCurrentLocale())} DA` : t('common.unavailable')}
                     </Text>
                   </TouchableOpacity>);
 
@@ -540,7 +542,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {const { t } = us
                 <Text style={styles.dateLabel}>{t("screens.reservations.reservationdatepickerscreen.depart")}</Text>
                 <Text style={styles.dateValue}>
                   {startDate ?
-                parseLocalDate(startDate)?.toLocaleDateString('fr-FR') || '-' :
+                parseLocalDate(startDate)?.toLocaleDateString(getCurrentLocale()) || '-' :
                 '-'}
                 </Text>
               </View>
@@ -548,7 +550,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {const { t } = us
               <View style={styles.dateItem}>
                 <Text style={styles.dateLabel}>{t("screens.reservations.reservationdatepickerscreen.retour")}</Text>
                 <Text style={styles.dateValue}>
-                  {endDate ? parseLocalDate(endDate)?.toLocaleDateString('fr-FR') || '-' : '-'}
+                  {endDate ? parseLocalDate(endDate)?.toLocaleDateString(getCurrentLocale()) || '-' : '-'}
                 </Text>
               </View>
             </View>
@@ -557,7 +559,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {const { t } = us
           <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>{t("screens.reservations.reservationdatepickerscreen.estime")}</Text>
                 <Text style={styles.priceValue}>
-                  {estimatedPrice.toLocaleString('fr-FR')}{t("screens.reservations.reservationdatepickerscreen.da")}
+                  {estimatedPrice.toLocaleString(getCurrentLocale())}{t("screens.reservations.reservationdatepickerscreen.da")}
             </Text>
               </View>
           }

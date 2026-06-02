@@ -20,7 +20,27 @@
       "retry": "Retry",
       "noVehicleFound": "No vehicle found",
       "tryAnotherSearch": "Try another search or filter."
-    }
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "authRequired": "Please sign in again to continue.",
+      "network": "Connection problem. Check your internet and try again.",
+      "forbidden": "You do not have permission to do that.",
+      "notFound": "We could not find what you requested.",
+      "dateUnavailable": "These dates are not available. Choose different dates.",
+      "payment": "Payment could not be completed. Try again or choose another method.",
+      "upload": "Upload failed. Check the file and try again.",
+      "password": "Please check your password and try again.",
+      "email": "Please check the email address and try again.",
+      "languageChange": "Unable to change language. Please try again."
+    },
+    "calendar": {
+      "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    },
+    "cash": "Cash",
+    "daPerDayCompact": " DZD/day",
+    "unavailable": "Unavailable",
+    "unknownUser": "User"
   },
   "components": {
     "admin": {
@@ -176,6 +196,7 @@
         "journalDactivite": "Activity log",
         "aujourdhui": "Today",
         "total": "Total",
+        "inscriptions": "Signups",
         "reservations": "Reservations",
         "paiements": "Payments",
         "chargement": "Loading..."
@@ -233,6 +254,7 @@
         "formatNonAutorise": "Unsupported format",
         "choisissezUnFichierPdfOuUneImage": "Choose a PDF file or an image (JPG, PNG, WEBP).",
         "supprimerLeDocument": "Delete document",
+        "confirmerSuppressionDocument": "Delete \"{{document}}\"?",
         "documents": "DOCUMENTS",
         "documentsDeLagence": "Agency documents",
         "suiviDesDocumentsDeLentreprise": "Company document tracking",
@@ -288,6 +310,7 @@
         "horsLigne": "Offline",
         "erreur": "Error",
         "gestionVisibilitePubliqueEtStatuts": "Management, public visibility, and statuses",
+        "ajouterUneAnnonce": "Add listing",
         "disponibles": "Available:",
         "loues": "Rented:",
         "nonPublies": "Unpublished:",

@@ -15,6 +15,7 @@ import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import RatingStars from '../../components/reviews/RatingStars';
 import ReviewCard from '../../components/reviews/ReviewCard';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const roundToHalf = (value) => Math.round(value * 2) / 2;
 
@@ -63,7 +64,7 @@ const OwnerCarReviewsScreen = ({ navigation, route }) => {const { t } = useTrans
       const json = await listRes.json();
       setItems(Array.isArray(json?.items) ? json.items : []);
     } catch (e) {
-      setError(e.message || t("common.legacyHome.error"));
+      setError(getFriendlyError(e, t));
       setItems([]);
     }
   }, [carId, sortBy, sortOrder, token]);

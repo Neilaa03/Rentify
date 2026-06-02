@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { getFriendlyError } from '../../utils/friendlyError';
 import {
   deleteNotification,
   getNotifications,
@@ -50,7 +51,7 @@ const NotificationsHistoryScreen = ({ navigation }) => {const { t } = useTransla
       setNotifications(Array.isArray(items) ? items : []);
       setUnreadCount(Number(count) || 0);
     } catch (err) {
-      setError(err.message || 'Impossible de charger les notifications');
+      setError(getFriendlyError(err, t));
     } finally {
       setIsLoading(false);
     }
@@ -92,7 +93,7 @@ const NotificationsHistoryScreen = ({ navigation }) => {const { t } = useTransla
           setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
           if (!notification.is_read) setUnreadCount((prev) => Math.max(0, prev - 1));
         } catch (err) {
-          Alert.alert(t("screens.notifications.notificationshistoryscreen.erreur"), err.message || 'Impossible de masquer');
+          Alert.alert(t("screens.notifications.notificationshistoryscreen.erreur"), getFriendlyError(err, t));
         }
       }
     }]

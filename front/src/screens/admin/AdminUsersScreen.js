@@ -4,12 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const FILTERS = [
-{ key: 'all', label: 'Tous', roles: [] },
-{ key: 'owner', label: 'Entreprises', roles: ['companyOwner'] },
-{ key: 'client', label: 'Particuliers', roles: ['client'] },
-{ key: 'renter', label: 'Locataires', roles: ['owner'] }];
+{ key: 'all', labelKey: 'common.legacyHome.all', roles: [] },
+{ key: 'owner', labelKey: 'screens.admin.adminusersscreen.entreprises', roles: ['companyOwner'] },
+{ key: 'client', labelKey: 'screens.admin.adminusersscreen.particuliers', roles: ['client'] },
+{ key: 'renter', labelKey: 'screens.admin.adminusersscreen.locataires', roles: ['owner'] }];
 
 
 export default function AdminUsersScreen({ navigation, route }) {const { t } = useTranslation();
@@ -26,7 +28,7 @@ export default function AdminUsersScreen({ navigation, route }) {const { t } = u
       setRows(data.data || []);
       setError('');
     } catch (e) {
-      setError(e.message);
+      setError(getFriendlyError(e, t));
     } finally {
       setLoading(false);
     }
@@ -66,7 +68,7 @@ export default function AdminUsersScreen({ navigation, route }) {const { t } = u
           
           {FILTERS.map((f) =>
           <TouchableOpacity key={f.key} style={[styles.filterChip, active === f.key && styles.filterChipActive]} onPress={() => setActive(f.key)}>
-              <Text style={[styles.filterText, active === f.key && styles.filterTextActive]}>{f.label}</Text>
+              <Text style={[styles.filterText, active === f.key && styles.filterTextActive]}>{t(f.labelKey)}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -87,7 +89,7 @@ export default function AdminUsersScreen({ navigation, route }) {const { t } = u
                     <Text style={styles.userEmail}>{u.email}</Text>
                     <View style={styles.userTags}>
                       <Text style={styles.roleTag}>{u.role || 'utilisateur'}</Text>
-                      <Text style={styles.dateTag}>{u.created_at ? new Date(u.created_at).toLocaleDateString('fr-FR') : ''}</Text>
+                      <Text style={styles.dateTag}>{u.created_at ? new Date(u.created_at).toLocaleDateString(getCurrentLocale()) : ''}</Text>
                     </View>
                   </View>
                   <TouchableOpacity style={[styles.statusBadge, { backgroundColor: u.is_active ? 'rgba(0,208,132,0.2)' : 'rgba(255,176,32,0.2)' }]} onPress={async () => {await adminApi.updateUser(u.id, { isActive: !u.is_active });load();}}>

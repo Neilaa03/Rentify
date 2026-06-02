@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { appFont } from '../../utils/responsive';import { useTranslation } from "react-i18next";
+import { getCurrentLocale } from '../../i18n';
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/540x280';
 
@@ -113,7 +114,7 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {const {
             <Text style={styles.title}>{car.brand} {car.model}</Text>
             <Text style={styles.subtitle}>{subtitleParts.join(' • ')}</Text>
           </View>
-          <Text style={styles.priceText}>{pricePerDay ? `${Number(pricePerDay).toLocaleString('fr-FR')} DA/j` : '—'}</Text>
+          <Text style={styles.priceText}>{pricePerDay ? `${Number(pricePerDay).toLocaleString(getCurrentLocale())}${t('common.daPerDayCompact')}` : '—'}</Text>
         </View>
 
         <View style={styles.detailsRow}>

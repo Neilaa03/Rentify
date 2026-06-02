@@ -8,8 +8,9 @@ import { useFavorites } from '../../contexts/FavoritesContext';
 import { API_ENDPOINTS } from '../../constants/api';
 import RatingStars from '../../components/reviews/RatingStars';
 import ReviewCard from '../../components/reviews/ReviewCard';import { useTranslation } from "react-i18next";
+import { getCurrentLocale } from '../../i18n';
 
-const formatPrice = (value) => `${value.toLocaleString('fr-FR')} DA`;
+const formatPrice = (value) => `${value.toLocaleString(getCurrentLocale())} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const roundToHalf = (value) => Math.round(value * 2) / 2;
 
@@ -272,7 +273,7 @@ const ListingDetailsScreen = ({ navigation, route }) => {const { t } = useTransl
             <View style={styles.pickupInfoRow}>
               <Ionicons name="car-outline" size={16} color="#cfd3ff" />
               <Text style={styles.pickupInfoText}>{t("screens.client.listingdetailsscreen.livraison")}
-                {Number(listing.deliveryFee || 0) > 0 ? `${Number(listing.deliveryFee).toLocaleString('fr-FR')} DA` : 'non disponible'}
+                {Number(listing.deliveryFee || 0) > 0 ? `${Number(listing.deliveryFee).toLocaleString(getCurrentLocale())} DA` : t('common.unavailable')}
               </Text>
             </View>
           </View>

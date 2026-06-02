@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, SectionTitle } from '../../components/agency/AgencyPrimitives';
 import { getAgencyProfile } from '../../services/agency';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 export default function AgencyProfileScreen({ navigation, route }) {const { t } = useTranslation();
   const token = route?.params?.token;
@@ -27,7 +28,7 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
       });
       setEditData(profileData || {});
     } catch (error) {
-      setState((prev) => ({ ...prev, loading: false, error: error.message || 'Impossible de charger le profil' }));
+      setState((prev) => ({ ...prev, loading: false, error: getFriendlyError(error, t) }));
     }
   }, [token]);
 
@@ -46,7 +47,7 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
     {
       text: 'Quitter',
       style: 'destructive',
-      onPress: () => navigation.reset({ index: 0, routes: [{ name: t("screens.auth.loginscreen.login") }] })
+      onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] })
     }]
 
     );

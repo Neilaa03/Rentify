@@ -126,7 +126,7 @@ const VerifyEmailScreen = ({ navigation, route }) => {const { t } = useTranslati
         }
 
         {status === 'verified' &&
-        <TouchableOpacity style={styles.button} onPress={() => navigation.reset({ index: 0, routes: [{ name: t("screens.auth.loginscreen.login"), params: { email } }] })}>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login', params: { email } }] })}>
             <Text style={styles.buttonText}>{t("screens.auth.verifyemailscreen.goToLogin")}</Text>
           </TouchableOpacity>
         }

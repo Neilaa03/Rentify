@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
-
-const tabs = ['Tous', 'En attente', 'Verifies', 'Rejetes'];
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const norm = (v) => String(v || '').toLowerCase();
 
@@ -48,8 +48,14 @@ const buildFallbackUrls = (url) => {
 };
 
 export default function AdminCarsScreen({ navigation, route }) {const { t } = useTranslation();
+  const tabs = [
+    { id: 'all', label: t("common.legacyHome.all") },
+    { id: 'pending', label: t("screens.admin.admincarsscreen.enAttente") },
+    { id: 'verified', label: t("screens.admin.admincarsscreen.verifies") },
+    { id: 'rejected', label: t("screens.admin.admincarsscreen.rejetes") }
+  ];
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState(t("common.legacyHome.all"));
+  const [activeTab, setActiveTab] = useState('all');
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -65,7 +71,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       setCars(data.data || []);
       setError('');
     } catch (e) {
-      setError(e.message);
+      setError(getFriendlyError(e, t));
     } finally {
       setLoading(false);
     }
@@ -101,10 +107,10 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
   const grouped = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filtered = carsWithMeta.filter((c) => {
-      const matchesStatus = activeTab === t("common.legacyHome.all") ||
-      activeTab === t("screens.admin.admincarsscreen.enAttente") && c.carStatus.includes('pending') ||
-      activeTab === t("screens.admin.admincarsscreen.verifies") && c.carStatus.includes('approve') ||
-      activeTab === t("screens.admin.admincarsscreen.rejetes") && c.carStatus.includes('reject');
+      const matchesStatus = activeTab === 'all' ||
+      activeTab === 'pending' && c.carStatus.includes('pending') ||
+      activeTab === 'verified' && c.carStatus.includes('approve') ||
+      activeTab === 'rejected' && c.carStatus.includes('reject');
       const matchesSearch = !term ||
       c.ownerName.toLowerCase().includes(term) ||
       c.displayName.toLowerCase().includes(term) ||
@@ -130,7 +136,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       const details = await adminApi.carDetails(car.id);
       setDetailsByCar((prev) => ({ ...prev, [car.id]: details }));
     } catch (e) {
-      Alert.alert(t("screens.admin.admincarsscreen.erreur"), e.message || 'Impossible de charger les documents');
+      Alert.alert(t("screens.admin.admincarsscreen.erreur"), getFriendlyError(e, t));
     }
   };
 
@@ -161,7 +167,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       await refreshCarDetails(selectedCar.id);
       await load();
     } catch (e) {
-      Alert.alert(t("screens.admin.admincarsscreen.erreur"), e.message || 'Mise à jour du document impossible');
+      Alert.alert(t("screens.admin.admincarsscreen.erreur"), getFriendlyError(e, t));
     }
   };
 
@@ -184,7 +190,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       }
     }
 
-    Alert.alert(t("screens.admin.admincarsscreen.ouvertureImpossible"), lastErr?.message || 'Le document ne peut pas etre ouvert sur cet appareil.');
+    Alert.alert(t("screens.admin.admincarsscreen.ouvertureImpossible"), getFriendlyError(lastErr, t));
   };
 
   const updateCarStatus = async (carId, status) => {
@@ -193,7 +199,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
       await load();
       setModalVisible(false);
     } catch (e) {
-      Alert.alert(t("screens.admin.admincarsscreen.erreur"), e.message || 'Mise a jour impossible');
+      Alert.alert(t("screens.admin.admincarsscreen.erreur"), getFriendlyError(e, t));
     }
   };
 
@@ -218,8 +224,8 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow}>
           {tabs.map((tab) =>
-          <TouchableOpacity key={tab} style={[styles.filterChip, activeTab === tab && styles.filterChipActive]} onPress={() => setActiveTab(tab)}>
-              <Text style={[styles.filterText, activeTab === tab && styles.filterTextActive]}>{tab}</Text>
+          <TouchableOpacity key={tab.id} style={[styles.filterChip, activeTab === tab.id && styles.filterChipActive]} onPress={() => setActiveTab(tab.id)}>
+              <Text style={[styles.filterText, activeTab === tab.id && styles.filterTextActive]}>{tab.label}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -284,7 +290,7 @@ export default function AdminCarsScreen({ navigation, route }) {const { t } = us
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalDocType}>{doc.type}</Text>
                     <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
-                    <Text style={styles.modalDocDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString('fr-FR') : ''}</Text>
+                    <Text style={styles.modalDocDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString(getCurrentLocale()) : ''}</Text>
                     {doc.ocrResult ?
                   <View style={styles.ocrBox}>
                         <Text style={styles.ocrLabel}>{t("screens.admin.admincarsscreen.ocr")}</Text>

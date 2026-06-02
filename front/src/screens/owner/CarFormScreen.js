@@ -29,6 +29,8 @@ import {
   uploadCarImage,
   deleteDocument } from
 '../../services/owner';import { useTranslation } from "react-i18next";
+import { getLanguageMeta } from '../../i18n';
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const fuelOptions = ['Essence', 'Diesel', 'Hybride', 'Electrique'];
 const transmissionOptions = ['Automatique', 'Manuelle'];
@@ -39,6 +41,20 @@ LocaleConfig.locales.fr = {
   dayNames: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
   dayNamesShort: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
   today: "Aujourd'hui"
+};
+LocaleConfig.locales.en = {
+  monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  today: 'Today'
+};
+LocaleConfig.locales.ar = {
+  monthNames: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+  monthNamesShort: ['ينا', 'فبر', 'مار', 'أبر', 'ماي', 'يون', 'يول', 'أغس', 'سبت', 'أكت', 'نوف', 'ديس'],
+  dayNames: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+  dayNamesShort: ['أحد', 'اثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+  today: 'اليوم'
 };
 LocaleConfig.defaultLocale = 'fr';
 
@@ -128,7 +144,8 @@ const guessDocumentFilename = ({ url, type }) => {
   }
 };
 
-const OwnerCarFormScreen = ({ navigation, route }) => {const { t } = useTranslation();
+const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTranslation();
+  LocaleConfig.defaultLocale = getLanguageMeta(i18n.language).code;
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || 'create';
@@ -288,7 +305,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t } = useTranslat
       try {
         await deleteDocument({ token, documentId: document.id });
       } catch (error) {
-        Alert.alert(t("screens.owner.carformscreen.erreur"), error.message || 'Suppression impossible');
+        Alert.alert(t("screens.owner.carformscreen.erreur"), getFriendlyError(error, t));
         return;
       }
     }
@@ -400,7 +417,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t } = useTranslat
         return updated;
       });
     } catch (error) {
-      Alert.alert(t("screens.owner.carformscreen.erreur"), error.message || 'Upload du document impossible');
+      Alert.alert(t("screens.owner.carformscreen.erreur"), getFriendlyError(error, t));
     } finally {
       setIsSubmitting(false);
     }
@@ -777,7 +794,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t } = useTranslat
       }
     } catch (error) {
       console.error('Submit error:', error);
-      Alert.alert(t("screens.owner.carformscreen.erreur"), error.message || 'Sauvegarde impossible');
+      Alert.alert(t("screens.owner.carformscreen.erreur"), getFriendlyError(error, t));
     } finally {
       setIsSubmitting(false);
     }

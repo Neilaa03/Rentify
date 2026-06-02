@@ -20,7 +20,27 @@
       "retry": "Reessayer",
       "noVehicleFound": "Aucun véhicule trouvé",
       "tryAnotherSearch": "Essaie une autre recherche ou un autre filtre."
-    }
+    },
+    "errors": {
+      "generic": "Une erreur est survenue. Veuillez réessayer.",
+      "authRequired": "Veuillez vous reconnecter pour continuer.",
+      "network": "Problème de connexion. Vérifiez internet puis réessayez.",
+      "forbidden": "Vous n’avez pas l’autorisation d’effectuer cette action.",
+      "notFound": "L’élément demandé est introuvable.",
+      "dateUnavailable": "Ces dates ne sont pas disponibles. Choisissez d’autres dates.",
+      "payment": "Le paiement n’a pas pu être finalisé. Réessayez ou choisissez une autre méthode.",
+      "upload": "Le téléversement a échoué. Vérifiez le fichier puis réessayez.",
+      "password": "Vérifiez votre mot de passe puis réessayez.",
+      "email": "Vérifiez l’adresse email puis réessayez.",
+      "languageChange": "Impossible de changer la langue. Veuillez réessayer."
+    },
+    "calendar": {
+      "weekdays": ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+    },
+    "cash": "Espèces",
+    "daPerDayCompact": " DA/jour",
+    "unavailable": "Non disponible",
+    "unknownUser": "Utilisateur"
   },
   "components": {
     "admin": {
@@ -176,6 +196,7 @@
         "journalDactivite": "Journal d'activite",
         "aujourdhui": "Aujourd'hui",
         "total": "Total",
+        "inscriptions": "Inscriptions",
         "reservations": "Reservations",
         "paiements": "Paiements",
         "chargement": "Chargement..."
@@ -233,6 +254,7 @@
         "formatNonAutorise": "Format non autorisé",
         "choisissezUnFichierPdfOuUneImage": "Choisissez un fichier PDF ou une image (JPG, PNG, WEBP).",
         "supprimerLeDocument": "Supprimer le document",
+        "confirmerSuppressionDocument": "Voulez-vous supprimer \"{{document}}\" ?",
         "documents": "DOCUMENTS",
         "documentsDeLagence": "Documents de l’agence",
         "suiviDesDocumentsDeLentreprise": "Suivi des documents de l’entreprise",
@@ -288,6 +310,7 @@
         "horsLigne": "Hors ligne",
         "erreur": "Erreur",
         "gestionVisibilitePubliqueEtStatuts": "Gestion, visibilité publique et statuts",
+        "ajouterUneAnnonce": "Ajouter une annonce",
         "disponibles": "Disponibles:",
         "loues": "Loués:",
         "nonPublies": "Non publiés:",

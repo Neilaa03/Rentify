@@ -18,6 +18,7 @@ import {
 '../../services/notifications';
 import storage from '../../utils/storage';
 import { API_ENDPOINTS } from '../../constants/api';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const NotificationRow = ({ item, onPress }) =>
 <TouchableOpacity
@@ -82,7 +83,7 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useT
       setNotifications(Array.isArray(items) ? items : []);
       setUnreadCount(Number(count) || 0);
     } catch (err) {
-      setError(err.message || 'Impossible de charger les notifications');
+      setError(getFriendlyError(err, t));
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +138,7 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useT
       setNotifications([]);
       setUnreadCount(0);
     } catch (err) {
-      setError(err.message || 'Impossible de marquer toutes les notifications comme lues');
+      setError(getFriendlyError(err, t));
     }
   };
 

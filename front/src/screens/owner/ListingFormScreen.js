@@ -17,6 +17,8 @@ import {
   updateOwnerListing } from
 '../../services/owner';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';import { useTranslation } from "react-i18next";
+import { getLanguageMeta } from '../../i18n';
+import { getFriendlyError } from '../../utils/friendlyError';
 
 LocaleConfig.locales.fr = {
   monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
@@ -24,6 +26,20 @@ LocaleConfig.locales.fr = {
   dayNames: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
   dayNamesShort: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
   today: "Aujourd'hui"
+};
+LocaleConfig.locales.en = {
+  monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  today: 'Today'
+};
+LocaleConfig.locales.ar = {
+  monthNames: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'],
+  monthNamesShort: ['ينا', 'فبر', 'مار', 'أبر', 'ماي', 'يون', 'يول', 'أغس', 'سبت', 'أكت', 'نوف', 'ديس'],
+  dayNames: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+  dayNamesShort: ['أحد', 'اثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+  today: 'اليوم'
 };
 LocaleConfig.defaultLocale = 'fr';
 
@@ -67,7 +83,8 @@ const buildRangeMarks = (startDate, endDate) => {
   return marks;
 };
 
-const OwnerListingFormScreen = ({ navigation, route }) => {const { t } = useTranslation();
+const OwnerListingFormScreen = ({ navigation, route }) => {const { t, i18n } = useTranslation();
+  LocaleConfig.defaultLocale = getLanguageMeta(i18n.language).code;
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || 'create';
@@ -172,7 +189,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {const { t } = useTran
 
       navigation.navigate('OwnerListings', { token, user });
     } catch (error) {
-      Alert.alert(t("screens.owner.listingformscreen.erreur"), error.message || 'Sauvegarde impossible');
+      Alert.alert(t("screens.owner.listingformscreen.erreur"), getFriendlyError(error, t));
     } finally {
       setIsSubmitting(false);
     }

@@ -6,6 +6,7 @@ import {
   ActivityIndicator } from
 'react-native';
 import { Ionicons } from '@expo/vector-icons';import { useTranslation } from "react-i18next";
+import { getCurrentLocale } from '../../i18n';
 
 const PaymentStatusDisplay = ({ status, amount, paymentMethod }) => {const { t } = useTranslation();
   const getStatusInfo = () => {
@@ -90,7 +91,7 @@ const PaymentStatusDisplay = ({ status, amount, paymentMethod }) => {const { t }
         <View style={styles.textContainer}>
           <Text style={styles.label}>{statusInfo.label}</Text>
           <Text style={styles.amount}>
-            {paymentMethod === 'cash' ? 'Espèces' : t("components.payment.paymentmethodselector.carteBancaire")} • {Number(amount || 0).toLocaleString('fr-FR')}{t("components.payment.paymentstatusdisplay.da")}
+            {paymentMethod === 'cash' ? t('common.cash') : t("components.payment.paymentmethodselector.carteBancaire")} • {Number(amount || 0).toLocaleString(getCurrentLocale())}{t("components.payment.paymentstatusdisplay.da")}
           </Text>
         </View>
       </View>

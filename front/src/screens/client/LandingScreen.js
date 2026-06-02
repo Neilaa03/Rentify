@@ -27,7 +27,7 @@ const LandingScreen = ({ navigation }) => {const { t } = useTranslation();
 
                         <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => navigation.navigate(t("screens.auth.loginscreen.login"))}>
+              onPress={() => navigation.navigate('Login')}>
               
                             <Text style={styles.buttonText}>{t("screens.client.landingscreen.iAlreadyHaveAnAccount")}</Text>
                         </TouchableOpacity>

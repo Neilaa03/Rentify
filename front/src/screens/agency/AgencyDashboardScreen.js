@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, Badge, MetricCard, ProgressRow, RequestRow, SectionTitle } from '../../components/agency/AgencyPrimitives';
 import { getAgencyDashboard } from '../../services/agency';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
 const toneMap = ['purple', 'blue', 'green', 'amber'];
 
@@ -23,7 +25,7 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
       const data = await getAgencyDashboard({ token });
       setState((prev) => ({ ...prev, loading: false, refreshing: false, error: '', data }));
     } catch (error) {
-      setState((prev) => ({ ...prev, loading: false, refreshing: false, error: error.message || 'Impossible de charger le tableau de bord' }));
+      setState((prev) => ({ ...prev, loading: false, refreshing: false, error: getFriendlyError(error, t) }));
     }
   }, [token]);
 
@@ -105,7 +107,7 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
                 <MetricCard label={t("screens.agency.agencydashboardscreen.totalVehicules")} value={Number(counters.totalVehicles || 0)} icon="car-sport-outline" toneKey="purple" />
                 <MetricCard label={t("screens.agency.agencydashboardscreen.disponibles")} value={Number(counters.availableVehicles || 0)} icon="checkmark-circle-outline" toneKey="green" />
                 <MetricCard label={t("screens.agency.agencydashboardscreen.loues")} value={Number(counters.rentedVehicles || 0)} icon="timer-outline" toneKey="amber" />
-                <MetricCard label={t("screens.agency.agencydashboardscreen.revenus")} value={`${Number(counters.monthlyRevenue || 0).toLocaleString('fr-FR')} DA`} icon="cash-outline" toneKey="blue" />
+                <MetricCard label={t("screens.agency.agencydashboardscreen.revenus")} value={`${Number(counters.monthlyRevenue || 0).toLocaleString(getCurrentLocale())} DA`} icon="cash-outline" toneKey="blue" />
               </View>
 
               <AgencyCard style={styles.statsCard}>
@@ -115,14 +117,14 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
                     <View style={styles.statIcon}>
                       <Ionicons name="eye-outline" size={16} color="#8f7dff" />
                     </View>
-                    <Text style={styles.statValue}>{totalViews.toLocaleString('fr-FR')}</Text>
+                    <Text style={styles.statValue}>{totalViews.toLocaleString(getCurrentLocale())}</Text>
                     <Text style={styles.statLabel}>{t("screens.agency.agencydashboardscreen.vues")}</Text>
                   </View>
                   <View style={styles.statItem}>
                     <View style={styles.statIcon}>
                       <Ionicons name="calendar-outline" size={16} color="#21d4a7" />
                     </View>
-                    <Text style={[styles.statValue, { color: '#21d4a7' }]}>{totalReservations.toLocaleString('fr-FR')}</Text>
+                    <Text style={[styles.statValue, { color: '#21d4a7' }]}>{totalReservations.toLocaleString(getCurrentLocale())}</Text>
                     <Text style={styles.statLabel}>{t("screens.agency.agencydashboardscreen.reservations")}</Text>
                   </View>
                   <View style={styles.statItem}>

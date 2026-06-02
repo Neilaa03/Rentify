@@ -4,20 +4,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
-const tabs = ['Tous', 'Ouverts', 'En cours', 'Resolus', 'Clotures'];
+const tabs = [
+  { id: 'all', labelKey: 'common.legacyHome.all' },
+  { id: 'open', labelKey: 'screens.admin.adminreportsscreen.ouvert' },
+  { id: 'progress', labelKey: 'screens.admin.adminreportsscreen.enCours' },
+  { id: 'resolved', labelKey: 'screens.admin.adminreportsscreen.resolu' },
+  { id: 'closed', labelKey: 'screens.admin.adminreportsscreen.cloture' }
+];
 
 const normalize = (status) => {
   const s = String(status || '').toLowerCase();
-  if (s.includes('resolve')) return 'Resolus';
-  if (s.includes('reject') || s.includes('close')) return 'Clotures';
-  if (s.includes('progress') || s.includes('review')) return 'En cours';
-  return 'Ouverts';
+  if (s.includes('resolve')) return 'resolved';
+  if (s.includes('reject') || s.includes('close')) return 'closed';
+  if (s.includes('progress') || s.includes('review')) return 'progress';
+  return 'open';
 };
 
 export default function AdminReportsScreen({ navigation, route }) {const { t } = useTranslation();
   const [rows, setRows] = useState([]);
-  const [active, setActive] = useState(t("common.legacyHome.all"));
+  const [active, setActive] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -28,7 +35,7 @@ export default function AdminReportsScreen({ navigation, route }) {const { t } =
       setRows(data.data || []);
       setError('');
     } catch (e) {
-      setError(e.message);
+      setError(getFriendlyError(e, t));
     } finally {
       setLoading(false);
     }
@@ -36,12 +43,12 @@ export default function AdminReportsScreen({ navigation, route }) {const { t } =
 
   useEffect(() => {load();}, []);
 
-  const visible = useMemo(() => rows.filter((r) => active === t("common.legacyHome.all") || normalize(r.status) === active), [rows, active]);
+  const visible = useMemo(() => rows.filter((r) => active === 'all' || normalize(r.status) === active), [rows, active]);
   const counts = useMemo(() => ({
-    open: rows.filter((r) => normalize(r.status) === 'Ouverts').length,
-    progress: rows.filter((r) => normalize(r.status) === t("screens.admin.adminreportsscreen.enCours")).length,
-    resolved: rows.filter((r) => normalize(r.status) === 'Resolus').length,
-    closed: rows.filter((r) => normalize(r.status) === 'Clotures').length
+    open: rows.filter((r) => normalize(r.status) === 'open').length,
+    progress: rows.filter((r) => normalize(r.status) === 'progress').length,
+    resolved: rows.filter((r) => normalize(r.status) === 'resolved').length,
+    closed: rows.filter((r) => normalize(r.status) === 'closed').length
   }), [rows]);
 
   return (
@@ -63,8 +70,8 @@ export default function AdminReportsScreen({ navigation, route }) {const { t } =
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow}>
           {tabs.map((tab) =>
-          <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
-              <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{tab}</Text>
+          <TouchableOpacity key={tab.id} style={[styles.filterChip, active === tab.id && styles.filterChipActive]} onPress={() => setActive(tab.id)}>
+              <Text style={[styles.filterText, active === tab.id && styles.filterTextActive]}>{t(tab.labelKey)}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -74,10 +81,12 @@ export default function AdminReportsScreen({ navigation, route }) {const { t } =
           {visible.map((r) => {
             const status = normalize(r.status);
             return (
-              <View key={r.id} style={[styles.reportCard, status === 'Ouverts' ? styles.reportOpen : null]}>
+                <View key={r.id} style={[styles.reportCard, status === 'open' ? styles.reportOpen : null]}>
                 <View style={styles.tagsRow}>
                   <Text style={styles.reason}>{r.reason || 'Signalement'}</Text>
-                  <Text style={[styles.status, status === 'Ouverts' ? styles.statusOpen : status === t("screens.admin.adminreportsscreen.enCours") ? styles.statusProgress : status === 'Resolus' ? styles.statusResolved : styles.statusClosed]}>{status}</Text>
+                  <Text style={[styles.status, status === 'open' ? styles.statusOpen : status === 'progress' ? styles.statusProgress : status === 'resolved' ? styles.statusResolved : styles.statusClosed]}>
+                    {t(tabs.find((tab) => tab.id === status)?.labelKey || 'screens.admin.adminreportsscreen.ouvert')}
+                  </Text>
                 </View>
                 <Text style={styles.reportTitle}>{r.reporter_name || 'Utilisateur'}{t("screens.admin.adminreportsscreen.text")}{r.target_name || 'Compte'}</Text>
                 <Text style={styles.reportDesc} numberOfLines={2}>{r.description || 'Aucune description.'}</Text>

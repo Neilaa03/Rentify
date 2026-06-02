@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import storage from '../../utils/storage';
 import { API_ENDPOINTS } from '../../constants/api';
 import { COLORS } from '../../constants/colors';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const onlyDigits = (value) => String(value || '').replace(/\D/g, '').slice(0, 6);
 
@@ -81,7 +82,7 @@ const HandoverVerifyScreen = ({ navigation, route }) => {const { t } = useTransl
 
       setSuccessOpen(true);
     } catch (e) {
-      Alert.alert(t("screens.handover.handoververifyscreen.erreur"), e.message || t("screens.reservations.reservationdatepickerscreen.uneErreurEstSurvenue"));
+      Alert.alert(t("screens.handover.handoververifyscreen.erreur"), getFriendlyError(e, t));
     } finally {
       setLoading(false);
     }

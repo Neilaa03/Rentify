@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { Button, Card, Row, ScreenHeader, SearchBox, StatCard, StatusBadge } from '../../components/admin/AdminUI';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 export default function AdminPaymentsScreen({ navigation, route }) {const { t } = useTranslation();
   const [status, setStatus] = useState('');
@@ -20,7 +21,7 @@ export default function AdminPaymentsScreen({ navigation, route }) {const { t } 
       setAnalytics(data.analytics || null);
       setError('');
     } catch (e) {
-      setError(e.message);
+      setError(getFriendlyError(e, t));
     } finally {
       setLoading(false);
     }

@@ -4,20 +4,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
+import { getCurrentLocale } from '../../i18n';
 
-const tabs = ['Tout', 'Inscriptions', 'Reservations', 'Documents', 'Paiements'];
+const tabs = [
+  { id: 'all', labelKey: 'common.legacyHome.all' },
+  { id: 'signups', labelKey: 'screens.admin.adminreservationsscreen.inscriptions' },
+  { id: 'reservations', labelKey: 'screens.admin.adminreservationsscreen.reservations' },
+  { id: 'documents', labelKey: 'components.admin.adminbottomnavigation.documents' },
+  { id: 'payments', labelKey: 'screens.admin.adminreservationsscreen.paiements' }
+];
 
 const pickType = (item) => {
   const t = String(item.type || item.status || '').toLowerCase();
-  if (t.includes('inscript') || t.includes('user')) return 'Inscriptions';
-  if (t.includes('reserv')) return 'Reservations';
-  if (t.includes('doc')) return 'Documents';
-  if (t.includes('pay') || t.includes('refund')) return 'Paiements';
-  return 'Reservations';
+  if (t.includes('inscript') || t.includes('user')) return 'signups';
+  if (t.includes('reserv')) return 'reservations';
+  if (t.includes('doc')) return 'documents';
+  if (t.includes('pay') || t.includes('refund')) return 'payments';
+  return 'reservations';
 };
 
 export default function AdminReservationsScreen({ navigation, route }) {const { t } = useTranslation();
-  const [active, setActive] = useState('Tout');
+  const [active, setActive] = useState('all');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,7 +38,7 @@ export default function AdminReservationsScreen({ navigation, route }) {const { 
       setEvents(activity);
       setError('');
     } catch (e) {
-      setError(e.message);
+      setError(getFriendlyError(e, t));
     } finally {
       setLoading(false);
     }
@@ -38,7 +46,11 @@ export default function AdminReservationsScreen({ navigation, route }) {const { 
 
   useEffect(() => {load();}, []);
 
-  const visible = useMemo(() => events.filter((e) => active === 'Tout' || e.category === active), [events, active]);
+  const visible = useMemo(() => events.filter((e) => active === 'all' || e.category === active), [events, active]);
+  const getCategoryLabel = (category) => {
+    const tab = tabs.find((item) => item.id === category);
+    return tab?.labelKey ? t(tab.labelKey) : tab?.label || category;
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -48,14 +60,14 @@ export default function AdminReservationsScreen({ navigation, route }) {const { 
         <View style={styles.topStats}>
           <MiniStat icon="flash-outline" value={visible.length} label={t("screens.admin.adminreservationsscreen.aujourdhui")} />
           <MiniStat icon="list-outline" value={events.length} label={t("screens.admin.adminreservationsscreen.total")} />
-          <MiniStat icon="calendar-outline" value={visible.filter((e) => e.category === t("screens.admin.adminreservationsscreen.reservations")).length} label={t("screens.admin.adminreservationsscreen.reservations")} />
-          <MiniStat icon="cash-outline" value={visible.filter((e) => e.category === t("screens.admin.adminreservationsscreen.paiements")).length} label={t("screens.admin.adminreservationsscreen.paiements")} />
+          <MiniStat icon="calendar-outline" value={visible.filter((e) => e.category === 'reservations').length} label={t("screens.admin.adminreservationsscreen.reservations")} />
+          <MiniStat icon="cash-outline" value={visible.filter((e) => e.category === 'payments').length} label={t("screens.admin.adminreservationsscreen.paiements")} />
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow}>
           {tabs.map((tab) =>
-          <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
-              <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{tab}</Text>
+          <TouchableOpacity key={tab.id} style={[styles.filterChip, active === tab.id && styles.filterChipActive]} onPress={() => setActive(tab.id)}>
+              <Text style={[styles.filterText, active === tab.id && styles.filterTextActive]}>{tab.labelKey ? t(tab.labelKey) : tab.label}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -64,10 +76,10 @@ export default function AdminReservationsScreen({ navigation, route }) {const { 
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           {visible.map((e) =>
           <View key={e._id} style={styles.item}>
-              <Text style={styles.time}>{e.at ? new Date(e.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</Text>
-              <View style={styles.iconWrap}><Ionicons name={e.category === t("screens.admin.adminreservationsscreen.paiements") ? 'cash-outline' : e.category === t("components.admin.adminbottomnavigation.documents") ? 'document-outline' : e.category === 'Inscriptions' ? 'person-add-outline' : 'calendar-outline'} size={15} color="#8f9dff" /></View>
+              <Text style={styles.time}>{e.at ? new Date(e.at).toLocaleTimeString(getCurrentLocale(), { hour: '2-digit', minute: '2-digit' }) : '--:--'}</Text>
+              <View style={styles.iconWrap}><Ionicons name={e.category === 'payments' ? 'cash-outline' : e.category === 'documents' ? 'document-outline' : e.category === 'signups' ? 'person-add-outline' : 'calendar-outline'} size={15} color="#8f9dff" /></View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.badge}>{e.category}</Text>
+                <Text style={styles.badge}>{getCategoryLabel(e.category)}</Text>
                 <Text style={styles.eventTitle}>{e.type || 'Evenement'}</Text>
                 <Text style={styles.eventSub}>{e.status || ''}</Text>
               </View>
