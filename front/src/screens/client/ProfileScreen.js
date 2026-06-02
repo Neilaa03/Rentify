@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground, TextInput, useWindowDimensions, Image, Modal, Pressable } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground, TextInput, useWindowDimensions, Image, Modal, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../../constants/api';
@@ -63,6 +63,13 @@ const ProfileScreen = ({ navigation, route }) => {
   const [photoViewerVisible, setPhotoViewerVisible] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [localProfilePictureUri, setLocalProfilePictureUri] = useState('');
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [changePasswordCurrent, setChangePasswordCurrent] = useState('');
+  const [changePasswordNew, setChangePasswordNew] = useState('');
+  const [changePasswordConfirm, setChangePasswordConfirm] = useState('');
+  const [changePasswordError, setChangePasswordError] = useState('');
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [ownerStats, setOwnerStats] = useState({ cars: 0, listings: 0, reservations: 0 });
   const [ownerStatsLoading, setOwnerStatsLoading] = useState(false);
   const [clientStats, setClientStats] = useState({ favorites: 0, reservations: 0, reviews: 0 });
@@ -123,22 +130,7 @@ const ProfileScreen = ({ navigation, route }) => {
         }
 
         const next = data?.user || null;
-        setProfile(next);
-        if (next) {
-          const normalized = {
-            id: next.id,
-            email: next.email,
-            firstName: next.firstName || next.first_name || '',
-            lastName: next.lastName || next.last_name || '',
-            phone: next.phone || '',
-            role: next.role,
-            isVerified: next.isVerified ?? next.is_verified,
-            isActive: next.isActive ?? next.is_active,
-            authProvider: next.authProvider || next.auth_provider || '',
-            profilePicture: next.profilePicture || next.profile_picture || '',
-          };
-          await storage.setItemAsync('userProfile', JSON.stringify(normalized));
-        }
+        await persistUpdatedUser(next);
       } catch (err) {
         setError(err.message || 'Unable to load profile');
       } finally {
@@ -235,6 +227,43 @@ const ProfileScreen = ({ navigation, route }) => {
     setIsEditingPersonalInfo(true);
   };
 
+  const persistUpdatedUser = async (updatedUser) => {
+    if (!updatedUser) return;
+
+    setProfile(updatedUser);
+    const normalized = {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.firstName || updatedUser.first_name || '',
+      lastName: updatedUser.lastName || updatedUser.last_name || '',
+      phone: updatedUser.phone || '',
+      role: updatedUser.role,
+      isVerified: updatedUser.isVerified ?? updatedUser.is_verified,
+      isActive: updatedUser.isActive ?? updatedUser.is_active,
+      authProvider: updatedUser.authProvider || updatedUser.auth_provider || '',
+      profilePicture: updatedUser.profilePicture || updatedUser.profile_picture || '',
+    };
+    await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+  };
+
+  const openPasswordEditor = () => {
+    setChangePasswordCurrent('');
+    setChangePasswordNew('');
+    setChangePasswordConfirm('');
+    setChangePasswordError('');
+    setShowPasswordFields(false);
+    setPasswordModalVisible(true);
+  };
+
+  const closePasswordEditor = () => {
+    setPasswordModalVisible(false);
+    setChangePasswordCurrent('');
+    setChangePasswordNew('');
+    setChangePasswordConfirm('');
+    setChangePasswordError('');
+    setShowPasswordFields(false);
+  };
+
   useEffect(() => {
     if (didAutoOpenPersonalInfo) return;
     if (!route?.params?.openPersonalInfo) return;
@@ -298,22 +327,7 @@ const ProfileScreen = ({ navigation, route }) => {
       if (!response.ok) throw new Error(data?.error || 'Impossible de mettre a jour le profil');
 
       const updatedUser = data?.user || null;
-      setProfile(updatedUser);
-      if (updatedUser) {
-        const normalized = {
-          id: updatedUser.id,
-          email: updatedUser.email,
-          firstName: updatedUser.firstName || updatedUser.first_name || '',
-          lastName: updatedUser.lastName || updatedUser.last_name || '',
-          phone: updatedUser.phone || '',
-          role: updatedUser.role,
-          isVerified: updatedUser.isVerified ?? updatedUser.is_verified,
-          isActive: updatedUser.isActive ?? updatedUser.is_active,
-          authProvider: updatedUser.authProvider || updatedUser.auth_provider || '',
-          profilePicture: updatedUser.profilePicture || updatedUser.profile_picture || '',
-        };
-        await storage.setItemAsync('userProfile', JSON.stringify(normalized));
-      }
+      await persistUpdatedUser(updatedUser);
       setIsEditingPersonalInfo(false);
     } catch (err) {
       setPersonalInfoError(err.message || 'Erreur lors de la mise a jour');
@@ -372,20 +386,7 @@ const ProfileScreen = ({ navigation, route }) => {
       const nextUser = data?.user || null;
       if (nextUser) {
         setLocalProfilePictureUri('');
-        setProfile(nextUser);
-        const normalized = {
-          id: nextUser.id,
-          email: nextUser.email,
-          firstName: nextUser.firstName || nextUser.first_name || '',
-          lastName: nextUser.lastName || nextUser.last_name || '',
-          phone: nextUser.phone || '',
-          role: nextUser.role,
-          isVerified: nextUser.isVerified ?? nextUser.is_verified,
-          isActive: nextUser.isActive ?? nextUser.is_active,
-          authProvider: nextUser.authProvider || nextUser.auth_provider || '',
-          profilePicture: nextUser.profilePicture || nextUser.profile_picture || '',
-        };
-        await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+        await persistUpdatedUser(nextUser);
       }
     } catch (err) {
       setLocalProfilePictureUri('');
@@ -414,25 +415,68 @@ const ProfileScreen = ({ navigation, route }) => {
       const nextUser = data?.user || null;
       if (nextUser) {
         setLocalProfilePictureUri('');
-        setProfile(nextUser);
-        const normalized = {
-          id: nextUser.id,
-          email: nextUser.email,
-          firstName: nextUser.firstName || nextUser.first_name || '',
-          lastName: nextUser.lastName || nextUser.last_name || '',
-          phone: nextUser.phone || '',
-          role: nextUser.role,
-          isVerified: nextUser.isVerified ?? nextUser.is_verified,
-          isActive: nextUser.isActive ?? nextUser.is_active,
-          authProvider: nextUser.authProvider || nextUser.auth_provider || '',
-          profilePicture: nextUser.profilePicture || nextUser.profile_picture || '',
-        };
-        await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+        await persistUpdatedUser(nextUser);
       }
     } catch (err) {
       setPersonalInfoError(err.message || 'Suppression echouee');
     } finally {
       setPhotoLoading(false);
+    }
+  };
+
+  const savePasswordChange = async () => {
+    const effectiveToken = token || (await storage.getItemAsync('userToken')) || '';
+    if (!effectiveToken) {
+      setChangePasswordError('Session invalide, reconnectez-vous.');
+      return;
+    }
+
+    const nextCurrentPassword = changePasswordCurrent.trim();
+    const nextNewPassword = changePasswordNew.trim();
+    const nextConfirmPassword = changePasswordConfirm.trim();
+
+    if (!isGoogleOnly && !nextCurrentPassword) {
+      setChangePasswordError('Mot de passe actuel requis.');
+      return;
+    }
+    if (nextNewPassword.length < 8) {
+      setChangePasswordError('Le nouveau mot de passe doit contenir au moins 8 caracteres.');
+      return;
+    }
+    if (nextNewPassword !== nextConfirmPassword) {
+      setChangePasswordError('Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    try {
+      setChangePasswordLoading(true);
+      setChangePasswordError('');
+
+      const response = await fetch(API_ENDPOINTS.PROFILE.ME_PASSWORD, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${effectiveToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: isGoogleOnly ? '' : nextCurrentPassword,
+          newPassword: nextNewPassword,
+          confirmPassword: nextConfirmPassword,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || 'Impossible de changer le mot de passe');
+      }
+
+      await persistUpdatedUser(data?.user || null);
+      closePasswordEditor();
+      Alert.alert('Mot de passe mis a jour', 'Votre mot de passe a ete modifie avec succes.');
+    } catch (err) {
+      setChangePasswordError(err.message || 'Impossible de changer le mot de passe');
+    } finally {
+      setChangePasswordLoading(false);
     }
   };
 
@@ -533,6 +577,68 @@ const ProfileScreen = ({ navigation, route }) => {
               </View>
             </Modal>
 
+            <Modal visible={passwordModalVisible} transparent animationType="fade" onRequestClose={closePasswordEditor}>
+              <Pressable style={styles.modalBackdrop} onPress={closePasswordEditor} />
+              <View style={styles.sheet}>
+                <View style={styles.sheetHeaderRow}>
+                  <Text style={styles.sheetTitle}>Changer le mot de passe</Text>
+                  <TouchableOpacity onPress={() => setShowPasswordFields((value) => !value)} style={styles.sheetIconButton}>
+                    <Ionicons name={showPasswordFields ? 'eye-off-outline' : 'eye-outline'} size={18} color="#d6dbff" />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.passwordSheetNote}>
+                  {isGoogleOnly
+                    ? 'Votre compte utilise Google. Definissez un mot de passe pour activer la connexion classique.'
+                    : 'Saisissez votre mot de passe actuel, puis choisissez un nouveau mot de passe.'}
+                </Text>
+                {!isGoogleOnly && (
+                  <>
+                    <Text style={[styles.inputLabel, { marginTop: 10 }]}>Mot de passe actuel</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={changePasswordCurrent}
+                      onChangeText={setChangePasswordCurrent}
+                      secureTextEntry={!showPasswordFields}
+                      placeholder="Mot de passe actuel"
+                      placeholderTextColor="#7d83b0"
+                      autoCapitalize="none"
+                    />
+                  </>
+                )}
+                <Text style={[styles.inputLabel, { marginTop: 10 }]}>Nouveau mot de passe</Text>
+                <TextInput
+                  style={styles.input}
+                  value={changePasswordNew}
+                  onChangeText={setChangePasswordNew}
+                  secureTextEntry={!showPasswordFields}
+                  placeholder="Nouveau mot de passe"
+                  placeholderTextColor="#7d83b0"
+                  autoCapitalize="none"
+                />
+                <Text style={[styles.inputLabel, { marginTop: 10 }]}>Confirmer le mot de passe</Text>
+                <TextInput
+                  style={styles.input}
+                  value={changePasswordConfirm}
+                  onChangeText={setChangePasswordConfirm}
+                  secureTextEntry={!showPasswordFields}
+                  placeholder="Confirmer le mot de passe"
+                  placeholderTextColor="#7d83b0"
+                  autoCapitalize="none"
+                />
+                {!!changePasswordError && <Text style={styles.errorText}>{changePasswordError}</Text>}
+                <View style={styles.editActions}>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={closePasswordEditor} disabled={changePasswordLoading}>
+                    <Text style={[styles.cancelBtnText, { fontSize: fontSize.editText }]}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveBtn} onPress={savePasswordChange} disabled={changePasswordLoading}>
+                    <Text style={[styles.saveBtnText, { fontSize: fontSize.editText }]} numberOfLines={1}>
+                      {changePasswordLoading ? 'Enregistrement...' : (isGoogleOnly ? 'Definir' : 'Changer')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
             {isEditingPersonalInfo && (
               <View style={styles.editCard}>
                 <Text style={styles.editTitle}>Informations personnelles</Text>
@@ -606,14 +712,14 @@ const ProfileScreen = ({ navigation, route }) => {
             <Text style={styles.sectionTitle}>MON COMPTE</Text>
             <SectionCard
               items={[
-                { label: 'Informations personnelles', icon: 'person-outline' },
-                ...(isGoogleOnly ? [{ label: 'Definir un mot de passe', icon: 'key-outline' }] : []),
+                { action: 'personalInfo', label: 'Informations personnelles', icon: 'person-outline' },
+                { action: 'password', label: isGoogleOnly ? 'Definir un mot de passe' : 'Changer mot de passe', icon: 'key-outline' },
                 { label: 'Moyens de paiement', icon: 'card-outline' },
                 { label: 'Mes adresses', icon: 'location-outline' },
               ]}
               onItemPress={(item) => {
-                if (item.label === 'Informations personnelles') openPersonalInfoEditor();
-                if (item.label === 'Definir un mot de passe') navigation.navigate('SetPassword', { token });
+                if (item.action === 'personalInfo') openPersonalInfoEditor();
+                if (item.action === 'password') openPasswordEditor();
               }}
             />
 
@@ -809,7 +915,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(23, 26, 54, 0.98)',
     padding: 12,
   },
+  sheetHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle: { color: '#f2f4ff', fontSize: appFont(15), fontWeight: '800', marginBottom: 8 },
+  sheetIconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(12, 15, 37, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.18)',
+    marginBottom: 8,
+  },
+  passwordSheetNote: { color: '#b4b9dc', fontSize: appFont(12.5), lineHeight: 18, marginBottom: 4 },
   sheetRow: {
     height: 44,
     borderRadius: 12,
