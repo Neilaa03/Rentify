@@ -21,6 +21,25 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
   const selectedListing = listing?.selectedOffer || listing;
   const offerCount = Number(listing?.offerCount || 0) || 0;
   const matchingOfferCount = Number(listing?.matchingOfferCount || 0) || 0;
+  const availableCities = useMemo(() => {
+    const sourceOffers = Array.isArray(listing?.offers) && listing.offers.length ? listing.offers : [selectedListing];
+    const seenCities = new Set();
+    const cities = [];
+
+    sourceOffers.forEach((offer) => {
+      const city = String(offer?.city || '').trim();
+      const normalizedCity = city.toLowerCase();
+
+      if (!city || seenCities.has(normalizedCity)) return;
+      seenCities.add(normalizedCity);
+      cities.push(city);
+    });
+
+    return cities;
+  }, [listing, selectedListing]);
+
+  const visibleCities = availableCities.slice(0, 5);
+  const hasMoreCities = availableCities.length > 5;
 
   const imageUrls = useMemo(() => {
     const fromListingImages = Array.isArray(selectedListing?.images)
@@ -161,20 +180,25 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
             <Ionicons name="settings-outline" size={14} color="#9aa0c8" />
             <Text style={styles.chipText}>{selectedListing.transmission}</Text>
           </View>
-          <View style={styles.chip}>
-            <Ionicons name="location-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{selectedListing.city}</Text>
-          </View>
         </View>
 
-        {(selectedListing.availableFrom || selectedListing.availableTo) && (
-          <View style={styles.availabilityRow}>
-            <Ionicons name="calendar-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.availabilityText} numberOfLines={1}>
-              {selectedListing.availableFrom || 'Début libre'} {'→'} {selectedListing.availableTo || 'Fin libre'}
-            </Text>
+        <View style={styles.citiesRow}>
+          <Ionicons name="location-outline" size={14} color="#9aa0c8" />
+          <View style={styles.citiesWrap}>
+            {visibleCities.map((city) => (
+              <View key={city} style={styles.cityChip}>
+                <Text style={styles.cityChipText} numberOfLines={1}>
+                  {city}
+                </Text>
+              </View>
+            ))}
+            {hasMoreCities && (
+              <View style={styles.moreCitiesChip}>
+                <Text style={styles.cityChipText}>...</Text>
+              </View>
+            )}
           </View>
-        )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -321,6 +345,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
+  citiesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  citiesWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    flex: 1,
+    marginLeft: 8,
+    overflow: 'hidden',
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -334,10 +371,37 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
+  cityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.12)',
+    marginRight: 6,
+    maxWidth: 92,
+  },
+  moreCitiesChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 156, 233, 0.12)',
+  },
   chipText: {
     color: '#9aa0c8',
     fontSize: appFont(12),
     marginLeft: 5,
+  },
+  cityChipText: {
+    color: '#9aa0c8',
+    fontSize: appFont(11.5),
+    fontWeight: '500',
   },
   availabilityRow: {
     marginTop: 4,

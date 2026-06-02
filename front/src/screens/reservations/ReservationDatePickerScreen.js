@@ -30,7 +30,12 @@ import {
 
 const ReservationDatePickerScreen = ({ navigation, route }) => {
   const DELIVERY_ADDRESS_REGEX = /^\d+\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*\s+\d{4,5}\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*$/u;
-  const { listing: initialListing, reservation: reservationFromParams, isEditing } = route.params;
+  const {
+    listing: initialListing,
+    selectedCity: selectedCityFromParams,
+    reservation: reservationFromParams,
+    isEditing,
+  } = route.params;
   const [listing, setListing] = useState(initialListing);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -40,6 +45,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   const [estimatedPrice, setEstimatedPrice] = useState(0);
   const [pickupMethod, setPickupMethod] = useState('owner_place');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const selectedCity = selectedCityFromParams || initialListing?.city || '';
 
   // Fetch full listing details and reserved dates
   useEffect(() => {
@@ -426,10 +432,10 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           <View style={styles.carInfo}>
             <Text style={styles.carBrand}>{listing.brand}</Text>
             <Text style={styles.carModel}>{listing.model}</Text>
-            {!!listing.city && (
+            {!!selectedCity && (
               <View style={styles.carMetaRow}>
                 <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
-                <Text style={styles.carMetaText}>{listing.city}</Text>
+                <Text style={styles.carMetaText}>{selectedCity}</Text>
               </View>
             )}
             <Text style={styles.carPrice}>

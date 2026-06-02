@@ -30,11 +30,7 @@ const getListingSearchText = (listing) => [
     listing?.title,
 ].filter(Boolean).join(' ').toLowerCase();
 
-const getListingPlaceText = (listing) => [
-    listing?.city,
-    listing?.country,
-    listing?.pickupAddress,
-].filter(Boolean).join(' ').toLowerCase();
+const getListingCityText = (listing) => String(listing?.city || '').trim().toLowerCase();
 
 const getListingDateWindow = (listing) => {
     const from = listing?.availableFrom || listing?.available_from || null;
@@ -262,7 +258,7 @@ const HomeScreen = ({ navigation, route }) => {
 
                     const placeMatch =
                         normalizedPlace.length === 0 ||
-                        getListingPlaceText(offer).includes(normalizedPlace);
+                        getListingCityText(offer).includes(normalizedPlace);
 
                     const filterMatch =
                         activeFilter === 'Tous' ||
@@ -330,17 +326,6 @@ const HomeScreen = ({ navigation, route }) => {
                         contentContainerStyle={styles.contentContainer}
                         showsVerticalScrollIndicator={false}
                     >
-                        <View style={styles.searchBar}>
-                            <Ionicons name="search-outline" size={20} color="#9aa0c8" />
-                            <TextInput
-                                value={searchValue}
-                                onChangeText={setSearchValue}
-                                placeholder="Rechercher une voiture ou une ville"
-                                placeholderTextColor="#7c82ab"
-                                style={styles.searchInput}
-                            />
-                        </View>
-
                         <View style={styles.filterPanel}>
                             <View style={styles.filterRow}>
                                 <View style={styles.filterField}>
