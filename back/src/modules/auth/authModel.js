@@ -75,6 +75,17 @@ export const getUserAuthMetaById = async (id) => {
     return data;
 };
 
+export const getUserPasswordMetaById = async (id) => {
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, email, password_hash, auth_provider')
+        .eq('id', id)
+        .single();
+
+    if (error) return null;
+    return data;
+};
+
 export const updateUserById = async (id, payload) => {
     const updatePayload = {};
     if (payload.email !== undefined) updatePayload.email = payload.email;
