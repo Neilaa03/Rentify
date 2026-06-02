@@ -13,6 +13,7 @@ const statusLabel = (status) => {
   const s = norm(status);
   if (s.includes('approve') || s.includes('verif')) return 'Verifie';
   if (s.includes('reject')) return 'Rejete';
+  if (s.includes('manual_review')) return 'En revision';
   return 'En attente';
 };
 
@@ -20,6 +21,7 @@ const statusTone = (status) => {
   const s = norm(status);
   if (s.includes('approve') || s.includes('verif')) return styles.ok;
   if (s.includes('reject')) return styles.bad;
+  if (s.includes('manual_review')) return styles.review;
   return styles.wait;
 };
 
@@ -132,6 +134,12 @@ export default function AdminCarsScreen({ navigation, route }) {
     }
   };
 
+  const refreshCarDetails = async (carId) => {
+    const details = await adminApi.carDetails(carId);
+    setDetailsByCar((prev) => ({ ...prev, [carId]: details }));
+    return details;
+  };
+
   const resolveDocs = (carId) => {
     const d = detailsByCar[carId];
     const docs = d?.documents || [];
@@ -141,7 +149,20 @@ export default function AdminCarsScreen({ navigation, route }) {
       status: doc.status || 'pending',
       url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
       uploadedAt: doc.created_at || doc.updated_at || '',
+      ocrResult: doc.ocr_result || doc.ocrResult || null,
     }));
+  };
+
+  const reviewDocument = async (documentId, status) => {
+    if (!selectedCar?.id) return;
+
+    try {
+      await adminApi.updateDocument(documentId, { status });
+      await refreshCarDetails(selectedCar.id);
+      await load();
+    } catch (e) {
+      Alert.alert('Erreur', e.message || 'Mise à jour du document impossible');
+    }
   };
 
   const openDocument = async (url) => {
@@ -264,6 +285,39 @@ export default function AdminCarsScreen({ navigation, route }) {
                     <Text style={styles.modalDocType}>{doc.type}</Text>
                     <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
                     <Text style={styles.modalDocDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString('fr-FR') : ''}</Text>
+                    {doc.ocrResult ? (
+                      <View style={styles.ocrBox}>
+                        <Text style={styles.ocrLabel}>OCR</Text>
+                        <Text style={styles.ocrText}>
+                          {doc.ocrResult.verification_reason || 'Aucune raison fournie'}
+                        </Text>
+                        <Text style={styles.ocrMeta}>
+                          {`Statut OCR: ${statusLabel(doc.ocrResult.verification_status)}`}
+                        </Text>
+                        <Text style={styles.ocrMeta}>
+                          {`Confiance: ${doc.ocrResult.confidence_score != null ? `${Number(doc.ocrResult.confidence_score).toFixed(1)}%` : 'N/A'}`}
+                        </Text>
+                        {doc.ocrResult.extracted_full_name ? <Text style={styles.ocrMeta}>{`Nom: ${doc.ocrResult.extracted_full_name}`}</Text> : null}
+                        {doc.ocrResult.extracted_document_number ? <Text style={styles.ocrMeta}>{`Numero: ${doc.ocrResult.extracted_document_number}`}</Text> : null}
+                        {doc.ocrResult.extracted_expiration_date ? <Text style={styles.ocrMeta}>{`Expiration: ${doc.ocrResult.extracted_expiration_date}`}</Text> : null}
+                      </View>
+                    ) : (
+                      <Text style={styles.ocrEmpty}>Aucun resultat OCR disponible.</Text>
+                    )}
+                    <View style={styles.docActionsRow}>
+                      <TouchableOpacity
+                        style={[styles.docActionBtn, styles.docRejectBtn]}
+                        onPress={() => reviewDocument(doc.id, 'rejected')}
+                      >
+                        <Text style={styles.docActionText}>Rejeter</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.docActionBtn, styles.docAcceptBtn]}
+                        onPress={() => reviewDocument(doc.id, 'approved')}
+                      >
+                        <Text style={styles.docActionText}>Accepter</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                   <TouchableOpacity style={styles.modalBtn} onPress={() => openDocument(doc.url)}>
                     <Text style={styles.modalBtnText}>Voir</Text>
@@ -272,16 +326,6 @@ export default function AdminCarsScreen({ navigation, route }) {
               ))}
             </ScrollView>
 
-            {selectedCar ? (
-              <View style={styles.footerActions}>
-                <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]} onPress={() => updateCarStatus(selectedCar.id, 'rejected')}>
-                  <Text style={styles.actionText}>Rejeter</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, styles.acceptBtn]} onPress={() => updateCarStatus(selectedCar.id, 'approved')}>
-                  <Text style={styles.actionText}>Accepter</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
           </View>
         </View>
       </Modal>
@@ -333,6 +377,7 @@ const styles = StyleSheet.create({
   viewBtnText: { color: '#d4daff', fontSize: 11, fontWeight: '700' },
   ok: { color: '#00d084' },
   bad: { color: '#ff4d6d' },
+  review: { color: '#ffb020' },
   wait: { color: '#ffb020' },
   loading: { color: '#8d94c2', marginTop: 8 },
   error: { color: '#ff7f90', marginBottom: 8 },
@@ -345,11 +390,16 @@ const styles = StyleSheet.create({
   modalDocRow: { borderWidth: 1, borderColor: '#2b315c', borderRadius: 12, padding: 10, backgroundColor: '#0b1030', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
   modalDocType: { color: '#e9edff', fontWeight: '700', marginBottom: 4 },
   modalDocDate: { color: '#6e76a6', fontSize: 11, marginTop: 3 },
+  ocrBox: { marginTop: 8, padding: 10, borderRadius: 10, backgroundColor: '#141a43', borderWidth: 1, borderColor: '#2b315c', gap: 4 },
+  ocrLabel: { color: '#cfd6ff', fontWeight: '800', fontSize: 12 },
+  ocrText: { color: '#f1f4ff', fontSize: 12, lineHeight: 17 },
+  ocrMeta: { color: '#aab2da', fontSize: 11, lineHeight: 16 },
+  ocrEmpty: { color: '#7680b2', fontSize: 11, marginTop: 8 },
   modalBtn: { borderRadius: 8, borderWidth: 1, borderColor: '#4a5392', paddingHorizontal: 10, paddingVertical: 6 },
   modalBtnText: { color: '#dbe0ff', fontWeight: '700' },
-  footerActions: { flexDirection: 'row', gap: 8, marginTop: 6 },
-  actionBtn: { flex: 1, borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
-  rejectBtn: { backgroundColor: 'rgba(255,77,109,0.2)', borderWidth: 1, borderColor: '#8f3247' },
-  acceptBtn: { backgroundColor: 'rgba(0,208,132,0.2)', borderWidth: 1, borderColor: '#197c5c' },
-  actionText: { color: '#fff', fontWeight: '800' },
+  docActionsRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  docActionBtn: { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1 },
+  docRejectBtn: { backgroundColor: 'rgba(255,77,109,0.16)', borderColor: '#8f3247' },
+  docAcceptBtn: { backgroundColor: 'rgba(0,208,132,0.16)', borderColor: '#197c5c' },
+  docActionText: { color: '#fff', fontWeight: '800' },
 });

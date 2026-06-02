@@ -51,6 +51,7 @@ CREATE TABLE public.cars (
   mileage integer,
   seats integer,
   registration_number character varying,
+  visible_by_tenants boolean DEFAULT true,
   description text,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
@@ -59,6 +60,39 @@ CREATE TABLE public.cars (
   CONSTRAINT cars_pkey PRIMARY KEY (id),
   CONSTRAINT cars_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id)
 );
+<<<<<<< HEAD
+=======
+CREATE TABLE public.code (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  pickup_id uuid NOT NULL,
+  code character varying NOT NULL,
+  expires_at timestamp without time zone,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT code_pkey PRIMARY KEY (id),
+  CONSTRAINT code_pickup_id_fkey FOREIGN KEY (pickup_id) REFERENCES public.pickup(id)
+);
+CREATE TABLE public.company (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  manager_id uuid NOT NULL,
+  company_name character varying NOT NULL,
+  company_email character varying,
+  company_phone character varying,
+  commercial_name character varying,
+  corporate_name character varying,
+  nif character varying,
+  manager_name character varying,
+  manager_phone character varying,
+  verification_status character varying DEFAULT 'INCOMPLETE'::character varying,
+  completion_percentage integer DEFAULT 0,
+  address text,
+  city character varying,
+  country character varying,
+  registration_number character varying,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT company_pkey PRIMARY KEY (id),
+  CONSTRAINT company_manager_id_fkey FOREIGN KEY (manager_id) REFERENCES public.users(id)
+);
+>>>>>>> dev
 CREATE TABLE public.documents (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   user_id uuid,
@@ -76,7 +110,27 @@ CREATE TABLE public.documents (
   CONSTRAINT documents_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id),
   CONSTRAINT documents_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
 );
+<<<<<<< HEAD
 CREATE TABLE public.car_images (
+=======
+CREATE TABLE public.document_ocr_results (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  document_id uuid NOT NULL,
+  ocr_text text,
+  extracted_full_name text,
+  extracted_document_number text,
+  extracted_expiration_date date,
+  confidence_score numeric(5,2),
+  verification_status USER-DEFINED NOT NULL DEFAULT 'manual_review'::document_status,
+  verification_reason text,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT document_ocr_results_pkey PRIMARY KEY (id),
+  CONSTRAINT document_ocr_results_document_id_key UNIQUE (document_id),
+  CONSTRAINT document_ocr_results_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id)
+);
+CREATE TABLE public.escrow_transactions (
+>>>>>>> dev
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   car_id uuid NOT NULL,
   image_url text NOT NULL,

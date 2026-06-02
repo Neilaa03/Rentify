@@ -204,6 +204,71 @@ const LoginScreen = ({ navigation }) => {
             const data = await response.json();
 
             if (response.ok) {
+                if (data.token) {
+                    await storage.setItemAsync('userToken', data.token);
+                }
+
+                const userParams = { token: data?.token, user: data?.user };
+                const isOwner = data?.user?.role === 'owner';
+                const isAgencyOwner = data?.user?.role === 'companyManager';
+                const isAdmin = data?.user?.role === 'admin';
+
+                try {
+                    if (data.token) {
+                        const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
+                            headers: { Authorization: `Bearer ${data.token}` },
+                        });
+                        const meJson = meRes.ok ? await meRes.json() : null;
+                        const rawUser = meJson?.user || data.user || null;
+
+                        if (rawUser) {
+                            const normalized = {
+                                id: rawUser.id,
+                                email: rawUser.email,
+                                firstName: rawUser.firstName || rawUser.first_name || '',
+                                lastName: rawUser.lastName || rawUser.last_name || '',
+                                phone: rawUser.phone || '',
+                                role: rawUser.role,
+                                isVerified: rawUser.isVerified ?? rawUser.is_verified,
+                                isActive: rawUser.isActive ?? rawUser.is_active,
+                            };
+
+                            await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+                        }
+                    }
+                } catch {
+                    // Non-blocking.
+                }
+
+                if (isAdmin) {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'AdminDashboard', params: userParams }],
+                    });
+                } else if (isAgencyOwner) {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'AgencyDashboard', params: userParams }],
+                    });
+                } else if (isOwner) {
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'OwnerDashboard', params: userParams }],
+                    });
+                } else {
+                    navigation.reset({
+                        index: 0,
+                        routes: [
+                            {
+                                name: 'ClientApp',
+                                params: {
+                                    screen: 'HomeTab',
+                                    params: userParams,
+                                },
+                            },
+                        ],
+                    });
+                }
                 await handleAuthSuccess(data);
             } else {
                 const message = data?.error || "We couldn't log you in. Please try again.";

@@ -11,6 +11,7 @@ export const registerSchema = z.object({
     lastName: z.string().min(1),
     phone: z.string().min(5).max(30),
     role: UserRole.default('client'),
+    redirectBase: z.string().min(1).optional(),
 }).refine((data) => data.password === data.confirmPassword);
 
 export const loginSchema = z.object({
@@ -30,6 +31,7 @@ export const updateMeSchema = z
   });
 export const resendVerificationSchema = z.object({
     email: z.string().email(),
+    redirectBase: z.string().min(1).optional(),
 });
 
 export const forgotPasswordSchema = z.object({

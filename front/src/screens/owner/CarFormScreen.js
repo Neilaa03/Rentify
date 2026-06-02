@@ -49,6 +49,23 @@ const toYmd = (date) => {
   return `${y}-${m}-${d}`;
 };
 
+const allowedDocumentMimeTypes = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
+
+const inferDocumentMimeType = (file) => {
+  const explicit = String(file?.mimeType || '').toLowerCase();
+  if (allowedDocumentMimeTypes.includes(explicit)) return explicit;
+  const name = String(file?.name || '').toLowerCase();
+  if (name.endsWith('.pdf')) return 'application/pdf';
+  if (name.endsWith('.png')) return 'image/png';
+  if (name.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
+};
+
 const buildRangeMarks = (startDate, endDate) => {
   if (!startDate) return {};
 
@@ -134,6 +151,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
       name: label,
       status: doc?.status || (doc?.documentUrl ? 'pending' : 'missing'),
       documentUrl: doc?.documentUrl || '',
+      ocrResult: doc?.ocrResult || doc?.ocr_result || null,
     };
   };
 
@@ -195,6 +213,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         return 'Validé';
       case 'rejected':
         return 'Rejeté';
+      case 'manual_review':
+        return 'En révision';
       case 'pending':
         return 'En attente';
       default:
@@ -208,11 +228,28 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         return '#2ecc71';
       case 'rejected':
         return '#ff6b6b';
+      case 'manual_review':
+        return '#ffb020';
       case 'pending':
         return '#f1c40f';
       default:
         return '#95a5a6';
     }
+  };
+
+  const getDocumentReason = (document) => {
+    const reason = document?.ocrResult?.verificationReason || document?.rejectionReason || '';
+    if (!reason) return '';
+
+    if (document?.status === 'rejected') {
+      return `Motif du rejet: ${reason}`;
+    }
+
+    if (document?.status === 'manual_review') {
+      return `Motif de révision: ${reason}`;
+    }
+
+    return reason;
   };
 
   const handleDocumentPress = async (type) => {
@@ -268,7 +305,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const pickDocument = async (type) => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
-                type: ['application/pdf'],
+                type: allowedDocumentMimeTypes,
                 copyToCacheDirectory: true,
             });
 
@@ -281,9 +318,9 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
 
             if (!uri || !name) return;
 
-            const isValidMime = mimeType === 'application/pdf';
+            const isValidMime = allowedDocumentMimeTypes.includes(mimeType);
             if (!isValidMime) {
-              return Alert.alert('Format non autorisé', 'Choisissez uniquement un fichier PDF.');
+              return Alert.alert('Format non autorisé', 'Choisissez un fichier PDF ou une image (JPG, PNG, WEBP).');
             }
 
             setStagedDocuments((prev) => ({
@@ -292,6 +329,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
                     uri,
                     name,
                     mimeType,
+                    file: asset?.file || null,
                 },
             }));
         } catch (error) {
@@ -307,11 +345,12 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
     const targetCarId = car?.id || form?.carId || null;
 
     if (!targetCarId) {
-      setDocumentField(type, {
+        setDocumentField(type, {
         ...form.documents[type],
         uri: staged.uri,
         name: staged.name,
         mimeType: staged.mimeType,
+        file: staged.file || null,
         status: 'pending',
       });
       setStagedDocuments((prev) => {
@@ -328,16 +367,17 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
 
     try {
       setIsSubmitting(true);
-      const uploaded = await uploadCarDocument({
-        token,
-        carId: targetCarId,
-        documentType: type,
-        file: {
-          uri: staged.uri,
-          name: staged.name || `${type}.pdf`,
-          type: staged.mimeType || 'application/pdf',
-        },
-      });
+        const uploaded = await uploadCarDocument({
+          token,
+          carId: targetCarId,
+          documentType: type,
+          file: {
+            uri: staged.uri,
+            name: staged.name || `${type}.pdf`,
+            type: inferDocumentMimeType(staged),
+            file: staged.file || null,
+          },
+        });
 
       setDocumentField(type, {
         ...form.documents[type],
@@ -347,7 +387,12 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
         name: staged.name,
         mimeType: staged.mimeType,
         status: uploaded?.status || 'pending',
+        ocrResult: uploaded?.ocrResult || uploaded?.ocr_result || form.documents[type]?.ocrResult || null,
       });
+
+      if ((uploaded?.status || 'pending') === 'rejected' && uploaded?.ocrResult?.verificationReason) {
+        Alert.alert('Document rejeté', uploaded.ocrResult.verificationReason);
+      }
 
       setStagedDocuments((prev) => {
         const updated = { ...prev };
@@ -534,6 +579,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
             uri: document.uri,
             name: document.name || `${documentType}.pdf`,
             type: document.mimeType || 'application/octet-stream',
+            file: document.file || null,
           },
         });
         return { documentType, uploaded };
@@ -1004,6 +1050,11 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
                             {getStatusText(document.status)}
                           </Text>
                         </View>
+                        {getDocumentReason(document) ? (
+                          <Text style={styles.docReasonText} numberOfLines={2}>
+                            {getDocumentReason(document)}
+                          </Text>
+                        ) : null}
                       </View>
 
                       <View style={styles.documentActions}>
@@ -1310,6 +1361,7 @@ const styles = StyleSheet.create({
   docName: { color: '#aeb4dc', marginTop: 4, maxWidth: 160 },
   docStatusBadge: { marginTop: 6, alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
   docStatusText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  docReasonText: { marginTop: 6, color: '#d7dcff', fontSize: 12, lineHeight: 16, maxWidth: 190 },
   documentActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   documentActionBtn: {
     width: 34,
