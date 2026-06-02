@@ -2,9 +2,11 @@ import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CommonActions } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const OwnerBottomNavigation = ({ navigation, route, active }) => {
-  const bottomOffset = 2;
+  const insets = useSafeAreaInsets();
+  const bottomOffset = 2 + (insets?.bottom || 0);
   const params = route?.params || {};
   const baseParams = { ...params };
   delete baseParams.listing;

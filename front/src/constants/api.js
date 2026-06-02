@@ -13,6 +13,11 @@ export const API_ENDPOINTS = {
         FORGOT_PASSWORD: `${API_BASE_URL}/api/auth/forgot-password`,
         RESET_PASSWORD: `${API_BASE_URL}/api/auth/reset-password`,
     },
+    PROFILE: {
+        ME_STATS: `${API_BASE_URL}/api/profile/me/stats`,
+        ME_CLIENT_STATS: `${API_BASE_URL}/api/profile/me/client-stats`,
+        ME_PASSWORD: `${API_BASE_URL}/api/profile/me/password`,
+    },
     CARS: {
         LIST: `${API_BASE_URL}/api/cars`,
         GET: (id) => `${API_BASE_URL}/api/cars/${id}`,
