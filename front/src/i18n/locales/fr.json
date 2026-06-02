@@ -320,63 +320,63 @@
     },
     "auth": {
       "forgotpasswordscreen": {
-        "forgotPassword": "Forgot password",
-        "enterYourEmailAndWellSendYou": "Enter your email and we’ll send you a reset link.",
+        "forgotPassword": "Mot de passe oublié",
+        "enterYourEmailAndWellSendYou": "Veillez entrer votre email et recevoir un lien pour réinitialiser votre mot de passe.",
         "email": "Email",
-        "sendResetLink": "Send reset link",
-        "backToLogin": "Back to login"
+        "sendResetLink": "Envoyer le lien de réinitialisation",
+        "backToLogin": "Retour à la page de connexion"
       },
       "loginscreen": {
-        "welcomeBack": "Welcome Back",
-        "logInToContinueYourJourneyWith": "Log in to continue your journey with Rentify",
-        "emailAddress": "Email Address",
+        "welcomeBack": "Bienvenue de nouveau",
+        "logInToContinueYourJourneyWith": "Connectez-vous pour continuer votre parcours avec Rentify",
+        "emailAddress": "Adresse email",
         "exampleMailCom": "example@mail.com",
-        "password": "Password",
+        "password": "Mot de passe",
         "text": "••••••••",
-        "forgotPassword": "Forgot Password?",
-        "login": "Login",
-        "dontHaveAnAccount": "Don't have an account?",
-        "signUp": "Sign Up"
+        "forgotPassword": "Mot de passe oublié?",
+        "login": "Connexion",
+        "dontHaveAnAccount": "Vous n'avez pas de compte ?",
+        "signUp": "Inscription"
       },
       "registerscreen": {
         "client": "Client",
-        "vehicleOwner": "Vehicle Owner",
-        "agency": "Agency",
-        "createAccount": "Create Account",
-        "joinRentifyAndStartYourJourney": "Join Rentify and start your journey",
-        "firstName": "First Name",
+        "vehicleOwner": "Propriétaire de véhicule",
+        "agency": "Agence",
+        "createAccount": "Créer un compte",
+        "joinRentifyAndStartYourJourney": "Rejoignez Rentify et commencez votre parcours",
+        "firstName": "Prénom",
         "john": "John",
-        "lastName": "Last Name",
+        "lastName": "Nom de famille",
         "doe": "Doe",
-        "emailAddress": "Email Address",
+        "emailAddress": "Adresse email",
         "exampleMailCom": "example@mail.com",
-        "phoneNumber": "Phone Number",
-        "selectYourRole": "Select Your Role",
-        "password": "Password",
+        "phoneNumber": "Numéro de téléphone",
+        "selectYourRole": "Sélectionnez votre rôle",
+        "password": "Mot de passe",
         "text": "••••••••",
-        "confirmPassword": "Confirm Password",
-        "alreadyHaveAnAccount": "Already have an account?",
-        "signIn": "Sign In"
+        "confirmPassword": "Confirmer le mot de passe",
+        "alreadyHaveAnAccount": "Vous avez déjà un compte ?",
+        "signIn": "Se connecter"
       },
       "resetpasswordscreen": {
-        "resetPassword": "Reset password",
-        "chooseANewPasswordFor": "Choose a new password for",
-        "newPassword": "New password",
-        "confirmPassword": "Confirm password",
-        "resendResetEmail": "Resend reset email"
+        "resetPassword": "Réinitialiser le mot de passe",
+        "chooseANewPasswordFor": "Choisissez un nouveau mot de passe pour",
+        "newPassword": "Nouveau mot de passe",
+        "confirmPassword": "Confirmer le mot de passe",
+        "resendResetEmail": "Renvoyer l'email de réinitialisation"
       },
       "setpasswordscreen": {
-        "setAPassword": "Set a password",
-        "optionalAddAPasswordSoYouCan": "Optional: add a password so you can also log in without Google.",
-        "password": "Password",
-        "confirmPassword": "Confirm password",
-        "savePassword": "Save password",
-        "skipForNow": "Skip for now"
+        "setAPassword": "Définir un mot de passe",
+        "optionalAddAPasswordSoYouCan": "Optionnel: ajoutez un mot de passe afin de pouvoir vous connecter sans Google.",
+        "password": "Mot de passe",
+        "confirmPassword": "Confirmer le mot de passe",
+        "savePassword": "Enregistrer le mot de passe",
+        "skipForNow": "Ignorer pour le moment"
       },
       "verifyemailscreen": {
-        "verifying": "Verifying…",
-        "goToLogin": "Go to login",
-        "openEmailApp": "Open email app"
+        "verifying": "Vérification…",
+        "goToLogin": "Aller à la page de connexion",
+        "openEmailApp": "Ouvrir l'application email"
       }
     },
     "client": {
@@ -402,9 +402,9 @@
       "landingscreen": {
         "rentify": "Rentify",
         "driveTheWorldsFinestVehicles": "Drive the world's finest vehicles.",
-        "getStarted": "Get Started",
-        "iAlreadyHaveAnAccount": "I already have an account",
-        "skipForNow": "Skip for now"
+        "getStarted": "Commencer",
+        "iAlreadyHaveAnAccount": "J'ai déjà un compte",
+        "skipForNow": "Ignorer pour le moment"
       },
       "listingdetailsscreen": {
         "detailsIndisponibles": "Détails indisponibles",
@@ -574,18 +574,18 @@
     },
     "messages": {
       "chatscreen": {
-        "uploadFailed": "Upload failed",
-        "sendAPhoto": "Send a photo",
-        "chooseASource": "Choose a source",
-        "missingDependency": "Missing dependency",
-        "installRequiredPackagesExpoFileSystemThen": "Install required packages: expo-file-system, then restart the app.",
-        "saved": "Saved",
-        "imageSavedToYourPhotos": "Image saved to your Photos.",
-        "imageSavedToTheSelectedFolder": "Image saved to the selected folder.",
-        "saveUnavailable": "Save unavailable",
-        "toSaveImagesToPhotosOnAndroid": "To save images to Photos on Android, you may need a development build (Expo Go is limited).",
-        "saveFailed": "Save failed",
-        "tapToOpen": "Tap to open",
+        "uploadFailed": "Échec de l'envoi",
+        "sendAPhoto": "Envoyer une photo",
+        "chooseASource": "Choisir une source",
+        "missingDependency": "Dépendance manquante",
+        "installRequiredPackagesExpoFileSystemThen": "Installer les packages requis: expo-file-system, puis redémarrer l'application.",
+        "saved": "Enregistré",
+        "imageSavedToYourPhotos": "Image enregistrée dans vos Photos.",
+        "imageSavedToTheSelectedFolder": "Image enregistrée dans le dossier sélectionné.",
+        "saveUnavailable": "Enregistrement indisponible",
+        "toSaveImagesToPhotosOnAndroid": "Pour enregistrer les images dans les Photos sur Android, vous devrez peut-être utiliser une version de développement (Expo Go est limité).",
+        "saveFailed": "Échec de l'enregistrement",
+        "tapToOpen": "Appuyer pour ouvrir",
         "chargement": "Chargement...",
         "erreur": "Erreur",
         "message": "Message..."
