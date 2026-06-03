@@ -24,7 +24,7 @@ const initialMessage = {
 
 const quickPrompts = [
   'Show my reservations',
-  'Find automatic cars in Paris',
+  //'Find automatic cars in Paris',
   'Show my profile',
 ];
 
