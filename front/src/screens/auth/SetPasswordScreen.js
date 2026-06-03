@@ -46,6 +46,8 @@ const SetPasswordScreen = ({ navigation, route }) => {const { t } = useTranslati
       const params = { token: t, user };
       if (role === 'admin') {
         navigation.reset({ index: 0, routes: [{ name: 'AdminDashboard', params }] });
+      } else if (role === 'companyManager') {
+        navigation.reset({ index: 0, routes: [{ name: 'AgencyDashboard', params }] });
       } else if (role === 'owner') {
         navigation.reset({ index: 0, routes: [{ name: 'OwnerDashboard', params }] });
       } else {

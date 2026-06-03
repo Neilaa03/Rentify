@@ -177,6 +177,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
   const [isRangeCalendarOpen, setIsRangeCalendarOpen] = useState(false);
   const [isSelectingEndDate, setIsSelectingEndDate] = useState(false);
   const [stagedDocuments, setStagedDocuments] = useState({});
+  const [draftCarId, setDraftCarId] = useState(prefill?.id || car?.id || '');
 
   const [form, setForm] = useState({
     brand: prefill?.brand || '',
@@ -269,6 +270,77 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
     return reason;
   };
 
+  const buildCarPayload = () => ({
+    brand: form.brand.trim(),
+    model: form.model.trim(),
+    year: Number(form.year),
+    color: form.color.trim(),
+    fuelType: form.fuelType,
+    transmission: form.transmission,
+    mileage: form.mileage ? Number(form.mileage) : undefined,
+    seats: Number(form.seats),
+    registrationNumber: form.registrationNumber.trim(),
+    description: form.description.trim()
+  });
+
+  const canCreateDraftCar = () =>
+    Boolean(
+      token &&
+      form.brand.trim() &&
+      form.model.trim() &&
+      form.year &&
+      form.fuelType &&
+      form.transmission &&
+      form.seats
+    );
+
+  const ensureDraftCar = async () => {
+    if (draftCarId) return draftCarId;
+    if (!canCreateDraftCar()) return null;
+
+    const createdCar = await createOwnerCar({
+      token,
+      payload: buildCarPayload()
+    });
+
+    const nextCarId = createdCar?.id || '';
+    if (nextCarId) {
+      setDraftCarId(nextCarId);
+      setField('carId', nextCarId);
+    }
+
+    return nextCarId || null;
+  };
+
+  const uploadDocumentForCar = async ({ carId, documentType, staged }) => {
+    const uploaded = await uploadCarDocument({
+      token,
+      carId,
+      documentType,
+      file: {
+        uri: staged.uri,
+        name: staged.name || `${documentType}.pdf`,
+        type: inferDocumentMimeType(staged),
+        file: staged.file || null
+      }
+    });
+
+    return uploaded;
+  };
+
+  const selectLatestDocumentsByType = (documents = []) => {
+    const sorted = [...documents].sort(
+      (left, right) =>
+        new Date(right?.updatedAt || right?.createdAt || 0) - new Date(left?.updatedAt || left?.createdAt || 0)
+    );
+
+    return sorted.reduce((acc, document) => {
+      if (!document?.documentType || acc[document.documentType]) return acc;
+      acc[document.documentType] = document;
+      return acc;
+    }, {});
+  };
+
   const handleDocumentPress = async (type) => {
     const document = form.documents[type];
     const candidateUrl =
@@ -359,9 +431,48 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
     const staged = stagedDocuments[type];
     if (!staged) return;
 
-    const targetCarId = car?.id || form?.carId || null;
+    const targetCarId = car?.id || draftCarId || form?.carId || null;
 
     if (!targetCarId) {
+      const createdDraftCarId = await ensureDraftCar();
+      if (createdDraftCarId) {
+        try {
+          setIsSubmitting(true);
+          const uploaded = await uploadDocumentForCar({
+            carId: createdDraftCarId,
+            documentType: type,
+            staged
+          });
+
+          setDocumentField(type, {
+            ...form.documents[type],
+            id: uploaded?.id || form.documents[type]?.id,
+            uri: uploaded?.documentUrl || staged.uri,
+            documentUrl: uploaded?.documentUrl || staged.uri,
+            name: staged.name,
+            mimeType: staged.mimeType,
+            status: uploaded?.status || 'pending',
+            ocrResult: uploaded?.ocrResult || uploaded?.ocr_result || form.documents[type]?.ocrResult || null
+          });
+
+          if ((uploaded?.status || 'pending') === 'rejected' && uploaded?.ocrResult?.verificationReason) {
+            Alert.alert(t("screens.owner.carformscreen.documentRejete"), uploaded.ocrResult.verificationReason);
+          }
+
+          setStagedDocuments((prev) => {
+            const updated = { ...prev };
+            delete updated[type];
+            return updated;
+          });
+          return;
+        } catch (error) {
+          Alert.alert(t("screens.owner.carformscreen.erreur"), getFriendlyError(error, t));
+          return;
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+
       setDocumentField(type, {
         ...form.documents[type],
         uri: staged.uri,
@@ -375,25 +486,16 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
         delete updated[type];
         return updated;
       });
-      Alert.alert(t("screens.owner.carformscreen.documentPret"), t("screens.owner.carformscreen.leDocumentEstPretEtSeraEnvoye")
-
-
-      );
+      Alert.alert(t("screens.owner.carformscreen.documentPret"), t("screens.owner.carformscreen.leDocumentEstPretEtSeraEnvoye"));
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const uploaded = await uploadCarDocument({
-        token,
+      const uploaded = await uploadDocumentForCar({
         carId: targetCarId,
         documentType: type,
-        file: {
-          uri: staged.uri,
-          name: staged.name || `${type}.pdf`,
-          type: inferDocumentMimeType(staged),
-          file: staged.file || null
-        }
+        staged
       });
 
       setDocumentField(type, {
@@ -634,27 +736,86 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
     await Promise.all(uploadImages);
 
     if (uploadedDocuments.length > 0) {
-      setForm((prev) => {
-        const nextDocuments = { ...prev.documents };
-        for (const result of uploadedDocuments) {
-          const documentType = result?.documentType;
-          const uploadedUrl = result?.uploaded?.documentUrl;
-          const uploadedId = result?.uploaded?.id;
-          if (!documentType || !uploadedUrl || !nextDocuments[documentType]) continue;
+      try {
+        const refreshedDocuments = await fetchJson(`/api/documents?carId=${carId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const latestDocumentsByType = selectLatestDocumentsByType(Array.isArray(refreshedDocuments) ? refreshedDocuments : []);
 
-          nextDocuments[documentType] = {
-            ...nextDocuments[documentType],
-            id: uploadedId || nextDocuments[documentType]?.id,
-            uri: uploadedUrl,
-            documentUrl: uploadedUrl
+        setForm((prev) => {
+          const nextDocuments = { ...prev.documents };
+
+          for (const [documentType, serverDocument] of Object.entries(latestDocumentsByType)) {
+            if (!nextDocuments[documentType]) continue;
+
+            nextDocuments[documentType] = {
+              ...nextDocuments[documentType],
+              id: serverDocument.id || nextDocuments[documentType]?.id,
+              uri: serverDocument.documentUrl || nextDocuments[documentType]?.uri || '',
+              documentUrl: serverDocument.documentUrl || nextDocuments[documentType]?.documentUrl || '',
+              status: serverDocument.status || nextDocuments[documentType]?.status || 'pending',
+              ocrResult: serverDocument.ocrResult || serverDocument.ocr_result || nextDocuments[documentType]?.ocrResult || null
+            };
+          }
+
+          return {
+            ...prev,
+            documents: nextDocuments
           };
-        }
+        });
 
-        return {
-          ...prev,
-          documents: nextDocuments
-        };
-      });
+        const rejectedDoc = Object.values(latestDocumentsByType).find(
+          (doc) =>
+            String(doc?.status || '').toLowerCase() === 'rejected' &&
+            String(doc?.ocrResult?.verificationReason || doc?.ocr_result?.verificationReason || '').trim()
+        );
+
+        if (rejectedDoc) {
+          const firstReason =
+            rejectedDoc?.ocrResult?.verificationReason ||
+            rejectedDoc?.ocr_result?.verificationReason ||
+            t("screens.owner.carformscreen.documentRejete");
+          Alert.alert(t("screens.owner.carformscreen.documentRejete"), firstReason);
+        }
+      } catch (_refreshError) {
+        const rejectedUploads = uploadedDocuments.filter(
+          (result) =>
+            String(result?.uploaded?.status || '').toLowerCase() === 'rejected' &&
+            String(result?.uploaded?.ocrResult?.verificationReason || result?.uploaded?.ocr_result?.verificationReason || '').trim()
+        );
+
+        setForm((prev) => {
+          const nextDocuments = { ...prev.documents };
+          for (const result of uploadedDocuments) {
+            const documentType = result?.documentType;
+            const uploadedUrl = result?.uploaded?.documentUrl;
+            const uploadedId = result?.uploaded?.id;
+            if (!documentType || !uploadedUrl || !nextDocuments[documentType]) continue;
+
+            nextDocuments[documentType] = {
+              ...nextDocuments[documentType],
+              id: uploadedId || nextDocuments[documentType]?.id,
+              uri: uploadedUrl,
+              documentUrl: uploadedUrl,
+              status: result?.uploaded?.status || nextDocuments[documentType]?.status || 'pending',
+              ocrResult: result?.uploaded?.ocrResult || result?.uploaded?.ocr_result || nextDocuments[documentType]?.ocrResult || null
+            };
+          }
+
+          return {
+            ...prev,
+            documents: nextDocuments
+          };
+        });
+
+        if (rejectedUploads.length > 0) {
+          const firstReason =
+            rejectedUploads[0]?.uploaded?.ocrResult?.verificationReason ||
+            rejectedUploads[0]?.uploaded?.ocr_result?.verificationReason ||
+            t("screens.owner.carformscreen.documentRejete");
+          Alert.alert(t("screens.owner.carformscreen.documentRejete"), firstReason);
+        }
+      }
     }
   };
 
@@ -663,24 +824,19 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
       throw new Error('createOwnerCar function is not available. Please restart the app.');
     }
 
-    const newCar = await createOwnerCar({
+    const carId = draftCarId || (await createOwnerCar({
       token,
-      payload: {
-        brand: form.brand.trim(),
-        model: form.model.trim(),
-        year: Number(form.year),
-        color: form.color.trim(),
-        fuelType: form.fuelType,
-        transmission: form.transmission,
-        mileage: form.mileage ? Number(form.mileage) : undefined,
-        seats: Number(form.seats),
-        registrationNumber: form.registrationNumber.trim(),
-        description: form.description.trim()
-      }
-    });
-
-    const carId = newCar?.id;
+      payload: buildCarPayload()
+    }))?.id;
     if (!carId) throw new Error('Création du véhicule échouée');
+
+    if (draftCarId) {
+      await updateOwnerCar({
+        token,
+        carId,
+        payload: buildCarPayload()
+      });
+    }
 
     await createCarExtras(carId);
   };
@@ -693,18 +849,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
     const updatedCar = await updateOwnerCar({
       token,
       carId: car.id,
-      payload: {
-        brand: form.brand.trim(),
-        model: form.model.trim(),
-        year: Number(form.year),
-        color: form.color.trim(),
-        fuelType: form.fuelType,
-        transmission: form.transmission,
-        mileage: form.mileage ? Number(form.mileage) : undefined,
-        seats: Number(form.seats),
-        registrationNumber: form.registrationNumber.trim(),
-        description: form.description.trim()
-      }
+      payload: buildCarPayload()
     });
 
     const carId = updatedCar?.id || car.id;
@@ -712,23 +857,31 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
   };
 
   const submitCreate = async () => {
-    const newCar = await createOwnerCar({
-      token,
-      payload: {
-        brand: form.brand.trim(),
-        model: form.model.trim(),
-        year: Number(form.year),
-        color: form.color.trim(),
-        fuelType: form.fuelType,
-        transmission: form.transmission,
-        mileage: form.mileage ? Number(form.mileage) : 0,
-        seats: Number(form.seats),
-        description: form.description.trim()
-      }
-    });
+    const carPayload = {
+      brand: form.brand.trim(),
+      model: form.model.trim(),
+      year: Number(form.year),
+      color: form.color.trim(),
+      fuelType: form.fuelType,
+      transmission: form.transmission,
+      mileage: form.mileage ? Number(form.mileage) : 0,
+      seats: Number(form.seats),
+      description: form.description.trim()
+    };
 
-    const carId = newCar?.id;
+    const carId = draftCarId || (await createOwnerCar({
+      token,
+      payload: carPayload
+    }))?.id;
     if (!carId) throw new Error('Creation du vehicule echouee');
+
+    if (draftCarId) {
+      await updateOwnerCar({
+        token,
+        carId,
+        payload: carPayload
+      });
+    }
 
     await createCarExtras(carId);
 

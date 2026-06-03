@@ -105,6 +105,7 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
 
     const userParams = { token: data?.token, user: data?.user };
     const isOwner = data?.user?.role === 'owner';
+    const isAgencyOwner = data?.user?.role === 'companyManager';
     const isAdmin = data?.user?.role === 'admin';
     const initialProvider = String(data?.user?.authProvider || data?.user?.auth_provider || '').toLowerCase();
     const shouldOfferPasswordSetup = (provider) => String(provider || '').toLowerCase() === 'google';
@@ -152,6 +153,11 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
       navigation.reset({
         index: 0,
         routes: [{ name: 'AdminDashboard', params: userParams }]
+      });
+    } else if (isAgencyOwner) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'AgencyDashboard', params: userParams }]
       });
     } else if (isOwner) {
       navigation.reset({
@@ -208,11 +214,6 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
           await storage.setItemAsync('userToken', data.token);
         }
 
-        const userParams = { token: data?.token, user: data?.user };
-        const isOwner = data?.user?.role === 'owner';
-        const isAgencyOwner = data?.user?.role === 'companyManager';
-        const isAdmin = data?.user?.role === 'admin';
-
         try {
           if (data.token) {
             const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
@@ -239,35 +240,6 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
         } catch {
 
           // Non-blocking.
-        }
-        if (isAdmin) {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'AdminDashboard', params: userParams }]
-          });
-        } else if (isAgencyOwner) {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'AgencyDashboard', params: userParams }]
-          });
-        } else if (isOwner) {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'OwnerDashboard', params: userParams }]
-          });
-        } else {
-          navigation.reset({
-            index: 0,
-            routes: [
-            {
-              name: 'ClientApp',
-              params: {
-                screen: 'HomeTab',
-                params: userParams
-              }
-            }]
-
-          });
         }
         await handleAuthSuccess(data);
       } else {

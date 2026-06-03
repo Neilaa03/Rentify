@@ -63,7 +63,9 @@ const buildMultipartDocument = async ({ file, documentType, ownerKey, ownerValue
     });
   }
 
-  formData.append(ownerKey, String(ownerValue));
+  if (ownerKey && ownerValue !== undefined && ownerValue !== null) {
+    formData.append(ownerKey, String(ownerValue));
+  }
   formData.append('documentType', documentType);
   return formData;
 };
