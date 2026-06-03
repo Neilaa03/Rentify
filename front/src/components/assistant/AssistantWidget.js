@@ -40,8 +40,10 @@ const AssistantWidget = () => {
   const [messages, setMessages] = useState([initialMessage]);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
-  const bubbleBottom = Math.max(insets.bottom + 92, 104);
-  const panelBottom = bubbleBottom + 78;
+  const bubbleBottom = Math.max(insets.bottom + 72, 82);
+  const bubbleGap = 4;
+  const panelBottom = bubbleBottom + 64 + bubbleGap;
+  const panelTop = 52;
 
   const context = useMemo(
     () => messages
@@ -104,6 +106,12 @@ const AssistantWidget = () => {
     setError('');
   };
 
+  const toggleOpen = (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    setIsOpen((prev) => !prev);
+  };
+
   return (
     <>
       {isOpen ? (
@@ -112,7 +120,7 @@ const AssistantWidget = () => {
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             pointerEvents="box-none"
-            style={[styles.panelWrap, { bottom: panelBottom }]}
+            style={[styles.panelWrap, { top: panelTop, bottom: panelBottom }]}
           >
             <View style={styles.panel}>
               <View style={styles.header}>
@@ -210,7 +218,7 @@ const AssistantWidget = () => {
 
       <TouchableOpacity
         style={[styles.bubble, { bottom: bubbleBottom }]}
-        onPress={() => setIsOpen((prev) => !prev)}
+        onPress={toggleOpen}
         activeOpacity={0.86}
         accessibilityRole="button"
         accessibilityLabel={isOpen ? 'Close AI assistant' : 'Open AI assistant'}
@@ -260,9 +268,9 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     zIndex: 33,
-    maxHeight: '68%',
   },
   panel: {
+    flex: 1,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(145, 152, 229, 0.22)',
@@ -313,8 +321,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(145, 152, 229, 0.16)',
   },
   messages: {
-    minHeight: 170,
-    maxHeight: 300,
+    flex: 1,
+    minHeight: 0,
   },
   messagesContent: {
     paddingVertical: 8,

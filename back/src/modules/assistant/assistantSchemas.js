@@ -8,7 +8,10 @@ export const assistantMessageSchema = z.object({
 
 export const chatRequestSchema = z.object({
   message: z.string().trim().min(1).max(6000),
-  conversationId: z.string().uuid().optional(),
+  conversationId: z.preprocess(
+    (value) => (value === null || value === '' ? undefined : value),
+    z.string().uuid().optional()
+  ),
   context: z.array(assistantMessageSchema).max(20).optional().default([]),
 });
 

@@ -11,14 +11,19 @@ export const sendAssistantMessage = async ({
   conversationId,
   context = [],
 }) => {
+  const payload = {
+    message,
+    context,
+  };
+
+  if (conversationId) {
+    payload.conversationId = conversationId;
+  }
+
   return fetchJson('/api/assistant/chat', {
     method: 'POST',
     headers: authHeaders(token, { 'Content-Type': 'application/json' }),
     timeoutMs: 30000,
-    body: JSON.stringify({
-      message,
-      conversationId,
-      context,
-    }),
+    body: JSON.stringify(payload),
   });
 };
