@@ -153,8 +153,16 @@
         "enAttente": "En attente",
         "verifies": "Verifies",
         "rejetes": "Rejetes",
+        "sections": {
+          "owners": "Propriétaires",
+          "agencies": "Agences",
+          "agencyDocs": "Documents de l'agence",
+          "managerDocs": "Documents du gérant"
+        },
         "typeProprietaire": "Type, proprietaire...",
+        "rechercherAgence": "Rechercher une agence...",
         "vehiculesAVerifier": "vehicules a verifier",
+        "agencesAVerifier": "agences a verifier",
         "voirDocs": "Voir docs",
         "chargement": "Chargement...",
         "chargementDesDocuments": "Chargement des documents...",

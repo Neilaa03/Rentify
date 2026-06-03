@@ -153,8 +153,16 @@
         "enAttente": "Pending",
         "verifies": "Verified",
         "rejetes": "Rejected",
+        "sections": {
+          "owners": "Owners",
+          "agencies": "Agencies",
+          "agencyDocs": "Agency documents",
+          "managerDocs": "Manager documents"
+        },
         "typeProprietaire": "Type, owner...",
+        "rechercherAgence": "Search an agency...",
         "vehiculesAVerifier": "vehicles to verify",
+        "agencesAVerifier": "agencies to verify",
         "voirDocs": "View docs",
         "impossibleDeChargerLesDocuments": "Unable to load documents",
         "miseAJourDuDocumentImpossible": "Unable to update document",

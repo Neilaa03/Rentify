@@ -20,6 +20,23 @@ const dedupeDocumentsByType = (documents = []) => {
   return [...latestByType.values()].sort((a, b) => getDocumentTimestamp(b) - getDocumentTimestamp(a));
 };
 
+const mapDocumentsWithOcr = async (documents = []) => {
+  const deduped = dedupeDocumentsByType(documents || []);
+  const documentIds = deduped.map((doc) => doc.id).filter(Boolean);
+  const { data: ocrResults } = documentIds.length
+    ? await supabase
+      .from('document_ocr_results')
+      .select('*')
+      .in('document_id', documentIds)
+    : { data: [] };
+  const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+
+  return deduped.map((doc) => ({
+    ...doc,
+    ocr_result: ocrByDocumentId[doc.id] || null,
+  }));
+};
+
 export const getDashboardMetrics = async () => {
   const [users, cars, reservations, payments, pendingCars, recentReservations] = await Promise.all([
     supabase.from('users').select('id', { count: 'exact', head: true }).neq('role', 'admin'),
@@ -85,24 +102,13 @@ export const getUserDetails = async (userId) => {
 
   if (userRes.error) throw userRes.error;
 
-  const docs = dedupeDocumentsByType(docsRes.data || []);
-  const documentIds = docs.map((doc) => doc.id).filter(Boolean);
-  const { data: ocrResults } = documentIds.length
-    ? await supabase
-      .from('document_ocr_results')
-      .select('*')
-      .in('document_id', documentIds)
-    : { data: [] };
-  const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+  const docs = await mapDocumentsWithOcr(docsRes.data || []);
 
   return {
     user: userRes.data,
     reservations: reservationsRes.data || [],
     payments: paymentsRes.data || [],
-    documents: (docs || []).map((doc) => ({
-      ...doc,
-      ocr_result: ocrByDocumentId[doc.id] || null,
-    })),
+    documents: docs,
   };
 };
 
@@ -147,21 +153,103 @@ export const getCarDetails = async (carId) => {
 
   const { data: owner } = await supabase.from('users').select('id,email,first_name,last_name,role,is_verified').eq('id', car.owner_id).single();
   const { data: company } = await supabase.from('company').select('*').eq('manager_id', car.owner_id).maybeSingle();
-  const documentIds = (docs || []).map((doc) => doc.id).filter(Boolean);
-  const { data: ocrResults } = documentIds.length
-    ? await supabase
-      .from('document_ocr_results')
-      .select('*')
-      .in('document_id', documentIds)
-    : { data: [] };
+  const documents = await mapDocumentsWithOcr(docs || []);
 
+  return { car, owner: owner || null, company: company || null, documents, listings: listings || [] };
+};
+
+export const getAgencyDocuments = async ({ search }) => {
+  let companyQuery = supabase.from('company').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+  if (search) {
+    companyQuery = companyQuery.or(
+      `company_name.ilike.%${search}%,company_email.ilike.%${search}%,registration_number.ilike.%${search}%,company_phone.ilike.%${search}%`,
+    );
+  }
+
+  const { data: companies, count, error } = await companyQuery;
+  if (error) throw error;
+
+  const managerIds = [...new Set((companies || []).map((company) => company.manager_id).filter(Boolean))];
+  const companyIds = [...new Set((companies || []).map((company) => company.id).filter(Boolean))];
+
+  const [{ data: managers }, { data: companyDocs }, { data: managerDocs }] = await Promise.all([
+    managerIds.length
+      ? supabase.from('users').select('id,email,first_name,last_name,phone,role,is_verified').in('id', managerIds)
+      : Promise.resolve({ data: [] }),
+    companyIds.length
+      ? supabase.from('documents').select('*').in('company_id', companyIds).order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    managerIds.length
+      ? supabase.from('documents').select('*').in('user_id', managerIds).order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const managerById = Object.fromEntries((managers || []).map((user) => [user.id, user]));
+  const companyDocsByCompanyId = (companyDocs || []).reduce((acc, doc) => {
+    if (!doc.company_id) return acc;
+    if (!acc[doc.company_id]) acc[doc.company_id] = [];
+    acc[doc.company_id].push(doc);
+    return acc;
+  }, {});
+  const managerDocsByManagerId = (managerDocs || []).reduce((acc, doc) => {
+    if (!doc.user_id) return acc;
+    if (!acc[doc.user_id]) acc[doc.user_id] = [];
+    acc[doc.user_id].push(doc);
+    return acc;
+  }, {});
+
+  const allDocumentIds = [...new Set([
+    ...(companyDocs || []).map((doc) => doc.id).filter(Boolean),
+    ...(managerDocs || []).map((doc) => doc.id).filter(Boolean),
+  ])];
+  const { data: ocrResults } = allDocumentIds.length
+    ? await supabase.from('document_ocr_results').select('*').in('document_id', allDocumentIds)
+    : { data: [] };
   const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
-  const documents = dedupeDocumentsByType(docs || []).map((doc) => ({
+
+  const mapDocs = (documents = [], ownerLabel) => dedupeDocumentsByType(documents).map((doc) => ({
     ...doc,
+    ownerLabel,
     ocr_result: ocrByDocumentId[doc.id] || null,
   }));
 
-  return { car, owner: owner || null, company: company || null, documents, listings: listings || [] };
+  const data = (companies || []).map((company) => {
+    const manager = managerById[company.manager_id] || null;
+    const companyDocuments = mapDocs(companyDocsByCompanyId[company.id] || [], 'Agence');
+    const managerDocuments = mapDocs(managerDocsByManagerId[company.manager_id] || [], 'Gérant');
+
+    const stats = [...companyDocuments, ...managerDocuments].reduce((acc, doc) => {
+      const normalized = String(doc.status || '').toLowerCase();
+      if (normalized.includes('approve') || normalized.includes('verif')) acc.approved += 1;
+      else if (normalized.includes('reject')) acc.rejected += 1;
+      else acc.pending += 1;
+      return acc;
+    }, { approved: 0, pending: 0, rejected: 0 });
+
+    return {
+      agency: {
+        id: company.id,
+        managerId: company.manager_id,
+        companyName: company.company_name || 'Agence',
+        companyEmail: company.company_email || '',
+        companyPhone: company.company_phone || '',
+        registrationNumber: company.registration_number || '',
+        city: company.city || '',
+        country: company.country || '',
+        address: company.address || '',
+        managerName: manager ? `${manager.first_name || ''} ${manager.last_name || ''}`.trim() || manager.email || 'Gérant' : 'Gérant',
+        managerEmail: manager?.email || '',
+        managerPhone: manager?.phone || '',
+        verificationStatus: stats.rejected > 0 ? 'REJECTED' : (stats.pending > 0 ? 'PENDING' : 'VERIFIED'),
+        documentCount: companyDocuments.length + managerDocuments.length,
+      },
+      companyDocuments,
+      managerDocuments,
+      stats,
+    };
+  });
+
+  return { data, count: count || 0 };
 };
 
 export const updateCarModeration = async (carId, payload) => {

@@ -59,28 +59,53 @@ const buildFallbackUrls = (url) => {
 
 export default function AdminCarsScreen({ navigation, route }) {
   const { t } = useTranslation();
+  const [activeSection, setActiveSection] = useState('owners');
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('Tous');
   const [cars, setCars] = useState([]);
+  const [agencies, setAgencies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [agenciesLoading, setAgenciesLoading] = useState(true);
   const [error, setError] = useState('');
+  const [agenciesError, setAgenciesError] = useState('');
 
   const [detailsByCar, setDetailsByCar] = useState({});
   const [selectedCar, setSelectedCar] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [reviewingDocId, setReviewingDocId] = useState(null);
+  const [selectedAgency, setSelectedAgency] = useState(null);
+  const [agencyModalVisible, setAgencyModalVisible] = useState(false);
+  const [reviewingAgencyDocId, setReviewingAgencyDocId] = useState(null);
 
   const load = async () => {
-    try {
-      setLoading(true);
-      const data = await adminApi.cars({ search, limit: 80 });
-      setCars(data.data || []);
+    setLoading(true);
+    setAgenciesLoading(true);
+
+    const [carsResult, agenciesResult] = await Promise.allSettled([
+      adminApi.cars({ search: '', limit: 80 }),
+      adminApi.agencyDocuments(),
+    ]);
+
+    if (carsResult.status === 'fulfilled') {
+      setCars(carsResult.value.data || []);
       setError('');
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
+    } else {
+      setError(carsResult.reason?.message || t('screens.admin.admincarsscreen.impossibleDeChargerLesDocuments'));
     }
+
+    if (agenciesResult.status === 'fulfilled') {
+      setAgencies(agenciesResult.value.data || []);
+      setAgenciesError('');
+    } else {
+      setAgenciesError(agenciesResult.reason?.message || t('screens.admin.admincarsscreen.impossibleDeChargerLesDocuments'));
+    }
+
+    setLoading(false);
+    setAgenciesLoading(false);
+    return {
+      cars: carsResult.status === 'fulfilled' ? carsResult.value.data || [] : [],
+      agencies: agenciesResult.status === 'fulfilled' ? agenciesResult.value.data || [] : [],
+    };
   };
 
   useEffect(() => { load(); }, []);
@@ -110,6 +135,32 @@ export default function AdminCarsScreen({ navigation, route }) {
     return { pending, verified, rejected };
   }, [carsWithMeta]);
 
+  const agenciesWithMeta = useMemo(() => {
+    return (agencies || []).map((row) => {
+      const companyDocuments = Array.isArray(row.companyDocuments) ? row.companyDocuments : [];
+      const managerDocuments = Array.isArray(row.managerDocuments) ? row.managerDocuments : [];
+      const allDocs = [...companyDocuments, ...managerDocuments];
+      const pending = allDocs.filter((doc) => {
+        const s = norm(doc.status);
+        return !s.includes('approve') && !s.includes('verif') && !s.includes('reject');
+      }).length;
+      const rejected = allDocs.filter((doc) => norm(doc.status).includes('reject')).length;
+      const agencyStatus = rejected > 0 ? 'reject' : pending > 0 ? 'pending' : 'approve';
+      return {
+        ...row,
+        companyDocuments,
+        managerDocuments,
+        allDocs,
+        pending,
+        rejected,
+        agencyStatus,
+        agencyName: row?.agency?.companyName || 'Agence',
+        managerName: row?.agency?.managerName || 'Gérant',
+        registrationNumber: row?.agency?.registrationNumber || '',
+      };
+    });
+  }, [agencies]);
+
   const grouped = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filtered = carsWithMeta.filter((c) => {
@@ -132,6 +183,34 @@ export default function AdminCarsScreen({ navigation, route }) {
 
     return Object.values(map);
   }, [carsWithMeta, search, activeTab]);
+
+  const filteredAgencies = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return agenciesWithMeta.filter((agency) => {
+      const matchesStatus = activeTab === 'Tous'
+        || (activeTab === 'En attente' && agency.agencyStatus.includes('pending'))
+        || (activeTab === 'Verifies' && agency.agencyStatus.includes('approve'))
+        || (activeTab === 'Rejetes' && agency.agencyStatus.includes('reject'));
+      const matchesSearch = !term
+        || agency.agencyName.toLowerCase().includes(term)
+        || agency.managerName.toLowerCase().includes(term)
+        || String(agency.registrationNumber || '').toLowerCase().includes(term)
+        || String(agency.agency?.companyEmail || '').toLowerCase().includes(term);
+      return matchesStatus && matchesSearch;
+    });
+  }, [agenciesWithMeta, search, activeTab]);
+
+  const agencyStats = useMemo(() => {
+    let pending = 0;
+    let verified = 0;
+    let rejected = 0;
+    agenciesWithMeta.forEach((agency) => {
+      if (agency.agencyStatus.includes('approve')) verified += 1;
+      else if (agency.agencyStatus.includes('reject')) rejected += 1;
+      else pending += 1;
+    });
+    return { pending, verified, rejected };
+  }, [agenciesWithMeta]);
 
   const openCarDocuments = async (car) => {
     setSelectedCar(car);
@@ -181,6 +260,26 @@ export default function AdminCarsScreen({ navigation, route }) {
     }
   };
 
+  const openAgencyDocuments = (agency) => {
+    setSelectedAgency(agency);
+    setAgencyModalVisible(true);
+    setReviewingAgencyDocId(null);
+  };
+
+  const reviewAgencyDocument = async (documentId, status) => {
+    if (!selectedAgency?.agency?.id) return;
+
+    try {
+      await adminApi.updateDocument(documentId, { status });
+      setReviewingAgencyDocId(null);
+      const refreshed = await load();
+      const current = (refreshed?.agencies || []).find((row) => row?.agency?.id === selectedAgency?.agency?.id);
+      if (current) setSelectedAgency(current);
+    } catch (e) {
+      Alert.alert(t('screens.admin.admincarsscreen.erreur'), e.message || t('screens.admin.admincarsscreen.miseAJourDuDocumentImpossible'));
+    }
+  };
+
   const openDocument = async (url) => {
     const candidates = buildFallbackUrls(url);
     if (!candidates.length) {
@@ -218,8 +317,13 @@ export default function AdminCarsScreen({ navigation, route }) {
     }
   };
 
-  const visibleDocCount = grouped.reduce((acc, g) => acc + g.cars.length, 0);
+  const visibleDocCount = activeSection === 'owners'
+    ? grouped.reduce((acc, g) => acc + g.cars.length, 0)
+    : filteredAgencies.length;
   const modalDocs = selectedCar ? resolveDocs(selectedCar.id) : [];
+  const agencyModalDocs = selectedAgency ? [...selectedAgency.companyDocuments, ...selectedAgency.managerDocuments] : [];
+  const sectionStats = activeSection === 'owners' ? stats : agencyStats;
+  const sectionError = activeSection === 'owners' ? error : agenciesError;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -227,15 +331,36 @@ export default function AdminCarsScreen({ navigation, route }) {
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
           <ScreenHeader title={t('screens.admin.admincarsscreen.documents')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
+          <View style={styles.sectionToggleRow}>
+            <TouchableOpacity style={[styles.sectionToggle, activeSection === 'owners' && styles.sectionToggleActive]} onPress={() => { setActiveSection('owners'); setActiveTab('Tous'); }}>
+              <Text style={[styles.sectionToggleText, activeSection === 'owners' && styles.sectionToggleTextActive]}>
+                {t('screens.admin.admincarsscreen.sections.owners', { defaultValue: 'Proprietaires' })}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.sectionToggle, activeSection === 'agencies' && styles.sectionToggleActive]} onPress={() => { setActiveSection('agencies'); setActiveTab('Tous'); }}>
+              <Text style={[styles.sectionToggleText, activeSection === 'agencies' && styles.sectionToggleTextActive]}>
+                {t('screens.admin.admincarsscreen.sections.agencies', { defaultValue: 'Agences' })}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.statsRow}>
-            <TopStat value={stats.pending} label={t('screens.admin.admincarsscreen.enAttente')} tone="amber" icon="time-outline" />
-            <TopStat value={stats.verified} label={t('screens.admin.admincarsscreen.verifies')} tone="green" icon="checkmark-circle-outline" />
-            <TopStat value={stats.rejected} label={t('screens.admin.admincarsscreen.rejetes')} tone="red" icon="close-circle-outline" />
+            <TopStat value={sectionStats.pending} label={t('screens.admin.admincarsscreen.enAttente')} tone="amber" icon="time-outline" />
+            <TopStat value={sectionStats.verified} label={t('screens.admin.admincarsscreen.verifies')} tone="green" icon="checkmark-circle-outline" />
+            <TopStat value={sectionStats.rejected} label={t('screens.admin.admincarsscreen.rejetes')} tone="red" icon="close-circle-outline" />
           </View>
 
           <View style={styles.searchWrap}>
             <Ionicons name="search-outline" size={16} color="#8a91bf" />
-            <TextInput value={search} onChangeText={setSearch} placeholder={t('screens.admin.admincarsscreen.typeProprietaire')} placeholderTextColor="#7078ab" style={styles.searchInput} />
+            <TextInput
+              value={search}
+              onChangeText={setSearch}
+              placeholder={activeSection === 'owners'
+                ? t('screens.admin.admincarsscreen.typeProprietaire')
+                : t('screens.admin.admincarsscreen.rechercherAgence', { defaultValue: 'Rechercher une agence' })}
+              placeholderTextColor="#7078ab"
+              style={styles.searchInput}
+            />
           </View>
 
           <ScrollView
@@ -251,38 +376,68 @@ export default function AdminCarsScreen({ navigation, route }) {
             ))}
           </ScrollView>
 
-          <Text style={styles.countText}>{visibleDocCount} {t('screens.admin.admincarsscreen.vehiculesAVerifier')}</Text>
+          <Text style={styles.countText}>
+            {visibleDocCount}{' '}
+            {activeSection === 'owners'
+              ? t('screens.admin.admincarsscreen.vehiculesAVerifier')
+              : t('screens.admin.admincarsscreen.agencesAVerifier', { defaultValue: 'agences à verifier' })}
+          </Text>
 
-          {!!error ? <Text style={styles.error}>{error}</Text> : null}
-          {grouped.map((group) => (
-            <View key={group.ownerName} style={styles.groupCard}>
-              <Text style={styles.groupTitle}>{group.ownerName}</Text>
-              {group.cars.map((car) => {
-                const loadedDetails = detailsByCar[car.id];
-                const visibleDocs = resolveDocs(car.id);
-                const docsCount = visibleDocs.length;
-                return (
-                  <View key={car.id} style={styles.docItem}>
-                    <View style={styles.docLeft}>
-                      <View style={styles.docIcon}><Ionicons name="car-sport-outline" size={16} color="#a8b0e2" /></View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.docTitle}>{car.displayName}</Text>
-                        <Text style={styles.docOwner}>{car.registration_number || 'Immatriculation indisponible'}</Text>
-                        <Text style={styles.docMeta}>{loadedDetails ? `${docsCount} document(s)` : 'Touchez pour charger les documents'}</Text>
+          {!!sectionError ? <Text style={styles.error}>{sectionError}</Text> : null}
+          {activeSection === 'owners' ? (
+            <>
+              {grouped.map((group) => (
+                <View key={group.ownerName} style={styles.groupCard}>
+                  <Text style={styles.groupTitle}>{group.ownerName}</Text>
+                  {group.cars.map((car) => {
+                    const loadedDetails = detailsByCar[car.id];
+                    const visibleDocs = resolveDocs(car.id);
+                    const docsCount = visibleDocs.length;
+                    return (
+                      <View key={car.id} style={styles.docItem}>
+                        <View style={styles.docLeft}>
+                          <View style={styles.docIcon}><Ionicons name="car-sport-outline" size={16} color="#a8b0e2" /></View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.docTitle}>{car.displayName}</Text>
+                            <Text style={styles.docOwner}>{car.registration_number || 'Immatriculation indisponible'}</Text>
+                            <Text style={styles.docMeta}>{loadedDetails ? `${docsCount} document(s)` : 'Touchez pour charger les documents'}</Text>
+                          </View>
+                        </View>
+                        <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                          <Text style={[styles.statusText, statusTone(car.carStatus)]}>{statusLabel(car.carStatus)}</Text>
+                          <TouchableOpacity style={styles.viewBtn} onPress={() => openCarDocuments(car)}>
+                            <Text style={styles.viewBtnText}>{t('screens.admin.admincarsscreen.voirDocs')}</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    </View>
-                    <View style={{ alignItems: 'flex-end', gap: 8 }}>
-                      <Text style={[styles.statusText, statusTone(car.carStatus)]}>{statusLabel(car.carStatus)}</Text>
-                      <TouchableOpacity style={styles.viewBtn} onPress={() => openCarDocuments(car)}>
-                      <Text style={styles.viewBtnText}>{t('screens.admin.admincarsscreen.voirDocs')}</Text>
-                      </TouchableOpacity>
-                    </View>
+                    );
+                  })}
+                </View>
+              ))}
+              {loading ? <Text style={styles.loading}>{t('screens.admin.admincarsscreen.chargement')}</Text> : null}
+            </>
+          ) : (
+            <>
+              {filteredAgencies.map((agency) => (
+                <View key={agency.agency.id} style={styles.groupCard}>
+                  <Text style={styles.groupTitle}>{agency.agencyName}</Text>
+                  <View style={styles.agencyMetaRow}>
+                    <Text style={styles.docOwner}>{agency.managerName}</Text>
+                    <Text style={[styles.statusText, statusTone(agency.agencyStatus)]}>{statusLabel(agency.agencyStatus)}</Text>
                   </View>
-                );
-              })}
-            </View>
-          ))}
-          {loading ? <Text style={styles.loading}>{t('screens.admin.admincarsscreen.chargement')}</Text> : null}
+                  <Text style={styles.docMeta}>
+                    {agency.registrationNumber || 'Registre indisponible'}
+                    {' · '}
+                    {agency.allDocs.length} document(s)
+                  </Text>
+                  <TouchableOpacity style={[styles.viewBtn, styles.agencyViewBtn]} onPress={() => openAgencyDocuments(agency)}>
+                    <Text style={styles.viewBtnText}>{t('screens.admin.admincarsscreen.voirDocs')}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {agenciesLoading ? <Text style={styles.loading}>{t('screens.admin.admincarsscreen.chargement')}</Text> : null}
+            </>
+          )}
         </ScrollView>
       </View>
 
@@ -294,7 +449,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                 <Text style={styles.modalTitle}>{selectedCar?.displayName || 'Documents'}</Text>
                 <Text style={styles.modalSub}>{selectedCar?.ownerName || ''}</Text>
               </View>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => { setModalVisible(false); setSelectedCar(null); setReviewingDocId(null); }}>
                 <Ionicons name="close-outline" size={24} color="#dbe0ff" />
               </TouchableOpacity>
             </View>
@@ -385,6 +540,122 @@ export default function AdminCarsScreen({ navigation, route }) {
         </View>
       </Modal>
 
+      <Modal visible={agencyModalVisible} transparent animationType="slide" onRequestClose={() => setAgencyModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>{selectedAgency?.agencyName || 'Agence'}</Text>
+                <Text style={styles.modalSub}>{selectedAgency?.managerName || ''}</Text>
+              </View>
+              <TouchableOpacity onPress={() => { setAgencyModalVisible(false); setSelectedAgency(null); setReviewingAgencyDocId(null); }}>
+                <Ionicons name="close-outline" size={24} color="#dbe0ff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ paddingBottom: 10 }}>
+              {selectedAgency && agencyModalDocs.length === 0 ? (
+                <Text style={styles.error}>{t('screens.admin.admincarsscreen.aucunDocumentTrouvePourCeVehicule')}</Text>
+              ) : null}
+
+              {selectedAgency?.companyDocuments?.length ? <Text style={styles.sectionLabel}>{t('screens.admin.admincarsscreen.sections.agencyDocs', { defaultValue: 'Documents de l agence' })}</Text> : null}
+              {selectedAgency?.companyDocuments?.map((doc) => (
+                <View key={doc.id} style={styles.modalDocRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalDocType}>{doc.document_type || doc.type || 'Document'}</Text>
+                    <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
+                    <Text style={styles.modalDocDate}>{doc.created_at ? new Date(doc.created_at).toLocaleString(getCurrentLocale()) : ''}</Text>
+                    {doc.ocr_result ? (
+                      <View style={styles.ocrBox}>
+                        <Text style={styles.ocrLabel}>{t('screens.admin.admincarsscreen.ocr')}</Text>
+                        <Text style={styles.ocrText}>{doc.ocr_result.verification_reason || t('screens.admin.admincarsscreen.aucuneRaisonFournie')}</Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.docActionsRow}>
+                      {isVerifiedDocument(doc.status) ? (
+                        reviewingAgencyDocId === doc.id ? (
+                          <>
+                            <TouchableOpacity style={[styles.docActionBtn, styles.docRejectBtn]} onPress={() => reviewAgencyDocument(doc.id, 'rejected')}>
+                              <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.rejeter')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.docActionBtn, styles.docDiscardBtn]} onPress={() => setReviewingAgencyDocId(null)}>
+                              <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.annuler')}</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <TouchableOpacity style={[styles.docActionBtn, styles.docReviewBtn, styles.docActionBtnFull]} onPress={() => setReviewingAgencyDocId(doc.id)}>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.changerEtat')}</Text>
+                          </TouchableOpacity>
+                        )
+                      ) : (
+                        <>
+                          <TouchableOpacity style={[styles.docActionBtn, styles.docRejectBtn]} onPress={() => reviewAgencyDocument(doc.id, 'rejected')}>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.rejeter')}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={[styles.docActionBtn, styles.docAcceptBtn]} onPress={() => reviewAgencyDocument(doc.id, 'approved')}>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.accepter')}</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <TouchableOpacity style={styles.modalBtn} onPress={() => openDocument(doc.document_url || doc.documentUrl || doc.url)}>
+                    <Text style={styles.modalBtnText}>{t('screens.admin.admincarsscreen.voir')}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {selectedAgency?.managerDocuments?.length ? <Text style={styles.sectionLabel}>{t('screens.admin.admincarsscreen.sections.managerDocs', { defaultValue: 'Documents du gerant' })}</Text> : null}
+              {selectedAgency?.managerDocuments?.map((doc) => (
+                <View key={doc.id} style={styles.modalDocRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalDocType}>{doc.document_type || doc.type || 'Document'}</Text>
+                    <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
+                    <Text style={styles.modalDocDate}>{doc.created_at ? new Date(doc.created_at).toLocaleString(getCurrentLocale()) : ''}</Text>
+                    {doc.ocr_result ? (
+                      <View style={styles.ocrBox}>
+                        <Text style={styles.ocrLabel}>{t('screens.admin.admincarsscreen.ocr')}</Text>
+                        <Text style={styles.ocrText}>{doc.ocr_result.verification_reason || t('screens.admin.admincarsscreen.aucuneRaisonFournie')}</Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.docActionsRow}>
+                      {isVerifiedDocument(doc.status) ? (
+                        reviewingAgencyDocId === doc.id ? (
+                          <>
+                            <TouchableOpacity style={[styles.docActionBtn, styles.docRejectBtn]} onPress={() => reviewAgencyDocument(doc.id, 'rejected')}>
+                              <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.rejeter')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.docActionBtn, styles.docDiscardBtn]} onPress={() => setReviewingAgencyDocId(null)}>
+                              <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.annuler')}</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <TouchableOpacity style={[styles.docActionBtn, styles.docReviewBtn, styles.docActionBtnFull]} onPress={() => setReviewingAgencyDocId(doc.id)}>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.changerEtat')}</Text>
+                          </TouchableOpacity>
+                        )
+                      ) : (
+                        <>
+                          <TouchableOpacity style={[styles.docActionBtn, styles.docRejectBtn]} onPress={() => reviewAgencyDocument(doc.id, 'rejected')}>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.rejeter')}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={[styles.docActionBtn, styles.docAcceptBtn]} onPress={() => reviewAgencyDocument(doc.id, 'approved')}>
+                            <Text style={styles.docActionText}>{t('screens.admin.admincarsscreen.accepter')}</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <TouchableOpacity style={styles.modalBtn} onPress={() => openDocument(doc.document_url || doc.documentUrl || doc.url)}>
+                    <Text style={styles.modalBtnText}>{t('screens.admin.admincarsscreen.voir')}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <AdminBottomNavigation navigation={navigation} route={route} active="documents" />
     </SafeAreaView>
   );
@@ -411,6 +682,11 @@ const styles = StyleSheet.create({
   pageScroll: { flex: 1 },
   pageContent: { paddingBottom: 92 },
   title: { color: '#f2f4ff', fontSize: 36, fontWeight: '800', marginTop: 10, marginBottom: 14 },
+  sectionToggleRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  sectionToggle: { flex: 1, borderRadius: 14, borderWidth: 1, borderColor: '#2d3360', backgroundColor: '#171d44', paddingVertical: 10, alignItems: 'center' },
+  sectionToggleActive: { backgroundColor: '#8f7dff', borderColor: '#8f7dff' },
+  sectionToggleText: { color: '#9299c8', fontWeight: '800' },
+  sectionToggleTextActive: { color: '#fff' },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
   topCard: { width: '31%', borderWidth: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center' },
   topStatRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -428,6 +704,7 @@ const styles = StyleSheet.create({
   content: { paddingTop: 0 },
   groupCard: { backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2b315c', borderRadius: 15, padding: 12, marginBottom: 10 },
   groupTitle: { color: '#9da7e0', fontWeight: '800', marginBottom: 8 },
+  agencyMetaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
   docItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#2b315c', borderRadius: 12, padding: 10, marginBottom: 8, backgroundColor: '#0b1030' },
   docLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, paddingRight: 10 },
   docIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: '#1b214a', justifyContent: 'center', alignItems: 'center' },
@@ -436,6 +713,7 @@ const styles = StyleSheet.create({
   docMeta: { color: '#5f6798', fontSize: 11, marginTop: 2 },
   statusText: { fontWeight: '800', fontSize: 12 },
   viewBtn: { borderRadius: 8, borderWidth: 1, borderColor: '#4a5392', paddingHorizontal: 8, paddingVertical: 5 },
+  agencyViewBtn: { alignSelf: 'flex-start', marginTop: 8 },
   viewBtnText: { color: '#d4daff', fontSize: 11, fontWeight: '700' },
   ok: { color: '#00d084' },
   bad: { color: '#ff4d6d' },
@@ -452,6 +730,7 @@ const styles = StyleSheet.create({
   modalDocRow: { borderWidth: 1, borderColor: '#2b315c', borderRadius: 12, padding: 10, backgroundColor: '#0b1030', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
   modalDocType: { color: '#e9edff', fontWeight: '700', marginBottom: 4 },
   modalDocDate: { color: '#6e76a6', fontSize: 11, marginTop: 3 },
+  sectionLabel: { color: '#8f9dff', fontWeight: '800', marginTop: 10, marginBottom: 8, textTransform: 'uppercase', fontSize: 11, letterSpacing: 0.8 },
   ocrBox: { marginTop: 8, padding: 10, borderRadius: 10, backgroundColor: '#141a43', borderWidth: 1, borderColor: '#2b315c', gap: 4 },
   ocrLabel: { color: '#cfd6ff', fontWeight: '800', fontSize: 12 },
   ocrText: { color: '#f1f4ff', fontSize: 12, lineHeight: 17 },

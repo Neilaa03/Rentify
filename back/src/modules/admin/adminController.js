@@ -11,6 +11,7 @@ import {
   getUserDetails,
   getCars,
   getCarDetails,
+  getAgencyDocuments,
   updateCarModeration,
   getReservations,
   getReservationDetails,
@@ -79,6 +80,16 @@ export const listCarsHandler = async (req, res) => {
 export const carDetailsHandler = async (req, res) => {
   try {
     const data = await getCarDetails(req.params.carId);
+    res.json(data);
+  } catch (error) {
+    handle(res, error);
+  }
+};
+
+export const agencyDocumentsHandler = async (req, res) => {
+  try {
+    const { search } = req.query;
+    const data = await getAgencyDocuments({ search });
     res.json(data);
   } catch (error) {
     handle(res, error);
