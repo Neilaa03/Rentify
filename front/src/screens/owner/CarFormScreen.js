@@ -375,10 +375,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {
             uri: staged.uri,
             name: staged.name || `${type}.pdf`,
             type: inferDocumentMimeType(staged),
-<<<<<<< HEAD
-=======
             file: staged.file || null,
->>>>>>> dev
           },
         });
 

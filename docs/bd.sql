@@ -77,7 +77,6 @@ CREATE TABLE public.documents (
   CONSTRAINT documents_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id),
   CONSTRAINT documents_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
 );
-<<<<<<< HEAD
 CREATE TABLE public.document_ocr_results (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   document_id uuid NOT NULL,
@@ -94,8 +93,6 @@ CREATE TABLE public.document_ocr_results (
   CONSTRAINT document_ocr_results_document_id_key UNIQUE (document_id),
   CONSTRAINT document_ocr_results_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id)
 );
-CREATE TABLE public.facture (
-=======
 CREATE TABLE public.car_images (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   car_id uuid NOT NULL,
@@ -138,7 +135,6 @@ CREATE TABLE public.reservations (
   CONSTRAINT reservations_renter_id_fkey FOREIGN KEY (renter_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.pickup (
->>>>>>> dev
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   reservation_id uuid NOT NULL,
   status USER-DEFINED DEFAULT 'pending'::pickup_status,

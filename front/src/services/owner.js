@@ -261,7 +261,6 @@ export const uploadCarDocument = async ({
   documentType,
   file,
 }) => {
-<<<<<<< HEAD
   const formData = new FormData();
   const safeUri = String(file?.uri || '');
   const isPdf =
@@ -288,8 +287,6 @@ export const uploadCarDocument = async ({
   formData.append('carId', String(carId));
   formData.append('documentType', documentType);
 
-=======
->>>>>>> dev
   console.log('Uploading document:', {
     carId,
     documentType,
@@ -333,9 +330,6 @@ export const uploadCarImage = async ({ token, carId, file, isPrimary }) => {
   const formData = new FormData();
   const safeUri = String(file?.uri || '');
   const safeName = file?.name || `car-image-${carId}.jpg`;
-<<<<<<< HEAD
-  const mimeType = file?.type || 'image/jpeg';
-=======
   const explicitType = String(file?.type || '').toLowerCase();
   const mimeType =
     allowedMimeTypes.has(explicitType) && explicitType !== 'application/pdf'
@@ -345,7 +339,6 @@ export const uploadCarImage = async ({ token, carId, file, isPrimary }) => {
         : safeName.toLowerCase().endsWith('.webp')
           ? 'image/webp'
           : 'image/jpeg');
->>>>>>> dev
 
   if (Platform.OS === 'web') {
     const blob = await fetch(safeUri).then((r) => r.blob());

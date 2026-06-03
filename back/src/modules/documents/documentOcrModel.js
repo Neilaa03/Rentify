@@ -53,8 +53,6 @@ export const upsertDocumentOcrResult = async (payload) => {
   if (error) throw error;
   return toDocumentOcrDto(data);
 };
-<<<<<<< HEAD
-=======
 
 export const deleteDocumentOcrResultByDocumentId = async (documentId) => {
   const { error } = await supabase
@@ -78,4 +76,3 @@ export const deleteDocumentOcrResultsByDocumentIds = async (documentIds = []) =>
   if (error) throw error;
   return { message: 'OCR results deleted' };
 };
->>>>>>> dev

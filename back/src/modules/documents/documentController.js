@@ -48,8 +48,6 @@ const ensurePdfExtension = (name = 'document') => {
   return `${trimmed}.pdf`;
 };
 
-<<<<<<< HEAD
-=======
 const allowedMimeTypes = new Set([
   'image/jpeg',
   'image/png',
@@ -76,7 +74,6 @@ const normalizeUploadedMimeType = (file) => {
   return explicit || 'application/octet-stream';
 };
 
->>>>>>> dev
 const getCloudinaryOcrUrl = (uploadUrl, mimeType) => {
   if (mimeType !== 'application/pdf') return uploadUrl;
   if (!uploadUrl) return uploadUrl;
@@ -138,8 +135,6 @@ const buildOcrRecordPayload = (documentId, verificationResult) => ({
   verificationReason: verificationResult.verificationReason,
 });
 
-<<<<<<< HEAD
-=======
 const sortDocumentsByRecency = (documents = []) =>
   [...documents].sort((a, b) => {
     const aTime = new Date(a?.updatedAt || a?.createdAt || 0).getTime();
@@ -149,7 +144,6 @@ const sortDocumentsByRecency = (documents = []) =>
 
 const findLatestDocument = (documents = []) => sortDocumentsByRecency(documents)[0] || null;
 
->>>>>>> dev
 export const getAllDocuments = async (req, res) => {
   try {
     const parsedFilters = documentFiltersSchema.parse({
@@ -358,53 +352,6 @@ export const uploadDocumentHandler = async (req, res) => {
 
     try {
       const ocrUrl = getCloudinaryOcrUrl(uploadResult.secure_url, mimeType);
-      verificationResult = await verifyDocumentImage(ocrUrl);
-    } catch (ocrError) {
-      verificationResult = {
-        status: 'manual_review',
-        extractedText: '',
-        extractedFullName: null,
-        extractedDocumentNumber: null,
-        extractedExpirationDate: null,
-        confidenceScore: 0,
-        verificationReason: `OCR processing failed: ${ocrError.message}`,
-      };
-    }
-
-    let ocrResult = null;
-    let documentStatus = verificationResult.status;
-
-    try {
-      ocrResult = await upsertDocumentOcrResult(
-        buildOcrRecordPayload(createdDocument.id, verificationResult),
-      );
-    } catch (ocrWriteError) {
-      console.error('Document OCR write error:', ocrWriteError);
-      documentStatus = 'manual_review';
-    }
-
-    let finalDocument = createdDocument;
-    try {
-      finalDocument = await updateDocument(
-        createdDocument.id,
-        buildDocumentReviewUpdate(documentStatus),
-      );
-    } catch (documentUpdateError) {
-      console.error('Document status update error:', documentUpdateError);
-    }
-
-    let verificationResult = {
-      status: 'manual_review',
-      extractedText: '',
-      extractedFullName: null,
-      extractedDocumentNumber: null,
-      extractedExpirationDate: null,
-      confidenceScore: 0,
-      verificationReason: 'OCR is not available for this file type.',
-    };
-
-    try {
-      const ocrUrl = getCloudinaryOcrUrl(uploadResult.secure_url, uploadedFile.mimetype);
       verificationResult = await verifyDocumentImage(ocrUrl);
     } catch (ocrError) {
       verificationResult = {

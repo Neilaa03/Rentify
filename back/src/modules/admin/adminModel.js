@@ -156,11 +156,7 @@ export const getCarDetails = async (carId) => {
     : { data: [] };
 
   const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
-<<<<<<< HEAD
-  const documents = (docs || []).map((doc) => ({
-=======
   const documents = dedupeDocumentsByType(docs || []).map((doc) => ({
->>>>>>> dev
     ...doc,
     ocr_result: ocrByDocumentId[doc.id] || null,
   }));
@@ -261,13 +257,8 @@ export const getReservationDetails = async (reservationId) => {
     ? await supabase.from('document_ocr_results').select('*').in('document_id', allDocIds)
     : { data: [] };
   const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
-<<<<<<< HEAD
-  const ownerDocuments = (ownerDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
-  const carDocuments = (carDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
-=======
   const ownerDocuments = dedupeDocumentsByType(ownerDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
   const carDocuments = dedupeDocumentsByType(carDocs || []).map((doc) => ({ ...doc, ocr_result: ocrByDocumentId[doc.id] || null }));
->>>>>>> dev
 
   return { reservation, listing: listing || null, renter: renter || null, car: car || null, owner: owner || null, company: company || null, payment: payment || null, pickup: pickup || null, ownerDocuments, carDocuments };
 };
