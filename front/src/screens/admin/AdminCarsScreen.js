@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
@@ -26,19 +26,19 @@ const statusTone = (status) => {
   return styles.wait;
 };
 
+const isRejectedStatus = (status) => norm(status).includes('reject');
 const isVerifiedDocument = (status) => {
   const s = norm(status);
   return s.includes('approve') || s.includes('verif');
 };
 
-const isRejectedDocument = (status) => norm(status).includes('reject');
-
 const normalizeDocUrl = (url) => {
   if (!url) return '';
   let clean = String(url).trim();
   if (!clean.startsWith('http')) clean = `https://${clean.replace(/^\/+/, '')}`;
+  const withoutQuery = clean.split('?')[0];
   // Some PDF files are stored under /image/upload and fail in mobile browser.
-  if (clean.includes('res.cloudinary.com') && clean.toLowerCase().endsWith('.pdf') && clean.includes('/image/upload/')) {
+  if (clean.includes('res.cloudinary.com') && withoutQuery.toLowerCase().endsWith('.pdf') && clean.includes('/image/upload/')) {
     return clean.replace('/image/upload/', '/raw/upload/');
   }
   return clean;
@@ -153,18 +153,8 @@ export default function AdminCarsScreen({ navigation, route }) {
   const resolveDocs = (carId) => {
     const d = detailsByCar[carId];
     const docs = d?.documents || [];
-<<<<<<< HEAD
-    return docs.map((doc, idx) => ({
-      id: doc.id || `${carId}-${idx}`,
-      type: doc.document_type || doc.type || 'Document',
-      status: doc.status || 'pending',
-      url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
-      uploadedAt: doc.created_at || doc.updated_at || '',
-      ocrResult: doc.ocr_result || doc.ocrResult || null,
-    }));
-=======
     return docs
-      .filter((doc) => !isRejectedDocument(doc.status))
+      .filter((doc) => !isRejectedStatus(doc.status))
       .map((doc, idx) => ({
         id: doc.id || `${carId}-${idx}`,
         type: doc.document_type || doc.type || 'Document',
@@ -181,39 +171,6 @@ export default function AdminCarsScreen({ navigation, route }) {
     try {
       await adminApi.updateDocument(documentId, { status });
       setReviewingDocId(null);
-      setDetailsByCar((prev) => {
-        const current = prev[selectedCar.id];
-        if (!current?.documents) return prev;
-
-        const nextDocuments = status === 'rejected'
-          ? current.documents.filter((doc) => String(doc.id) !== String(documentId))
-          : current.documents.map((doc) => (
-            String(doc.id) === String(documentId)
-              ? { ...doc, status }
-              : doc
-          ));
-
-        return {
-          ...prev,
-          [selectedCar.id]: {
-            ...current,
-            documents: nextDocuments,
-          },
-        };
-      });
-      await refreshCarDetails(selectedCar.id);
-      await load();
-    } catch (e) {
-      Alert.alert('Erreur', e.message || 'Mise à jour du document impossible');
-    }
->>>>>>> dev
-  };
-
-  const reviewDocument = async (documentId, status) => {
-    if (!selectedCar?.id) return;
-
-    try {
-      await adminApi.updateDocument(documentId, { status });
       await refreshCarDetails(selectedCar.id);
       await load();
     } catch (e) {
@@ -231,6 +188,11 @@ export default function AdminCarsScreen({ navigation, route }) {
     let lastErr = null;
     for (const candidate of candidates) {
       try {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const opened = window.open(candidate, '_blank', 'noopener,noreferrer');
+          if (opened) return;
+        }
+
         const supported = await Linking.canOpenURL(candidate);
         if (!supported) continue;
         await Linking.openURL(candidate);
@@ -294,7 +256,8 @@ export default function AdminCarsScreen({ navigation, route }) {
               <Text style={styles.groupTitle}>{group.ownerName}</Text>
               {group.cars.map((car) => {
                 const loadedDetails = detailsByCar[car.id];
-                const docsCount = loadedDetails ? resolveDocs(car.id).length : undefined;
+                const visibleDocs = resolveDocs(car.id);
+                const docsCount = visibleDocs.length;
                 return (
                   <View key={car.id} style={styles.docItem}>
                     <View style={styles.docLeft}>
@@ -302,7 +265,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.docTitle}>{car.displayName}</Text>
                         <Text style={styles.docOwner}>{car.registration_number || 'Immatriculation indisponible'}</Text>
-                        <Text style={styles.docMeta}>{docsCount !== undefined ? `${docsCount} document(s)` : 'Touchez pour charger les documents'}</Text>
+                        <Text style={styles.docMeta}>{loadedDetails ? `${docsCount} document(s)` : 'Touchez pour charger les documents'}</Text>
                       </View>
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 8 }}>
@@ -366,20 +329,6 @@ export default function AdminCarsScreen({ navigation, route }) {
                       <Text style={styles.ocrEmpty}>Aucun resultat OCR disponible.</Text>
                     )}
                     <View style={styles.docActionsRow}>
-<<<<<<< HEAD
-                      <TouchableOpacity
-                        style={[styles.docActionBtn, styles.docRejectBtn]}
-                        onPress={() => reviewDocument(doc.id, 'rejected')}
-                      >
-                        <Text style={styles.docActionText}>Rejeter</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.docActionBtn, styles.docAcceptBtn]}
-                        onPress={() => reviewDocument(doc.id, 'approved')}
-                      >
-                        <Text style={styles.docActionText}>Accepter</Text>
-                      </TouchableOpacity>
-=======
                       {isVerifiedDocument(doc.status) ? (
                         reviewingDocId === doc.id ? (
                           <>
@@ -420,7 +369,6 @@ export default function AdminCarsScreen({ navigation, route }) {
                           </TouchableOpacity>
                         </>
                       )}
->>>>>>> dev
                     </View>
                   </View>
                   <TouchableOpacity style={styles.modalBtn} onPress={() => openDocument(doc.url)}>
@@ -512,11 +460,8 @@ const styles = StyleSheet.create({
   docActionBtn: { flex: 1, borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1 },
   docRejectBtn: { backgroundColor: 'rgba(255,77,109,0.16)', borderColor: '#8f3247' },
   docAcceptBtn: { backgroundColor: 'rgba(0,208,132,0.16)', borderColor: '#197c5c' },
-<<<<<<< HEAD
-=======
   docReviewBtn: { backgroundColor: 'rgba(143,157,255,0.16)', borderColor: '#8f9dff' },
   docDiscardBtn: { backgroundColor: 'rgba(255,255,255,0.08)', borderColor: '#4a5392' },
   docActionBtnFull: { flex: 1 },
->>>>>>> dev
   docActionText: { color: '#fff', fontWeight: '800' },
 });
