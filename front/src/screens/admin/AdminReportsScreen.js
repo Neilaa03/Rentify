@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
+import { useTranslation } from 'react-i18next';
 
 const tabs = ['Tous', 'Ouverts', 'En cours', 'Resolus', 'Clotures'];
 
@@ -17,6 +18,7 @@ const normalize = (status) => {
 };
 
 export default function AdminReportsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const [rows, setRows] = useState([]);
   const [active, setActive] = useState('Tous');
   const [loading, setLoading] = useState(true);
@@ -49,24 +51,24 @@ export default function AdminReportsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
-          <ScreenHeader title="Signalements" rightAction={<AdminLogoutButton navigation={navigation} />} />
+          <ScreenHeader title={t('screens.admin.adminreportsscreen.signalements')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
           <View style={styles.alertBox}>
             <Ionicons name="alert-circle-outline" size={16} color="#ff4d6d" />
-            <Text style={styles.alertText}>{counts.open} signalements ouverts necessitant une action</Text>
+            <Text style={styles.alertText}>{counts.open} {t('screens.admin.adminreportsscreen.signalementsOuvertsNecessitantUneAction')}</Text>
           </View>
 
           <View style={styles.topStats}>
-            <Stat value={counts.open} label="Ouvert" tone="#ff4d6d" icon="alert-circle-outline" />
-            <Stat value={counts.progress} label="En cours" tone="#ffb020" icon="time-outline" />
-            <Stat value={counts.resolved} label="Resolu" tone="#00d084" icon="checkmark-circle-outline" />
-            <Stat value={counts.closed} label="Cloture" tone="#8f9dff" icon="lock-closed-outline" />
+            <Stat value={counts.open} label={t('screens.admin.adminreportsscreen.ouvert')} tone="#ff4d6d" icon="alert-circle-outline" />
+            <Stat value={counts.progress} label={t('screens.admin.adminreportsscreen.enCours')} tone="#ffb020" icon="time-outline" />
+            <Stat value={counts.resolved} label={t('screens.admin.adminreportsscreen.resolu')} tone="#00d084" icon="checkmark-circle-outline" />
+            <Stat value={counts.closed} label={t('screens.admin.adminreportsscreen.cloture')} tone="#8f9dff" icon="lock-closed-outline" />
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow} contentContainerStyle={styles.filtersRowContent}>
             {tabs.map((tab) => (
               <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
-                <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{tab}</Text>
+                <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{t(`screens.admin.adminreportsscreen.tabs.${tab}`, { defaultValue: tab })}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -88,22 +90,22 @@ export default function AdminReportsScreen({ navigation, route }) {
                     <Ionicons name={cardIcon} size={14} color={status === 'Ouverts' ? '#ff4d6d' : status === 'En cours' ? '#ffb020' : status === 'Resolus' ? '#00d084' : '#8f9dff'} />
                   </View>
                   <Text style={styles.reason}>{r.reason || 'Signalement'}</Text>
-                  <Text style={[styles.status, status === 'Ouverts' ? styles.statusOpen : status === 'En cours' ? styles.statusProgress : status === 'Resolus' ? styles.statusResolved : styles.statusClosed]}>{status}</Text>
+                <Text style={[styles.status, status === 'Ouverts' ? styles.statusOpen : status === 'En cours' ? styles.statusProgress : status === 'Resolus' ? styles.statusResolved : styles.statusClosed]}>{t(`screens.admin.adminreportsscreen.statuses.${status}`, { defaultValue: status })}</Text>
                 </View>
-                <Text style={styles.reportTitle}>{r.reporter_name || 'Utilisateur'} -> {r.target_name || 'Compte'}</Text>
-                <Text style={styles.reportDesc} numberOfLines={2}>{r.description || 'Aucune description.'}</Text>
+                <Text style={styles.reportTitle}>{r.reporter_name || t('common.unknownUser')} {t('screens.admin.adminreportsscreen.text')} {r.target_name || t('screens.admin.adminreportsscreen.compte')}</Text>
+                <Text style={styles.reportDesc} numberOfLines={2}>{r.description || t('screens.admin.adminreportsscreen.aucuneDescription')}</Text>
                 <View style={styles.actions}>
                   <TouchableOpacity style={styles.actionBtn} onPress={async () => { await adminApi.updateReport(r.id, 'rejected'); load(); }}>
-                    <Text style={styles.actionText}>Cloturer</Text>
+                    <Text style={styles.actionText}>{t('screens.admin.adminreportsscreen.cloturer')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary]} onPress={async () => { await adminApi.updateReport(r.id, 'resolved'); load(); }}>
-                    <Text style={styles.actionText}>Resoudre</Text>
+                    <Text style={styles.actionText}>{t('screens.admin.adminreportsscreen.resoudre')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             );
           })}
-          {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
+          {loading ? <Text style={styles.loading}>{t('screens.admin.adminreportsscreen.chargement')}</Text> : null}
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="reports" />

@@ -20,6 +20,8 @@ import {
 import { fetchJson } from '../../services/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import AppBackground from '../../components/layout/AppBackground';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -27,26 +29,26 @@ const badgeByTone = {
   amber: { color: '#ffb347', backgroundColor: 'rgba(255,179,71,0.16)' },
 };
 
-const statusFilters = [
-  { key: 'all', label: 'Toutes' },
-  { key: 'published', label: 'Publiées' },
-  { key: 'unpublished', label: 'Non publiées' },
-];
-
-const sortModes = [
-  { key: 'recent', label: 'Récentes' },
-  { key: 'car_asc', label: 'Voiture A-Z' },
-  { key: 'car_desc', label: 'Voiture Z-A' },
-];
-
 const OwnerListingsScreen = ({
   navigation,
   route,
   BottomNavigationComponent = OwnerBottomNavigation,
-  title = 'Mes annonces',
+  title,
 }) => {
+  const { t } = useTranslation();
   const token = route?.params?.token;
   const user = route?.params?.user;
+  const screenTitle = title || t('screens.owner.listingsscreen.mesAnnonces');
+  const statusFilters = [
+    { key: 'all', label: t('screens.owner.listingsscreen.toutes') },
+    { key: 'published', label: t('screens.owner.listingsscreen.publiees') },
+    { key: 'unpublished', label: t('screens.owner.listingsscreen.nonPubliees') },
+  ];
+  const sortModes = [
+    { key: 'recent', label: t('screens.owner.listingsscreen.recentes') },
+    { key: 'car_asc', label: t('screens.owner.listingsscreen.voitureAz') },
+    { key: 'car_desc', label: t('screens.owner.listingsscreen.voitureZa') },
+  ];
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -65,11 +67,11 @@ const OwnerListingsScreen = ({
       setError('');
       const data = await getOwnerListings({ token, ownerId: user.id });
       setListings(data);
-      
+
       // Fetch primary images for each unique car
       const images = {};
       const uniqueCarIds = [...new Set(data.map(item => item.carId).filter(Boolean))];
-      
+
       await Promise.all(
         uniqueCarIds.map(async (carId) => {
           try {
@@ -89,7 +91,7 @@ const OwnerListingsScreen = ({
       );
       setCarImages(images);
     } catch (err) {
-      setError(err.message || 'Erreur chargement annonces');
+      setError(err.message || t('screens.owner.listingsscreen.erreurChargementAnnonces'));
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -112,7 +114,7 @@ const OwnerListingsScreen = ({
       if (!map.has(item.carId)) {
         map.set(item.carId, {
           id: item.carId,
-          label: `${item.brand || ''} ${item.model || ''}`.trim() || item.title || 'Voiture',
+          label: `${item.brand || ''} ${item.model || ''}`.trim() || item.title || t('screens.owner.listingsscreen.voiture'),
         });
       }
     });
@@ -141,12 +143,12 @@ const OwnerListingsScreen = ({
 
   const handleDelete = (listing) => {
     Alert.alert(
-      'Supprimer',
-      `Êtes-vous sûr de vouloir supprimer l'annonce "${listing.title}" ?`,
+      t('screens.owner.listingsscreen.supprimer'),
+      t('screens.owner.listingsscreen.confirmerSuppressionAnnonce', { title: listing.title }),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('screens.owner.listingsscreen.annuler'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('screens.owner.listingsscreen.supprimer'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -154,7 +156,7 @@ const OwnerListingsScreen = ({
               loadListings();
             } catch (err) {
               console.error(err);
-              Alert.alert('Erreur', 'Impossible de supprimer l\'annonce. Réessayez plus tard.');
+              Alert.alert(t('screens.owner.listingsscreen.erreur'), t('screens.owner.listingsscreen.impossibleDeSupprimerLannonceReessayezPlusTard'));
             }
           },
         },
@@ -165,8 +167,8 @@ const OwnerListingsScreen = ({
   const handleTogglePublish = async (listing) => {
     if (!listing.isActive && listing.state !== 'ready_to_publish') {
       Alert.alert(
-        'Publication bloquée',
-        'Vous devez valider carte grise, assurance et contrôle technique avant publication.'
+        t('screens.owner.listingsscreen.publicationBloquee'),
+        t('screens.owner.listingsscreen.vousDevezValiderCarteGriseAssuranceEt')
       );
       return;
     }
@@ -186,7 +188,7 @@ const OwnerListingsScreen = ({
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{title}</Text>
+          <Text style={styles.headerTitle}>{screenTitle}</Text>
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}
@@ -215,8 +217,8 @@ const OwnerListingsScreen = ({
               <Ionicons name="car-outline" size={16} color="#dce1ff" />
               <Text style={styles.filterBtnText}>
                 {selectedCarId === 'all'
-                  ? 'Toutes les voitures'
-                  : availableCars.find((car) => String(car.id) === String(selectedCarId))?.label || 'Voiture'}
+                  ? t('screens.owner.listingsscreen.toutesLesVoitures')
+                  : availableCars.find((car) => String(car.id) === String(selectedCarId))?.label || t('screens.owner.listingsscreen.voiture')}
               </Text>
               <Ionicons name="chevron-down-outline" size={16} color="#aab1dd" />
             </TouchableOpacity>
@@ -231,7 +233,7 @@ const OwnerListingsScreen = ({
             >
               <Ionicons name="swap-vertical-outline" size={16} color="#dce1ff" />
               <Text style={styles.filterBtnText}>
-                {sortModes.find((item) => item.key === sortMode)?.label || 'Récentes'}
+                {sortModes.find((item) => item.key === sortMode)?.label || t('screens.owner.listingsscreen.recentes')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -246,7 +248,7 @@ const OwnerListingsScreen = ({
             data={filteredListings}
             keyExtractor={(item) => item.id}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8f7dff" />}
-            ListEmptyComponent={<Text style={styles.emptyText}>Aucune annonce ne correspond à ces filtres.</Text>}
+            ListEmptyComponent={<Text style={styles.emptyText}>{t('screens.owner.listingsscreen.aucuneAnnonceNeCorrespondACesFiltres')}</Text>}
             ListHeaderComponent={error ? <Text style={styles.errorText}>{error}</Text> : null}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => {
@@ -259,7 +261,7 @@ const OwnerListingsScreen = ({
                       style={styles.cardImage}
                     />
                   )}
-                  
+
                   <View style={styles.cardContent}>
                     <View style={styles.cardTop}>
                       <View>
@@ -271,25 +273,25 @@ const OwnerListingsScreen = ({
                       <Text style={[styles.badge, badgeStyle]}>{item.stateLabel}</Text>
                     </View>
 
-                    <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString('fr-FR')} DA / jour</Text>
+                    <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString(getCurrentLocale())} {t('screens.owner.listingsscreen.daJour')}</Text>
 
                     <View style={styles.actions}>
                       <TouchableOpacity
                         style={styles.actionBtn}
                         onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'edit', listing: item })}
                       >
-                        <Text style={styles.actionText}>Modifier</Text>
+                        <Text style={styles.actionText}>{t('screens.owner.listingsscreen.modifier')}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
-                        <Text style={[styles.actionText, { color: '#ff8a9e' }]}>Supprimer</Text>
+                        <Text style={[styles.actionText, { color: '#ff8a9e' }]}>{t('screens.owner.listingsscreen.supprimer')}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
                         style={[styles.publishBtn, !item.isActive && item.state !== 'ready_to_publish' && styles.publishBtnDisabled]}
                         onPress={() => handleTogglePublish(item)}
                       >
-                        <Text style={styles.publishText}>{item.isActive ? 'Dépublier' : 'Publier'}</Text>
+                        <Text style={styles.publishText}>{item.isActive ? t('screens.owner.listingsscreen.depublier') : t('screens.owner.listingsscreen.publier')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -304,7 +306,7 @@ const OwnerListingsScreen = ({
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filtrer par voiture</Text>
+              <Text style={styles.modalTitle}>{t('screens.owner.listingsscreen.filtrerParVoiture')}</Text>
               <TouchableOpacity onPress={() => setCarFilterVisible(false)} style={styles.iconBtn}>
                 <Ionicons name="close-outline" size={20} color="#fff" />
               </TouchableOpacity>
@@ -317,7 +319,7 @@ const OwnerListingsScreen = ({
                 setCarFilterVisible(false);
               }}
             >
-              <Text style={[styles.modalOptionText, selectedCarId === 'all' && styles.modalOptionTextActive]}>Toutes les voitures</Text>
+              <Text style={[styles.modalOptionText, selectedCarId === 'all' && styles.modalOptionTextActive]}>{t('screens.owner.listingsscreen.toutesLesVoitures')}</Text>
             </TouchableOpacity>
 
             <FlatList

@@ -6,19 +6,20 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
-} from 'react-native';
+  View } from
+'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import RatingStars from '../../components/reviews/RatingStars';
-import ReviewCard from '../../components/reviews/ReviewCard';
+import ReviewCard from '../../components/reviews/ReviewCard';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../../utils/friendlyError';
 
 const roundToHalf = (value) => Math.round(value * 2) / 2;
 
-const OwnerCarReviewsScreen = ({ navigation, route }) => {
+const OwnerCarReviewsScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const token = route?.params?.token;
   const carId = route?.params?.carId;
   const car = route?.params?.car;
@@ -36,7 +37,7 @@ const OwnerCarReviewsScreen = ({ navigation, route }) => {
 
   const title = useMemo(() => {
     const label = car ? `${car.brand || ''} ${car.model || ''}`.trim() : '';
-    return label ? `Avis · ${label}` : 'Avis';
+    return label ? `Avis · ${label}` : t("screens.client.profilescreen.avis");
   }, [car]);
 
   const fetchAll = useCallback(async () => {
@@ -47,9 +48,9 @@ const OwnerCarReviewsScreen = ({ navigation, route }) => {
       const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
 
       const [summaryRes, listRes] = await Promise.all([
-        fetch(API_ENDPOINTS.REVIEWS.CAR_SUMMARY(carId), { headers }),
-        fetch(`${API_ENDPOINTS.REVIEWS.CAR_LIST(carId)}${query}`, { headers }),
-      ]);
+      fetch(API_ENDPOINTS.REVIEWS.CAR_SUMMARY(carId), { headers }),
+      fetch(`${API_ENDPOINTS.REVIEWS.CAR_LIST(carId)}${query}`, { headers })]
+      );
 
       if (summaryRes.ok) {
         const json = await summaryRes.json();
@@ -63,7 +64,7 @@ const OwnerCarReviewsScreen = ({ navigation, route }) => {
       const json = await listRes.json();
       setItems(Array.isArray(json?.items) ? json.items : []);
     } catch (e) {
-      setError(e.message || 'Erreur');
+      setError(getFriendlyError(e, t));
       setItems([]);
     }
   }, [carId, sortBy, sortOrder, token]);
@@ -86,7 +87,7 @@ const OwnerCarReviewsScreen = ({ navigation, route }) => {
     setRefreshing(false);
   }, [fetchAll]);
 
-  const toggleOrder = () => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+  const toggleOrder = () => setSortOrder((prev) => prev === 'desc' ? 'asc' : 'desc');
 
   const orderLabel = useMemo(() => {
     if (sortBy === 'rating') return sortOrder === 'desc' ? 'Meilleures notes' : 'Moins bonnes';
@@ -115,16 +116,16 @@ const OwnerCarReviewsScreen = ({ navigation, route }) => {
             <TouchableOpacity
               onPress={() => setSortBy('createdAt')}
               activeOpacity={0.85}
-              style={[styles.pill, sortBy === 'createdAt' && styles.pillActive]}
-            >
-              <Text style={[styles.pillText, sortBy === 'createdAt' && styles.pillTextActive]}>Date</Text>
+              style={[styles.pill, sortBy === 'createdAt' && styles.pillActive]}>
+              
+              <Text style={[styles.pillText, sortBy === 'createdAt' && styles.pillTextActive]}>{t("screens.owner.carreviewsscreen.date")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setSortBy('rating')}
               activeOpacity={0.85}
-              style={[styles.pill, sortBy === 'rating' && styles.pillActive]}
-            >
-              <Text style={[styles.pillText, sortBy === 'rating' && styles.pillTextActive]}>Note</Text>
+              style={[styles.pill, sortBy === 'rating' && styles.pillActive]}>
+              
+              <Text style={[styles.pillText, sortBy === 'rating' && styles.pillTextActive]}>{t("screens.owner.carreviewsscreen.note")}</Text>
             </TouchableOpacity>
           </View>
 
@@ -133,40 +134,40 @@ const OwnerCarReviewsScreen = ({ navigation, route }) => {
               colors={['rgba(143, 108, 255, 0.20)', 'rgba(143, 108, 255, 0.08)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.orderButtonInner}
-            >
+              style={styles.orderButtonInner}>
+              
               <Ionicons name={sortOrder === 'desc' ? 'arrow-down' : 'arrow-up'} size={16} color="#fff" />
               <Text style={styles.orderButtonText}>{orderLabel}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        {loading ? (
-          <View style={styles.center}>
+        {loading ?
+        <View style={styles.center}>
             <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.centerText}>Chargement…</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.center}>
+            <Text style={styles.centerText}>{t("screens.owner.carreviewsscreen.chargement")}</Text>
+          </View> :
+        error ?
+        <View style={styles.center}>
             <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={items}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            ListEmptyComponent={
-              <View style={styles.center}>
-                <Text style={styles.centerText}>Aucun avis.</Text>
+          </View> :
+
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={
+          <View style={styles.center}>
+                <Text style={styles.centerText}>{t("screens.owner.carreviewsscreen.aucunAvis")}</Text>
               </View>
-            }
-          />
-        )}
+          } />
+
+        }
       </View>
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 };
 
 const styles = StyleSheet.create({
@@ -176,12 +177,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 10
   },
   headerDivider: {
     height: 1,
     backgroundColor: 'rgba(148, 156, 233, 0.16)',
-    marginBottom: 12,
+    marginBottom: 12
   },
   iconBtn: {
     width: 44,
@@ -189,11 +190,11 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(148, 156, 233, 0.10)',
+    backgroundColor: 'rgba(148, 156, 233, 0.10)'
   },
   iconBtnPlaceholder: {
     width: 44,
-    height: 44,
+    height: 44
   },
   headerTitle: { flex: 1, marginHorizontal: 12, color: '#fff', fontSize: 18, fontWeight: '900' },
   filtersRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12 },
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(148, 156, 233, 0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(148, 156, 233, 0.16)',
+    borderColor: 'rgba(148, 156, 233, 0.16)'
   },
   pillActive: { backgroundColor: 'rgba(143, 108, 255, 0.22)', borderColor: 'rgba(143, 108, 255, 0.35)' },
   pillText: { color: '#cfd3ff', fontSize: 12, fontWeight: '800' },
@@ -220,13 +221,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(143, 108, 255, 0.22)',
-    minWidth: 160,
+    minWidth: 160
   },
   orderButtonText: { color: '#fff', fontSize: 12, fontWeight: '900' },
   listContent: { paddingBottom: 16 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   centerText: { marginTop: 10, color: '#8e95bf', fontSize: 13, fontWeight: '700', textAlign: 'center' },
-  errorText: { color: '#ff6b6b', fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  errorText: { color: '#ff6b6b', fontSize: 13, fontWeight: '800', textAlign: 'center' }
 });
 
 export default OwnerCarReviewsScreen;

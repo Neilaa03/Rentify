@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { appFont } from '../../utils/responsive';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export const ADMIN_COLORS = {
   bg: '#0a0c24',
@@ -28,6 +29,7 @@ export const ScreenHeader = ({ kicker, title, rightAction }) => (
 
 export const AdminLogoutButton = ({ navigation, tint = ADMIN_COLORS.danger }) => {
   const { clearSession } = useAuth();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     try {
@@ -38,7 +40,7 @@ export const AdminLogoutButton = ({ navigation, tint = ADMIN_COLORS.danger }) =>
   };
 
   return (
-    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} accessibilityRole="button" accessibilityLabel="Se déconnecter">
+    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton} accessibilityRole="button" accessibilityLabel={t('components.admin.adminui.seDeconnecter')}>
       <Ionicons name="log-out-outline" size={20} color={tint} />
     </TouchableOpacity>
   );

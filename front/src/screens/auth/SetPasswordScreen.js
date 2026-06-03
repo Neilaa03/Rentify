@@ -5,9 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
-import storage from '../../utils/storage';
+import storage from '../../utils/storage';import { useTranslation } from "react-i18next";
 
-const SetPasswordScreen = ({ navigation, route }) => {
+const SetPasswordScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +36,7 @@ const SetPasswordScreen = ({ navigation, route }) => {
 
     try {
       const meRes = await fetch(API_ENDPOINTS.AUTH.ME, {
-        headers: { Authorization: `Bearer ${t}` },
+        headers: { Authorization: `Bearer ${t}` }
       });
       const meJson = meRes.ok ? await meRes.json() : null;
       const user = meJson?.user || null;
@@ -51,7 +51,7 @@ const SetPasswordScreen = ({ navigation, route }) => {
       } else {
         navigation.reset({
           index: 0,
-          routes: [{ name: 'ClientApp', params: { screen: 'HomeTab', params } }],
+          routes: [{ name: 'ClientApp', params: { screen: 'HomeTab', params } }]
         });
       }
     } catch {
@@ -82,9 +82,9 @@ const SetPasswordScreen = ({ navigation, route }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ password, confirmPassword }),
+        body: JSON.stringify({ password, confirmPassword })
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -103,20 +103,20 @@ const SetPasswordScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Set a password</Text>
-        <Text style={styles.subtitle}>
-          Optional: add a password so you can also log in without Google.
+        <Text style={styles.title}>{t("screens.auth.setpasswordscreen.setAPassword")}</Text>
+        <Text style={styles.subtitle}>{t("screens.auth.setpasswordscreen.optionalAddAPasswordSoYouCan")}
+
         </Text>
 
         <View style={styles.field}>
           <TextInput
             style={styles.input}
-            placeholder="Password"
+            placeholder={t("screens.auth.setpasswordscreen.password")}
             placeholderTextColor="rgba(255,255,255,0.55)"
             secureTextEntry={!showPassword}
             value={password}
-            onChangeText={setPassword}
-          />
+            onChangeText={setPassword} />
+          
           <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eyeButton}>
             <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
@@ -124,12 +124,12 @@ const SetPasswordScreen = ({ navigation, route }) => {
 
         <TextInput
           style={[styles.input, { marginTop: 10 }]}
-          placeholder="Confirm password"
+          placeholder={t("screens.auth.setpasswordscreen.confirmPassword")}
           placeholderTextColor="rgba(255,255,255,0.55)"
           secureTextEntry={!showPassword}
           value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
+          onChangeText={setConfirmPassword} />
+        
 
         {!!error && <Text style={styles.messageError}>{error}</Text>}
         {!!message && <Text style={styles.messageOk}>{message}</Text>}
@@ -139,20 +139,20 @@ const SetPasswordScreen = ({ navigation, route }) => {
             colors={[COLORS.secondary, COLORS.primary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.button}
-          >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save password</Text>}
+            style={styles.button}>
+            
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{t("screens.auth.setpasswordscreen.savePassword")}</Text>}
           </LinearGradient>
         </TouchableOpacity>
 
-        {allowSkip && (
-          <TouchableOpacity onPress={goNext} style={styles.link}>
-            <Text style={styles.linkText}>Skip for now</Text>
+        {allowSkip &&
+        <TouchableOpacity onPress={goNext} style={styles.link}>
+            <Text style={styles.linkText}>{t("screens.auth.setpasswordscreen.skipForNow")}</Text>
           </TouchableOpacity>
-        )}
+        }
       </View>
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 };
 
 const styles = StyleSheet.create({
@@ -168,8 +168,7 @@ const styles = StyleSheet.create({
   messageError: { color: 'rgba(255, 92, 92, 0.95)', marginTop: 10 },
   messageOk: { color: 'rgba(126, 231, 135, 0.95)', marginTop: 10 },
   link: { marginTop: 14, alignSelf: 'center' },
-  linkText: { color: COLORS.secondary, fontWeight: '700' },
+  linkText: { color: COLORS.secondary, fontWeight: '700' }
 });
 
 export default SetPasswordScreen;
-

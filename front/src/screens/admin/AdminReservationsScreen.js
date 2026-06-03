@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
 const tabs = ['Tout', 'Inscriptions', 'Reservations', 'Documents', 'Paiements'];
 
@@ -18,6 +20,7 @@ const pickType = (item) => {
 };
 
 export default function AdminReservationsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const [active, setActive] = useState('Tout');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,19 +48,19 @@ export default function AdminReservationsScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
-          <ScreenHeader title="Journal d'activite" rightAction={<AdminLogoutButton navigation={navigation} />} />
+          <ScreenHeader title={t('screens.admin.adminreservationsscreen.journalDactivite')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
           <View style={styles.topStats}>
-            <MiniStat icon="flash-outline" value={visible.length} label="Aujourd'hui" />
-            <MiniStat icon="list-outline" value={events.length} label="Total" />
-            <MiniStat icon="calendar-outline" value={visible.filter((e) => e.category === 'Reservations').length} label="Reservations" />
-            <MiniStat icon="cash-outline" value={visible.filter((e) => e.category === 'Paiements').length} label="Paiements" />
+            <MiniStat icon="flash-outline" value={visible.length} label={t('screens.admin.adminreservationsscreen.aujourdhui')} />
+            <MiniStat icon="list-outline" value={events.length} label={t('screens.admin.adminreservationsscreen.total')} />
+            <MiniStat icon="calendar-outline" value={visible.filter((e) => e.category === 'Reservations').length} label={t('screens.admin.adminreservationsscreen.reservations')} />
+            <MiniStat icon="cash-outline" value={visible.filter((e) => e.category === 'Paiements').length} label={t('screens.admin.adminreservationsscreen.paiements')} />
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow} contentContainerStyle={styles.filtersRowContent}>
             {tabs.map((tab) => (
               <TouchableOpacity key={tab} style={[styles.filterChip, active === tab && styles.filterChipActive]} onPress={() => setActive(tab)}>
-                <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{tab}</Text>
+                <Text style={[styles.filterText, active === tab && styles.filterTextActive]}>{t(`screens.admin.adminreservationsscreen.tabs.${tab}`, { defaultValue: tab })}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -65,16 +68,16 @@ export default function AdminReservationsScreen({ navigation, route }) {
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           {visible.map((e) => (
             <View key={e._id} style={styles.item}>
-              <Text style={styles.time}>{e.at ? new Date(e.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</Text>
+              <Text style={styles.time}>{e.at ? new Date(e.at).toLocaleTimeString(getCurrentLocale(), { hour: '2-digit', minute: '2-digit' }) : '--:--'}</Text>
               <View style={styles.iconWrap}><Ionicons name={e.category === 'Paiements' ? 'cash-outline' : e.category === 'Documents' ? 'document-outline' : e.category === 'Inscriptions' ? 'person-add-outline' : 'calendar-outline'} size={15} color="#8f9dff" /></View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.badge}>{e.category}</Text>
-                <Text style={styles.eventTitle}>{e.type || 'Evenement'}</Text>
+                <Text style={styles.badge}>{t(`screens.admin.adminreservationsscreen.tabs.${e.category}`, { defaultValue: e.category })}</Text>
+                <Text style={styles.eventTitle}>{e.type || t('screens.admin.adminreservationsscreen.evenement')}</Text>
                 <Text style={styles.eventSub}>{e.status || ''}</Text>
               </View>
             </View>
           ))}
-          {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
+          {loading ? <Text style={styles.loading}>{t('screens.admin.adminreservationsscreen.chargement')}</Text> : null}
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="activity" />

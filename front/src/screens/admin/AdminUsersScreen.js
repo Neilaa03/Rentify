@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
+import { useTranslation } from 'react-i18next';
+import { getCurrentLocale } from '../../i18n';
 
 const FILTERS = [
   { key: 'all', label: 'Tous', roles: [] },
@@ -14,6 +16,7 @@ const FILTERS = [
 ];
 
 export default function AdminUsersScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [active, setActive] = useState('all');
   const [rows, setRows] = useState([]);
@@ -47,7 +50,7 @@ export default function AdminUsersScreen({ navigation, route }) {
       const details = await adminApi.userDetails(user.id);
       setDetailsByUser((prev) => ({ ...prev, [user.id]: details }));
     } catch (e) {
-      Alert.alert('Erreur', e.message || 'Impossible de charger les documents');
+      Alert.alert(t('screens.admin.adminusersscreen.erreur'), e.message || t('screens.admin.adminusersscreen.impossibleDeChargerLesDocuments'));
     }
   };
 
@@ -90,7 +93,7 @@ export default function AdminUsersScreen({ navigation, route }) {
       const details = await adminApi.userDetails(selectedUser.id);
       setDetailsByUser((prev) => ({ ...prev, [selectedUser.id]: details }));
     } catch (e) {
-      Alert.alert('Erreur', e.message || 'Mise à jour du document impossible');
+      Alert.alert(t('screens.admin.adminusersscreen.erreur'), e.message || t('screens.admin.adminusersscreen.miseAJourDuDocumentImpossible'));
     }
   };
 
@@ -99,7 +102,7 @@ export default function AdminUsersScreen({ navigation, route }) {
     try {
       await Linking.openURL(url);
     } catch (e) {
-      Alert.alert('Erreur', e.message || 'Impossible d’ouvrir le document');
+      Alert.alert(t('screens.admin.adminusersscreen.erreur'), e.message || t('screens.admin.adminusersscreen.impossibleDouvrirLeDocument'));
     }
   };
 
@@ -120,11 +123,11 @@ export default function AdminUsersScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
-          <ScreenHeader title="Comptes utilisateurs" rightAction={<AdminLogoutButton navigation={navigation} />} />
+          <ScreenHeader title={t('screens.admin.adminusersscreen.comptesUtilisateurs')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
           <View style={styles.searchWrap}>
             <Ionicons name="search-outline" size={16} color="#8a91bf" />
-            <TextInput value={search} onChangeText={setSearch} placeholder="Rechercher..." placeholderTextColor="#7078ab" style={styles.searchInput} />
+            <TextInput value={search} onChangeText={setSearch} placeholder={t('screens.admin.adminusersscreen.rechercher')} placeholderTextColor="#7078ab" style={styles.searchInput} />
           </View>
 
           <ScrollView
@@ -136,12 +139,12 @@ export default function AdminUsersScreen({ navigation, route }) {
           >
             {FILTERS.map((f) => (
               <TouchableOpacity key={f.key} style={[styles.filterChip, active === f.key && styles.filterChipActive]} onPress={() => setActive(f.key)}>
-                <Text style={[styles.filterText, active === f.key && styles.filterTextActive]}>{f.label}</Text>
+                <Text style={[styles.filterText, active === f.key && styles.filterTextActive]}>{t(`screens.admin.adminusersscreen.filters.${f.key}`, { defaultValue: f.label })}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          <Text style={styles.countText}>{list.length} comptes</Text>
+          <Text style={styles.countText}>{list.length} {t('screens.admin.adminusersscreen.comptes')}</Text>
 
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           {list.map((u) => {
@@ -156,20 +159,20 @@ export default function AdminUsersScreen({ navigation, route }) {
                     <Text style={styles.userEmail}>{u.email}</Text>
                     <View style={styles.userTags}>
                       <Text style={styles.roleTag}>{u.role || 'utilisateur'}</Text>
-                      <Text style={styles.dateTag}>{u.created_at ? new Date(u.created_at).toLocaleDateString('fr-FR') : ''}</Text>
+                      <Text style={styles.dateTag}>{u.created_at ? new Date(u.created_at).toLocaleDateString(getCurrentLocale()) : ''}</Text>
                     </View>
                     <TouchableOpacity style={styles.docsBtn} onPress={() => openUserDocuments(u)}>
-                      <Text style={styles.docsBtnText}>Voir docs</Text>
+                      <Text style={styles.docsBtnText}>{t('screens.admin.adminusersscreen.voirDocs')}</Text>
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity style={[styles.statusBadge, { backgroundColor: u.is_active ? 'rgba(0,208,132,0.2)' : 'rgba(255,176,32,0.2)' }]} onPress={async () => { await adminApi.updateUser(u.id, { isActive: !u.is_active }); load(); }}>
-                    <Text style={[styles.statusText, { color: u.is_active ? '#00d084' : '#ffb020' }]}>{u.is_active ? 'Verifie' : 'En attente'}</Text>
+                    <Text style={[styles.statusText, { color: u.is_active ? '#00d084' : '#ffb020' }]}>{u.is_active ? t('screens.admin.adminusersscreen.verifie') : t('screens.admin.adminusersscreen.enAttente')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             );
           })}
-          {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
+          {loading ? <Text style={styles.loading}>{t('screens.admin.adminusersscreen.chargement')}</Text> : null}
         </ScrollView>
       </View>
 
@@ -187,10 +190,10 @@ export default function AdminUsersScreen({ navigation, route }) {
             </View>
 
             <ScrollView contentContainerStyle={{ paddingBottom: 10 }}>
-              {selectedUser && !detailsByUser[selectedUser.id] ? <Text style={styles.loading}>Chargement des documents...</Text> : null}
+              {selectedUser && !detailsByUser[selectedUser.id] ? <Text style={styles.loading}>{t('screens.admin.adminusersscreen.chargementDesDocuments')}</Text> : null}
 
               {selectedUser && detailsByUser[selectedUser.id] && resolveDocs(selectedUser.id).length === 0 ? (
-                <Text style={styles.error}>Aucun document trouve pour cet utilisateur.</Text>
+                <Text style={styles.error}>{t('screens.admin.adminusersscreen.aucunDocumentTrouvePourCetUtilisateur')}</Text>
               ) : null}
 
               {resolveDocs(selectedUser?.id).map((doc) => (
@@ -202,26 +205,26 @@ export default function AdminUsersScreen({ navigation, route }) {
                         <Text style={styles.identityBadge}>Identité</Text>
                       ) : null}
                     </View>
-                    <Text style={styles.docDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString('fr-FR') : ''}</Text>
+                    <Text style={styles.docDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString(getCurrentLocale()) : ''}</Text>
                     <Text style={[styles.docStatus, doc.status === 'approved' ? styles.docStatusOk : doc.status === 'rejected' ? styles.docStatusBad : styles.docStatusWait]}>
                       {doc.status}
                     </Text>
                   </View>
                   <View style={styles.docActions}>
                     <TouchableOpacity style={styles.viewDocBtn} onPress={() => openDocument(doc.url)}>
-                      <Text style={styles.viewDocText}>Voir</Text>
+                      <Text style={styles.viewDocText}>{t('screens.admin.adminusersscreen.voir')}</Text>
                     </TouchableOpacity>
                     {doc.status === 'approved' ? (
                       <TouchableOpacity style={styles.toggleBtn} onPress={() => reviewDocument(doc.id, 'rejected')}>
-                        <Text style={styles.toggleText}>Rejeter</Text>
+                        <Text style={styles.toggleText}>{t('screens.admin.adminusersscreen.rejeter')}</Text>
                       </TouchableOpacity>
                     ) : (
                       <>
                         <TouchableOpacity style={styles.rejectBtn} onPress={() => reviewDocument(doc.id, 'rejected')}>
-                          <Text style={styles.toggleText}>Rejeter</Text>
+                          <Text style={styles.toggleText}>{t('screens.admin.adminusersscreen.rejeter')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.acceptBtn} onPress={() => reviewDocument(doc.id, 'approved')}>
-                          <Text style={styles.toggleText}>Accepter</Text>
+                          <Text style={styles.toggleText}>{t('screens.admin.adminusersscreen.accepter')}</Text>
                         </TouchableOpacity>
                       </>
                     )}

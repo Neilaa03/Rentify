@@ -4,8 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, Button, Card, Row, ScreenHeader, SearchBox, StatCard, StatusBadge } from '../../components/admin/AdminUI';
+import { useTranslation } from 'react-i18next';
 
 export default function AdminPaymentsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState('');
   const [rows, setRows] = useState([]);
   const [analytics, setAnalytics] = useState(null);
@@ -31,21 +33,21 @@ export default function AdminPaymentsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ScreenHeader kicker="ADMIN PANEL" title="Payments" rightAction={<AdminLogoutButton navigation={navigation} />} />
+        <ScreenHeader kicker="ADMIN PANEL" title={t('screens.admin.adminpaymentsscreen.payments')} rightAction={<AdminLogoutButton navigation={navigation} />} />
         <View style={styles.topActions}>
-          <Button label="Reports" type="ghost" onPress={() => navigation.navigate('AdminReports', route?.params || {})} />
+          <Button label={t('screens.admin.adminpaymentsscreen.reports')} type="ghost" onPress={() => navigation.navigate('AdminReports', route?.params || {})} />
         </View>
-        <SearchBox value={status} onChangeText={setStatus} placeholder="Status filter" />
-        <Button label="Search" onPress={load} />
+        <SearchBox value={status} onChangeText={setStatus} placeholder={t('screens.admin.adminpaymentsscreen.statusFilter')} />
+        <Button label={t('screens.admin.adminpaymentsscreen.search')} onPress={load} />
         <ScrollView contentContainerStyle={styles.content}>
-          {analytics ? <View style={styles.grid}><StatCard label="Failed" value={analytics.failed} /><StatCard label="Revenue" value={`€${analytics.grossRevenue}`} /></View> : null}
-          {loading ? <Text style={styles.muted}>Loading...</Text> : null}
+          {analytics ? <View style={styles.grid}><StatCard label={t('screens.admin.adminpaymentsscreen.failed')} value={analytics.failed} /><StatCard label={t('screens.admin.adminpaymentsscreen.revenue')} value={`€${analytics.grossRevenue}`} /></View> : null}
+          {loading ? <Text style={styles.muted}>{t('screens.admin.adminpaymentsscreen.loading')}</Text> : null}
           {!!error ? <Text style={styles.error}>{error}</Text> : null}
           <Card>
             {rows.map((p) => (
               <View key={p.id}>
                 <Row title={`${p.id.slice(0, 8)} - €${p.amount}`} subtitle={p.payment_method || 'card'} right={<StatusBadge status={p.status} />} />
-                {['completed', 'paid'].includes(p.status) ? <Button label="Refund" type="danger" onPress={async () => { await adminApi.refund({ paymentId: p.id, reason: 'Admin refund' }); load(); }} /> : null}
+                {['completed', 'paid'].includes(p.status) ? <Button label={t('screens.admin.adminpaymentsscreen.refund')} type="danger" onPress={async () => { await adminApi.refund({ paymentId: p.id, reason: 'Admin refund' }); load(); }} /> : null}
               </View>
             ))}
           </Card>

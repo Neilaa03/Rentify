@@ -3,9 +3,9 @@ import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View, 
 import * as ExpoLinking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants/colors';
-import { API_ENDPOINTS } from '../../constants/api';
+import { API_ENDPOINTS } from '../../constants/api';import { useTranslation } from "react-i18next";
 
-const VerifyEmailScreen = ({ navigation, route }) => {
+const VerifyEmailScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const [status, setStatus] = useState('idle'); // idle | verifying | verified | failed
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -20,7 +20,7 @@ const VerifyEmailScreen = ({ navigation, route }) => {
       email: params.get('email') || '',
       token: params.get('token') || '',
       verified: params.get('verified') || '',
-      reason: params.get('reason') || '',
+      reason: params.get('reason') || ''
     };
   }, []);
 
@@ -87,12 +87,12 @@ const VerifyEmailScreen = ({ navigation, route }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          redirectBase: Platform.OS !== 'web' ? ExpoLinking.createURL('/') : '',
-        }),
+          redirectBase: Platform.OS !== 'web' ? ExpoLinking.createURL('/') : ''
+        })
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) setMessage(data?.message || 'Verification email sent.');
-      else setMessage(data?.error || 'Failed to resend verification email.');
+      if (res.ok) setMessage(data?.message || 'Verification email sent.');else
+      setMessage(data?.error || 'Failed to resend verification email.');
     } catch (e) {
       setMessage("Couldn't reach the server.");
     } finally {
@@ -107,51 +107,51 @@ const VerifyEmailScreen = ({ navigation, route }) => {
           {status === 'verified' ? 'Email verified' : 'Verify your email'}
         </Text>
         <Text style={styles.subtitle}>
-          {status === 'verified'
-            ? 'Your account is ready. You can log in now.'
-            : (email ? `We sent a verification link to ${email}.` : 'We sent a verification link to your email.')}
+          {status === 'verified' ?
+          'Your account is ready. You can log in now.' :
+          email ? `We sent a verification link to ${email}.` : 'We sent a verification link to your email.'}
         </Text>
 
-        {status === 'verifying' && (
-          <View style={styles.row}>
+        {status === 'verifying' &&
+        <View style={styles.row}>
             <ActivityIndicator color={COLORS.primary} />
-            <Text style={styles.statusText}>Verifying…</Text>
+            <Text style={styles.statusText}>{t("screens.auth.verifyemailscreen.verifying")}</Text>
           </View>
-        )}
+        }
 
-        {!!(message || status === 'failed') && (
-          <Text style={[styles.message, status === 'failed' ? styles.messageError : null]}>
+        {!!(message || status === 'failed') &&
+        <Text style={[styles.message, status === 'failed' ? styles.messageError : null]}>
             {message || 'Verification failed. Please request a new verification email.'}
           </Text>
-        )}
+        }
 
-        {status === 'verified' && (
-          <TouchableOpacity style={styles.button} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login', params: { email } }] })}>
-            <Text style={styles.buttonText}>Go to login</Text>
+        {status === 'verified' &&
+        <TouchableOpacity style={styles.button} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login', params: { email } }] })}>
+            <Text style={styles.buttonText}>{t("screens.auth.verifyemailscreen.goToLogin")}</Text>
           </TouchableOpacity>
-        )}
+        }
 
-        {status !== 'verified' ? (
-          <>
+        {status !== 'verified' ?
+        <>
             <TouchableOpacity style={styles.button} onPress={handleResend} disabled={sending}>
               <Text style={styles.buttonText}>{sending ? 'Sending…' : 'Resend verification email'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              onPress={() => {
-                // Note: there is no universal cross-platform deep link to "open inbox".
-                // Try Gmail first, then fallback to the default mail handler.
-                Linking.openURL('googlegmail://').catch(() => Linking.openURL('mailto:'));
-              }}
-            >
-              <Text style={styles.buttonText}>Open email app</Text>
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => {
+              // Note: there is no universal cross-platform deep link to "open inbox".
+              // Try Gmail first, then fallback to the default mail handler.
+              Linking.openURL('googlegmail://').catch(() => Linking.openURL('mailto:'));
+            }}>
+            
+              <Text style={styles.buttonText}>{t("screens.auth.verifyemailscreen.openEmailApp")}</Text>
             </TouchableOpacity>
-          </>
-        ) : null}
+          </> :
+        null}
       </View>
-    </SafeAreaView>
-  );
+    </SafeAreaView>);
+
 };
 
 const styles = StyleSheet.create({
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: '700' },
   secondaryButton: { backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
   link: { marginTop: 14, alignSelf: 'center' },
-  linkText: { color: COLORS.secondary, fontWeight: '700' },
+  linkText: { color: COLORS.secondary, fontWeight: '700' }
 });
 
 export default VerifyEmailScreen;
