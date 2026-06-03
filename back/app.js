@@ -15,6 +15,7 @@ import adminRoutes from './src/modules/admin/adminRoutes.js';
 import reviewRoutes from './src/modules/reviews/reviewRoutes.js';
 import profileRoutes from './src/modules/profile/profileRoutes.js';
 import agencyRoutes from './src/modules/agency/agencyRoutes.js';
+import assistantRoutes from './src/modules/assistant/assistantRoutes.js';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/agency', agencyRoutes);
+app.use('/api/assistant', assistantRoutes);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });

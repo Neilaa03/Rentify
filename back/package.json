@@ -15,6 +15,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/genai": "^2.7.0",
     "@supabase/supabase-js": "^2.105.3",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
@@ -28,6 +29,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "nodemailer": "^8.0.9",
+    "openai": "^6.10.0",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.1",
     "stripe": "^17.5.0",
