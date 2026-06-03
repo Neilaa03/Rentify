@@ -18,6 +18,7 @@ import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNaviga
 import MessageIconButton from '../../components/messaging/MessageIconButton';
 import NotificationIconButton from '../../components/notifications/NotificationIconButton';
 import AppBackground from '../../components/layout/AppBackground';import { useTranslation } from "react-i18next";
+import { Badge } from '../../components/agency/AgencyPrimitives';
 import { getFriendlyError } from '../../utils/friendlyError';
 import { getCurrentLocale } from '../../i18n';
 
@@ -43,6 +44,9 @@ const StatCard = ({ icon, title, value }) =>
 const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const token = route?.params?.token;
   const user = route?.params?.user;
+  const accountVerified = Boolean(user?.isVerified ?? user?.is_verified);
+  const verificationLabel = accountVerified ? 'OWNER VERIFIED' : 'APPROVAL PENDING';
+  const verificationTone = accountVerified ? 'green' : 'amber';
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -163,18 +167,28 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
     <AppBackground>
       <View style={styles.container}>
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerTextBlock}>
             <Text style={styles.kicker}>{t("screens.owner.dashboardscreen.espaceProprietaire")}</Text>
             <Text style={styles.title}>{t("screens.owner.dashboardscreen.bonjour")}{user?.first_name || 'Owner'}{t("screens.owner.dashboardscreen.text")}</Text>
           </View>
-          <NotificationIconButton
-            navigation={navigation}
-            style={styles.notificationButton}
-            iconSize={24}
-            routeParams={{ user: route?.params?.user }} />
-          
-          <MessageIconButton navigation={navigation} mode="owner_clients" style={styles.inboxBtn} iconSize={20} />
+          <View style={styles.headerActions}>
+            <NotificationIconButton
+              navigation={navigation}
+              style={styles.notificationButton}
+              iconSize={24}
+              routeParams={{ user: route?.params?.user }} />
+            
+            <MessageIconButton navigation={navigation} mode="owner_clients" style={styles.inboxBtn} iconSize={20} />
+          </View>
         </View>
+
+          <Badge
+            label={verificationLabel}
+            toneKey={verificationTone}
+            fullWidth
+            textStyle={styles.verificationBadgeText}
+            style={styles.verificationBadge}
+          />
 
         {isLoading ?
         <View style={styles.loaderWrap}>
@@ -302,10 +316,30 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'flex-start',
+    gap: 12
   },
+  headerTextBlock: { flex: 1, minWidth: 0 },
   kicker: { color: '#8f7dff', fontSize: 12, letterSpacing: 1.2, fontWeight: '700' },
   title: { color: '#fff', fontSize: 30, fontWeight: '800', marginTop: 6 },
+  verificationBadge: {
+    width: '100%',
+    minHeight: 42,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 18
+  },
+  verificationBadgeText: {
+    fontSize: 12
+  },
+  verificationSubtitle: {
+    color: '#A5AECF',
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12
+  },
+  headerActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   logoutBtn: {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.16)',

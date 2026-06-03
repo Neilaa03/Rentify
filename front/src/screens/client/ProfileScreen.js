@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../../constants/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
+import { Badge } from '../../components/agency/AgencyPrimitives';
 import storage from '../../utils/storage';
 import { appFont } from '../../utils/responsive';
 import { deleteDocument, getUserDocuments, uploadUserDocument } from '../../services/owner';
@@ -146,7 +147,6 @@ const ProfileScreen = ({ navigation, route }) => {
   const [identityDocument, setIdentityDocument] = useState(null);
   const [identityLoading, setIdentityLoading] = useState(false);
   const [identityBusy, setIdentityBusy] = useState(false);
-  const [identityAlertShown, setIdentityAlertShown] = useState(false);
   const [identityError, setIdentityError] = useState('');
   const [profileSynced, setProfileSynced] = useState(false);
   const [didAutoOpenPersonalInfo, setDidAutoOpenPersonalInfo] = useState(false);
@@ -407,17 +407,21 @@ const ProfileScreen = ({ navigation, route }) => {
   const identityReason = identityDocument?.ocrResult?.verificationReason || '';
   const identityVerified = String(identityDocument?.status || '').toLowerCase() === 'approved';
   const accountVerified = Boolean(profile?.isVerified ?? profile?.is_verified);
-
-  useEffect(() => {
-    if (!isOwner || loading || identityLoading || identityAlertShown || !profileSynced) return;
-    if (accountVerified || identityVerified) return;
-
-    Alert.alert(
-      'Carte d’identité requise',
-      'Vous devez téléverser et faire valider votre carte d’identité pour publier un véhicule ou une annonce.'
-    );
-    setIdentityAlertShown(true);
-  }, [accountVerified, identityAlertShown, identityLoading, identityVerified, isOwner, loading, profileSynced]);
+  const verificationTone = accountVerified || identityVerified
+    ? 'green'
+    : identityDocument
+      ? (String(identityDocument?.status || '').toLowerCase() === 'rejected' ? 'red' : 'amber')
+      : 'neutral';
+  const verificationLabel = accountVerified || identityVerified
+    ? 'Compte vérifié'
+    : identityDocument
+      ? (String(identityDocument?.status || '').toLowerCase() === 'rejected' ? 'Carte d’identité rejetée' : 'Carte d’identité en vérification')
+      : 'Carte d’identité manquante';
+  const verificationSubtitle = accountVerified || identityVerified
+    ? 'Votre identité est validée.'
+    : identityDocument
+      ? (identityReason || 'Votre document est en cours de revue.')
+      : 'Téléversez votre carte d’identité';
 
   const openPersonalInfoEditor = () => {
     setEditFirstName(profile?.first_name || profile?.firstName || '');
@@ -581,7 +585,6 @@ const ProfileScreen = ({ navigation, route }) => {
         },
       });
       setIdentityDocument(uploaded);
-      setIdentityAlertShown(false);
       if ((uploaded?.status || '').toLowerCase() === 'rejected' && uploaded?.ocrResult?.verificationReason) {
         Alert.alert('Document rejeté', uploaded.ocrResult.verificationReason);
       }
@@ -602,7 +605,6 @@ const ProfileScreen = ({ navigation, route }) => {
       setIdentityBusy(true);
       await deleteDocument({ token, documentId: identityDocument.id });
       setIdentityDocument(null);
-      setIdentityAlertShown(false);
     } catch (error) {
       Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.suppressionImpossible'));
     } finally {
@@ -859,6 +861,19 @@ const ProfileScreen = ({ navigation, route }) => {
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.overlay}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             <Text style={[styles.title, { fontSize: fontSize.title }]}>{t('screens.client.profilescreen.profil')}</Text>
+
+            {isOwner ? (
+              <View style={styles.verificationPanel}>
+                <Badge
+                  label={verificationLabel}
+                  toneKey={verificationTone}
+                  fullWidth
+                  textStyle={styles.verificationBadgeText}
+                  style={styles.verificationBadge}
+                />
+                <Text style={styles.verificationSubtitle}>{verificationSubtitle}</Text>
+              </View>
+            ) : null}
 
             <View style={styles.profileCard}>
               <TouchableOpacity
@@ -1384,6 +1399,29 @@ const styles = StyleSheet.create({
   background: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(5, 6, 22, 0.72)' },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 96 },
+  verificationPanel: {
+    marginTop: -2,
+    marginBottom: 2,
+    padding: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,179,71,0.22)',
+    backgroundColor: 'rgba(15, 18, 40, 0.92)',
+  },
+  verificationBadge: {
+    width: '100%',
+    minHeight: 54,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+  },
+  verificationBadgeText: { fontSize: appFont(13) },
+  verificationSubtitle: {
+    color: '#A5AECF',
+    marginTop: 2,
+    fontSize: appFont(12),
+    lineHeight: 12,
+  },
   title: { fontSize: appFont(22, 24), color: '#f2f4ff', fontWeight: '700', marginTop: 10, marginBottom: 14 },
   profileCard: {
     borderRadius: 16,

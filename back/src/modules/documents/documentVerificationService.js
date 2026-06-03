@@ -6,6 +6,7 @@ const LABELLED_NUMBER_PATTERN = /(?:document\s*(?:no|number)|id\s*(?:no|number)|
 const GENERIC_NUMBER_PATTERN = /\b([a-z0-9][a-z0-9\-\/]{5,})\b/gi;
 const NAME_LABEL_PATTERN = /(?:full\s*name|name|holder|surname|given\s*name)\s*[:\-]?\s*(.+)/i;
 const APPROVAL_CONFIDENCE_THRESHOLD = 90;
+let workerPromise = null;
 
 const normalizeText = (text = '') =>
   String(text || '')
@@ -102,19 +103,28 @@ const getConfidenceScore = (data) => {
   return total / wordConfidences.length;
 };
 
+const getOcrWorker = async () => {
+  if (!workerPromise) {
+    workerPromise = createWorker('eng');
+  }
+
+  return workerPromise;
+};
+
+const recognizeDocument = async (imageUrl) => {
+  const worker = await getOcrWorker();
+  const { data } = await worker.recognize(imageUrl);
+  return data;
+};
+
 export const extractTextFromImage = async (imageUrl) => {
   if (!imageUrl) return '';
 
-  const worker = await createWorker('eng');
-  try {
-    const { data } = await worker.recognize(imageUrl);
-    return {
-      extractedText: normalizeText(data?.text || ''),
-      confidenceScore: getConfidenceScore(data),
-    };
-  } finally {
-    await worker.terminate();
-  }
+  const data = await recognizeDocument(imageUrl);
+  return {
+    extractedText: normalizeText(data?.text || ''),
+    confidenceScore: getConfidenceScore(data),
+  };
 };
 
 export const parseDocumentFields = (extractedText) => {
