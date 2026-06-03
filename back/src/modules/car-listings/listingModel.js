@@ -86,6 +86,7 @@ export const getListings = async (filters = {}) => {
     seats,
     brand,
     year,
+    isActive,
     page = 1,
     limit = 10,
     sortOrder = 'asc',
@@ -109,6 +110,7 @@ export const getListings = async (filters = {}) => {
   if (seats !== undefined) query = query.eq('cars.seats', seats);
   if (brand) query = query.ilike('cars.brand', `%${brand}%`);
   if (year !== undefined) query = query.eq('cars.year', year);
+  if (isActive !== undefined) query = query.eq('is_active', Boolean(isActive));
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
