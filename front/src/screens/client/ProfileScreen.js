@@ -413,15 +413,15 @@ const ProfileScreen = ({ navigation, route }) => {
       ? (String(identityDocument?.status || '').toLowerCase() === 'rejected' ? 'red' : 'amber')
       : 'neutral';
   const verificationLabel = accountVerified || identityVerified
-    ? 'Compte vérifié'
+    ? t('screens.client.profilescreen.verificationBadgeVerified')
     : identityDocument
-      ? (String(identityDocument?.status || '').toLowerCase() === 'rejected' ? 'Carte d’identité rejetée' : 'Carte d’identité en vérification')
-      : 'Carte d’identité manquante';
+      ? (String(identityDocument?.status || '').toLowerCase() === 'rejected' ? t('screens.client.profilescreen.rejectedBadge') : t('screens.client.profilescreen.pendingBadge'))
+      : t('screens.client.profilescreen.missingBadge');
   const verificationSubtitle = accountVerified || identityVerified
-    ? 'Votre identité est validée.'
+    ? t('screens.client.profilescreen.verificationBadgeVerifiedSubtitle')
     : identityDocument
-      ? (identityReason || 'Votre document est en cours de revue.')
-      : 'Téléversez votre carte d’identité';
+      ? (identityReason || t('screens.client.profilescreen.underReviewFallback'))
+      : t('screens.client.profilescreen.uploadIdPrompt');
 
   const openPersonalInfoEditor = () => {
     setEditFirstName(profile?.first_name || profile?.firstName || '');

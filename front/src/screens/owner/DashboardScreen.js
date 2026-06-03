@@ -45,7 +45,9 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
   const token = route?.params?.token;
   const user = route?.params?.user;
   const accountVerified = Boolean(user?.isVerified ?? user?.is_verified);
-  const verificationLabel = accountVerified ? 'OWNER VERIFIED' : 'APPROVAL PENDING';
+  const verificationLabel = accountVerified
+    ? t('screens.owner.dashboardscreen.verificationBadgeVerified')
+    : t('screens.owner.dashboardscreen.verificationBadgePending');
   const verificationTone = accountVerified ? 'green' : 'amber';
 
   const [isLoading, setIsLoading] = useState(true);
