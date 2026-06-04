@@ -72,6 +72,8 @@ export const reservationDetailsSchema = z.object({
   path: ['reservationId'],
 });
 
+export const cancelReservationActionSchema = reservationDetailsSchema;
+
 export const listingAvailabilitySchema = z.object({
   listingId: z.string().uuid(),
 });
@@ -85,6 +87,41 @@ export const reservationPriceSchema = z.object({
 }).refine((value) => value.endDate || value.durationDays, {
   message: 'Either endDate or durationDays is required',
   path: ['endDate'],
+});
+
+export const createReservationActionSchema = z.object({
+  listingId: optionalUuid(),
+  listingNumber: optionalReferenceNumber(),
+  startDate: z.string().date(),
+  endDate: z.string().date().optional(),
+  durationDays: z.coerce.number().int().positive().max(365).optional(),
+  pickupMethod: z.enum(['owner_place', 'company_place', 'renter_delivery']).optional().default('owner_place'),
+  pickupAddress: z.string().trim().max(240).optional(),
+}).refine((value) => value.listingId || value.listingNumber, {
+  message: 'Either listingId or listingNumber is required',
+  path: ['listingId'],
+}).refine((value) => value.endDate || value.durationDays, {
+  message: 'Either endDate or durationDays is required',
+  path: ['endDate'],
+});
+
+export const leaveReviewActionSchema = z.object({
+  reservationId: optionalUuid(),
+  reservationNumber: optionalReferenceNumber(),
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z.string().trim().max(1000).optional().default(''),
+}).refine((value) => value.reservationId || value.reservationNumber, {
+  message: 'Either reservationId or reservationNumber is required',
+  path: ['reservationId'],
+});
+
+export const updateProfileActionSchema = z.object({
+  firstName: z.string().trim().min(1).max(80).optional(),
+  lastName: z.string().trim().min(1).max(80).optional(),
+  phone: z.string().trim().min(5).max(30).optional(),
+}).refine((value) => value.firstName !== undefined || value.lastName !== undefined || value.phone !== undefined, {
+  message: 'At least one profile field is required',
+  path: ['firstName'],
 });
 
 export const paymentStatusSchema = z.object({

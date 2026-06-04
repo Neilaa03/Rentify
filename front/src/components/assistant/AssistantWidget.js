@@ -50,6 +50,14 @@ const buildToolReferenceContext = (toolResults = []) => {
       lines.push(`Current car: carId=${car.id || ''}; name=${car.name || ''}; listingId=${car.listing?.id || ''}`);
     }
 
+    if (result.type === 'pendingAction') {
+      lines.push(`Hidden pending action: ${JSON.stringify(result.action || {})}`);
+    }
+
+    if (result.type === 'actionResult') {
+      lines.push('Hidden pending action cleared');
+    }
+
     if (result.type === 'reservations') {
       (result.items || []).forEach((item, index) => {
         lines.push(`Reservation ${index + 1}: reservationId=${item.id}; listingId=${item.listingId || ''}; name=${item.title || ''}`);
@@ -163,6 +171,52 @@ const ToolResultCards = ({ results = [] }) => {
   return (
     <View style={styles.toolResults}>
       {results.map((result, index) => {
+        if (result.type === 'pendingAction') {
+          const action = result.action || {};
+          const preview = action.preview || {};
+          const changes = preview.changes || {};
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              <View style={styles.singleResultHeader}>
+                <Text style={styles.singleResultName}>{formatValue(action.summary)}</Text>
+                <Text style={styles.singleResultMeta}>Reply yes to confirm, or no to cancel.</Text>
+              </View>
+              {preview.carName ? <InfoRow label="Vehicle" value={preview.carName} /> : null}
+              {preview.listingTitle ? <InfoRow label="Listing" value={preview.listingTitle} /> : null}
+              {preview.startDate || preview.endDate ? <InfoRow label="Period" value={formatDateRange(preview.startDate, preview.endDate)} /> : null}
+              {preview.totalPrice ? <InfoRow label="Estimated price" value={`${preview.totalPrice} ${preview.currency || 'EUR'}`} /> : null}
+              {preview.rating ? <InfoRow label="Rating" value={`${preview.rating}/5`} /> : null}
+              {preview.comment ? <InfoRow label="Comment" value={preview.comment} /> : null}
+              {changes.firstName !== undefined ? <InfoRow label="New first name" value={changes.firstName} /> : null}
+              {changes.lastName !== undefined ? <InfoRow label="New last name" value={changes.lastName} /> : null}
+              {changes.phone !== undefined ? <InfoRow label="New phone" value={changes.phone} /> : null}
+            </View>
+          );
+        }
+
+        if (result.type === 'actionResult') {
+          const actionResult = result.result || {};
+          const listing = actionResult.listing || {};
+          const car = listing.car || {};
+          const carName = [car.brand, car.model].filter(Boolean).join(' ');
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              <View style={styles.singleResultHeader}>
+                <Text style={styles.singleResultName}>{result.status === 'cancelled' ? 'Cancelled' : 'Completed'}</Text>
+                <Text style={styles.singleResultMeta}>{formatValue(result.actionType)}</Text>
+              </View>
+              {carName ? <InfoRow label="Vehicle" value={carName} /> : null}
+              {actionResult.startDate || actionResult.endDate ? <InfoRow label="Period" value={formatDateRange(actionResult.startDate, actionResult.endDate)} /> : null}
+              {actionResult.status ? <InfoRow label="Status" value={actionResult.status} /> : null}
+              {actionResult.totalPrice ? <InfoRow label="Total price" value={actionResult.totalPrice} /> : null}
+              {actionResult.rating ? <InfoRow label="Rating" value={`${actionResult.rating}/5`} /> : null}
+              {actionResult.phone ? <InfoRow label="Phone" value={actionResult.phone} /> : null}
+            </View>
+          );
+        }
+
         if (result.type === 'profile') {
           const profile = result.profile || {};
           return (
