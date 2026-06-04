@@ -32,10 +32,14 @@ export type AssistantToolName =
   | 'getPaymentStatus'
   | 'getFavorites'
   | 'getVehicleReviews'
-  | 'getMyReviews';
+  | 'getMyReviews'
+  | 'requestCancelReservation'
+  | 'requestCreateReservation'
+  | 'requestLeaveReview'
+  | 'requestUpdateProfile';
 
 export interface AssistantToolResult {
-  type: 'reservation' | 'reservations' | 'vehicles' | 'listing' | 'car' | 'profile' | 'price' | 'payment' | 'availability' | 'reviews' | 'raw';
+  type: 'actionResult' | 'pendingAction' | 'reservation' | 'reservations' | 'vehicles' | 'listing' | 'car' | 'profile' | 'price' | 'payment' | 'availability' | 'reviews' | 'raw';
   title: string;
   [key: string]: unknown;
 }
