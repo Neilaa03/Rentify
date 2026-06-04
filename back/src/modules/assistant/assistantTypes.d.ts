@@ -16,13 +16,29 @@ export interface AssistantChatResponse {
   conversationId: string;
   message: AssistantChatMessage;
   toolsUsed: AssistantToolName[];
+  toolResults?: AssistantToolResult[];
 }
 
 export type AssistantToolName =
   | 'getReservations'
+  | 'getReservationDetails'
   | 'searchVehicles'
   | 'getVehicleDetails'
-  | 'getUserProfile';
+  | 'getListingDetails'
+  | 'getCarDetails'
+  | 'getUserProfile'
+  | 'getListingAvailability'
+  | 'calculateReservationPrice'
+  | 'getPaymentStatus'
+  | 'getFavorites'
+  | 'getVehicleReviews'
+  | 'getMyReviews';
+
+export interface AssistantToolResult {
+  type: 'reservation' | 'reservations' | 'vehicles' | 'listing' | 'car' | 'profile' | 'price' | 'payment' | 'availability' | 'reviews' | 'raw';
+  title: string;
+  [key: string]: unknown;
+}
 
 export interface SearchVehicleFilters {
   country?: string;

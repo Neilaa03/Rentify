@@ -6,6 +6,7 @@ import { COLORS } from '../../constants/colors';
 import ListingCard from '../../components/cards/ListingCard';
 import MessageIconButton from '../../components/messaging/MessageIconButton';
 import NotificationIconButton from '../../components/notifications/NotificationIconButton';
+import AssistantWidget from '../../components/assistant/AssistantWidget';
 import CustomCalendar from '../../components/reservation/CustomCalendar';
 import { getListings } from '../../services/listings';
 import { useFavorites } from '../../contexts/FavoritesContext';
@@ -563,6 +564,7 @@ const HomeScreen = ({ navigation, route }) => {
                         )}
                         <View style={{ height: 8 }} />
                     </ScrollView>
+                    <AssistantWidget />
                 </SafeAreaView>
             </ImageBackground>
         </View>

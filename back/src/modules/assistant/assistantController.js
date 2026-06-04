@@ -1,5 +1,5 @@
 import { chatRequestSchema } from './assistantSchemas.js';
-import { runAssistantChat } from './assistantService.js';
+import { assistantProvider, runAssistantChat } from './assistantService.js';
 
 const zodErrors = (error) => error.issues?.map((item) => ({
   path: item.path.join('.'),
@@ -21,7 +21,7 @@ const getAssistantErrorResponse = (error) => {
   if (status === 429 || message.includes('429') || message.toLowerCase().includes('quota')) {
     return {
       status: 429,
-      error: 'OpenAI quota or rate limit reached. Check your OpenAI billing, usage limits, or try again later.',
+      error: `${assistantProvider === 'gemini' ? 'Gemini' : 'AI provider'} quota or rate limit reached. Try again later or check your provider quota dashboard.`,
     };
   }
 
@@ -35,7 +35,7 @@ const getAssistantErrorResponse = (error) => {
   if (status >= 500) {
     return {
       status: 502,
-      error: 'OpenAI service is temporarily unavailable.',
+      error: 'AI provider service is temporarily unavailable.',
     };
   }
 
