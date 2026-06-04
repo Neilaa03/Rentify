@@ -7,6 +7,7 @@ import {
   userDetailsHandler,
   listCarsHandler,
   carDetailsHandler,
+  agencyDocumentsHandler,
   updateCarHandler,
   listReservationsHandler,
   reservationDetailsHandler,
@@ -30,6 +31,7 @@ router.patch('/users/:userId', updateUserHandler);
 router.get('/cars', listCarsHandler);
 router.get('/cars/:carId', carDetailsHandler);
 router.patch('/cars/:carId', updateCarHandler);
+router.get('/agency-documents', agencyDocumentsHandler);
 
 router.get('/reservations', listReservationsHandler);
 router.get('/reservations/:reservationId', reservationDetailsHandler);

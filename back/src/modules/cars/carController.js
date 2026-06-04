@@ -15,6 +15,7 @@ import {
 
 import { getCarImages } from '../car-images/carImageModel.js';
 import { getDocuments } from '../documents/documentModel.js';
+import { getDocumentOcrResultByDocumentId } from '../documents/documentOcrModel.js';
 
 const zodErrors = (error) => error.issues.map((item) => item.message);
 
@@ -47,11 +48,17 @@ export const getMyCars = async (req, res) => {
         try {
           const images = await getCarImages({ carId: car.id });
           const documents = await getDocuments({ carId: car.id });
+          const enrichedDocuments = await Promise.all(
+            documents.map(async (document) => ({
+              ...document,
+              ocrResult: await getDocumentOcrResultByDocumentId(document.id),
+            }))
+          );
           
           return {
             ...car,
             images,
-            documents,
+            documents: enrichedDocuments,
           };
         } catch (_error) {
           // If there's an error fetching images/docs, return car without them

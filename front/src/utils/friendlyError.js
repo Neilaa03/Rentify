@@ -6,6 +6,7 @@ const ERROR_RULES = [
   { match: /date|available|disponible|réservée|reservee/i, key: 'common.errors.dateUnavailable' },
   { match: /payment|stripe|paiement|card/i, key: 'common.errors.payment' },
   { match: /upload|televers|télévers|document|file|image/i, key: 'common.errors.upload' },
+  { match: /CLIENT_VERIFICATION_REQUIRED|driver\s*license|licen[cs]e/i, key: 'common.errors.verificationRequired' },
   { match: /password|mot de passe/i, key: 'common.errors.password' },
   { match: /email/i, key: 'common.errors.email' },
 ];
