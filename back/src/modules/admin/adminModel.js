@@ -6,6 +6,32 @@ const withPagination = (query, page = 1, limit = 20) => query.range((page - 1) *
 
 const getDocumentTimestamp = (doc) => new Date(doc?.updated_at || doc?.created_at || 0).getTime();
 
+const normalizeDocumentStatus = (status) => String(status || '').toLowerCase();
+
+const isApprovedDocumentStatus = (status) => {
+  const normalized = normalizeDocumentStatus(status);
+  return normalized.includes('approve') || normalized.includes('verif');
+};
+
+const isRejectedDocumentStatus = (status) => normalizeDocumentStatus(status).includes('reject');
+
+const filterVisibleDocuments = (documents = []) =>
+  (documents || []).filter((doc) => !isRejectedDocumentStatus(doc.status));
+
+const buildDocumentSummary = (documents = []) => {
+  const visibleDocuments = filterVisibleDocuments(documents);
+  const pendingDocumentCount = visibleDocuments.filter((doc) => !isApprovedDocumentStatus(doc.status)).length;
+  const verifiedDocumentCount = visibleDocuments.length - pendingDocumentCount;
+
+  return {
+    visibleDocuments,
+    visibleDocumentCount: visibleDocuments.length,
+    pendingDocumentCount,
+    verifiedDocumentCount,
+    verificationStatus: visibleDocuments.length > 0 && pendingDocumentCount === 0 ? 'VERIFIED' : 'PENDING',
+  };
+};
+
 const dedupeDocumentsByType = (documents = []) => {
   const latestByType = new Map();
 
@@ -128,16 +154,32 @@ export const getCars = async ({ page, limit, search, approvalStatus, hidden }) =
   const { data: companies } = ownerIds.length
     ? await supabase.from('company').select('id,manager_id,company_name,company_email,registration_number').in('manager_id', ownerIds)
     : { data: [] };
+  const carIds = [...new Set((data || []).map((car) => car.id).filter(Boolean))];
+  const { data: carDocuments } = carIds.length
+    ? await supabase.from('documents').select('*').in('car_id', carIds).order('created_at', { ascending: false })
+    : { data: [] };
 
   const ownerMap = Object.fromEntries((owners || []).map((u) => [u.id, u]));
   const companyMap = Object.fromEntries((companies || []).map((c) => [c.manager_id, c]));
+  const documentsByCarId = (carDocuments || []).reduce((acc, doc) => {
+    if (!doc.car_id) return acc;
+    if (!acc[doc.car_id]) acc[doc.car_id] = [];
+    acc[doc.car_id].push(doc);
+    return acc;
+  }, {});
 
   return {
-    data: (data || []).map((car) => ({
-      ...car,
-      owner: ownerMap[car.owner_id] || null,
-      company: companyMap[car.owner_id] || null,
-    })),
+    data: (data || []).map((car) => {
+      const dedupedDocuments = dedupeDocumentsByType(documentsByCarId[car.id] || []);
+      const summary = buildDocumentSummary(dedupedDocuments);
+      return {
+        ...car,
+        owner: ownerMap[car.owner_id] || null,
+        company: companyMap[car.owner_id] || null,
+        documentStatus: summary.verificationStatus,
+        documentCount: summary.visibleDocumentCount,
+      };
+    }),
     count: count || 0,
   };
 };
@@ -154,8 +196,20 @@ export const getCarDetails = async (carId) => {
   const { data: owner } = await supabase.from('users').select('id,email,first_name,last_name,role,is_verified').eq('id', car.owner_id).single();
   const { data: company } = await supabase.from('company').select('*').eq('manager_id', car.owner_id).maybeSingle();
   const documents = await mapDocumentsWithOcr(docs || []);
+  const summary = buildDocumentSummary(documents);
 
-  return { car, owner: owner || null, company: company || null, documents, listings: listings || [] };
+  return {
+    car: {
+      ...car,
+      documentStatus: summary.verificationStatus,
+      documentCount: summary.visibleDocumentCount,
+    },
+    owner: owner || null,
+    company: company || null,
+    documents: summary.visibleDocuments,
+    documentSummary: summary,
+    listings: listings || [],
+  };
 };
 
 export const getAgencyDocuments = async ({ search }) => {
@@ -215,16 +269,9 @@ export const getAgencyDocuments = async ({ search }) => {
 
   const data = (companies || []).map((company) => {
     const manager = managerById[company.manager_id] || null;
-    const companyDocuments = mapDocs(companyDocsByCompanyId[company.id] || [], 'Agence');
-    const managerDocuments = mapDocs(managerDocsByManagerId[company.manager_id] || [], 'Gérant');
-
-    const stats = [...companyDocuments, ...managerDocuments].reduce((acc, doc) => {
-      const normalized = String(doc.status || '').toLowerCase();
-      if (normalized.includes('approve') || normalized.includes('verif')) acc.approved += 1;
-      else if (normalized.includes('reject')) acc.rejected += 1;
-      else acc.pending += 1;
-      return acc;
-    }, { approved: 0, pending: 0, rejected: 0 });
+    const companyDocuments = filterVisibleDocuments(mapDocs(companyDocsByCompanyId[company.id] || [], 'Agence'));
+    const managerDocuments = filterVisibleDocuments(mapDocs(managerDocsByManagerId[company.manager_id] || [], 'Gérant'));
+    const summary = buildDocumentSummary([...companyDocuments, ...managerDocuments]);
 
     return {
       agency: {
@@ -240,12 +287,16 @@ export const getAgencyDocuments = async ({ search }) => {
         managerName: manager ? `${manager.first_name || ''} ${manager.last_name || ''}`.trim() || manager.email || 'Gérant' : 'Gérant',
         managerEmail: manager?.email || '',
         managerPhone: manager?.phone || '',
-        verificationStatus: stats.rejected > 0 ? 'REJECTED' : (stats.pending > 0 ? 'PENDING' : 'VERIFIED'),
-        documentCount: companyDocuments.length + managerDocuments.length,
+        verificationStatus: summary.verificationStatus,
+        documentCount: summary.visibleDocumentCount,
       },
       companyDocuments,
       managerDocuments,
-      stats,
+      stats: {
+        approved: summary.verifiedDocumentCount,
+        pending: summary.pendingDocumentCount,
+        rejected: 0,
+      },
     };
   });
 

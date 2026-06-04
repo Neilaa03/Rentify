@@ -114,13 +114,30 @@ const inferIdentityMimeType = (file) => {
   return 'image/jpeg';
 };
 
-const getIdentityStatusMeta = (status) => {
+const getIdentityStatusMeta = (status, documentLabel, t) => {
   const normalized = String(status || '').toLowerCase();
-  if (normalized === 'approved') return { label: 'Vérifié', tone: '#21d4a7', bg: 'rgba(33,212,167,0.12)' };
-  if (normalized === 'rejected') return { label: 'Rejeté', tone: '#ff6b6b', bg: 'rgba(255,107,107,0.12)' };
-  if (normalized === 'manual_review') return { label: 'En vérification', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
-  if (normalized === 'pending') return { label: 'En attente', tone: '#ffb347', bg: 'rgba(255,179,71,0.12)' };
-  return { label: 'Manquant', tone: '#9ca2cb', bg: 'rgba(255,255,255,0.05)' };
+  if (normalized === 'approved') {
+    return { label: t('screens.client.profilescreen.verificationBadgeVerified'), tone: '#21d4a7', bg: 'rgba(33,212,167,0.12)' };
+  }
+  if (normalized === 'rejected') {
+    return {
+      label: t('screens.client.profilescreen.rejectedBadgeDocument', { document: documentLabel, defaultValue: `${documentLabel} rejected` }),
+      tone: '#ff6b6b',
+      bg: 'rgba(255,107,107,0.12)',
+    };
+  }
+  if (normalized === 'manual_review' || normalized === 'pending') {
+    return {
+      label: t('screens.client.profilescreen.pendingBadgeDocument', { document: documentLabel, defaultValue: `${documentLabel} under review` }),
+      tone: '#ffb347',
+      bg: 'rgba(255,179,71,0.12)',
+    };
+  }
+  return {
+    label: t('screens.client.profilescreen.missingBadgeDocument', { document: documentLabel, defaultValue: `${documentLabel} missing` }),
+    tone: '#9ca2cb',
+    bg: 'rgba(255,255,255,0.05)',
+  };
 };
 
 const pickLatestDocument = (documents = []) =>
@@ -178,7 +195,13 @@ const ProfileScreen = ({ navigation, route }) => {
   const [changingLanguage, setChangingLanguage] = useState(false);
 
   const [token, setToken] = useState(route?.params?.token || '');
-  const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
+  const profileRole = String(profile?.role || route?.params?.user?.role || '').toLowerCase();
+  const isOwner = profileRole === 'owner';
+  const isClient = profileRole === 'client';
+  const verificationDocumentType = isOwner ? 'identity_card' : 'driver_license';
+  const verificationDocumentLabel = isOwner
+    ? t('screens.client.profilescreen.identityCard')
+    : t('screens.client.profilescreen.drivingLicense');
   const isGoogleOnly = String(profile?.auth_provider || profile?.authProvider || '').toLowerCase() === 'google';
   const isGoogleConnected = ['google', 'hybrid'].includes(String(profile?.auth_provider || profile?.authProvider || '').toLowerCase());
   const profilePicture = localProfilePictureUri || profile?.profile_picture || profile?.profilePicture || '';
@@ -315,9 +338,8 @@ const ProfileScreen = ({ navigation, route }) => {
     fetchOwnerStats();
   }, [isOwner, token]);
 
-
   const loadIdentityDocument = useCallback(async () => {
-    if (!token || !isOwner || !profile?.id) return;
+    if (!token || (!isOwner && !isClient) || !profile?.id) return;
 
     try {
       setIdentityLoading(true);
@@ -325,17 +347,21 @@ const ProfileScreen = ({ navigation, route }) => {
       const docs = await getUserDocuments({
         token,
         userId: profile.id,
-        documentType: 'identity_card',
+        documentType: verificationDocumentType,
       });
-      const identityDocs = (Array.isArray(docs) ? docs : []).filter((doc) => doc.documentType === 'identity_card');
+      const identityDocs = (Array.isArray(docs) ? docs : []).filter((doc) => doc.documentType === verificationDocumentType);
       const identity = pickLatestDocument(identityDocs);
       setIdentityDocument(identity);
     } catch (err) {
-      setIdentityError(err.message || 'Impossible de charger la carte d’identité');
+      setIdentityError(err.message || t('screens.client.profilescreen.impossibleDeChargerLeDocument'));
     } finally {
       setIdentityLoading(false);
     }
-  }, [isOwner, profile?.id, token]);
+  }, [isClient, isOwner, profile?.id, token, verificationDocumentType, t]);
+
+  useEffect(() => {
+    loadIdentityDocument();
+  }, [loadIdentityDocument]);
 
 
   useEffect(() => {
@@ -403,25 +429,22 @@ const ProfileScreen = ({ navigation, route }) => {
   }, [profile]);
 
   const initial = (profile?.first_name?.[0] || profile?.firstName?.[0] || profile?.email?.[0] || 'U').toUpperCase();
-  const identityStatus = getIdentityStatusMeta(identityDocument?.status);
-  const identityReason = identityDocument?.ocrResult?.verificationReason || '';
+  const identityStatus = getIdentityStatusMeta(identityDocument?.status, verificationDocumentLabel, t);
   const identityVerified = String(identityDocument?.status || '').toLowerCase() === 'approved';
-  const accountVerified = Boolean(profile?.isVerified ?? profile?.is_verified);
-  const verificationTone = accountVerified || identityVerified
+  const identityReason = !identityVerified ? (identityDocument?.ocrResult?.verificationReason || '') : '';
+  const verificationTone = identityVerified
     ? 'green'
     : identityDocument
       ? (String(identityDocument?.status || '').toLowerCase() === 'rejected' ? 'red' : 'amber')
       : 'neutral';
-  const verificationLabel = accountVerified || identityVerified
-    ? t('screens.client.profilescreen.verificationBadgeVerified')
+  const verificationLabel = identityStatus.label;
+  const verificationSubtitle = identityVerified
+    ? (isClient
+      ? t('screens.client.profilescreen.verificationBadgeVerifiedSubtitleClient')
+      : t('screens.client.profilescreen.verificationBadgeVerifiedSubtitle'))
     : identityDocument
-      ? (String(identityDocument?.status || '').toLowerCase() === 'rejected' ? t('screens.client.profilescreen.rejectedBadge') : t('screens.client.profilescreen.pendingBadge'))
-      : t('screens.client.profilescreen.missingBadge');
-  const verificationSubtitle = accountVerified || identityVerified
-    ? t('screens.client.profilescreen.verificationBadgeVerifiedSubtitle')
-    : identityDocument
-      ? (identityReason || t('screens.client.profilescreen.underReviewFallback'))
-      : t('screens.client.profilescreen.uploadIdPrompt');
+      ? (identityReason || t('screens.client.profilescreen.underReviewFallbackDocument', { document: verificationDocumentLabel, defaultValue: `Your ${verificationDocumentLabel} is being reviewed.` }))
+      : t('screens.client.profilescreen.uploadDocumentPrompt', { document: verificationDocumentLabel, defaultValue: `Upload your ${verificationDocumentLabel}` });
 
   const openPersonalInfoEditor = () => {
     setEditFirstName(profile?.first_name || profile?.firstName || '');
@@ -563,7 +586,7 @@ const ProfileScreen = ({ navigation, route }) => {
       const asset = Array.isArray(result?.assets) ? result.assets[0] : result;
       const uri = asset?.uri;
       const mimeType = inferIdentityMimeType(asset);
-      const name = asset?.name || `identity_card${mimeType === 'application/pdf' ? '.pdf' : mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg'}`;
+      const name = asset?.name || `${verificationDocumentType}${mimeType === 'application/pdf' ? '.pdf' : mimeType === 'image/png' ? '.png' : mimeType === 'image/webp' ? '.webp' : '.jpg'}`;
 
       if (!uri) return;
 
@@ -576,7 +599,7 @@ const ProfileScreen = ({ navigation, route }) => {
       const uploaded = await uploadUserDocument({
         token,
         userId: profile?.id,
-        documentType: 'identity_card',
+        documentType: verificationDocumentType,
         file: {
           uri,
           name,
@@ -586,19 +609,22 @@ const ProfileScreen = ({ navigation, route }) => {
       });
       setIdentityDocument(uploaded);
       if ((uploaded?.status || '').toLowerCase() === 'rejected' && uploaded?.ocrResult?.verificationReason) {
-        Alert.alert('Document rejeté', uploaded.ocrResult.verificationReason);
+        Alert.alert(verificationDocumentLabel, uploaded.ocrResult.verificationReason);
       }
     } catch (error) {
-      Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.impossibleDeTeleverserLaCarteDidentite'));
+      Alert.alert(t('screens.client.profilescreen.erreur'), error.message || t('screens.client.profilescreen.impossibleDeTeleverserLeDocument'));
     } finally {
       setIdentityBusy(false);
     }
-  }, [profile?.id, token]);
+  }, [profile?.id, token, verificationDocumentType, verificationDocumentLabel, t]);
 
   const deleteIdentityDocument = useCallback(async () => {
     if (!identityDocument?.id) return;
-    if (accountVerified || identityVerified) {
-      Alert.alert('Document verrouillé', 'Votre carte d’identité est vérifiée et ne peut plus être supprimée.');
+    if (identityVerified) {
+      Alert.alert(
+        t('screens.client.profilescreen.documentLocked'),
+        t('screens.client.profilescreen.documentLockedSubtitle', { document: verificationDocumentLabel })
+      );
       return;
     }
     try {
@@ -610,7 +636,7 @@ const ProfileScreen = ({ navigation, route }) => {
     } finally {
       setIdentityBusy(false);
     }
-  }, [accountVerified, identityDocument?.id, identityVerified, token]);
+  }, [identityDocument?.id, identityVerified, token, t, verificationDocumentLabel]);
   const pickAndUploadProfilePicture = async () => {
     const effectiveToken = token || (await storage.getItemAsync('userToken')) || '';
     if (!effectiveToken) {
@@ -1270,15 +1296,19 @@ const ProfileScreen = ({ navigation, route }) => {
               )}
             </View>
 
-            {isOwner ? (
+            {isOwner || isClient ? (
               <View style={styles.identityCard}>
                 <View style={styles.identityHeader}>
                   <View style={styles.identityIcon}>
                     <Ionicons name="id-card-outline" size={20} color="#8f6cff" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.identityTitle}>Carte d'identité</Text>
-                    <Text style={styles.identitySubtitle}>Obligatoire pour publier un véhicule ou une annonce</Text>
+                    <Text style={styles.identityTitle}>{verificationDocumentLabel}</Text>
+                    <Text style={styles.identitySubtitle}>
+                      {isOwner
+                        ? t('screens.client.profilescreen.verificationDocumentRequiredOwner')
+                        : t('screens.client.profilescreen.verificationDocumentRequiredClient')}
+                    </Text>
                   </View>
                   <View style={[styles.identityBadge, { backgroundColor: identityStatus.bg }]}>
                     <Text style={[styles.identityBadgeText, { color: identityStatus.tone }]}>{identityStatus.label}</Text>
@@ -1293,21 +1323,23 @@ const ProfileScreen = ({ navigation, route }) => {
                 ) : (
                   <>
                     <Text style={styles.identityName} numberOfLines={1}>
-                      {identityDocument?.documentUrl ? identityDocument.documentUrl.split('/').pop() : 'Aucun document soumis'}
+                      {identityDocument?.documentUrl ? identityDocument.documentUrl.split('/').pop() : t('screens.client.profilescreen.noDocumentSubmitted')}
                     </Text>
                     <Text style={styles.identityHint}>
                       {identityVerified
-                        ? 'Votre carte est approuvée. Vous pouvez publier.'
+                        ? (isClient
+                          ? t('screens.client.profilescreen.verificationBadgeVerifiedSubtitleClient')
+                          : t('screens.client.profilescreen.verificationBadgeVerifiedSubtitle'))
                         : identityDocument?.status === 'rejected'
-                          ? 'Votre carte est rejetée. Téléversez une nouvelle version.'
-                          : 'Vous ne pouvez pas publier tant que la carte n’est pas validée.'}
+                          ? t('screens.client.profilescreen.rejectedDocumentMessage', { document: verificationDocumentLabel })
+                          : t('screens.client.profilescreen.notVerifiedYetMessage', { document: verificationDocumentLabel })}
                     </Text>
-                    {identityReason ? <Text style={styles.identityReason}>{identityReason}</Text> : null}
+                    {!identityVerified && identityReason ? <Text style={styles.identityReason}>{identityReason}</Text> : null}
 
                     <View style={styles.identityActions}>
                       <TouchableOpacity style={styles.identityActionBtn} onPress={identityDocument?.documentUrl ? openIdentityDocument : pickIdentityDocument} disabled={identityBusy}>
                         <Ionicons name="eye-outline" size={16} color="#dce2ff" />
-                        <Text style={styles.identityActionText}>Voir</Text>
+                        <Text style={styles.identityActionText}>{t('screens.client.profilescreen.voir')}</Text>
                       </TouchableOpacity>
                       {!identityVerified ? (
                         <TouchableOpacity style={[styles.identityActionBtn, styles.identityPrimaryBtn]} onPress={pickIdentityDocument} disabled={identityBusy}>
@@ -1317,11 +1349,11 @@ const ProfileScreen = ({ navigation, route }) => {
                         ? t('screens.client.profilescreen.chargement')
                               : identityDocument?.documentUrl
                                 ? t('screens.client.profilescreen.remplacer')
-                                : t('screens.client.profilescreen.televerser')}
+                                : t('screens.client.profilescreen.televerserDocument')}
                           </Text>
                         </TouchableOpacity>
                       ) : null}
-                      {identityDocument?.id && !accountVerified && !identityVerified ? (
+                      {identityDocument?.id && !identityVerified ? (
                         <TouchableOpacity style={styles.identityActionBtn} onPress={deleteIdentityDocument} disabled={identityBusy}>
                           <Ionicons name="trash-outline" size={16} color="#ff7b89" />
                           <Text style={styles.identityActionDangerText}>{t('screens.client.profilescreen.supprimer')}</Text>

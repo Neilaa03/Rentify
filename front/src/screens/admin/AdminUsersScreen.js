@@ -72,14 +72,14 @@ export default function AdminUsersScreen({ navigation, route }) {
     });
   };
 
-  const formatDocType = (type) => {
+  const formatDocType = (type, translator) => {
     switch (String(type || '').toLowerCase()) {
       case 'identity_card':
-        return "Carte d'identité";
+        return translator('screens.admin.adminusersscreen.identityCard');
       case 'passport':
-        return 'Passeport';
+        return translator('screens.admin.adminusersscreen.passport');
       case 'driver_license':
-        return 'Permis de conduire';
+        return translator('screens.admin.adminusersscreen.driverLicense');
       default:
         return type || 'Document';
     }
@@ -200,7 +200,7 @@ export default function AdminUsersScreen({ navigation, route }) {
                 <View key={doc.id} style={styles.docRow}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.docTypeRow}>
-                      <Text style={styles.docType}>{formatDocType(doc.type)}</Text>
+                      <Text style={styles.docType}>{formatDocType(doc.type, t)}</Text>
                       {String(doc.type || '').toLowerCase() === 'identity_card' ? (
                         <Text style={styles.identityBadge}>Identité</Text>
                       ) : null}

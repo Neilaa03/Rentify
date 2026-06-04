@@ -8,27 +8,24 @@ import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI'
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
 
-const tabs = ['Tous', 'En attente', 'Verifies', 'Rejetes'];
+const tabs = ['All', 'Pending', 'Verified'];
 
 const norm = (v) => String(v || '').toLowerCase();
 
 const statusLabel = (status) => {
   const s = norm(status);
-  if (s.includes('approve') || s.includes('verif')) return 'Verifie';
-  if (s.includes('reject')) return 'Rejete';
-  if (s.includes('manual_review')) return 'En revision';
-  return 'En attente';
+  if (s.includes('approve') || s.includes('verif')) return 'Verified';
+  if (s.includes('manual_review')) return 'Under review';
+  return 'Pending';
 };
 
 const statusTone = (status) => {
   const s = norm(status);
   if (s.includes('approve') || s.includes('verif')) return styles.ok;
-  if (s.includes('reject')) return styles.bad;
   if (s.includes('manual_review')) return styles.review;
   return styles.wait;
 };
 
-const isRejectedStatus = (status) => norm(status).includes('reject');
 const isVerifiedDocument = (status) => {
   const s = norm(status);
   return s.includes('approve') || s.includes('verif');
@@ -61,7 +58,7 @@ export default function AdminCarsScreen({ navigation, route }) {
   const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState('owners');
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('Tous');
+  const [activeTab, setActiveTab] = useState('All');
   const [cars, setCars] = useState([]);
   const [agencies, setAgencies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +109,7 @@ export default function AdminCarsScreen({ navigation, route }) {
 
   const carsWithMeta = useMemo(() => {
     return (cars || []).map((c) => {
-      const carStatus = norm(c.approval_status || 'pending');
+      const carStatus = norm(c.documentStatus || c.approval_status || 'pending');
       const ownerName = c.company?.company_name || `${c.owner?.first_name || ''} ${c.owner?.last_name || ''}`.trim() || 'Utilisateur inconnu';
       return {
         ...c,
@@ -126,13 +123,11 @@ export default function AdminCarsScreen({ navigation, route }) {
   const stats = useMemo(() => {
     let pending = 0;
     let verified = 0;
-    let rejected = 0;
     carsWithMeta.forEach((c) => {
       if (c.carStatus.includes('approve')) verified += 1;
-      else if (c.carStatus.includes('reject')) rejected += 1;
       else pending += 1;
     });
-    return { pending, verified, rejected };
+    return { pending, verified };
   }, [carsWithMeta]);
 
   const agenciesWithMeta = useMemo(() => {
@@ -142,17 +137,15 @@ export default function AdminCarsScreen({ navigation, route }) {
       const allDocs = [...companyDocuments, ...managerDocuments];
       const pending = allDocs.filter((doc) => {
         const s = norm(doc.status);
-        return !s.includes('approve') && !s.includes('verif') && !s.includes('reject');
+        return !s.includes('approve') && !s.includes('verif');
       }).length;
-      const rejected = allDocs.filter((doc) => norm(doc.status).includes('reject')).length;
-      const agencyStatus = rejected > 0 ? 'reject' : pending > 0 ? 'pending' : 'approve';
+      const agencyStatus = pending > 0 ? 'pending' : 'approve';
       return {
         ...row,
         companyDocuments,
         managerDocuments,
         allDocs,
         pending,
-        rejected,
         agencyStatus,
         agencyName: row?.agency?.companyName || 'Agence',
         managerName: row?.agency?.managerName || 'Gérant',
@@ -164,10 +157,9 @@ export default function AdminCarsScreen({ navigation, route }) {
   const grouped = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filtered = carsWithMeta.filter((c) => {
-      const matchesStatus = activeTab === 'Tous'
-        || (activeTab === 'En attente' && c.carStatus.includes('pending'))
-        || (activeTab === 'Verifies' && c.carStatus.includes('approve'))
-        || (activeTab === 'Rejetes' && c.carStatus.includes('reject'));
+      const matchesStatus = activeTab === 'All'
+        || (activeTab === 'Pending' && c.carStatus.includes('pending'))
+        || (activeTab === 'Verified' && c.carStatus.includes('approve'));
       const matchesSearch = !term
         || c.ownerName.toLowerCase().includes(term)
         || c.displayName.toLowerCase().includes(term)
@@ -187,10 +179,9 @@ export default function AdminCarsScreen({ navigation, route }) {
   const filteredAgencies = useMemo(() => {
     const term = search.trim().toLowerCase();
     return agenciesWithMeta.filter((agency) => {
-      const matchesStatus = activeTab === 'Tous'
-        || (activeTab === 'En attente' && agency.agencyStatus.includes('pending'))
-        || (activeTab === 'Verifies' && agency.agencyStatus.includes('approve'))
-        || (activeTab === 'Rejetes' && agency.agencyStatus.includes('reject'));
+      const matchesStatus = activeTab === 'All'
+        || (activeTab === 'Pending' && agency.agencyStatus.includes('pending'))
+        || (activeTab === 'Verified' && agency.agencyStatus.includes('approve'));
       const matchesSearch = !term
         || agency.agencyName.toLowerCase().includes(term)
         || agency.managerName.toLowerCase().includes(term)
@@ -203,13 +194,11 @@ export default function AdminCarsScreen({ navigation, route }) {
   const agencyStats = useMemo(() => {
     let pending = 0;
     let verified = 0;
-    let rejected = 0;
     agenciesWithMeta.forEach((agency) => {
       if (agency.agencyStatus.includes('approve')) verified += 1;
-      else if (agency.agencyStatus.includes('reject')) rejected += 1;
       else pending += 1;
     });
-    return { pending, verified, rejected };
+    return { pending, verified };
   }, [agenciesWithMeta]);
 
   const openCarDocuments = async (car) => {
@@ -235,16 +224,14 @@ export default function AdminCarsScreen({ navigation, route }) {
   const resolveDocs = (carId) => {
     const d = detailsByCar[carId];
     const docs = d?.documents || [];
-    return docs
-      .filter((doc) => !isRejectedStatus(doc.status))
-      .map((doc, idx) => ({
-        id: doc.id || `${carId}-${idx}`,
-        type: doc.document_type || doc.type || 'Document',
-        status: doc.status || 'pending',
-        url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
-        uploadedAt: doc.created_at || doc.updated_at || '',
-        ocrResult: doc.ocr_result || doc.ocrResult || null,
-      }));
+    return docs.map((doc, idx) => ({
+      id: doc.id || `${carId}-${idx}`,
+      type: doc.document_type || doc.type || 'Document',
+      status: doc.status || 'pending',
+      url: doc.document_url || doc.url || doc.file_url || doc.documentUrl || '',
+      uploadedAt: doc.created_at || doc.updated_at || '',
+      ocrResult: doc.ocr_result || doc.ocrResult || null,
+    })).filter((doc) => norm(doc.status) !== 'rejected');
   };
 
   const reviewDocument = async (documentId, status) => {
@@ -321,7 +308,9 @@ export default function AdminCarsScreen({ navigation, route }) {
     ? grouped.reduce((acc, g) => acc + g.cars.length, 0)
     : filteredAgencies.length;
   const modalDocs = selectedCar ? resolveDocs(selectedCar.id) : [];
-  const agencyModalDocs = selectedAgency ? [...selectedAgency.companyDocuments, ...selectedAgency.managerDocuments] : [];
+  const agencyModalDocs = selectedAgency
+    ? [...selectedAgency.companyDocuments, ...selectedAgency.managerDocuments].filter((doc) => norm(doc.status) !== 'rejected')
+    : [];
   const sectionStats = activeSection === 'owners' ? stats : agencyStats;
   const sectionError = activeSection === 'owners' ? error : agenciesError;
 
@@ -332,22 +321,21 @@ export default function AdminCarsScreen({ navigation, route }) {
           <ScreenHeader title={t('screens.admin.admincarsscreen.documents')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
           <View style={styles.sectionToggleRow}>
-            <TouchableOpacity style={[styles.sectionToggle, activeSection === 'owners' && styles.sectionToggleActive]} onPress={() => { setActiveSection('owners'); setActiveTab('Tous'); }}>
+            <TouchableOpacity style={[styles.sectionToggle, activeSection === 'owners' && styles.sectionToggleActive]} onPress={() => { setActiveSection('owners'); setActiveTab('All'); }}>
               <Text style={[styles.sectionToggleText, activeSection === 'owners' && styles.sectionToggleTextActive]}>
-                {t('screens.admin.admincarsscreen.sections.owners', { defaultValue: 'Proprietaires' })}
+                {t('screens.admin.admincarsscreen.sections.owners', { defaultValue: 'Owners' })}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.sectionToggle, activeSection === 'agencies' && styles.sectionToggleActive]} onPress={() => { setActiveSection('agencies'); setActiveTab('Tous'); }}>
+            <TouchableOpacity style={[styles.sectionToggle, activeSection === 'agencies' && styles.sectionToggleActive]} onPress={() => { setActiveSection('agencies'); setActiveTab('All'); }}>
               <Text style={[styles.sectionToggleText, activeSection === 'agencies' && styles.sectionToggleTextActive]}>
-                {t('screens.admin.admincarsscreen.sections.agencies', { defaultValue: 'Agences' })}
+                {t('screens.admin.admincarsscreen.sections.agencies', { defaultValue: 'Agencies' })}
               </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.statsRow}>
-            <TopStat value={sectionStats.pending} label={t('screens.admin.admincarsscreen.enAttente')} tone="amber" icon="time-outline" />
-            <TopStat value={sectionStats.verified} label={t('screens.admin.admincarsscreen.verifies')} tone="green" icon="checkmark-circle-outline" />
-            <TopStat value={sectionStats.rejected} label={t('screens.admin.admincarsscreen.rejetes')} tone="red" icon="close-circle-outline" />
+            <TopStat value={sectionStats.pending} label={t('screens.admin.admincarsscreen.pending', { defaultValue: 'Pending' })} tone="amber" icon="time-outline" />
+            <TopStat value={sectionStats.verified} label={t('screens.admin.admincarsscreen.verified', { defaultValue: 'Verified' })} tone="green" icon="checkmark-circle-outline" />
           </View>
 
           <View style={styles.searchWrap}>
@@ -356,8 +344,8 @@ export default function AdminCarsScreen({ navigation, route }) {
               value={search}
               onChangeText={setSearch}
               placeholder={activeSection === 'owners'
-                ? t('screens.admin.admincarsscreen.typeProprietaire')
-                : t('screens.admin.admincarsscreen.rechercherAgence', { defaultValue: 'Rechercher une agence' })}
+                ? t('screens.admin.admincarsscreen.typeProprietaire', { defaultValue: 'Search owner' })
+                : t('screens.admin.admincarsscreen.rechercherAgence', { defaultValue: 'Search an agency' })}
               placeholderTextColor="#7078ab"
               style={styles.searchInput}
             />
@@ -376,11 +364,11 @@ export default function AdminCarsScreen({ navigation, route }) {
             ))}
           </ScrollView>
 
-          <Text style={styles.countText}>
+              <Text style={styles.countText}>
             {visibleDocCount}{' '}
             {activeSection === 'owners'
-              ? t('screens.admin.admincarsscreen.vehiculesAVerifier')
-              : t('screens.admin.admincarsscreen.agencesAVerifier', { defaultValue: 'agences à verifier' })}
+              ? t('screens.admin.admincarsscreen.vehiculesAVerifier', { defaultValue: 'vehicles to review' })
+              : t('screens.admin.admincarsscreen.agencesAVerifier', { defaultValue: 'agencies to review' })}
           </Text>
 
           {!!sectionError ? <Text style={styles.error}>{sectionError}</Text> : null}
@@ -688,7 +676,7 @@ const styles = StyleSheet.create({
   sectionToggleText: { color: '#9299c8', fontWeight: '800' },
   sectionToggleTextActive: { color: '#fff' },
   statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  topCard: { width: '31%', borderWidth: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center' },
+  topCard: { width: '48%', borderWidth: 1, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 8, alignItems: 'center' },
   topStatRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   topValue: { fontSize: 20, fontWeight: '800' },
   topLabel: { fontSize: 11, marginTop: 2 },
