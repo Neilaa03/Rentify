@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { FunctionCallingConfigMode, GoogleGenAI, Type } from '@google/genai';
 import { assistantToolDefinitions, executeAssistantTool } from './assistantTools.js';
-import { createConversationId, logAssistantMessage } from './assistantRepository.js';
+import { createConversationId, logAssistantMessage, logAssistantToolCall } from './assistantModel.js';
 
 const model = process.env.OPENAI_MODEL || 'gpt-5';
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
@@ -57,6 +57,153 @@ const buildInitialMessages = ({ context, message, user }) => [
   ...normalizeContext(context),
   { role: 'user', content: message },
 ];
+
+const compactListing = (listing) => ({
+  id: listing.id,
+  title: listing.title,
+  city: listing.city,
+  country: listing.country,
+  pricePerDay: listing.pricePerDay,
+  car: listing.car ? {
+    id: listing.car.id,
+    brand: listing.car.brand,
+    model: listing.car.model,
+    year: listing.car.year,
+    transmission: listing.car.transmission,
+    fuelType: listing.car.fuelType,
+    seats: listing.car.seats,
+    image: listing.car.images?.[0]?.imageUrl || null,
+  } : null,
+});
+
+const createToolResultPreview = ({ name, data }) => {
+  if (name === 'getReservations') {
+    return {
+      type: 'reservations',
+      title: 'Reservations',
+      items: (data || []).slice(0, 5).map((item) => ({
+        id: item.id,
+        title: item.listing?.title || `${item.listing?.car?.brand || ''} ${item.listing?.car?.model || ''}`.trim(),
+        city: item.listing?.city,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        status: item.status,
+        totalPrice: item.totalPrice,
+      })),
+    };
+  }
+
+  if (name === 'searchVehicles') {
+    return {
+      type: 'vehicles',
+      title: 'Vehicles',
+      items: (data.items || []).slice(0, 5).map(compactListing),
+    };
+  }
+
+  if (name === 'getFavorites') {
+    return {
+      type: 'vehicles',
+      title: 'Favorite vehicles',
+      items: (data.items || []).slice(0, 5).map(compactListing),
+    };
+  }
+
+  if (name === 'getUserProfile') {
+    return {
+      type: 'profile',
+      title: 'Profile',
+      profile: {
+        name: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+        accountStatus: data.accountStatus,
+        verificationStatus: data.verificationStatus,
+        reservations: data.stats?.client?.reservations,
+        favorites: data.stats?.client?.favorites,
+        reviews: data.stats?.client?.reviews,
+      },
+    };
+  }
+
+  if (name === 'calculateReservationPrice') {
+    return {
+      type: 'price',
+      title: 'Price estimate',
+      estimate: data,
+    };
+  }
+
+  if (name === 'getPaymentStatus') {
+    return {
+      type: 'payment',
+      title: 'Payment status',
+      payment: data,
+    };
+  }
+
+  if (name === 'getListingAvailability') {
+    return {
+      type: 'availability',
+      title: 'Availability',
+      availability: data,
+    };
+  }
+
+  if (name === 'getVehicleReviews') {
+    return {
+      type: 'reviews',
+      title: 'Reviews',
+      reviews: data,
+    };
+  }
+
+  if (name === 'getMyReviews') {
+    return {
+      type: 'myReviews',
+      title: 'Reviews you left',
+      reviews: data,
+    };
+  }
+
+  return {
+    type: 'raw',
+    title: name,
+    data,
+  };
+};
+
+const executeAuditedTool = async ({ name, rawArguments, user, conversationId }) => {
+  const startedAt = Date.now();
+  try {
+    const data = await executeAssistantTool({ name, rawArguments, user });
+    await logAssistantToolCall({
+      conversationId,
+      userId: user.id,
+      toolName: name,
+      input: rawArguments || {},
+      success: true,
+      latencyMs: Date.now() - startedAt,
+    }).catch((error) => console.error('[assistant] failed to log tool call', error.message));
+
+    return {
+      data,
+      preview: createToolResultPreview({ name, data }),
+    };
+  } catch (error) {
+    await logAssistantToolCall({
+      conversationId,
+      userId: user.id,
+      toolName: name,
+      input: rawArguments || {},
+      success: false,
+      latencyMs: Date.now() - startedAt,
+      error: error.message || 'Tool failed',
+    }).catch((logError) => console.error('[assistant] failed to log tool call', logError.message));
+    throw error;
+  }
+};
 
 const toGeminiRole = (role) => (role === 'assistant' ? 'model' : 'user');
 
@@ -119,6 +266,10 @@ const inferMockTool = (message) => {
     return { name: 'getReservations', args: {} };
   }
 
+  if (text.includes('my review') || text.includes('reviews i left') || text.includes('reviews left')) {
+    return { name: 'getMyReviews', args: { limit: 5 } };
+  }
+
   if (text.includes('profile') || text.includes('account') || text.includes('me')) {
     return { name: 'getUserProfile', args: {} };
   }
@@ -163,6 +314,15 @@ const summarizeMockResult = ({ toolName, result }) => {
     return `Your profile is ${result.firstName || ''} ${result.lastName || ''} (${result.email}), role ${result.role}. You have ${result.stats?.client?.reservations ?? 0} reservation(s).`;
   }
 
+  if (toolName === 'getMyReviews') {
+    if (!result.items?.length) return 'I did not find reviews you have left yet.';
+    const lines = result.items.slice(0, 5).map((review) => {
+      const carName = review.vehicle ? `${review.vehicle.brand || ''} ${review.vehicle.model || ''}`.trim() : review.listing?.title || 'vehicle';
+      return `- ${review.rating}/5 for ${carName}: ${review.comment || 'No comment'}`;
+    });
+    return `Here are reviews you left:\n${lines.join('\n')}`;
+  }
+
   if (toolName === 'getVehicleDetails') {
     const car = result.car;
     return `Vehicle details: ${result.title || `${car?.brand || ''} ${car?.model || ''}`.trim()} in ${result.city || 'unknown city'}, ${result.country || 'unknown country'}, ${result.pricePerDay} per day.`;
@@ -192,13 +352,14 @@ const runMockAssistantChat = async ({ user, message, conversationId }) => {
   }).catch((error) => console.error('[assistant] failed to log user message', error.message));
 
   const tool = inferMockTool(message);
-  const result = await executeAssistantTool({
+  const toolResult = await executeAuditedTool({
     name: tool.name,
     rawArguments: tool.args,
     user,
+    conversationId: id,
   });
 
-  const answer = `[Mock AI mode] ${summarizeMockResult({ toolName: tool.name, result })}`;
+  const answer = `[Mock AI mode] ${summarizeMockResult({ toolName: tool.name, result: toolResult.data })}`;
 
   await logAssistantMessage({
     conversationId: id,
@@ -216,6 +377,7 @@ const runMockAssistantChat = async ({ user, message, conversationId }) => {
       createdAt: new Date().toISOString(),
     },
     toolsUsed: [tool.name],
+    toolResults: [toolResult.preview],
   };
 };
 
@@ -235,6 +397,7 @@ const runGeminiAssistantChat = async ({ user, message, context, conversationId }
   let response;
   let toolRound = 0;
   const toolsUsed = [];
+  const toolResults = [];
 
   while (toolRound <= maxToolRounds) {
     response = await ai.models.generateContent({
@@ -280,18 +443,20 @@ const runGeminiAssistantChat = async ({ user, message, context, conversationId }
     const toolResponseParts = [];
     for (const functionCall of functionCalls) {
       try {
-        const result = await executeAssistantTool({
+        const toolResult = await executeAuditedTool({
           name: functionCall.name,
           rawArguments: functionCall.args || {},
           user,
+          conversationId: id,
         });
 
         toolsUsed.push(functionCall.name);
+        toolResults.push(toolResult.preview);
         toolResponseParts.push({
           functionResponse: {
             id: functionCall.id,
             name: functionCall.name,
-            response: { ok: true, data: result },
+            response: { ok: true, data: toolResult.data },
           },
         });
       } catch (error) {
@@ -333,6 +498,7 @@ const runGeminiAssistantChat = async ({ user, message, context, conversationId }
       createdAt: new Date().toISOString(),
     },
     toolsUsed: [...new Set(toolsUsed)],
+    toolResults,
   };
 };
 
@@ -360,6 +526,7 @@ export const runAssistantChat = async ({ user, message, context, conversationId 
   let completion;
   let toolRound = 0;
   const toolsUsed = [];
+  const toolResults = [];
 
   while (toolRound <= maxToolRounds) {
     completion = await openai.chat.completions.create({
@@ -389,17 +556,19 @@ export const runAssistantChat = async ({ user, message, context, conversationId 
     for (const toolCall of toolCalls) {
       const name = toolCall.function?.name;
       try {
-        const result = await executeAssistantTool({
+        const toolResult = await executeAuditedTool({
           name,
           rawArguments: toolCall.function?.arguments,
           user,
+          conversationId: id,
         });
 
         toolsUsed.push(name);
+        toolResults.push(toolResult.preview);
         messages.push({
           role: 'tool',
           tool_call_id: toolCall.id,
-          content: JSON.stringify({ ok: true, data: result }),
+          content: JSON.stringify({ ok: true, data: toolResult.data }),
         });
       } catch (error) {
         messages.push({
@@ -436,5 +605,6 @@ export const runAssistantChat = async ({ user, message, context, conversationId 
       createdAt: new Date().toISOString(),
     },
     toolsUsed: [...new Set(toolsUsed)],
+    toolResults,
   };
 };

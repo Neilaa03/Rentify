@@ -30,6 +30,17 @@ const quickPrompts = [
 
 const getMessageText = (message) => String(message?.content || '').trim();
 
+const getCardIntroText = (content) => {
+  const lines = String(content || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const intro = lines.find((line) => !/^[-*•]\s+/.test(line) && !/^\*\*?[^:*]+:\*\*?/.test(line));
+  if (!intro) return 'Here is what I found:';
+  return intro.length > 130 ? `${intro.slice(0, 127).trim()}...` : intro;
+};
+
 const renderInlineMarkdown = (text, baseStyle, boldStyle) => {
   const parts = String(text || '').split(/(\*\*[^*]+\*\*)/g);
 
@@ -85,6 +96,123 @@ const renderMessageContent = (content, baseStyle, boldStyle) => {
       </Text>
     );
   });
+};
+
+const formatValue = (value) => {
+  if (value === null || value === undefined || value === '') return 'Not set';
+  return String(value);
+};
+
+const ToolResultCards = ({ results = [] }) => {
+  if (!Array.isArray(results) || results.length === 0) return null;
+
+  return (
+    <View style={styles.toolResults}>
+      {results.map((result, index) => {
+        if (result.type === 'profile') {
+          const profile = result.profile || {};
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              <View style={styles.resultGrid}>
+                <View style={styles.resultCell}>
+                  <Text style={styles.resultLabel}>Name</Text>
+                  <Text style={styles.resultValue}>{formatValue(profile.name)}</Text>
+                </View>
+                <View style={styles.resultCell}>
+                  <Text style={styles.resultLabel}>Email</Text>
+                  <Text style={styles.resultValue}>{formatValue(profile.email)}</Text>
+                </View>
+                <View style={styles.resultCell}>
+                  <Text style={styles.resultLabel}>Phone</Text>
+                  <Text style={styles.resultValue}>{formatValue(profile.phone)}</Text>
+                </View>
+                <View style={styles.resultCell}>
+                  <Text style={styles.resultLabel}>Status</Text>
+                  <Text style={styles.resultValue}>{formatValue(profile.verificationStatus)}</Text>
+                </View>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statPill}>{profile.reservations || 0} reservations</Text>
+                <Text style={styles.statPill}>{profile.favorites || 0} favorites</Text>
+                <Text style={styles.statPill}>{profile.reviews || 0} reviews</Text>
+              </View>
+            </View>
+          );
+        }
+
+        if (result.type === 'reservations') {
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              {(result.items || []).length ? result.items.map((item) => (
+                <View key={item.id} style={styles.listItem}>
+                  <Text style={styles.listTitle}>{formatValue(item.title)}</Text>
+                  <Text style={styles.listMeta}>{[item.city, `${item.startDate} to ${item.endDate}`].filter(Boolean).join(' • ')}</Text>
+                  <View style={styles.statRow}>
+                    <Text style={styles.statusPill}>{formatValue(item.status)}</Text>
+                    <Text style={styles.pricePill}>{formatValue(item.totalPrice)}</Text>
+                  </View>
+                </View>
+              )) : <Text style={styles.emptyResult}>No reservations found.</Text>}
+            </View>
+          );
+        }
+
+        if (result.type === 'vehicles') {
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              {(result.items || []).length ? result.items.map((item) => (
+                <View key={item.id} style={styles.listItem}>
+                  <Text style={styles.listTitle}>{item.title || `${item.car?.brand || ''} ${item.car?.model || ''}`.trim()}</Text>
+                  <Text style={styles.listMeta}>{[item.city, item.car?.transmission, item.car?.fuelType].filter(Boolean).join(' • ')}</Text>
+                  <Text style={styles.priceLine}>{formatValue(item.pricePerDay)} / day</Text>
+                </View>
+              )) : <Text style={styles.emptyResult}>No vehicles found.</Text>}
+            </View>
+          );
+        }
+
+        if (result.type === 'price') {
+          const estimate = result.estimate || {};
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              <Text style={styles.bigPrice}>{formatValue(estimate.totalPrice)} {estimate.currency || 'EUR'}</Text>
+              <Text style={styles.listMeta}>{estimate.totalDays || 0} day(s), estimate only</Text>
+            </View>
+          );
+        }
+
+        if (result.type === 'myReviews' || result.type === 'reviews') {
+          const reviews = result.reviews || {};
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              {(reviews.items || []).length ? reviews.items.map((item) => (
+                <View key={item.id || `${item.createdAt}-${item.rating}`} style={styles.listItem}>
+                  <Text style={styles.listTitle}>
+                    {'★'.repeat(Number(item.rating) || 0)}{Number(item.rating) ? ` ${item.rating}/5` : 'Review'}
+                  </Text>
+                  {item.comment ? <Text style={styles.reviewComment}>{item.comment}</Text> : null}
+                  <Text style={styles.listMeta}>
+                    {[
+                      item.vehicle ? `${item.vehicle.brand || ''} ${item.vehicle.model || ''}`.trim() : null,
+                      item.listing?.city,
+                      item.reservation ? `${item.reservation.startDate} to ${item.reservation.endDate}` : null,
+                    ].filter(Boolean).join(' • ')}
+                  </Text>
+                </View>
+              )) : <Text style={styles.emptyResult}>No reviews found.</Text>}
+            </View>
+          );
+        }
+
+        return null;
+      })}
+    </View>
+  );
 };
 
 const AssistantWidget = () => {
@@ -149,7 +277,7 @@ const AssistantWidget = () => {
       });
 
       setConversationId(response.conversationId || conversationId);
-      setMessages((prev) => [...prev, response.message]);
+      setMessages((prev) => [...prev, { ...response.message, toolResults: response.toolResults || [] }]);
       scrollToBottom();
     } catch (err) {
       setError(err.message || 'Assistant unavailable.');
@@ -202,6 +330,8 @@ const AssistantWidget = () => {
               >
                 {messages.map((message, index) => {
                   const isUser = message.role === 'user';
+                  const hasToolCards = !isUser && Array.isArray(message.toolResults) && message.toolResults.length > 0;
+                  const displayText = hasToolCards ? getCardIntroText(getMessageText(message)) : getMessageText(message);
                   return (
                     <View
                       key={`${message.createdAt || index}-${index}`}
@@ -209,10 +339,11 @@ const AssistantWidget = () => {
                     >
                       <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}>
                         {renderMessageContent(
-                          getMessageText(message),
+                          displayText,
                           [styles.messageText, isUser ? styles.userText : styles.assistantText],
                           styles.boldText
                         )}
+                        {!isUser ? <ToolResultCards results={message.toolResults} /> : null}
                       </View>
                     </View>
                   );
@@ -464,6 +595,123 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     lineHeight: 18,
+  },
+  toolResults: {
+    marginTop: 6,
+    gap: 8,
+  },
+  resultCard: {
+    borderRadius: 13,
+    padding: 10,
+    backgroundColor: 'rgba(6, 8, 24, 0.42)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.16)',
+  },
+  resultTitle: {
+    color: '#F6F8FF',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  resultGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  resultCell: {
+    width: '47%',
+    minHeight: 48,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    backgroundColor: 'rgba(255,255,255,0.045)',
+  },
+  resultLabel: {
+    color: '#9EA6D6',
+    fontSize: 10,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+  resultValue: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  statRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  statPill: {
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    color: '#d8dcff',
+    fontSize: 10,
+    fontWeight: '800',
+    backgroundColor: 'rgba(108, 77, 255, 0.22)',
+  },
+  listItem: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(145, 152, 229, 0.12)',
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  listTitle: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+  listMeta: {
+    color: '#B6BCE5',
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  statusPill: {
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    backgroundColor: 'rgba(35, 212, 159, 0.22)',
+  },
+  pricePill: {
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '900',
+    backgroundColor: 'rgba(108, 77, 255, 0.28)',
+  },
+  priceLine: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '900',
+    marginTop: 5,
+  },
+  reviewComment: {
+    color: '#ECF0FF',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 5,
+  },
+  bigPrice: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  emptyResult: {
+    color: '#AEB5DF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   typingRow: {
     alignSelf: 'flex-start',

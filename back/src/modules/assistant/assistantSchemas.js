@@ -34,3 +34,33 @@ export const searchVehicleFiltersSchema = z.object({
 export const vehicleDetailsSchema = z.object({
   vehicleId: z.string().trim().min(1).max(120),
 });
+
+export const reservationDetailsSchema = z.object({
+  reservationId: z.string().uuid(),
+});
+
+export const listingAvailabilitySchema = z.object({
+  listingId: z.string().uuid(),
+});
+
+export const reservationPriceSchema = z.object({
+  listingId: z.string().uuid(),
+  startDate: z.string().date(),
+  endDate: z.string().date(),
+  pickupMethod: z.enum(['owner_place', 'renter_delivery']).optional().default('owner_place'),
+});
+
+export const paymentStatusSchema = z.object({
+  reservationId: z.string().uuid(),
+});
+
+export const vehicleReviewsSchema = z.object({
+  vehicleId: z.string().trim().min(1).max(120),
+  page: z.coerce.number().int().positive().max(20).optional().default(1),
+  limit: z.coerce.number().int().positive().max(8).optional().default(5),
+});
+
+export const myReviewsSchema = z.object({
+  page: z.coerce.number().int().positive().max(20).optional().default(1),
+  limit: z.coerce.number().int().positive().max(8).optional().default(5),
+});

@@ -1,10 +1,26 @@
-import { searchVehicleFiltersSchema, vehicleDetailsSchema } from './assistantSchemas.js';
 import {
+  listingAvailabilitySchema,
+  myReviewsSchema,
+  paymentStatusSchema,
+  reservationDetailsSchema,
+  reservationPriceSchema,
+  searchVehicleFiltersSchema,
+  vehicleDetailsSchema,
+  vehicleReviewsSchema,
+} from './assistantSchemas.js';
+import {
+  calculateReservationPriceReadOnly,
+  getFavoritesReadOnly,
+  getListingAvailabilityReadOnly,
+  getMyReviewsReadOnly,
+  getPaymentStatusReadOnly,
+  getReservationDetailsReadOnly,
   getReservationsForUser,
   getUserProfileReadOnly,
   getVehicleDetailsReadOnly,
+  getVehicleReviewsReadOnly,
   searchVehiclesReadOnly,
-} from './assistantRepository.js';
+} from './assistantModel.js';
 
 export const assistantToolDefinitions = [
   {
@@ -23,7 +39,7 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'searchVehicles',
-      description: 'Search active Rentify vehicle listings using read-only filters.',
+      description: 'Search Rentify vehicle listings using read-only filters.',
       parameters: {
         type: 'object',
         properties: {
@@ -72,6 +88,113 @@ export const assistantToolDefinitions = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'getReservationDetails',
+      description: 'Read details for one reservation if the authenticated user is allowed to see it.',
+      parameters: {
+        type: 'object',
+        properties: {
+          reservationId: { type: 'string' },
+        },
+        required: ['reservationId'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getListingAvailability',
+      description: 'Read a listing availability window and currently blocked reservation ranges.',
+      parameters: {
+        type: 'object',
+        properties: {
+          listingId: { type: 'string' },
+        },
+        required: ['listingId'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'calculateReservationPrice',
+      description: 'Calculate a read-only reservation price estimate. Does not create a reservation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          listingId: { type: 'string' },
+          startDate: { type: 'string', description: 'YYYY-MM-DD' },
+          endDate: { type: 'string', description: 'YYYY-MM-DD' },
+          pickupMethod: { type: 'string', enum: ['owner_place', 'renter_delivery'] },
+        },
+        required: ['listingId', 'startDate', 'endDate'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getPaymentStatus',
+      description: 'Read payment and escrow status for an allowed reservation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          reservationId: { type: 'string' },
+        },
+        required: ['reservationId'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getFavorites',
+      description: 'Read the authenticated user active favorite listings.',
+      parameters: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getVehicleReviews',
+      description: 'Read reviews and rating summary for a vehicle/listing.',
+      parameters: {
+        type: 'object',
+        properties: {
+          vehicleId: { type: 'string', description: 'Listing id or car id' },
+          page: { type: 'integer' },
+          limit: { type: 'integer' },
+        },
+        required: ['vehicleId'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getMyReviews',
+      description: 'Read reviews left by the authenticated user, including rating, comment, reservation, listing, and vehicle context. Use when the user asks for my reviews or reviews I left.',
+      parameters: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer' },
+          limit: { type: 'integer' },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 const parseToolArguments = (rawArguments) => {
@@ -91,12 +214,32 @@ export const executeAssistantTool = async ({ name, rawArguments, user }) => {
   switch (name) {
     case 'getReservations':
       return getReservationsForUser(user.id);
+    case 'getReservationDetails':
+      return getReservationDetailsReadOnly({
+        reservationId: reservationDetailsSchema.parse(args).reservationId,
+        user,
+      });
     case 'searchVehicles':
       return searchVehiclesReadOnly(searchVehicleFiltersSchema.parse(args));
     case 'getVehicleDetails':
       return getVehicleDetailsReadOnly(vehicleDetailsSchema.parse(args).vehicleId);
     case 'getUserProfile':
       return getUserProfileReadOnly(user.id, user.role);
+    case 'getListingAvailability':
+      return getListingAvailabilityReadOnly(listingAvailabilitySchema.parse(args).listingId);
+    case 'calculateReservationPrice':
+      return calculateReservationPriceReadOnly(reservationPriceSchema.parse(args));
+    case 'getPaymentStatus':
+      return getPaymentStatusReadOnly({
+        reservationId: paymentStatusSchema.parse(args).reservationId,
+        user,
+      });
+    case 'getFavorites':
+      return getFavoritesReadOnly(user.id);
+    case 'getVehicleReviews':
+      return getVehicleReviewsReadOnly(vehicleReviewsSchema.parse(args));
+    case 'getMyReviews':
+      return getMyReviewsReadOnly({ userId: user.id, ...myReviewsSchema.parse(args) });
     default:
       throw new Error(`Unsupported assistant tool: ${name}`);
   }
