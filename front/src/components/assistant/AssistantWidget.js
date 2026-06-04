@@ -30,6 +30,63 @@ const quickPrompts = [
 
 const getMessageText = (message) => String(message?.content || '').trim();
 
+const renderInlineMarkdown = (text, baseStyle, boldStyle) => {
+  const parts = String(text || '').split(/(\*\*[^*]+\*\*)/g);
+
+  return parts.map((part, index) => {
+    const isBold = part.startsWith('**') && part.endsWith('**');
+    const clean = isBold ? part.slice(2, -2) : part;
+    return (
+      <Text key={`${clean}-${index}`} style={[baseStyle, isBold && boldStyle]}>
+        {clean}
+      </Text>
+    );
+  });
+};
+
+const renderMessageContent = (content, baseStyle, boldStyle) => {
+  const lines = String(content || '').split('\n');
+
+  return lines.map((line, index) => {
+    const trimmed = line.trim();
+    const bulletMatch = trimmed.match(/^[-*•]\s+(.+)$/);
+    const bulletText = bulletMatch ? bulletMatch[1] : '';
+    const labelMatch = (bulletText || trimmed).match(/^\*\*?([^:*]+):\*\*?\s*(.*)$/);
+
+    if (!trimmed) {
+      return <View key={`empty-${index}`} style={styles.messageSpacer} />;
+    }
+
+    if (labelMatch) {
+      return (
+        <View key={`${line}-${index}`} style={styles.detailRow}>
+          <Text style={[baseStyle, styles.detailLabel]}>{labelMatch[1].trim()}</Text>
+          <Text style={[baseStyle, styles.detailValue]}>
+            {renderInlineMarkdown(labelMatch[2].trim(), baseStyle, boldStyle)}
+          </Text>
+        </View>
+      );
+    }
+
+    if (bulletMatch) {
+      return (
+        <View key={`${line}-${index}`} style={styles.bulletRow}>
+          <Text style={[baseStyle, styles.bulletDot]}>•</Text>
+          <Text style={[baseStyle, styles.bulletText]}>
+            {renderInlineMarkdown(bulletText, baseStyle, boldStyle)}
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <Text key={`${line}-${index}`} style={[baseStyle, styles.paragraphText]}>
+        {renderInlineMarkdown(trimmed, baseStyle, boldStyle)}
+      </Text>
+    );
+  });
+};
+
 const AssistantWidget = () => {
   const insets = useSafeAreaInsets();
   const { token, isAuthenticated } = useAuth();
@@ -151,9 +208,11 @@ const AssistantWidget = () => {
                       style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}
                     >
                       <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-                        <Text style={[styles.messageText, isUser ? styles.userText : styles.assistantText]}>
-                          {getMessageText(message)}
-                        </Text>
+                        {renderMessageContent(
+                          getMessageText(message),
+                          [styles.messageText, isUser ? styles.userText : styles.assistantText],
+                          styles.boldText
+                        )}
                       </View>
                     </View>
                   );
@@ -338,7 +397,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   messageBubble: {
-    maxWidth: '84%',
+    maxWidth: '88%',
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -363,6 +422,48 @@ const styles = StyleSheet.create({
   },
   assistantText: {
     color: '#ECF0FF',
+  },
+  boldText: {
+    fontWeight: '900',
+  },
+  paragraphText: {
+    marginBottom: 8,
+  },
+  messageSpacer: {
+    height: 6,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+    paddingRight: 2,
+  },
+  bulletDot: {
+    width: 14,
+    lineHeight: 19,
+    color: '#B9C0F3',
+    fontWeight: '900',
+  },
+  bulletText: {
+    flex: 1,
+  },
+  detailRow: {
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    marginBottom: 7,
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.12)',
+  },
+  detailLabel: {
+    color: '#B9C0F3',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  detailValue: {
+    lineHeight: 18,
   },
   typingRow: {
     alignSelf: 'flex-start',

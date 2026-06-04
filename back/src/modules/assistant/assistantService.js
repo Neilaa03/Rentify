@@ -5,7 +5,7 @@ import { createConversationId, logAssistantMessage } from './assistantRepository
 
 const model = process.env.OPENAI_MODEL || 'gpt-5';
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const provider = String(process.env.ASSISTANT_PROVIDER || 'openai').toLowerCase();
+export const assistantProvider = String(process.env.ASSISTANT_PROVIDER || 'openai').toLowerCase();
 const maxContextMessages = Number(process.env.ASSISTANT_MAX_CONTEXT_MESSAGES || 12);
 const maxToolRounds = Number(process.env.ASSISTANT_MAX_TOOL_ROUNDS || 3);
 
@@ -16,6 +16,8 @@ Never claim you performed a booking, cancellation, payment, profile edit, upload
 If the user asks for a write action, explain that Phase 1 is read-only and give concise next-step guidance.
 Only use data returned by tools for account-specific claims.
 Keep answers practical, concise, and friendly.
+When showing profile data, never mention ids, image URLs, raw timestamps, or internal fields.
+When showing reservations or vehicles, summarize the most useful fields in short grouped bullets.
 `.trim();
 
 const normalizeContext = (context = []) => (
@@ -252,8 +254,15 @@ const runGeminiAssistantChat = async ({ user, message, context, conversationId }
     const functionCalls = response.functionCalls || [];
     if (!functionCalls.length) break;
 
-    const modelParts = functionCalls.map((functionCall) => ({ functionCall }));
-    contents.push({ role: 'model', parts: modelParts });
+    const modelContent = response.candidates?.[0]?.content;
+    if (modelContent?.parts?.length) {
+      contents.push(modelContent);
+    } else {
+      contents.push({
+        role: 'model',
+        parts: functionCalls.map((functionCall) => ({ functionCall })),
+      });
+    }
 
     if (toolRound === maxToolRounds) {
       contents.push({
@@ -328,11 +337,11 @@ const runGeminiAssistantChat = async ({ user, message, context, conversationId }
 };
 
 export const runAssistantChat = async ({ user, message, context, conversationId }) => {
-  if (provider === 'mock') {
+  if (assistantProvider === 'mock') {
     return runMockAssistantChat({ user, message, conversationId });
   }
 
-  if (provider === 'gemini') {
+  if (assistantProvider === 'gemini') {
     return runGeminiAssistantChat({ user, message, context, conversationId });
   }
 

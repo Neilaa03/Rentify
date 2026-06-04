@@ -90,16 +90,12 @@ export const getUserProfileReadOnly = async (userId, role) => {
   ]);
 
   return {
-    id: user.id,
     firstName: user.first_name,
     lastName: user.last_name,
     email: user.email,
     phone: user.phone,
-    role: user.role,
-    isActive: user.is_active,
-    isVerified: user.is_verified,
-    emailVerifiedAt: user.email_verified_at,
-    profilePicture: user.profile_picture,
+    accountStatus: user.is_active ? 'active' : 'inactive',
+    verificationStatus: user.is_verified ? 'verified' : 'not verified',
     stats: {
       client: clientStats,
       owner: ownerStats,
