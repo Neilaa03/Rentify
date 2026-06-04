@@ -63,7 +63,9 @@ const buildMultipartDocument = async ({ file, documentType, ownerKey, ownerValue
     });
   }
 
-  formData.append(ownerKey, String(ownerValue));
+  if (ownerKey && ownerValue !== undefined && ownerValue !== null) {
+    formData.append(ownerKey, String(ownerValue));
+  }
   formData.append('documentType', documentType);
   return formData;
 };
@@ -261,6 +263,32 @@ export const uploadCarDocument = async ({
   documentType,
   file,
 }) => {
+  const formData = new FormData();
+  const safeUri = String(file?.uri || '');
+  const isPdf =
+    String(file?.type || '').toLowerCase() === 'application/pdf' ||
+    safeUri.toLowerCase().endsWith('.pdf');
+  const safeName = (() => {
+    const base = file?.name || `${documentType}.pdf`;
+    if (!isPdf) return base;
+    return base.toLowerCase().endsWith('.pdf') ? base : `${base}.pdf`;
+  })();
+  const mimeType = file?.type || (isPdf ? 'application/pdf' : 'application/octet-stream');
+
+  if (Platform.OS === 'web') {
+    const blob = await fetch(safeUri).then((r) => r.blob());
+    formData.append('document', blob, safeName);
+  } else {
+    formData.append('document', {
+      uri: safeUri,
+      name: safeName,
+      type: mimeType,
+    });
+  }
+
+  formData.append('carId', String(carId));
+  formData.append('documentType', documentType);
+
   console.log('Uploading document:', {
     carId,
     documentType,

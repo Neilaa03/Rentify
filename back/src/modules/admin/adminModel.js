@@ -6,6 +6,32 @@ const withPagination = (query, page = 1, limit = 20) => query.range((page - 1) *
 
 const getDocumentTimestamp = (doc) => new Date(doc?.updated_at || doc?.created_at || 0).getTime();
 
+const normalizeDocumentStatus = (status) => String(status || '').toLowerCase();
+
+const isApprovedDocumentStatus = (status) => {
+  const normalized = normalizeDocumentStatus(status);
+  return normalized.includes('approve') || normalized.includes('verif');
+};
+
+const isRejectedDocumentStatus = (status) => normalizeDocumentStatus(status).includes('reject');
+
+const filterVisibleDocuments = (documents = []) =>
+  (documents || []).filter((doc) => !isRejectedDocumentStatus(doc.status));
+
+const buildDocumentSummary = (documents = []) => {
+  const visibleDocuments = filterVisibleDocuments(documents);
+  const pendingDocumentCount = visibleDocuments.filter((doc) => !isApprovedDocumentStatus(doc.status)).length;
+  const verifiedDocumentCount = visibleDocuments.length - pendingDocumentCount;
+
+  return {
+    visibleDocuments,
+    visibleDocumentCount: visibleDocuments.length,
+    pendingDocumentCount,
+    verifiedDocumentCount,
+    verificationStatus: visibleDocuments.length > 0 && pendingDocumentCount === 0 ? 'VERIFIED' : 'PENDING',
+  };
+};
+
 const dedupeDocumentsByType = (documents = []) => {
   const latestByType = new Map();
 
@@ -18,6 +44,23 @@ const dedupeDocumentsByType = (documents = []) => {
   }
 
   return [...latestByType.values()].sort((a, b) => getDocumentTimestamp(b) - getDocumentTimestamp(a));
+};
+
+const mapDocumentsWithOcr = async (documents = []) => {
+  const deduped = dedupeDocumentsByType(documents || []);
+  const documentIds = deduped.map((doc) => doc.id).filter(Boolean);
+  const { data: ocrResults } = documentIds.length
+    ? await supabase
+      .from('document_ocr_results')
+      .select('*')
+      .in('document_id', documentIds)
+    : { data: [] };
+  const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+
+  return deduped.map((doc) => ({
+    ...doc,
+    ocr_result: ocrByDocumentId[doc.id] || null,
+  }));
 };
 
 export const getDashboardMetrics = async () => {
@@ -62,7 +105,54 @@ export const getUsers = async ({ page, limit, search, role, isActive }) => {
 
   const { data, count, error } = await withPagination(query, page, limit);
   if (error) throw error;
-  return { data: data || [], count: count || 0 };
+
+  const users = data || [];
+  const userIds = [...new Set(users.map((user) => user.id).filter(Boolean))];
+  const companyManagerIds = [...new Set(users.filter((user) => String(user.role || '').toLowerCase() === 'companymanager').map((user) => user.id).filter(Boolean))];
+
+  const [userDocsRes, companiesRes] = await Promise.all([
+    userIds.length
+      ? supabase.from('documents').select('*').in('user_id', userIds).order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    companyManagerIds.length
+      ? supabase.from('company').select('id,manager_id').in('manager_id', companyManagerIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const companyIds = [...new Set((companiesRes.data || []).map((company) => company.id).filter(Boolean))];
+  const companyDocsRes = companyIds.length
+    ? await supabase.from('documents').select('*').in('company_id', companyIds).order('created_at', { ascending: false })
+    : { data: [] };
+
+  const userDocsByUserId = (userDocsRes.data || []).reduce((acc, doc) => {
+    if (!doc.user_id) return acc;
+    if (!acc[doc.user_id]) acc[doc.user_id] = [];
+    acc[doc.user_id].push(doc);
+    return acc;
+  }, {});
+  const companyDocsByManagerId = (companyDocsRes.data || []).reduce((acc, doc) => {
+    if (!doc.company_id) return acc;
+    const company = (companiesRes.data || []).find((row) => row.id === doc.company_id);
+    if (!company?.manager_id) return acc;
+    if (!acc[company.manager_id]) acc[company.manager_id] = [];
+    acc[company.manager_id].push(doc);
+    return acc;
+  }, {});
+
+  return {
+    data: users.map((user) => {
+      const ownDocuments = userDocsByUserId[user.id] || [];
+      const companyDocuments = companyDocsByManagerId[user.id] || [];
+      const summary = buildDocumentSummary([...ownDocuments, ...companyDocuments]);
+
+      return {
+        ...user,
+        documentStatus: summary.verificationStatus,
+        documentCount: summary.visibleDocumentCount,
+      };
+    }),
+    count: count || 0,
+  };
 };
 
 export const updateUser = async (userId, payload) => {
@@ -85,24 +175,13 @@ export const getUserDetails = async (userId) => {
 
   if (userRes.error) throw userRes.error;
 
-  const docs = dedupeDocumentsByType(docsRes.data || []);
-  const documentIds = docs.map((doc) => doc.id).filter(Boolean);
-  const { data: ocrResults } = documentIds.length
-    ? await supabase
-      .from('document_ocr_results')
-      .select('*')
-      .in('document_id', documentIds)
-    : { data: [] };
-  const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
+  const docs = await mapDocumentsWithOcr(docsRes.data || []);
 
   return {
     user: userRes.data,
     reservations: reservationsRes.data || [],
     payments: paymentsRes.data || [],
-    documents: (docs || []).map((doc) => ({
-      ...doc,
-      ocr_result: ocrByDocumentId[doc.id] || null,
-    })),
+    documents: docs,
   };
 };
 
@@ -122,16 +201,32 @@ export const getCars = async ({ page, limit, search, approvalStatus, hidden }) =
   const { data: companies } = ownerIds.length
     ? await supabase.from('company').select('id,manager_id,company_name,company_email,registration_number').in('manager_id', ownerIds)
     : { data: [] };
+  const carIds = [...new Set((data || []).map((car) => car.id).filter(Boolean))];
+  const { data: carDocuments } = carIds.length
+    ? await supabase.from('documents').select('*').in('car_id', carIds).order('created_at', { ascending: false })
+    : { data: [] };
 
   const ownerMap = Object.fromEntries((owners || []).map((u) => [u.id, u]));
   const companyMap = Object.fromEntries((companies || []).map((c) => [c.manager_id, c]));
+  const documentsByCarId = (carDocuments || []).reduce((acc, doc) => {
+    if (!doc.car_id) return acc;
+    if (!acc[doc.car_id]) acc[doc.car_id] = [];
+    acc[doc.car_id].push(doc);
+    return acc;
+  }, {});
 
   return {
-    data: (data || []).map((car) => ({
-      ...car,
-      owner: ownerMap[car.owner_id] || null,
-      company: companyMap[car.owner_id] || null,
-    })),
+    data: (data || []).map((car) => {
+      const dedupedDocuments = dedupeDocumentsByType(documentsByCarId[car.id] || []);
+      const summary = buildDocumentSummary(dedupedDocuments);
+      return {
+        ...car,
+        owner: ownerMap[car.owner_id] || null,
+        company: companyMap[car.owner_id] || null,
+        documentStatus: summary.verificationStatus,
+        documentCount: summary.visibleDocumentCount,
+      };
+    }),
     count: count || 0,
   };
 };
@@ -147,21 +242,112 @@ export const getCarDetails = async (carId) => {
 
   const { data: owner } = await supabase.from('users').select('id,email,first_name,last_name,role,is_verified').eq('id', car.owner_id).single();
   const { data: company } = await supabase.from('company').select('*').eq('manager_id', car.owner_id).maybeSingle();
-  const documentIds = (docs || []).map((doc) => doc.id).filter(Boolean);
-  const { data: ocrResults } = documentIds.length
-    ? await supabase
-      .from('document_ocr_results')
-      .select('*')
-      .in('document_id', documentIds)
-    : { data: [] };
+  const documents = await mapDocumentsWithOcr(docs || []);
+  const summary = buildDocumentSummary(documents);
 
+  return {
+    car: {
+      ...car,
+      documentStatus: summary.verificationStatus,
+      documentCount: summary.visibleDocumentCount,
+    },
+    owner: owner || null,
+    company: company || null,
+    documents: summary.visibleDocuments,
+    documentSummary: summary,
+    listings: listings || [],
+  };
+};
+
+export const getAgencyDocuments = async ({ search }) => {
+  let companyQuery = supabase.from('company').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+  if (search) {
+    companyQuery = companyQuery.or(
+      `company_name.ilike.%${search}%,company_email.ilike.%${search}%,registration_number.ilike.%${search}%,company_phone.ilike.%${search}%`,
+    );
+  }
+
+  const { data: companies, count, error } = await companyQuery;
+  if (error) throw error;
+
+  const managerIds = [...new Set((companies || []).map((company) => company.manager_id).filter(Boolean))];
+  const companyIds = [...new Set((companies || []).map((company) => company.id).filter(Boolean))];
+
+  const [{ data: managers }, { data: companyDocs }, { data: managerDocs }] = await Promise.all([
+    managerIds.length
+      ? supabase.from('users').select('id,email,first_name,last_name,phone,role,is_verified').in('id', managerIds)
+      : Promise.resolve({ data: [] }),
+    companyIds.length
+      ? supabase.from('documents').select('*').in('company_id', companyIds).order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    managerIds.length
+      ? supabase.from('documents').select('*').in('user_id', managerIds).order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const managerById = Object.fromEntries((managers || []).map((user) => [user.id, user]));
+  const companyDocsByCompanyId = (companyDocs || []).reduce((acc, doc) => {
+    if (!doc.company_id) return acc;
+    if (!acc[doc.company_id]) acc[doc.company_id] = [];
+    acc[doc.company_id].push(doc);
+    return acc;
+  }, {});
+  const managerDocsByManagerId = (managerDocs || []).reduce((acc, doc) => {
+    if (!doc.user_id) return acc;
+    if (!acc[doc.user_id]) acc[doc.user_id] = [];
+    acc[doc.user_id].push(doc);
+    return acc;
+  }, {});
+
+  const allDocumentIds = [...new Set([
+    ...(companyDocs || []).map((doc) => doc.id).filter(Boolean),
+    ...(managerDocs || []).map((doc) => doc.id).filter(Boolean),
+  ])];
+  const { data: ocrResults } = allDocumentIds.length
+    ? await supabase.from('document_ocr_results').select('*').in('document_id', allDocumentIds)
+    : { data: [] };
   const ocrByDocumentId = Object.fromEntries((ocrResults || []).map((row) => [row.document_id, row]));
-  const documents = dedupeDocumentsByType(docs || []).map((doc) => ({
+
+  const mapDocs = (documents = [], ownerLabel) => dedupeDocumentsByType(documents).map((doc) => ({
     ...doc,
+    ownerLabel,
     ocr_result: ocrByDocumentId[doc.id] || null,
   }));
 
-  return { car, owner: owner || null, company: company || null, documents, listings: listings || [] };
+  const data = (companies || []).map((company) => {
+    const manager = managerById[company.manager_id] || null;
+    const companyDocuments = filterVisibleDocuments(mapDocs(companyDocsByCompanyId[company.id] || [], 'Agence'));
+    const managerDocuments = filterVisibleDocuments(mapDocs(managerDocsByManagerId[company.manager_id] || [], 'Gérant'));
+    const summary = buildDocumentSummary([...companyDocuments, ...managerDocuments]);
+
+    return {
+      agency: {
+        id: company.id,
+        managerId: company.manager_id,
+        companyName: company.company_name || 'Agence',
+        companyEmail: company.company_email || '',
+        companyPhone: company.company_phone || '',
+        registrationNumber: company.registration_number || '',
+        city: company.city || '',
+        country: company.country || '',
+        address: company.address || '',
+        managerName: manager ? `${manager.first_name || ''} ${manager.last_name || ''}`.trim() || manager.email || 'Gérant' : 'Gérant',
+        managerEmail: manager?.email || '',
+        managerPhone: manager?.phone || '',
+        verificationStatus: summary.verificationStatus,
+        documentCount: summary.visibleDocumentCount,
+      },
+      companyDocuments,
+      managerDocuments,
+      stats: {
+        approved: summary.verifiedDocumentCount,
+        pending: summary.pendingDocumentCount,
+        rejected: 0,
+      },
+    };
+  });
+
+  return { data, count: count || 0 };
 };
 
 export const updateCarModeration = async (carId, payload) => {

@@ -43,6 +43,10 @@ export const adminApi = {
     const token = await tokenOrThrow();
     return fetchJson(`/api/admin/cars/${carId}`, { headers: authHeaders(token) });
   },
+  agencyDocuments: async (params) => {
+    const token = await tokenOrThrow();
+    return fetchJson(`/api/admin/agency-documents${q(params)}`, { headers: authHeaders(token) });
+  },
   updateDocument: async (documentId, payload) => {
     const token = await tokenOrThrow();
     return fetchJson(`/api/documents/${documentId}`, {

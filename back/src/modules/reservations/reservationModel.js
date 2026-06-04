@@ -1,4 +1,5 @@
 import { supabase } from '../../config/supabase.js';
+import { hasApprovedDocument } from '../documents/documentModel.js';
 
 const RESERVATIONS_TABLE = 'reservations';
 const LISTINGS_TABLE = 'listings';
@@ -247,6 +248,15 @@ const assertTransitionAllowed = (fromStatus, toStatus, reservationRow) => {
 };
 
 export const createReservation = async (payload, renterId) => {
+    const clientHasApprovedLicense = await hasApprovedDocument({
+        userId: renterId,
+        documentType: 'driver_license',
+    });
+
+    if (!clientHasApprovedLicense) {
+        throw new Error('CLIENT_VERIFICATION_REQUIRED');
+    }
+
     // Check for date conflicts
     const conflict = await checkDateConflict(
         payload.listingId,

@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
+import { getUserDocuments } from '../../services/owner';
 import {
   parseLocalDate,
   formatLocalYmd,
@@ -48,12 +49,88 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   const [estimatedPrice, setEstimatedPrice] = useState(0);
   const [pickupMethod, setPickupMethod] = useState('owner_place');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [verificationState, setVerificationState] = useState({
+    loading: true,
+    verified: false,
+    status: 'loading',
+    document: null,
+  });
   const selectedCity = selectedCityFromParams || initialListing?.city || '';
+
+  const pickLatestDocument = (documents = []) =>
+    [...documents].sort((a, b) => {
+      const aTime = new Date(a?.updatedAt || a?.createdAt || a?.updated_at || a?.created_at || 0).getTime();
+      const bTime = new Date(b?.updatedAt || b?.createdAt || b?.updated_at || b?.created_at || 0).getTime();
+      return bTime - aTime;
+    })[0] || null;
+
+  const loadClientVerification = async () => {
+    try {
+      const token = await storage.getItemAsync('userToken');
+      if (!token) {
+        setVerificationState({ loading: false, verified: false, status: 'error', document: null });
+        return;
+      }
+
+      let userId = '';
+      let role = '';
+
+      const cachedProfile = await storage.getItemAsync('userProfile');
+      if (cachedProfile) {
+        try {
+          const parsed = JSON.parse(cachedProfile);
+          userId = parsed?.id || '';
+          role = String(parsed?.role || '').toLowerCase();
+        } catch {
+          // ignore cached parsing errors
+        }
+      }
+
+      if (!userId) {
+        const meResponse = await fetch(API_ENDPOINTS.AUTH.ME, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (meResponse.ok) {
+          const meData = await meResponse.json().catch(() => ({}));
+          userId = meData?.user?.id || '';
+          role = String(meData?.user?.role || '').toLowerCase();
+        }
+      }
+
+      if (!userId || role !== 'client') {
+        setVerificationState({ loading: false, verified: true, status: 'not_required', document: null });
+        return;
+      }
+
+      const docs = await getUserDocuments({
+        token,
+        userId,
+        documentType: 'driver_license',
+      });
+      const latest = pickLatestDocument((Array.isArray(docs) ? docs : []).filter((doc) => doc.documentType === 'driver_license'));
+      const verified = String(latest?.status || '').toLowerCase() === 'approved';
+      setVerificationState({
+        loading: false,
+        verified,
+        status: verified ? 'verified' : 'unverified',
+        document: latest || null,
+      });
+    } catch {
+      setVerificationState({ loading: false, verified: false, status: 'error', document: null });
+    }
+  };
 
   // Fetch full listing details and reserved dates
   useEffect(() => {
     fetchListingDetails();
   }, [initialListing.id, reservationFromParams?.id]);
+
+  useEffect(() => {
+    loadClientVerification();
+  }, [initialListing.id]);
 
   // When editing an existing reservation, preload the current dates as the initial draft selection.
   useEffect(() => {
@@ -282,6 +359,28 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   };
 
   const handlePrimaryAction = async () => {
+    if (verificationState.status === 'unverified') {
+      Alert.alert(
+        t('screens.reservations.reservationdatepickerscreen.verificationRequiredTitle'),
+        t('screens.reservations.reservationdatepickerscreen.verificationRequiredMessage'),
+        [
+          { text: t('screens.reservations.reservationdatepickerscreen.annuler'), style: 'cancel' },
+          {
+            text: t('screens.reservations.reservationdatepickerscreen.goToProfile'),
+            onPress: () => {
+              const parent = navigation.getParent?.();
+              if (parent?.navigate) {
+                parent.navigate('ProfileTab', { screen: 'Profile' });
+                return;
+              }
+              navigation.navigate('Profile');
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     if (!startDate || !endDate) {
       Alert.alert(t('screens.reservations.reservationdatepickerscreen.erreur'), t('screens.reservations.reservationdatepickerscreen.veuillezSelectionnerUnePlageDeDates'));
       return;
@@ -421,6 +520,20 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {verificationState.status === 'unverified' ? (
+          <View style={styles.verificationBanner}>
+            <Ionicons name="shield-outline" size={18} color="#ffb347" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.verificationBannerTitle}>
+                {t('screens.reservations.reservationdatepickerscreen.verificationRequiredTitle')}
+              </Text>
+              <Text style={styles.verificationBannerText}>
+                {t('screens.reservations.reservationdatepickerscreen.verificationRequiredMessage')}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {/* Car Info Preview */}
         <View style={styles.carPreview}>
           <View style={styles.carImage}>
@@ -588,12 +701,12 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handlePrimaryAction}
-          disabled={!startDate || !endDate || loading}
+          disabled={!startDate || !endDate || loading || verificationState.status === 'unverified'}
           style={styles.reserveButtonWrapper}
         >
           <LinearGradient
             colors={
-              startDate && endDate
+              startDate && endDate && verificationState.status !== 'unverified'
                 ? ['#4C6FFF', COLORS.primary]
                 : ['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.08)']
             }
@@ -657,6 +770,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 140,
+  },
+  verificationBanner: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,179,71,0.35)',
+    backgroundColor: 'rgba(255,179,71,0.12)',
+    padding: 14,
+    marginBottom: 14,
+  },
+  verificationBannerTitle: {
+    color: '#ffd188',
+    fontWeight: '800',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  verificationBannerText: {
+    color: '#ffe9be',
+    lineHeight: 18,
+    fontSize: 12,
   },
   carPreview: {
     flexDirection: 'row',

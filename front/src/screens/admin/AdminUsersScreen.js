@@ -8,17 +8,23 @@ import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI'
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
 
-const FILTERS = [
-  { key: 'all', label: 'Tous', roles: [] },
-  { key: 'owner', label: 'Propriétaires', roles: ['owner'] },
-  { key: 'company', label: 'Entreprises', roles: ['companyManager'] },
-  { key: 'client', label: 'Particuliers', roles: ['client'] },
+const ROLE_TABS = [
+  { key: 'owners', roles: ['owner'] },
+  { key: 'company', roles: ['companyManager'] },
+  { key: 'users', roles: ['client'] },
+];
+
+const DOCUMENT_FILTERS = [
+  { key: 'all', statuses: [] },
+  { key: 'pending', statuses: ['PENDING'] },
+  { key: 'verified', statuses: ['VERIFIED'] },
 ];
 
 export default function AdminUsersScreen({ navigation, route }) {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const [active, setActive] = useState('all');
+  const [activeRole, setActiveRole] = useState('owners');
+  const [activeDocumentStatus, setActiveDocumentStatus] = useState('all');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -72,17 +78,36 @@ export default function AdminUsersScreen({ navigation, route }) {
     });
   };
 
-  const formatDocType = (type) => {
+  const formatDocType = (type, translator) => {
     switch (String(type || '').toLowerCase()) {
       case 'identity_card':
-        return "Carte d'identité";
+        return translator('screens.admin.adminusersscreen.identityCard');
       case 'passport':
-        return 'Passeport';
+        return translator('screens.admin.adminusersscreen.passport');
       case 'driver_license':
-        return 'Permis de conduire';
+        return translator('screens.admin.adminusersscreen.driverLicense');
       default:
         return type || 'Document';
     }
+  };
+
+  const formatRoleLabel = (role) => {
+    switch (String(role || '').toLowerCase()) {
+      case 'owner':
+        return t('screens.admin.adminusersscreen.roles.owner');
+      case 'companymanager':
+        return t('screens.admin.adminusersscreen.roles.company');
+      case 'client':
+        return t('screens.admin.adminusersscreen.roles.client');
+      default:
+        return String(role || t('screens.admin.adminusersscreen.roles.unknown'));
+    }
+  };
+
+  const formatDocumentStatusLabel = (status) => {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'VERIFIED') return t('screens.admin.adminusersscreen.documentStatuses.verified');
+    return t('screens.admin.adminusersscreen.documentStatuses.pending');
   };
 
   const reviewDocument = async (documentId, status) => {
@@ -107,17 +132,21 @@ export default function AdminUsersScreen({ navigation, route }) {
   };
 
   const list = useMemo(() => {
-    const selected = FILTERS.find((f) => f.key === active);
     let items = [...rows];
-    if (selected?.roles?.length) {
-      items = items.filter((u) => selected.roles.includes(String(u.role || '').toLowerCase()));
+    const selectedRole = ROLE_TABS.find((f) => f.key === activeRole);
+    const selectedDocumentStatus = DOCUMENT_FILTERS.find((f) => f.key === activeDocumentStatus);
+    if (selectedRole?.roles?.length) {
+      items = items.filter((u) => selectedRole.roles.includes(String(u.role || '').toLowerCase()));
+    }
+    if (selectedDocumentStatus?.statuses?.length) {
+      items = items.filter((u) => selectedDocumentStatus.statuses.includes(String(u.documentStatus || 'PENDING').toUpperCase()));
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       items = items.filter((u) => (`${u.first_name || ''} ${u.last_name || ''}`.toLowerCase().includes(q) || String(u.email || '').toLowerCase().includes(q)));
     }
     return items;
-  }, [rows, search, active]);
+  }, [rows, search, activeRole, activeDocumentStatus]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -125,11 +154,22 @@ export default function AdminUsersScreen({ navigation, route }) {
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
           <ScreenHeader title={t('screens.admin.adminusersscreen.comptesUtilisateurs')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
+          <View style={styles.sectionToggleRow}>
+            {ROLE_TABS.map((tab) => (
+              <TouchableOpacity key={tab.key} style={[styles.sectionToggle, activeRole === tab.key && styles.sectionToggleActive]} onPress={() => setActiveRole(tab.key)}>
+                <Text style={[styles.sectionToggleText, activeRole === tab.key && styles.sectionToggleTextActive]}>
+                  {t(`screens.admin.adminusersscreen.roles.${tab.key}`)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <View style={styles.searchWrap}>
             <Ionicons name="search-outline" size={16} color="#8a91bf" />
             <TextInput value={search} onChangeText={setSearch} placeholder={t('screens.admin.adminusersscreen.rechercher')} placeholderTextColor="#7078ab" style={styles.searchInput} />
           </View>
 
+          <Text style={styles.sectionLabel}>{t('screens.admin.adminusersscreen.sections.documents')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -137,9 +177,9 @@ export default function AdminUsersScreen({ navigation, route }) {
             style={styles.filtersRow}
             contentContainerStyle={styles.filtersRowContent}
           >
-            {FILTERS.map((f) => (
-              <TouchableOpacity key={f.key} style={[styles.filterChip, active === f.key && styles.filterChipActive]} onPress={() => setActive(f.key)}>
-                <Text style={[styles.filterText, active === f.key && styles.filterTextActive]}>{t(`screens.admin.adminusersscreen.filters.${f.key}`, { defaultValue: f.label })}</Text>
+            {DOCUMENT_FILTERS.map((f) => (
+              <TouchableOpacity key={f.key} style={[styles.filterChip, activeDocumentStatus === f.key && styles.filterChipActive]} onPress={() => setActiveDocumentStatus(f.key)}>
+                <Text style={[styles.filterText, activeDocumentStatus === f.key && styles.filterTextActive]}>{t(`screens.admin.adminusersscreen.documentStatuses.${f.key}`)}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -150,6 +190,7 @@ export default function AdminUsersScreen({ navigation, route }) {
           {list.map((u) => {
             const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
             const initials = (u.first_name?.[0] || u.email?.[0] || 'U').toUpperCase() + (u.last_name?.[0] || '').toUpperCase();
+            const documentStatus = String(u.documentStatus || 'PENDING').toUpperCase();
             return (
               <View key={u.id} style={styles.userCard}>
                 <View style={styles.userHeader}>
@@ -158,7 +199,13 @@ export default function AdminUsersScreen({ navigation, route }) {
                     <Text style={styles.userName}>{fullName}</Text>
                     <Text style={styles.userEmail}>{u.email}</Text>
                     <View style={styles.userTags}>
-                      <Text style={styles.roleTag}>{u.role || 'utilisateur'}</Text>
+                      <Text style={styles.roleTag}>{formatRoleLabel(u.role)}</Text>
+                      <Text style={[styles.documentTag, documentStatus === 'VERIFIED' ? styles.documentTagVerified : styles.documentTagPending]}>
+                        {formatDocumentStatusLabel(documentStatus)}
+                      </Text>
+                      <Text style={styles.documentCountTag}>
+                        {u.documentCount || 0} {t('screens.admin.adminusersscreen.documents')}
+                      </Text>
                       <Text style={styles.dateTag}>{u.created_at ? new Date(u.created_at).toLocaleDateString(getCurrentLocale()) : ''}</Text>
                     </View>
                     <TouchableOpacity style={styles.docsBtn} onPress={() => openUserDocuments(u)}>
@@ -166,7 +213,7 @@ export default function AdminUsersScreen({ navigation, route }) {
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity style={[styles.statusBadge, { backgroundColor: u.is_active ? 'rgba(0,208,132,0.2)' : 'rgba(255,176,32,0.2)' }]} onPress={async () => { await adminApi.updateUser(u.id, { isActive: !u.is_active }); load(); }}>
-                    <Text style={[styles.statusText, { color: u.is_active ? '#00d084' : '#ffb020' }]}>{u.is_active ? t('screens.admin.adminusersscreen.verifie') : t('screens.admin.adminusersscreen.enAttente')}</Text>
+                    <Text style={[styles.statusText, { color: u.is_active ? '#00d084' : '#ffb020' }]}>{u.is_active ? t('screens.admin.adminusersscreen.active') : t('screens.admin.adminusersscreen.inactive')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -182,7 +229,9 @@ export default function AdminUsersScreen({ navigation, route }) {
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>{selectedUser ? `${selectedUser.first_name || ''} ${selectedUser.last_name || ''}`.trim() || selectedUser.email : 'Documents'}</Text>
-                <Text style={styles.modalSub}>{selectedUser?.role || ''}</Text>
+                <Text style={styles.modalSub}>
+                  {selectedUser ? `${formatRoleLabel(selectedUser.role)} · ${selectedUser.documentStatus ? formatDocumentStatusLabel(selectedUser.documentStatus) : t('screens.admin.adminusersscreen.documentStatuses.pending')}` : ''}
+                </Text>
               </View>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <Ionicons name="close-outline" size={24} color="#dbe0ff" />
@@ -200,14 +249,14 @@ export default function AdminUsersScreen({ navigation, route }) {
                 <View key={doc.id} style={styles.docRow}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.docTypeRow}>
-                      <Text style={styles.docType}>{formatDocType(doc.type)}</Text>
+                      <Text style={styles.docType}>{formatDocType(doc.type, t)}</Text>
                       {String(doc.type || '').toLowerCase() === 'identity_card' ? (
-                        <Text style={styles.identityBadge}>Identité</Text>
+                        <Text style={styles.identityBadge}>{t('screens.admin.adminusersscreen.identityDocument')}</Text>
                       ) : null}
                     </View>
                     <Text style={styles.docDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString(getCurrentLocale()) : ''}</Text>
                     <Text style={[styles.docStatus, doc.status === 'approved' ? styles.docStatusOk : doc.status === 'rejected' ? styles.docStatusBad : styles.docStatusWait]}>
-                      {doc.status}
+                      {doc.status === 'approved' ? t('screens.admin.adminusersscreen.documentReviewStatus.approved') : doc.status === 'rejected' ? t('screens.admin.adminusersscreen.documentReviewStatus.rejected') : t('screens.admin.adminusersscreen.documentReviewStatus.pending')}
                     </Text>
                   </View>
                   <View style={styles.docActions}>
@@ -249,8 +298,14 @@ const styles = StyleSheet.create({
   title: { color: '#f2f4ff', fontSize: 36, fontWeight: '800', marginTop: 10, marginBottom: 14 },
   searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0f1433', borderWidth: 1, borderColor: '#2a2f57', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 7, minHeight: 42 },
   searchInput: { flex: 1, color: '#dce1ff' },
-  filtersRow: { marginTop: 10, marginBottom: 14, scrollbarWidth: 'thin' },
+  sectionToggleRow: { flexDirection: 'row', backgroundColor: '#11163a', borderRadius: 16, padding: 4, borderWidth: 1, borderColor: '#2b315c', marginTop: 10, marginBottom: 10 },
+  sectionToggle: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center' },
+  sectionToggleActive: { backgroundColor: '#8f7dff' },
+  sectionToggleText: { color: '#98a0cd', fontWeight: '800', fontSize: 13 },
+  sectionToggleTextActive: { color: '#fff' },
+  filtersRow: { marginTop: 4, marginBottom: 12, scrollbarWidth: 'thin' },
   filtersRowContent: { paddingVertical: 6, paddingRight: 8 },
+  sectionLabel: { color: '#aab1dd', marginTop: 2, marginBottom: 2, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
   filterChip: { backgroundColor: '#171d44', borderRadius: 99, borderWidth: 1, borderColor: '#2d3360', paddingHorizontal: 14, height: 34, justifyContent: 'center', marginRight: 8 },
   filterChipActive: { backgroundColor: '#8f7dff', borderColor: '#8f7dff' },
   filterText: { color: '#9299c8', fontWeight: '700' },
@@ -267,6 +322,10 @@ const styles = StyleSheet.create({
   docsBtn: { marginTop: 8, alignSelf: 'flex-start', borderRadius: 8, borderWidth: 1, borderColor: '#4a5392', paddingHorizontal: 10, paddingVertical: 5 },
   docsBtnText: { color: '#d4daff', fontSize: 11, fontWeight: '700' },
   roleTag: { color: '#00d084', backgroundColor: 'rgba(0,208,132,0.18)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, fontWeight: '700', fontSize: 11, textTransform: 'capitalize' },
+  documentTag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, fontWeight: '700', fontSize: 11 },
+  documentTagVerified: { color: '#00d084', backgroundColor: 'rgba(0,208,132,0.18)' },
+  documentTagPending: { color: '#ffb020', backgroundColor: 'rgba(255,176,32,0.18)' },
+  documentCountTag: { color: '#92a0d7', backgroundColor: 'rgba(146,160,215,0.12)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, fontWeight: '700', fontSize: 11 },
   dateTag: { color: '#7e85b2', fontSize: 11 },
   statusBadge: { borderRadius: 9, paddingHorizontal: 8, paddingVertical: 5 },
   statusText: { fontWeight: '700', fontSize: 11 },
