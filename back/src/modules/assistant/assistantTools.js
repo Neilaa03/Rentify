@@ -122,16 +122,17 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'calculateReservationPrice',
-      description: 'Calculate a read-only reservation price estimate. Does not create a reservation.',
+      description: 'Calculate a read-only reservation price estimate. Does not create a reservation. If the user asks for a number of days, pass durationDays and let the backend compute the inclusive end date.',
       parameters: {
         type: 'object',
         properties: {
           listingId: { type: 'string' },
           startDate: { type: 'string', description: 'YYYY-MM-DD' },
-          endDate: { type: 'string', description: 'YYYY-MM-DD' },
+          endDate: { type: 'string', description: 'YYYY-MM-DD. Optional when durationDays is provided.' },
+          durationDays: { type: 'integer', description: 'Exact requested rental duration in days, for example 10 for "10 days".' },
           pickupMethod: { type: 'string', enum: ['owner_place', 'renter_delivery'] },
         },
-        required: ['listingId', 'startDate', 'endDate'],
+        required: ['listingId', 'startDate'],
         additionalProperties: false,
       },
     },

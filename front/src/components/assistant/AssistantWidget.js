@@ -103,6 +103,30 @@ const formatValue = (value) => {
   return String(value);
 };
 
+const formatDate = (value) => {
+  if (!value) return 'Not set';
+  const raw = String(value).slice(0, 10);
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return String(value);
+  return `${match[3]}-${match[2]}-${match[1]}`;
+};
+
+const formatDateRange = (start, end) => `${formatDate(start)} → ${formatDate(end)}`;
+
+const InfoRow = ({ label, value }) => (
+  <View style={styles.infoRow}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue}>{formatValue(value)}</Text>
+  </View>
+);
+
+const StatChip = ({ value, label }) => (
+  <View style={styles.statPill}>
+    <Text style={styles.statPillNumber}>{value || 0}</Text>
+    <Text style={styles.statPillLabel}>{label}</Text>
+  </View>
+);
+
 const ToolResultCards = ({ results = [] }) => {
   if (!Array.isArray(results) || results.length === 0) return null;
 
@@ -133,9 +157,9 @@ const ToolResultCards = ({ results = [] }) => {
                 </View>
               </View>
               <View style={styles.statRow}>
-                <Text style={styles.statPill}>{profile.reservations || 0} reservations</Text>
-                <Text style={styles.statPill}>{profile.favorites || 0} favorites</Text>
-                <Text style={styles.statPill}>{profile.reviews || 0} reviews</Text>
+                <StatChip value={profile.reservations} label="Reservations" />
+                <StatChip value={profile.favorites} label="Favorites" />
+                <StatChip value={profile.reviews} label="Reviews" />
               </View>
             </View>
           );
@@ -145,14 +169,14 @@ const ToolResultCards = ({ results = [] }) => {
           return (
             <View key={`${result.type}-${index}`} style={styles.resultCard}>
               <Text style={styles.resultTitle}>{result.title}</Text>
-              {(result.items || []).length ? result.items.map((item) => (
+              {(result.items || []).length ? result.items.map((item, itemIndex) => (
                 <View key={item.id} style={styles.listItem}>
-                  <Text style={styles.listTitle}>{formatValue(item.title)}</Text>
-                  <Text style={styles.listMeta}>{[item.city, `${item.startDate} to ${item.endDate}`].filter(Boolean).join(' • ')}</Text>
-                  <View style={styles.statRow}>
-                    <Text style={styles.statusPill}>{formatValue(item.status)}</Text>
-                    <Text style={styles.pricePill}>{formatValue(item.totalPrice)}</Text>
-                  </View>
+                  <Text style={styles.listTitle}>Reservation {itemIndex + 1}</Text>
+                  <InfoRow label="Vehicle" value={item.title} />
+                  <InfoRow label="Location" value={item.city} />
+                  <InfoRow label="Period" value={formatDateRange(item.startDate, item.endDate)} />
+                  <InfoRow label="Status" value={item.status} />
+                  <InfoRow label="Total price" value={item.totalPrice} />
                 </View>
               )) : <Text style={styles.emptyResult}>No reservations found.</Text>}
             </View>
@@ -163,11 +187,15 @@ const ToolResultCards = ({ results = [] }) => {
           return (
             <View key={`${result.type}-${index}`} style={styles.resultCard}>
               <Text style={styles.resultTitle}>{result.title}</Text>
-              {(result.items || []).length ? result.items.map((item) => (
+              {(result.items || []).length ? result.items.map((item, itemIndex) => (
                 <View key={item.id} style={styles.listItem}>
-                  <Text style={styles.listTitle}>{item.title || `${item.car?.brand || ''} ${item.car?.model || ''}`.trim()}</Text>
-                  <Text style={styles.listMeta}>{[item.city, item.car?.transmission, item.car?.fuelType].filter(Boolean).join(' • ')}</Text>
-                  <Text style={styles.priceLine}>{formatValue(item.pricePerDay)} / day</Text>
+                  <Text style={styles.listTitle}>Vehicle {itemIndex + 1}</Text>
+                  <InfoRow label="Car" value={item.carName || `${item.car?.brand || ''} ${item.car?.model || ''}`.trim()} />
+                  <InfoRow label="Listing" value={item.listingTitle} />
+                  <InfoRow label="Location" value={item.city} />
+                  <InfoRow label="Transmission" value={item.car?.transmission} />
+                  <InfoRow label="Fuel" value={item.car?.fuelType} />
+                  <InfoRow label="Price/day" value={item.pricePerDay} />
                 </View>
               )) : <Text style={styles.emptyResult}>No vehicles found.</Text>}
             </View>
@@ -180,7 +208,9 @@ const ToolResultCards = ({ results = [] }) => {
             <View key={`${result.type}-${index}`} style={styles.resultCard}>
               <Text style={styles.resultTitle}>{result.title}</Text>
               <Text style={styles.bigPrice}>{formatValue(estimate.totalPrice)} {estimate.currency || 'EUR'}</Text>
-              <Text style={styles.listMeta}>{estimate.totalDays || 0} day(s), estimate only</Text>
+              <InfoRow label="Period" value={formatDateRange(estimate.startDate, estimate.endDate)} />
+              <InfoRow label="Duration" value={`${estimate.totalDays || 0} day(s)`} />
+              <InfoRow label="Note" value="Estimate only" />
             </View>
           );
         }
@@ -190,19 +220,15 @@ const ToolResultCards = ({ results = [] }) => {
           return (
             <View key={`${result.type}-${index}`} style={styles.resultCard}>
               <Text style={styles.resultTitle}>{result.title}</Text>
-              {(reviews.items || []).length ? reviews.items.map((item) => (
+              {(reviews.items || []).length ? reviews.items.map((item, itemIndex) => (
                 <View key={item.id || `${item.createdAt}-${item.rating}`} style={styles.listItem}>
-                  <Text style={styles.listTitle}>
-                    {'★'.repeat(Number(item.rating) || 0)}{Number(item.rating) ? ` ${item.rating}/5` : 'Review'}
-                  </Text>
+                  <Text style={styles.listTitle}>Review {itemIndex + 1}</Text>
+                  <InfoRow label="Rating" value={Number(item.rating) ? `${'★'.repeat(Number(item.rating))} ${item.rating}/5` : 'Not set'} />
                   {item.comment ? <Text style={styles.reviewComment}>{item.comment}</Text> : null}
-                  <Text style={styles.listMeta}>
-                    {[
-                      item.vehicle ? `${item.vehicle.brand || ''} ${item.vehicle.model || ''}`.trim() : null,
-                      item.listing?.city,
-                      item.reservation ? `${item.reservation.startDate} to ${item.reservation.endDate}` : null,
-                    ].filter(Boolean).join(' • ')}
-                  </Text>
+                  <InfoRow label="Vehicle" value={item.vehicle ? `${item.vehicle.brand || ''} ${item.vehicle.model || ''}`.trim() : item.listing?.title} />
+                  <InfoRow label="Location" value={item.listing?.city} />
+                  <InfoRow label="Reservation" value={item.reservation ? formatDateRange(item.reservation.startDate, item.reservation.endDate) : null} />
+                  <InfoRow label="Review date" value={formatDate(item.createdAt)} />
                 </View>
               )) : <Text style={styles.emptyResult}>No reviews found.</Text>}
             </View>
@@ -279,6 +305,7 @@ const AssistantWidget = () => {
       setConversationId(response.conversationId || conversationId);
       setMessages((prev) => [...prev, { ...response.message, toolResults: response.toolResults || [] }]);
       scrollToBottom();
+      setTimeout(scrollToBottom, 80);
     } catch (err) {
       setError(err.message || 'Assistant unavailable.');
     } finally {
@@ -337,7 +364,11 @@ const AssistantWidget = () => {
                       key={`${message.createdAt || index}-${index}`}
                       style={[styles.messageRow, isUser ? styles.userRow : styles.assistantRow]}
                     >
-                      <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+                      <View style={[
+                        styles.messageBubble,
+                        isUser ? styles.userBubble : styles.assistantBubble,
+                        hasToolCards && styles.cardMessageBubble,
+                      ]}>
                         {renderMessageContent(
                           displayText,
                           [styles.messageText, isUser ? styles.userText : styles.assistantText],
@@ -533,6 +564,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
+  cardMessageBubble: {
+    width: '100%',
+    maxWidth: '100%',
+    paddingHorizontal: 10,
+  },
   userBubble: {
     backgroundColor: '#6C4DFF',
     borderBottomRightRadius: 5,
@@ -601,17 +637,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   resultCard: {
-    borderRadius: 13,
+    borderRadius: 14,
     padding: 10,
-    backgroundColor: 'rgba(6, 8, 24, 0.42)',
-    borderWidth: 1,
-    borderColor: 'rgba(145, 152, 229, 0.16)',
+    backgroundColor: 'rgba(6, 8, 24, 0.28)',
+    overflow: 'hidden',
   },
   resultTitle: {
     color: '#F6F8FF',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   resultGrid: {
     flexDirection: 'row',
@@ -619,7 +654,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   resultCell: {
-    width: '47%',
+    width: '100%',
     minHeight: 48,
     borderRadius: 10,
     paddingHorizontal: 8,
@@ -639,31 +674,63 @@ const styles = StyleSheet.create({
   },
   statRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
+    gap: 7,
     marginTop: 8,
   },
   statPill: {
-    borderRadius: 999,
-    overflow: 'hidden',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    color: '#d8dcff',
-    fontSize: 10,
-    fontWeight: '800',
+    flex: 1,
+    minHeight: 54,
+    borderRadius: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(108, 77, 255, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.14)',
+  },
+  statPillNumber: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  statPillLabel: {
+    color: '#d8dcff',
+    fontSize: 9,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   listItem: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(145, 152, 229, 0.12)',
-    paddingTop: 8,
-    marginTop: 8,
+    borderRadius: 13,
+    padding: 11,
+    marginBottom: 9,
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.14)',
   },
   listTitle: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  infoRow: {
+    paddingVertical: 7,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(145, 152, 229, 0.08)',
+  },
+  infoLabel: {
+    color: '#9EA6D6',
+    fontSize: 10.5,
     fontWeight: '900',
     marginBottom: 3,
+  },
+  infoValue: {
+    color: '#F6F8FF',
+    fontSize: 12.5,
+    fontWeight: '700',
+    lineHeight: 18,
   },
   listMeta: {
     color: '#B6BCE5',

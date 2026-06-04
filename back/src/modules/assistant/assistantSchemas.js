@@ -46,8 +46,12 @@ export const listingAvailabilitySchema = z.object({
 export const reservationPriceSchema = z.object({
   listingId: z.string().uuid(),
   startDate: z.string().date(),
-  endDate: z.string().date(),
+  endDate: z.string().date().optional(),
+  durationDays: z.coerce.number().int().positive().max(365).optional(),
   pickupMethod: z.enum(['owner_place', 'renter_delivery']).optional().default('owner_place'),
+}).refine((value) => value.endDate || value.durationDays, {
+  message: 'Either endDate or durationDays is required',
+  path: ['endDate'],
 });
 
 export const paymentStatusSchema = z.object({

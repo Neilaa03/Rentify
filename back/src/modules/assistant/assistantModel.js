@@ -131,15 +131,26 @@ export const getListingAvailabilityReadOnly = async (listingId) => {
   };
 };
 
-const calculateRentalDays = (startDate, endDate) => {
-  const start = new Date(`${startDate}T00:00:00.000Z`);
-  const end = new Date(`${endDate}T00:00:00.000Z`);
-  const diff = end.getTime() - start.getTime();
-  if (!Number.isFinite(diff) || diff < 0) throw new Error('endDate must be after startDate');
-  return Math.floor(diff / (24 * 60 * 60 * 1000)) + 1;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const parseYmdToUtcMs = (date) => {
+  const ms = Date.parse(`${date}T00:00:00.000Z`);
+  if (!Number.isFinite(ms)) throw new Error('Invalid reservation date');
+  return ms;
 };
 
-export const calculateReservationPriceReadOnly = async ({ listingId, startDate, endDate, pickupMethod }) => {
+const addDaysYmd = (date, daysToAdd) => {
+  const next = new Date(parseYmdToUtcMs(date) + (daysToAdd * MS_PER_DAY));
+  return next.toISOString().split('T')[0];
+};
+
+const calculateRentalDays = (startDate, endDate) => {
+  const diff = parseYmdToUtcMs(endDate) - parseYmdToUtcMs(startDate);
+  if (!Number.isFinite(diff) || diff < 0) throw new Error('endDate must be on or after startDate');
+  return Math.floor(diff / MS_PER_DAY) + 1;
+};
+
+export const calculateReservationPriceReadOnly = async ({ listingId, startDate, endDate, durationDays, pickupMethod }) => {
   const { data: listing, error } = await supabase
     .from('listings')
     .select('id, title, price_per_day, price_per_week, price_per_month, delivery_fee, pickup_address')
@@ -149,7 +160,9 @@ export const calculateReservationPriceReadOnly = async ({ listingId, startDate, 
   if (error || !listing) throw new Error('Listing not found');
   if (!listing.price_per_day) throw new Error('Listing daily price is missing');
 
-  let remainingDays = calculateRentalDays(startDate, endDate);
+  const totalDays = durationDays ? Number(durationDays) : calculateRentalDays(startDate, endDate);
+  const resolvedEndDate = durationDays ? addDaysYmd(startDate, totalDays - 1) : endDate;
+  let remainingDays = totalDays;
   let totalPrice = 0;
   const breakdown = [];
 
@@ -185,9 +198,9 @@ export const calculateReservationPriceReadOnly = async ({ listingId, startDate, 
     listingId,
     title: listing.title,
     startDate,
-    endDate,
+    endDate: resolvedEndDate,
     pickupMethod,
-    totalDays: calculateRentalDays(startDate, endDate),
+    totalDays,
     totalPrice,
     currency: 'EUR',
     breakdown,

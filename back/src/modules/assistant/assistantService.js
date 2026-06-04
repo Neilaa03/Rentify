@@ -18,6 +18,8 @@ Only use data returned by tools for account-specific claims.
 Keep answers practical, concise, and friendly.
 When showing profile data, never mention ids, image URLs, raw timestamps, or internal fields.
 When showing reservations or vehicles, summarize the most useful fields in short grouped bullets.
+If a user says "it" or asks for a price without a clear vehicle/listing id from context, ask which numbered vehicle they mean instead of searching and showing unrelated vehicles.
+For rental price estimates, rental dates are inclusive. If a user asks for N days starting on a date, call calculateReservationPrice with durationDays=N and do not invent an endDate.
 `.trim();
 
 const normalizeContext = (context = []) => (
@@ -58,23 +60,30 @@ const buildInitialMessages = ({ context, message, user }) => [
   { role: 'user', content: message },
 ];
 
-const compactListing = (listing) => ({
-  id: listing.id,
-  title: listing.title,
-  city: listing.city,
-  country: listing.country,
-  pricePerDay: listing.pricePerDay,
-  car: listing.car ? {
-    id: listing.car.id,
-    brand: listing.car.brand,
-    model: listing.car.model,
-    year: listing.car.year,
-    transmission: listing.car.transmission,
-    fuelType: listing.car.fuelType,
-    seats: listing.car.seats,
-    image: listing.car.images?.[0]?.imageUrl || null,
-  } : null,
-});
+const compactListing = (listing) => {
+  const carName = listing.car
+    ? `${listing.car.brand || ''} ${listing.car.model || ''}`.trim()
+    : '';
+
+  return {
+    id: listing.id,
+    listingTitle: listing.title,
+    carName: carName || listing.title || 'Vehicle',
+    city: listing.city,
+    country: listing.country,
+    pricePerDay: listing.pricePerDay,
+    car: listing.car ? {
+      id: listing.car.id,
+      brand: listing.car.brand,
+      model: listing.car.model,
+      year: listing.car.year,
+      transmission: listing.car.transmission,
+      fuelType: listing.car.fuelType,
+      seats: listing.car.seats,
+      image: listing.car.images?.[0]?.imageUrl || null,
+    } : null,
+  };
+};
 
 const createToolResultPreview = ({ name, data }) => {
   if (name === 'getReservations') {
@@ -172,6 +181,17 @@ const createToolResultPreview = ({ name, data }) => {
     title: name,
     data,
   };
+};
+
+const selectDisplayToolResults = (results = []) => {
+  const priorityTypes = ['price', 'payment', 'profile', 'myReviews', 'reservations', 'availability', 'reviews'];
+  const firstPriority = priorityTypes.find((type) => results.some((result) => result.type === type));
+
+  if (firstPriority) {
+    return results.filter((result) => result.type === firstPriority);
+  }
+
+  return results;
 };
 
 const executeAuditedTool = async ({ name, rawArguments, user, conversationId }) => {
@@ -377,7 +397,7 @@ const runMockAssistantChat = async ({ user, message, conversationId }) => {
       createdAt: new Date().toISOString(),
     },
     toolsUsed: [tool.name],
-    toolResults: [toolResult.preview],
+    toolResults: selectDisplayToolResults([toolResult.preview]),
   };
 };
 
@@ -498,7 +518,7 @@ const runGeminiAssistantChat = async ({ user, message, context, conversationId }
       createdAt: new Date().toISOString(),
     },
     toolsUsed: [...new Set(toolsUsed)],
-    toolResults,
+    toolResults: selectDisplayToolResults(toolResults),
   };
 };
 
@@ -605,6 +625,6 @@ export const runAssistantChat = async ({ user, message, context, conversationId 
       createdAt: new Date().toISOString(),
     },
     toolsUsed: [...new Set(toolsUsed)],
-    toolResults,
+    toolResults: selectDisplayToolResults(toolResults),
   };
 };
