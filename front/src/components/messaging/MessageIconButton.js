@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 import { getCurrentUserProfile } from '../../services/authSession';
 import { getConversations, getOwnerClientsExpanded } from '../../services/messages';
@@ -18,6 +19,7 @@ const sumUnread = (rows) =>
   (Array.isArray(rows) ? rows : []).reduce((acc, row) => acc + (Number(row?.unreadCount) || 0), 0);
 
 const MessageIconButton = ({ navigation, mode = 'conversations', style, iconSize = 22, color = '#fff' }) => {
+  const { colors } = useTheme();
   const [unread, setUnread] = useState(0);
   const [meId, setMeId] = useState(null);
 
@@ -100,7 +102,7 @@ const MessageIconButton = ({ navigation, mode = 'conversations', style, iconSize
       <Ionicons name="chatbubble-ellipses-outline" size={iconSize} color={color} />
       {badge ? (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge}</Text>
+          <Text style={[styles.badgeText, { color: colors.white }]}>{badge}</Text>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -121,9 +123,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#ff3b6b',
     borderWidth: 1,
-    borderColor: 'rgba(15,18,40,0.8)',
+    borderColor: 'rgba(255,255,255,0.8)',
   },
-  badgeText: { color: '#fff', fontWeight: '900', fontSize: 10 },
+  badgeText: { fontWeight: '900', fontSize: 10 },
 });
 
 export default MessageIconButton;

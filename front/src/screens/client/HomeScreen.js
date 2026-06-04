@@ -13,6 +13,7 @@ import storage from '../../utils/storage';
 import { parseLocalDate, formatLocalYmd } from '../../utils/reservationUtils';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
@@ -80,6 +81,7 @@ const sortListingsForDisplay = (items) => [...items].sort((a, b) => {
 
 const HomeScreen = ({ navigation, route }) => {
     const { t } = useTranslation();
+    const { colors } = useTheme();
     const [activeTab, setActiveTab] = useState('home');
     const [searchValue, setSearchValue] = useState('');
     const [activeFilter, setActiveFilter] = useState('all');
@@ -322,9 +324,9 @@ const HomeScreen = ({ navigation, route }) => {
                 style={styles.background}
                 resizeMode="cover"
               >
-                <SafeAreaView style={styles.overlay}>
+                <SafeAreaView style={[styles.overlay, { backgroundColor: colors.overlay }]}>
                     <View style={styles.header}>
-                        <Text style={styles.logo}>{t('screens.client.homescreen.tousLesVehicules')}</Text>
+                        <Text style={[styles.logo, { color: colors.text }]}>{t('screens.client.homescreen.tousLesVehicules')}</Text>
                         <View style={styles.headerRight}>
                             <NotificationIconButton navigation={navigation} style={styles.notificationButton} iconSize={24} />
                             <MessageIconButton navigation={navigation} style={styles.logoutButton} iconSize={24} />
@@ -336,25 +338,29 @@ const HomeScreen = ({ navigation, route }) => {
                         contentContainerStyle={styles.contentContainer}
                         showsVerticalScrollIndicator={false}
                     >
-                        <View style={styles.filterPanel}>
+                        <View style={[styles.filterPanel, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                             <View style={styles.filterRow}>
-                                <View style={styles.filterField}>
-                                    <Ionicons name="location-outline" size={16} color="#9aa0c8" />
+                                <View style={[styles.filterField, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
+                                    <Ionicons name="location-outline" size={16} color={colors.textMuted} />
                                     <TextInput
                                         value={placeValue}
                                         onChangeText={setPlaceValue}
                                         placeholder={t('screens.client.homescreen.lieuVilleOuQuartier')}
-                                        placeholderTextColor="#7c82ab"
-                                        style={styles.filterInput}
+                                        placeholderTextColor={colors.textMuted}
+                                        style={[styles.filterInput, { color: colors.text }]}
                                     />
                                 </View>
                                 <TouchableOpacity
-                                    style={[styles.dateFilterButton, showDatePicker && styles.dateFilterButtonActive]}
+                                    style={[
+                                      styles.dateFilterButton,
+                                      { backgroundColor: colors.surfaceStrong, borderColor: colors.border },
+                                      showDatePicker && { borderColor: colors.primary, backgroundColor: colors.surface }
+                                    ]}
                                     onPress={() => setShowDatePicker((prev) => !prev)}
                                     activeOpacity={0.85}
                                 >
-                                    <Ionicons name="calendar-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.dateFilterButtonText}>
+                                    <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                                    <Text style={[styles.dateFilterButtonText, { color: colors.text }]}>
                                         {startDate
                                             ? endDate
                                                 ? `${formatDateLabel(startDate)} → ${formatDateLabel(endDate)}`
@@ -368,24 +374,24 @@ const HomeScreen = ({ navigation, route }) => {
                                 <View style={styles.activeFiltersRow}>
                                     {placeValue ? (
                                         <TouchableOpacity
-                                            style={styles.activeFilterChip}
+                                    style={[styles.activeFilterChip, { backgroundColor: colors.surface }]}
                                             onPress={() => setPlaceValue('')}
                                             activeOpacity={0.8}
                                         >
-                                            <Text style={styles.activeFilterChipText}>{placeValue}</Text>
-                                            <Ionicons name="close" size={12} color="#fff" />
+                                            <Text style={[styles.activeFilterChipText, { color: colors.text }]}>{placeValue}</Text>
+                                            <Ionicons name="close" size={12} color={colors.text} />
                                         </TouchableOpacity>
                                     ) : null}
                                     {startDate ? (
                                         <TouchableOpacity
-                                            style={styles.activeFilterChip}
+                                        style={[styles.activeFilterChip, { backgroundColor: colors.surface }]}
                                             onPress={clearDateFilters}
                                             activeOpacity={0.8}
                                         >
-                                            <Text style={styles.activeFilterChipText}>
+                                            <Text style={[styles.activeFilterChipText, { color: colors.text }]}>
                                                 {endDate ? `${formatDateLabel(startDate)} → ${formatDateLabel(endDate)}` : formatDateLabel(startDate)}
                                             </Text>
-                                            <Ionicons name="close" size={12} color="#fff" />
+                                            <Ionicons name="close" size={12} color={colors.text} />
                                         </TouchableOpacity>
                                     ) : null}
                                     <TouchableOpacity

@@ -570,7 +570,7 @@
         "drivingLicense": "Driving license",
         "verificationDocumentRequiredOwner": "Required to publish a vehicle or listing.",
         "verificationDocumentRequiredClient": "Required to make bookings.",
-        "verificationBadgeVerifiedSubtitleClient": "Your driving license is validated. You can make bookings.",
+        "verificationBadgeVerifiedSubtitleClient": "Your driving license is validated.",
         "verificationBadgePendingDocument": "{{document}} pending",
         "verificationBadgePendingSubtitleDocument": "Upload your {{document}} to unlock verification.",
         "rejectedBadgeDocument": "{{document}} rejected",

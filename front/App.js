@@ -6,6 +6,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from './src/contexts/AuthContext';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import LandingScreen from './src/screens/client/LandingScreen';
 import HomeScreen from './src/screens/client/HomeScreen';
 import ListingDetailsScreen from './src/screens/client/ListingDetailsScreen';
@@ -46,7 +47,6 @@ import AgencyProfileScreen from './src/screens/agency/AgencyProfileScreen';
 import './src/i18n';
 
 const Stack = createStackNavigator();
-const APP_BACKGROUND = '#0f1228';
 const STRIPE_PUBLISHABLE_KEY = process?.env?.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
 if (Platform.OS !== 'web') {
@@ -76,7 +76,8 @@ const getNativeStripeProvider = () => {
   }
 };
 
-export default function App() {
+function AppShell() {
+  const { navigationTheme, colors } = useTheme();
   const NativeStripeProvider = getNativeStripeProvider();
   const linking = {
     prefixes: [Linking.createURL('/'), 'rentify://'],
@@ -100,11 +101,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NativeStripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
         <AuthProvider>
-          <NavigationContainer linking={linking}>
+          <NavigationContainer linking={linking} theme={navigationTheme}>
             <Stack.Navigator
               screenOptions={{
                 headerShown: false,
-                cardStyle: { backgroundColor: APP_BACKGROUND },
+                cardStyle: { backgroundColor: colors.background },
               }}
             >
               <Stack.Screen name="Landing" component={LandingScreen} />
@@ -149,5 +150,13 @@ export default function App() {
         </AuthProvider>
       </NativeStripeProvider>
     </GestureHandlerRootView>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppShell />
+    </ThemeProvider>
   );
 }

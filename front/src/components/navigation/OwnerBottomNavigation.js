@@ -3,8 +3,10 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';import { useTranslation } from "react-i18next";
+import { useTheme } from '../../contexts/ThemeContext';
 
 const OwnerBottomNavigation = ({ navigation, route, active }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomOffset = 2 + (insets?.bottom || 0);
   const params = route?.params || {};
@@ -55,10 +57,10 @@ const OwnerBottomNavigation = ({ navigation, route, active }) => {const { t } = 
 
 
   return (
-    <View style={[styles.footer, { bottom: bottomOffset }]}>
+    <View style={[styles.footer, { bottom: bottomOffset, backgroundColor: colors.tabBar, borderTopColor: colors.tabBarBorder }]}>
       {tabs.map((tab) => {
         const isActive = active === tab.key;
-        const color = isActive ? '#8f6cff' : '#8a90b8';
+        const color = isActive ? colors.primary : colors.textMuted;
 
         return (
           <TouchableOpacity key={tab.key} style={styles.footerTab} onPress={tab.onPress}>
@@ -79,10 +81,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#151738',
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)'
   },
   footerTab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4 }
 });

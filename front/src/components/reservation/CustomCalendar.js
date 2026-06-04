@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const CustomCalendar = ({
   onDayPress,
@@ -15,6 +16,7 @@ const CustomCalendar = ({
   startFromMonday = true,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const activeLocale = locale || getCurrentLocale();
 
@@ -112,14 +114,14 @@ const CustomCalendar = ({
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handlePreviousMonth} style={styles.navButton}>
+        <TouchableOpacity onPress={handlePreviousMonth} style={[styles.navButton, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
         </TouchableOpacity>
-        <Text style={styles.monthYear}>{monthYearLabel}</Text>
-        <TouchableOpacity onPress={handleNextMonth} style={styles.navButton}>
+        <Text style={[styles.monthYear, { color: colors.text }]}>{monthYearLabel}</Text>
+        <TouchableOpacity onPress={handleNextMonth} style={[styles.navButton, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Ionicons name="chevron-forward" size={22} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
@@ -127,7 +129,7 @@ const CustomCalendar = ({
       {/* Day labels */}
       <View style={styles.weekLabels}>
         {dayLabels.map((label) => (
-          <Text key={label} style={styles.dayLabel}>
+          <Text key={label} style={[styles.dayLabel, { color: colors.textMuted }]}>
             {label}
           </Text>
         ))}
@@ -168,8 +170,9 @@ const CustomCalendar = ({
                   <Text
                     style={[
                       styles.dayText,
-                      disabled && styles.dayDisabledText,
-                      (isSelected || inRange) && styles.daySelectedText,
+                      { color: colors.text },
+                      disabled && { color: colors.textMuted },
+                      (isSelected || inRange) && { color: colors.white },
                     ]}
                   >
                     {day}
@@ -189,11 +192,9 @@ const CustomCalendar = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.surfaceStrong,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
   },
   header: {
     flexDirection: 'row',
@@ -207,12 +208,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   monthYear: {
-    color: COLORS.text,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -224,7 +222,6 @@ const styles = StyleSheet.create({
   dayLabel: {
     flex: 1,
     textAlign: 'center',
-    color: COLORS.textMuted,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -244,7 +241,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayText: {
-    color: COLORS.text,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -260,7 +256,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   daySelectedText: {
-    color: '#fff',
     fontWeight: '700',
   },
   dayInRange: {

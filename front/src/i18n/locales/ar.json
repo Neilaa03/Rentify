@@ -562,7 +562,7 @@
         "drivingLicense": "رخصة القيادة",
         "verificationDocumentRequiredOwner": "مطلوب لنشر مركبة أو إعلان.",
         "verificationDocumentRequiredClient": "مطلوب لإجراء الحجوزات.",
-        "verificationBadgeVerifiedSubtitleClient": "تم التحقق من رخصة القيادة الخاصة بك. يمكنك إجراء الحجوزات.",
+        "verificationBadgeVerifiedSubtitleClient": "تم التحقق من رخصة القيادة الخاصة بك.",
         "verificationBadgePendingDocument": "حالة {{document}} قيد الانتظار",
         "verificationBadgePendingSubtitleDocument": "ارفع {{document}} لفتح التحقق.",
         "rejectedBadgeDocument": "تم رفض {{document}}",

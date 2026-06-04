@@ -22,10 +22,12 @@ import { isTablet, moderateScale, rf } from '../../utils/responsive';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';import { useTranslation } from "react-i18next";
+import { useTheme } from '../../contexts/ThemeContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const tabletLayout = isTablet();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -400,7 +402,7 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
         style={styles.background}
         resizeMode="cover">
         
-                <SafeAreaView style={styles.overlay}>
+                <SafeAreaView style={[styles.overlay, { backgroundColor: colors.overlay, paddingHorizontal: moderateScale(20) }]}>
                     <KeyboardAvoidingView
             style={styles.keyboardAvoid}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -443,16 +445,17 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                   
 
                                     <View style={styles.inputContainer}>
-                                        <Text style={styles.label}>{t("screens.auth.loginscreen.password")}</Text>
+                                        <Text style={[styles.label, { color: colors.text }]}>{t("screens.auth.loginscreen.password")}</Text>
                                         <View>
                                             <TextInput
                         style={[
                         styles.input,
+                        { color: colors.text, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
                         password ? styles.inputFilled : null,
                         errors.password ? styles.inputError : null]
                         }
                         placeholder="••••••••"
-                        placeholderTextColor="rgba(255,255,255,0.6)"
+                        placeholderTextColor={colors.textMuted}
                         value={password}
                         onChangeText={(text) => {
                           setPassword(text);
@@ -470,40 +473,47 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                                                 <Ionicons
                           name={showPassword ? 'eye-off' : 'eye'}
                           size={20}
-                          color="rgba(255,255,255,0.8)" />
+                          color={colors.textMuted} />
                         
                                             </TouchableOpacity>
                                         </View>
-                                        {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                                        {!!errors.password && <Text style={[styles.errorText, { color: colors.danger }]}>{errors.password}</Text>}
                                     </View>
 
                                     <TouchableOpacity
                     style={styles.forgotPassword}
                     onPress={() => navigation.navigate('ForgotPassword', { email: email.trim() })}>
                     
-                                        <Text style={styles.forgotText}>{t("screens.auth.loginscreen.forgotPassword")}</Text>
+                                        <Text style={[styles.forgotText, { color: colors.primary }]}>{t("screens.auth.loginscreen.forgotPassword")}</Text>
                                     </TouchableOpacity>
 
-                                    {!!errors.form && <Text style={styles.formErrorText}>{errors.form}</Text>}
+                                    {!!errors.form && <Text style={[styles.formErrorText, { color: colors.danger }]}>{errors.form}</Text>}
 
                                     <AuthGradientButton label={t("screens.auth.loginscreen.login")} onPress={handleLogin} disabled={loading} />
 
                                     <TouchableOpacity
-                    style={[styles.googleButton, !googleRequest || googleLoading ? styles.googleButtonDisabled : null]}
+                    style={[
+                      styles.googleButton,
+                      {
+                        backgroundColor: colors.surfaceStrong,
+                        borderColor: colors.border
+                      },
+                      !googleRequest || googleLoading ? styles.googleButtonDisabled : null
+                    ]}
                     onPress={handleGoogleLogin}
                     disabled={!googleRequest || googleLoading}>
                     
-                                        <Ionicons name="logo-google" size={18} color="#fff" />
-                                        <Text style={styles.googleButtonText}>
+                                        <Ionicons name="logo-google" size={18} color={colors.text} />
+                                        <Text style={[styles.googleButtonText, { color: colors.text }]}>
                                             {googleLoading ? 'Signing in…' : 'Continue with Google'}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
 
                                 <View style={styles.footer}>
-                                    <Text style={styles.footerText}>{t("screens.auth.loginscreen.dontHaveAnAccount")}</Text>
+                                    <Text style={[styles.footerText, { color: colors.textMuted }]}>{t("screens.auth.loginscreen.dontHaveAnAccount")}</Text>
                                     <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                                        <Text style={styles.linkText}>{t("screens.auth.loginscreen.signUp")}</Text>
+                                        <Text style={[styles.linkText, { color: colors.primary }]}>{t("screens.auth.loginscreen.signUp")}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -536,20 +546,16 @@ const styles = StyleSheet.create({
     marginBottom: moderateScale(18)
   },
   label: {
-    color: '#fff',
     marginBottom: moderateScale(8),
     fontSize: rf(14, 12, 16),
     fontWeight: '500'
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.16)',
     borderRadius: moderateScale(12),
     paddingHorizontal: moderateScale(14),
     paddingVertical: moderateScale(13),
     paddingRight: moderateScale(46),
-    color: '#fff',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
     fontSize: rf(15, 13, 18)
   },
   eyeButton: {
@@ -570,34 +576,30 @@ const styles = StyleSheet.create({
   },
   errorText: {
     marginTop: moderateScale(8),
-    color: 'rgba(255, 92, 92, 0.95)',
     fontSize: rf(12, 11, 14),
     lineHeight: rf(16, 14, 20)
   },
   formErrorText: {
     marginBottom: moderateScale(14),
-    color: 'rgba(255, 92, 92, 0.95)',
     fontSize: rf(13, 12, 15),
     lineHeight: rf(18, 16, 22),
     textAlign: 'center'
   },
   forgotPassword: { alignSelf: 'flex-end', marginBottom: moderateScale(26) },
-  forgotText: { color: COLORS.primary, fontSize: rf(14, 12, 16) },
+  forgotText: { fontSize: rf(14, 12, 16) },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: moderateScale(30),
     flexWrap: 'wrap'
   },
-  footerText: { color: '#aaa' },
-  linkText: { color: COLORS.secondary, fontWeight: 'bold' },
+  footerText: { fontWeight: '400' },
+  linkText: { fontWeight: 'bold' },
   googleButton: {
     marginTop: moderateScale(12),
     height: moderateScale(48),
     borderRadius: moderateScale(12),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center'
@@ -607,7 +609,6 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     marginLeft: moderateScale(10),
-    color: '#fff',
     fontWeight: '700',
     fontSize: rf(14, 12, 16)
   }

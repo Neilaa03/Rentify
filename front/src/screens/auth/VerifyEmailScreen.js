@@ -4,8 +4,10 @@ import * as ExpoLinking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';import { useTranslation } from "react-i18next";
+import { useTheme } from '../../contexts/ThemeContext';
 
 const VerifyEmailScreen = ({ navigation, route }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const [status, setStatus] = useState('idle'); // idle | verifying | verified | failed
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -101,8 +103,8 @@ const VerifyEmailScreen = ({ navigation, route }) => {const { t } = useTranslati
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.card}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.card, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
         <Text style={styles.title}>
           {status === 'verified' ? 'Email verified' : 'Verify your email'}
         </Text>
@@ -114,27 +116,27 @@ const VerifyEmailScreen = ({ navigation, route }) => {const { t } = useTranslati
 
         {status === 'verifying' &&
         <View style={styles.row}>
-            <ActivityIndicator color={COLORS.primary} />
-            <Text style={styles.statusText}>{t("screens.auth.verifyemailscreen.verifying")}</Text>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={[styles.statusText, { color: colors.textMuted }]}>{t("screens.auth.verifyemailscreen.verifying")}</Text>
           </View>
         }
 
         {!!(message || status === 'failed') &&
-        <Text style={[styles.message, status === 'failed' ? styles.messageError : null]}>
+        <Text style={[styles.message, { color: colors.textMuted }, status === 'failed' ? { color: colors.danger } : null]}>
             {message || 'Verification failed. Please request a new verification email.'}
           </Text>
         }
 
         {status === 'verified' &&
         <TouchableOpacity style={styles.button} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Login', params: { email } }] })}>
-            <Text style={styles.buttonText}>{t("screens.auth.verifyemailscreen.goToLogin")}</Text>
+            <Text style={[styles.buttonText, { color: colors.white }]}>{t("screens.auth.verifyemailscreen.goToLogin")}</Text>
           </TouchableOpacity>
         }
 
         {status !== 'verified' ?
         <>
             <TouchableOpacity style={styles.button} onPress={handleResend} disabled={sending}>
-              <Text style={styles.buttonText}>{sending ? 'Sending…' : 'Resend verification email'}</Text>
+              <Text style={[styles.buttonText, { color: colors.white }]}>{sending ? 'Sending…' : 'Resend verification email'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -145,7 +147,7 @@ const VerifyEmailScreen = ({ navigation, route }) => {const { t } = useTranslati
               Linking.openURL('googlegmail://').catch(() => Linking.openURL('mailto:'));
             }}>
             
-              <Text style={styles.buttonText}>{t("screens.auth.verifyemailscreen.openEmailApp")}</Text>
+              <Text style={[styles.buttonText, { color: colors.text }]}>{t("screens.auth.verifyemailscreen.openEmailApp")}</Text>
             </TouchableOpacity>
           </> :
         null}
@@ -155,19 +157,19 @@ const VerifyEmailScreen = ({ navigation, route }) => {const { t } = useTranslati
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f1228', justifyContent: 'center', padding: 24 },
-  card: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)' },
-  title: { color: '#fff', fontSize: 26, fontWeight: '700', marginBottom: 8 },
-  subtitle: { color: 'rgba(255,255,255,0.75)', fontSize: 14, marginBottom: 16, lineHeight: 20 },
+  container: { flex: 1, justifyContent: 'center', padding: 24 },
+  card: { borderRadius: 16, padding: 20, borderWidth: 1 },
+  title: { fontSize: 26, fontWeight: '700', marginBottom: 8 },
+  subtitle: { fontSize: 14, marginBottom: 16, lineHeight: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  statusText: { color: 'rgba(255,255,255,0.8)' },
-  message: { color: 'rgba(255,255,255,0.9)', marginTop: 8, marginBottom: 12 },
-  messageError: { color: 'rgba(255, 92, 92, 0.95)' },
+  statusText: { marginTop: 8, marginBottom: 12 },
+  message: { marginTop: 8, marginBottom: 12 },
+  messageError: {},
   button: { backgroundColor: COLORS.primary, borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
-  buttonText: { color: '#fff', fontWeight: '700' },
+  buttonText: { fontWeight: '700' },
   secondaryButton: { backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
   link: { marginTop: 14, alignSelf: 'center' },
-  linkText: { color: COLORS.secondary, fontWeight: '700' }
+  linkText: { fontWeight: '700' }
 });
 
 export default VerifyEmailScreen;

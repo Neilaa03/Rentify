@@ -28,6 +28,7 @@ import { deleteDocument, getUserDocuments, uploadUserDocument } from '../../serv
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { getLanguageMeta, setAppLanguage, supportedLanguages } from '../../i18n';
+import { useTheme, THEME_MODES } from '../../contexts/ThemeContext';
 
 const profileFont = (width, regular, small, verySmall = small) => {
   if (width <= 340) return verySmall;
@@ -40,42 +41,51 @@ const COMPANY_SUPPORT_EMAIL = runtimeEnv.EXPO_PUBLIC_SUPPORT_EMAIL || 'support@r
 const COMPANY_SUPPORT_PHONE = runtimeEnv.EXPO_PUBLIC_SUPPORT_PHONE || '+213 555 00 00 00';
 const PLAY_STORE_REVIEW_URL = runtimeEnv.EXPO_PUBLIC_PLAY_STORE_REVIEW_URL || '';
 
-const InfoLine = ({ icon, title, text }) => (
+const InfoLine = ({ icon, title, text }) => {
+  const { colors } = useTheme();
+
+  return (
   <View style={styles.infoLine}>
     <View style={styles.infoLineIcon}>
-      <Ionicons name={icon} size={17} color="#8f6cff" />
+      <Ionicons name={icon} size={17} color={colors.primary} />
     </View>
     <View style={styles.infoLineBody}>
-      <Text style={styles.infoLineTitle}>{title}</Text>
-      <Text style={styles.infoLineText}>{text}</Text>
+      <Text style={[styles.infoLineTitle, { color: colors.text }]}>{title}</Text>
+      <Text style={[styles.infoLineText, { color: colors.textMuted }]}>{text}</Text>
     </View>
   </View>
-);
+  );
+};
 
-const SettingsModal = ({ visible, title, onClose, children }) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-    <View style={styles.pageModalBackdrop}>
-      <View style={styles.pageModal}>
-        <View style={styles.pageModalHeader}>
-          <Text style={styles.pageModalTitle}>{title}</Text>
-          <TouchableOpacity style={styles.pageModalClose} onPress={onClose}>
-            <Ionicons name="close" size={20} color="#eef1ff" />
-          </TouchableOpacity>
+const SettingsModal = ({ visible, title, onClose, children }) => {
+  const { colors } = useTheme();
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.pageModalBackdrop, { backgroundColor: colors.modalBackdrop }]}>
+        <View style={[styles.pageModal, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
+          <View style={styles.pageModalHeader}>
+            <Text style={[styles.pageModalTitle, { color: colors.text }]}>{title}</Text>
+            <TouchableOpacity style={[styles.pageModalClose, { backgroundColor: colors.surface }]} onPress={onClose}>
+              <Ionicons name="close" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageModalContent}>
+            {children}
+          </ScrollView>
         </View>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.pageModalContent}>
-          {children}
-        </ScrollView>
       </View>
-    </View>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
 const SectionCard = ({ items, onItemPress }) => {
   const { width } = useWindowDimensions();
   const rowFontSize = profileFont(width, appFont(15), 14, 13);
+  const { colors } = useTheme();
 
   return (
-    <View style={styles.sectionCard}>
+    <View style={[styles.sectionCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
       {items.map((item, index) => (
         <TouchableOpacity
           key={item.label}
@@ -83,24 +93,27 @@ const SectionCard = ({ items, onItemPress }) => {
           onPress={() => onItemPress?.(item)}
         >
           <View style={styles.rowLeft}>
-            <View style={styles.iconWrap}>
-              <Ionicons name={item.icon} size={17} color="#8f6cff" />
+            <View style={[styles.iconWrap, { backgroundColor: colors.surface }]}>
+              <Ionicons name={item.icon} size={17} color={colors.primary} />
             </View>
-            <Text style={[styles.rowLabel, { fontSize: rowFontSize }]} numberOfLines={1}>{item.label}</Text>
+            <Text style={[styles.rowLabel, { fontSize: rowFontSize, color: colors.text }]} numberOfLines={1}>{item.label}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color="#7d83b0" />
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
       ))}
     </View>
   );
 };
 
-const StatCard = ({ value, label }) => (
-  <View style={styles.statCard}>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{label}</Text>
-  </View>
-);
+const StatCard = ({ value, label }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.statCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
+      <Text style={[styles.statValue, { color: colors.primary }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.textMuted }]}>{label}</Text>
+    </View>
+  );
+};
 
 const identityMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
@@ -150,6 +163,7 @@ const pickLatestDocument = (documents = []) =>
 
 const ProfileScreen = ({ navigation, route }) => {
   const { t, i18n } = useTranslation();
+  const { colors, mode, setThemeMode } = useTheme();
   const { width } = useWindowDimensions();
   const [profile, setProfile] = useState(route?.params?.user || null);
   const [loading, setLoading] = useState(false);
@@ -884,12 +898,12 @@ const ProfileScreen = ({ navigation, route }) => {
   return (
     <View style={styles.container}>
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
-        <SafeAreaView edges={['top', 'left', 'right']} style={styles.overlay}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={[styles.overlay, { backgroundColor: colors.overlay }]}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <Text style={[styles.title, { fontSize: fontSize.title }]}>{t('screens.client.profilescreen.profil')}</Text>
+            <Text style={[styles.title, { fontSize: fontSize.title, color: colors.text }]}>{t('screens.client.profilescreen.profil')}</Text>
 
             {isOwner ? (
-              <View style={styles.verificationPanel}>
+              <View style={[styles.verificationPanel, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                 <Badge
                   label={verificationLabel}
                   toneKey={verificationTone}
@@ -901,9 +915,9 @@ const ProfileScreen = ({ navigation, route }) => {
               </View>
             ) : null}
 
-            <View style={styles.profileCard}>
+            <View style={[styles.profileCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
               <TouchableOpacity
-                style={styles.avatar}
+                style={[styles.avatar, { backgroundColor: colors.primary }]}
                 onPress={() => {
                   if (profilePicture) openPhotoSheet();
                   else pickAndUploadProfilePicture();
@@ -914,22 +928,22 @@ const ProfileScreen = ({ navigation, route }) => {
                 {profilePicture ? (
                   <Image source={{ uri: profilePicture }} style={styles.avatarImage} />
                 ) : (
-                  <Text style={styles.avatarText}>{initial}</Text>
+                  <Text style={[styles.avatarText, { color: colors.white }]}>{initial}</Text>
                 )}
                 <View style={styles.avatarEditPill}>
-                  <Ionicons name="camera-outline" size={16} color="#fff" />
+                  <Ionicons name="camera-outline" size={16} color={colors.white} />
                 </View>
               </TouchableOpacity>
               <View style={styles.profileInfo}>
-                <Text style={[styles.profileName, { fontSize: fontSize.profileName }]} numberOfLines={1}>{fullName}</Text>
-                <Text style={[styles.profilePhone, { fontSize: fontSize.profilePhone }]} numberOfLines={1}>{profile?.phone || profile?.email || '-'}</Text>
+                <Text style={[styles.profileName, { fontSize: fontSize.profileName, color: colors.text }]} numberOfLines={1}>{fullName}</Text>
+                <Text style={[styles.profilePhone, { fontSize: fontSize.profilePhone, color: colors.textMuted }]} numberOfLines={1}>{profile?.phone || profile?.email || '-'}</Text>
                 {isGoogleConnected && <Text style={styles.googleBadge} numberOfLines={1}>{t('screens.client.profilescreen.compteGoogleConnecte')}</Text>}
                 {!!personalInfoError && <Text style={styles.errorText}>{personalInfoError}</Text>}
                 {!!error && <Text style={styles.errorText}>{error}</Text>}
                 {loading && <Text style={styles.loadingText}>{t('screens.client.profilescreen.chargement')}</Text>}
               </View>
-              <TouchableOpacity style={styles.editBtn} onPress={openPersonalInfoEditor}>
-                <Ionicons name="pencil-outline" size={16} color="#d6dbff" />
+              <TouchableOpacity style={[styles.editBtn, { backgroundColor: colors.surface }]} onPress={openPersonalInfoEditor}>
+                <Ionicons name="pencil-outline" size={16} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -1226,6 +1240,34 @@ const ProfileScreen = ({ navigation, route }) => {
               </View>
             </SettingsModal>
 
+            <SettingsModal visible={activeInfoPage === 'theme'} title="Theme" onClose={closeInfoPage}>
+              <View style={styles.languageOptions}>
+                {[
+                  { key: THEME_MODES.SYSTEM, label: 'System', subtitle: 'Follow the device appearance' },
+                  { key: THEME_MODES.LIGHT, label: 'Light', subtitle: 'Bright surfaces with the same brand colors' },
+                  { key: THEME_MODES.DARK, label: 'Dark', subtitle: 'Keep the current dark look' },
+                ].map((option) => {
+                  const isActive = mode === option.key;
+                  return (
+                    <TouchableOpacity
+                      key={option.key}
+                      style={[styles.languageOption, isActive && styles.languageOptionActive]}
+                      onPress={() => setThemeMode(option.key)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.languageCodeBadge, isActive && styles.languageCodeBadgeActive]}>
+                        <Ionicons name={isActive ? 'radio-button-on' : 'radio-button-off'} size={18} color={isActive ? '#8f6cff' : '#7d83b0'} />
+                      </View>
+                      <View style={styles.languageOptionTextWrap}>
+                        <Text style={[styles.languageOptionTitle, isActive && styles.languageOptionTitleActive]}>{option.label}</Text>
+                        <Text style={styles.languageOptionSubtitle}>{option.subtitle}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </SettingsModal>
+
             {isEditingPersonalInfo && (
               <View style={styles.editCard}>
                 <Text style={styles.editTitle}>{t('screens.client.profilescreen.informationsPersonnelles')}</Text>
@@ -1297,14 +1339,14 @@ const ProfileScreen = ({ navigation, route }) => {
             </View>
 
             {isOwner || isClient ? (
-              <View style={styles.identityCard}>
+              <View style={[styles.identityCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                 <View style={styles.identityHeader}>
-                  <View style={styles.identityIcon}>
-                    <Ionicons name="id-card-outline" size={20} color="#8f6cff" />
+                  <View style={[styles.identityIcon, { backgroundColor: colors.surface }]}>
+                    <Ionicons name="id-card-outline" size={20} color={colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.identityTitle}>{verificationDocumentLabel}</Text>
-                    <Text style={styles.identitySubtitle}>
+                    <Text style={[styles.identityTitle, { color: colors.text }]}>{verificationDocumentLabel}</Text>
+                    <Text style={[styles.identitySubtitle, { color: colors.textMuted }]}>
                       {isOwner
                         ? t('screens.client.profilescreen.verificationDocumentRequiredOwner')
                         : t('screens.client.profilescreen.verificationDocumentRequiredClient')}
@@ -1315,17 +1357,17 @@ const ProfileScreen = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                {!!identityError && <Text style={styles.identityError}>{identityError}</Text>}
+                {!!identityError && <Text style={[styles.identityError, { color: colors.danger }]}>{identityError}</Text>}
                 {identityLoading ? (
                   <View style={styles.identityLoader}>
-                    <ActivityIndicator size="small" color="#8f6cff" />
+                    <ActivityIndicator size="small" color={colors.primary} />
                   </View>
                 ) : (
                   <>
-                    <Text style={styles.identityName} numberOfLines={1}>
+                    <Text style={[styles.identityName, { color: colors.text }]} numberOfLines={1}>
                       {identityDocument?.documentUrl ? identityDocument.documentUrl.split('/').pop() : t('screens.client.profilescreen.noDocumentSubmitted')}
                     </Text>
-                    <Text style={styles.identityHint}>
+                    <Text style={[styles.identityHint, { color: colors.textMuted }]}>
                       {identityVerified
                         ? (isClient
                           ? t('screens.client.profilescreen.verificationBadgeVerifiedSubtitleClient')
@@ -1334,17 +1376,17 @@ const ProfileScreen = ({ navigation, route }) => {
                           ? t('screens.client.profilescreen.rejectedDocumentMessage', { document: verificationDocumentLabel })
                           : t('screens.client.profilescreen.notVerifiedYetMessage', { document: verificationDocumentLabel })}
                     </Text>
-                    {!identityVerified && identityReason ? <Text style={styles.identityReason}>{identityReason}</Text> : null}
+                    {!identityVerified && identityReason ? <Text style={[styles.identityReason, { color: colors.warning }]}>{identityReason}</Text> : null}
 
                     <View style={styles.identityActions}>
-                      <TouchableOpacity style={styles.identityActionBtn} onPress={identityDocument?.documentUrl ? openIdentityDocument : pickIdentityDocument} disabled={identityBusy}>
-                        <Ionicons name="eye-outline" size={16} color="#dce2ff" />
-                        <Text style={styles.identityActionText}>{t('screens.client.profilescreen.voir')}</Text>
+                      <TouchableOpacity style={[styles.identityActionBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={identityDocument?.documentUrl ? openIdentityDocument : pickIdentityDocument} disabled={identityBusy}>
+                        <Ionicons name="eye-outline" size={16} color={colors.textMuted} />
+                        <Text style={[styles.identityActionText, { color: colors.text }]}>{t('screens.client.profilescreen.voir')}</Text>
                       </TouchableOpacity>
                       {!identityVerified ? (
-                        <TouchableOpacity style={[styles.identityActionBtn, styles.identityPrimaryBtn]} onPress={pickIdentityDocument} disabled={identityBusy}>
-                          <Ionicons name={identityDocument?.documentUrl ? 'create-outline' : 'cloud-upload-outline'} size={16} color="#fff" />
-                          <Text style={styles.identityActionPrimaryText}>
+                        <TouchableOpacity style={[styles.identityActionBtn, styles.identityPrimaryBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]} onPress={pickIdentityDocument} disabled={identityBusy}>
+                          <Ionicons name={identityDocument?.documentUrl ? 'create-outline' : 'cloud-upload-outline'} size={16} color={colors.white} />
+                          <Text style={[styles.identityActionPrimaryText, { color: colors.white }]}>
                             {identityBusy
                         ? t('screens.client.profilescreen.chargement')
                               : identityDocument?.documentUrl
@@ -1354,9 +1396,9 @@ const ProfileScreen = ({ navigation, route }) => {
                         </TouchableOpacity>
                       ) : null}
                       {identityDocument?.id && !identityVerified ? (
-                        <TouchableOpacity style={styles.identityActionBtn} onPress={deleteIdentityDocument} disabled={identityBusy}>
-                          <Ionicons name="trash-outline" size={16} color="#ff7b89" />
-                          <Text style={styles.identityActionDangerText}>{t('screens.client.profilescreen.supprimer')}</Text>
+                        <TouchableOpacity style={[styles.identityActionBtn, { backgroundColor: `${colors.danger}10`, borderColor: `${colors.danger}30` }]} onPress={deleteIdentityDocument} disabled={identityBusy}>
+                          <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                          <Text style={[styles.identityActionDangerText, { color: colors.danger }]}>{t('screens.client.profilescreen.supprimer')}</Text>
                         </TouchableOpacity>
                       ) : null}
                     </View>
@@ -1389,6 +1431,7 @@ const ProfileScreen = ({ navigation, route }) => {
             <SectionCard
               items={[
                 { action: 'language', label: t('screens.client.profilescreen.langue'), icon: 'globe-outline' },
+                { action: 'theme', label: 'Theme', icon: 'moon-outline' },
                 { action: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
                 { action: 'privacy', label: t('screens.client.profilescreen.confidentialiteSecurite'), icon: 'shield-checkmark-outline' },
               ]}

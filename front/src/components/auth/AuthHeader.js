@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { rf, moderateScale } from '../../utils/responsive';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const AuthHeader = ({ title, subtitle }) => {
+    const { colors } = useTheme();
     return (
         <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>{subtitle}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>
         </View>
     );
 };
@@ -18,13 +20,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: rf(30, 24, 38),
         fontWeight: '700',
-        color: '#fff',
     },
     subtitle: {
         marginTop: moderateScale(8),
         fontSize: rf(15, 13, 18),
         lineHeight: rf(22, 18, 26),
-        color: '#AAA',
     },
 });
 

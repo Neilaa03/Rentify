@@ -570,7 +570,7 @@
         "drivingLicense": "Permis de conduire",
         "verificationDocumentRequiredOwner": "Requis pour publier un véhicule ou une annonce.",
         "verificationDocumentRequiredClient": "Requis pour faire des réservations.",
-        "verificationBadgeVerifiedSubtitleClient": "Votre permis de conduire est validé. Vous pouvez faire des réservations.",
+        "verificationBadgeVerifiedSubtitleClient": "Votre permis de conduire est validé.",
         "verificationBadgePendingDocument": "{{document}} en attente",
         "verificationBadgePendingSubtitleDocument": "Téléversez votre {{document}} pour débloquer la vérification.",
         "rejectedBadgeDocument": "{{document}} rejeté",

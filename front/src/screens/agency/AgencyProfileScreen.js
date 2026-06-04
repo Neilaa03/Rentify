@@ -6,8 +6,10 @@ import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavi
 import { AgencyCard, SectionTitle } from '../../components/agency/AgencyPrimitives';
 import { getAgencyProfile } from '../../services/agency';import { useTranslation } from "react-i18next";
 import { getFriendlyError } from '../../utils/friendlyError';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function AgencyProfileScreen({ navigation, route }) {const { t } = useTranslation();
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const [state, setState] = useState({ loading: true, error: '', profile: null });
   const [isEditing, setIsEditing] = useState(false);
@@ -62,29 +64,29 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
   const EditableField = ({ label, value, placeholder, icon }) =>
   <View style={styles.fieldContainer}>
       <View style={styles.fieldHeader}>
-        {icon && <Ionicons name={icon} size={16} color="#8f7dff" style={{ marginRight: 6 }} />}
-        <Text style={styles.fieldLabel}>{label}</Text>
+        {icon && <Ionicons name={icon} size={16} color={colors.primary} style={{ marginRight: 6 }} />}
+        <Text style={[styles.fieldLabel, { color: colors.primary }]}>{label}</Text>
       </View>
       {isEditing ?
     <TextInput
-      style={styles.fieldInput}
+      style={[styles.fieldInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
       value={editData[value] || ''}
       placeholder={placeholder}
-      placeholderTextColor="#5a6280"
+      placeholderTextColor={colors.textMuted}
       onChangeText={(text) => setEditData({ ...editData, [value]: text })} /> :
 
 
-    <Text style={styles.fieldValue}>{editData[value] || profile[value] || '-'}</Text>
+    <Text style={[styles.fieldValue, { color: colors.text }]}>{editData[value] || profile[value] || '-'}</Text>
     }
     </View>;
 
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="#0a0c24" />
+      <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} translucent backgroundColor={colors.background} />
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-          <View style={styles.overlay}>
+          <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
           <View style={styles.page}>
           <View style={styles.headerSpacer} />
 
@@ -117,10 +119,10 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
                 {/* Company Information Section */}
                 <AgencyCard style={styles.section}>
                   <View style={styles.sectionHeader}>
-                    <Ionicons name="business-outline" size={20} color="#8f7dff" />
+                    <Ionicons name="business-outline" size={20} color={colors.primary} />
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.sectionTitle}>{t("screens.agency.agencyprofilescreen.informationsCommerciales")}</Text>
-                      <Text style={styles.sectionSubtitle}>{t("screens.agency.agencyprofilescreen.raisonSocialeEtIdentifiants")}</Text>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.agency.agencyprofilescreen.informationsCommerciales")}</Text>
+                      <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{t("screens.agency.agencyprofilescreen.raisonSocialeEtIdentifiants")}</Text>
                     </View>
                   </View>
                   <View style={styles.divider} />
@@ -131,10 +133,10 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
                 {/* Legal Information Section */}
                 <AgencyCard style={styles.section}>
                   <View style={styles.sectionHeader}>
-                    <Ionicons name="shield-checkmark-outline" size={20} color="#21d4a7" />
+                    <Ionicons name="shield-checkmark-outline" size={20} color={colors.success} />
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.sectionTitle}>{t("screens.agency.agencyprofilescreen.informationsLegales")}</Text>
-                      <Text style={styles.sectionSubtitle}>{t("screens.agency.agencyprofilescreen.enregistrementEtVerification")}</Text>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.agency.agencyprofilescreen.informationsLegales")}</Text>
+                      <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{t("screens.agency.agencyprofilescreen.enregistrementEtVerification")}</Text>
                     </View>
                   </View>
                   <View style={styles.divider} />
@@ -145,10 +147,10 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
                 {/* Manager Information Section */}
                 <AgencyCard style={styles.section}>
                   <View style={styles.sectionHeader}>
-                    <Ionicons name="person-outline" size={20} color="#ffb347" />
+                    <Ionicons name="person-outline" size={20} color={colors.warning} />
                     <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.sectionTitle}>{t("screens.agency.agencyprofilescreen.responsableDeLagence")}</Text>
-                      <Text style={styles.sectionSubtitle}>{t("screens.agency.agencyprofilescreen.contactDuGerant")}</Text>
+                      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.agency.agencyprofilescreen.responsableDeLagence")}</Text>
+                      <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{t("screens.agency.agencyprofilescreen.contactDuGerant")}</Text>
                     </View>
                   </View>
                   <View style={styles.divider} />
@@ -158,19 +160,19 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
 
                 {/* Verification Status */}
                 <AgencyCard style={[styles.section, styles.statusCard]}>
-                  <View style={styles.statusContent}>
+                    <View style={styles.statusContent}>
                     <View style={styles.statusIcon}>
                       <Ionicons
                           name={profile.verificationStatus === 'VERIFIED' ? "checkmark-circle" : "information-circle"}
                           size={32}
-                          color={profile.verificationStatus === 'VERIFIED' ? '#21d4a7' : '#ffb347'} />
+                          color={profile.verificationStatus === 'VERIFIED' ? colors.success : colors.warning} />
                         
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.statusTitle}>
+                      <Text style={[styles.statusTitle, { color: colors.text }]}>
                         {profile.verificationStatus === 'VERIFIED' ? 'Agence vérifiée' : t("screens.agency.agencydashboardscreen.enAttenteDeVerification")}
                       </Text>
-                      <Text style={styles.statusSubtitle}>
+                      <Text style={[styles.statusSubtitle, { color: colors.textMuted }]}>
                         {profile.verificationStatus === 'VERIFIED' ?
                           'Votre agence est approuvée et active' :
                           'Votre dossier est en cours de révision'}
@@ -182,26 +184,26 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
                 {/* Action Buttons */}
                 {isEditing &&
                   <View style={styles.editingActions}>
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSaveChanges}>
-                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                      <Text style={styles.saveButtonText}>{t("screens.agency.agencyprofilescreen.enregistrerLesModifications")}</Text>
+                    <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.success }]} onPress={handleSaveChanges}>
+                      <Ionicons name="checkmark-circle" size={18} color={colors.white} />
+                      <Text style={[styles.saveButtonText, { color: colors.white }]}>{t("screens.agency.agencyprofilescreen.enregistrerLesModifications")}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditing(false)}>
-                      <Text style={styles.cancelButtonText}>{t("screens.agency.agencyprofilescreen.annuler")}</Text>
+                    <TouchableOpacity style={[styles.cancelButton, { borderColor: colors.border }]} onPress={() => setIsEditing(false)}>
+                      <Text style={[styles.cancelButtonText, { color: colors.textMuted }]}>{t("screens.agency.agencyprofilescreen.annuler")}</Text>
                     </TouchableOpacity>
                   </View>
                   }
 
                 {!isEditing &&
                   <>
-                    <TouchableOpacity style={styles.primaryAction} onPress={() => navigation.navigate('AgencyDocuments', { token: route?.params?.token, user: route?.params?.user })}>
-                      <Ionicons name="document-attach-outline" size={18} color="#fff" />
-                      <Text style={styles.primaryActionText}>{t("screens.agency.agencyprofilescreen.gererMesDocuments")}</Text>
+                    <TouchableOpacity style={[styles.primaryAction, { backgroundColor: colors.primary }]} onPress={() => navigation.navigate('AgencyDocuments', { token: route?.params?.token, user: route?.params?.user })}>
+                      <Ionicons name="document-attach-outline" size={18} color={colors.white} />
+                      <Text style={[styles.primaryActionText, { color: colors.white }]}>{t("screens.agency.agencyprofilescreen.gererMesDocuments")}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.dangerAction} onPress={onLeave}>
-                      <Ionicons name="log-out-outline" size={18} color="#FF5C6C" />
-                      <Text style={styles.dangerActionText}>{t("screens.agency.agencyprofilescreen.quitterLespaceAgence")}</Text>
+                      <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+                      <Text style={[styles.dangerActionText, { color: colors.danger }]}>{t("screens.agency.agencyprofilescreen.quitterLespaceAgence")}</Text>
                     </TouchableOpacity>
                   </>
                   }

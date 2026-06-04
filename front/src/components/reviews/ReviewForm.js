@@ -3,18 +3,20 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';import { useTranslation } from "react-i18next";
+import { useTheme } from '../../contexts/ThemeContext';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const ReviewForm = ({ initialRating = 0, initialComment = '', onSubmit, submitting = false }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const [rating, setRating] = useState(clamp(Number(initialRating) || 0, 0, 5));
   const [comment, setComment] = useState(String(initialComment || ''));
 
   const canSubmit = useMemo(() => rating >= 1 && rating <= 5 && !submitting, [rating, submitting]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>{t("components.reviews.reviewform.note")}</Text>
+    <View style={[styles.container, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
+      <Text style={[styles.label, { color: colors.text }]}>{t("components.reviews.reviewform.note")}</Text>
       <View style={styles.starsRow}>
         {Array.from({ length: 5 }).map((_, index) => {
           const value = index + 1;
@@ -31,18 +33,18 @@ const ReviewForm = ({ initialRating = 0, initialComment = '', onSubmit, submitti
             </TouchableOpacity>);
 
         })}
-        <Text style={styles.ratingText}>{rating ? `${rating}/5` : '—'}</Text>
+        <Text style={[styles.ratingText, { color: colors.textMuted }]}>{rating ? `${rating}/5` : '—'}</Text>
       </View>
 
-      <Text style={styles.label}>{t("components.reviews.reviewform.commentaireOptionnel")}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{t("components.reviews.reviewform.commentaireOptionnel")}</Text>
       <TextInput
         value={comment}
         onChangeText={setComment}
         placeholder={t("components.reviews.reviewform.partagezVotreExperience")}
-        placeholderTextColor="#7077a8"
+        placeholderTextColor={colors.textMuted}
         multiline
         editable={!submitting}
-        style={styles.input} />
+        style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]} />
       
 
       <TouchableOpacity
@@ -51,12 +53,12 @@ const ReviewForm = ({ initialRating = 0, initialComment = '', onSubmit, submitti
         activeOpacity={0.85}>
         
         <LinearGradient
-          colors={canSubmit ? [COLORS.secondary, COLORS.primary] : ['#3a3f66', '#2b2f52']}
+          colors={canSubmit ? [COLORS.secondary, COLORS.primary] : [colors.textMuted, colors.icon]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.button}>
           
-          {submitting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.buttonText}>{t("components.reviews.reviewform.envoyer")}</Text>}
+          {submitting ? <ActivityIndicator color={colors.white} size="small" /> : <Text style={[styles.buttonText, { color: colors.white }]}>{t("components.reviews.reviewform.envoyer")}</Text>}
         </LinearGradient>
       </TouchableOpacity>
     </View>);
@@ -67,12 +69,9 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 14,
     padding: 14,
-    backgroundColor: '#151837',
     borderWidth: 1,
-    borderColor: 'rgba(148, 156, 233, 0.2)'
   },
   label: {
-    color: '#f6f8ff',
     fontSize: 13,
     fontWeight: '800',
     marginBottom: 8
@@ -88,7 +87,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     marginLeft: 6,
-    color: '#cfd3ff',
     fontSize: 12,
     fontWeight: '700'
   },
@@ -97,10 +95,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: '#f6f8ff',
-    backgroundColor: 'rgba(15, 18, 40, 0.6)',
     borderWidth: 1,
-    borderColor: 'rgba(148, 156, 233, 0.15)',
     marginBottom: 12,
     textAlignVertical: 'top'
   },
@@ -111,7 +106,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   buttonText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '900'
   }

@@ -21,6 +21,7 @@ import AppBackground from '../../components/layout/AppBackground';import { useTr
 import { Badge } from '../../components/agency/AgencyPrimitives';
 import { getFriendlyError } from '../../utils/friendlyError';
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const toneStyles = {
   green: { color: '#21d4a7', bg: 'rgba(33,212,167,0.16)' },
@@ -31,17 +32,20 @@ const toneStyles = {
 const OWNER_CARD_BG = '#111329';
 const OWNER_CARD_BORDER = 'rgba(143, 150, 255, 0.14)';
 
-const StatCard = ({ icon, title, value }) =>
-<View style={styles.statCard}>
+const StatCard = ({ icon, title, value }) => {
+  const { colors } = useTheme();
+  return <View style={[styles.statCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
     <View style={styles.statIconWrap}>
-      <Ionicons name={icon} size={16} color="#8f7dff" />
+      <Ionicons name={icon} size={16} color={colors.primary} />
     </View>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statTitle}>{title}</Text>
+    <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+    <Text style={[styles.statTitle, { color: colors.textMuted }]}>{title}</Text>
   </View>;
+};
 
 
 const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const user = route?.params?.user;
   const accountVerified = Boolean(user?.isVerified ?? user?.is_verified);
@@ -170,8 +174,8 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerTextBlock}>
-            <Text style={styles.kicker}>{t("screens.owner.dashboardscreen.espaceProprietaire")}</Text>
-            <Text style={styles.title}>{t("screens.owner.dashboardscreen.bonjour")}{user?.first_name || 'Owner'}{t("screens.owner.dashboardscreen.text")}</Text>
+            <Text style={[styles.kicker, { color: colors.primary }]}>{t("screens.owner.dashboardscreen.espaceProprietaire")}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t("screens.owner.dashboardscreen.bonjour")}{user?.first_name || 'Owner'}{t("screens.owner.dashboardscreen.text")}</Text>
           </View>
           <View style={styles.headerActions}>
             <NotificationIconButton
@@ -184,21 +188,21 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
           </View>
         </View>
 
-          <Badge
+        <Badge
             label={verificationLabel}
             toneKey={verificationTone}
             fullWidth
             textStyle={styles.verificationBadgeText}
-            style={styles.verificationBadge}
+            style={[styles.verificationBadge, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}
           />
 
         {isLoading ?
         <View style={styles.loaderWrap}>
-            <ActivityIndicator size="large" color="#8f7dff" />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View> :
 
         <ScrollView
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8f7dff" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
           contentContainerStyle={styles.content}>
           
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -216,58 +220,58 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
 
             <View style={styles.quickRow}>
               <TouchableOpacity
-              style={[styles.quickCard, styles.primaryQuickCard]}
+              style={[styles.quickCard, styles.primaryQuickCard, { backgroundColor: colors.primary, borderColor: colors.primary }]}
               onPress={() => navigation.navigate('OwnerCars', { token, user })}>
               
-                <Ionicons name="car-outline" size={24} color="#fff" />
-                <Text style={styles.quickTitle}>{t("screens.owner.dashboardscreen.mesVehicules2")}</Text>
-                <Text style={styles.quickSubtitle}>{t("screens.owner.dashboardscreen.gererMesVoitures")}</Text>
+                <Ionicons name="car-outline" size={24} color={colors.white} />
+                <Text style={[styles.quickTitle, { color: colors.white }]}>{t("screens.owner.dashboardscreen.mesVehicules2")}</Text>
+                <Text style={[styles.quickSubtitle, { color: 'rgba(255,255,255,0.8)' }]}>{t("screens.owner.dashboardscreen.gererMesVoitures")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-              style={styles.quickCard}
+              style={[styles.quickCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}
               onPress={() => navigation.navigate('OwnerListings', { token, user })}>
               
-                <Ionicons name="list-outline" size={24} color="#8f7dff" />
-                <Text style={styles.quickTitle}>{t("screens.owner.dashboardscreen.mesAnnonces")}</Text>
-                <Text style={styles.quickSubtitle}>{t("screens.owner.dashboardscreen.gererEtPublier")}</Text>
+                <Ionicons name="list-outline" size={24} color={colors.primary} />
+                <Text style={[styles.quickTitle, { color: colors.text }]}>{t("screens.owner.dashboardscreen.mesAnnonces")}</Text>
+                <Text style={[styles.quickSubtitle, { color: colors.textMuted }]}>{t("screens.owner.dashboardscreen.gererEtPublier")}</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.connectCard}>
+            <View style={[styles.connectCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
               <View style={styles.connectCardHeader}>
-                <Ionicons name="card-outline" size={20} color="#8f7dff" />
-                <Text style={styles.connectTitle}>{t("screens.owner.dashboardscreen.paiementsCarteProprietaire")}</Text>
+                <Ionicons name="card-outline" size={20} color={colors.primary} />
+                <Text style={[styles.connectTitle, { color: colors.text }]}>{t("screens.owner.dashboardscreen.paiementsCarteProprietaire")}</Text>
               </View>
-              <Text style={styles.connectText}>
+              <Text style={[styles.connectText, { color: colors.textMuted }]}>
                 {connectStatus?.cardPaymentsAvailable ?
               'Votre compte Stripe est pret. Les clients peuvent payer par carte.' :
               'Configurez Stripe pour recevoir les paiements carte des clients.'}
               </Text>
               <View style={styles.balanceRow}>
-                <View style={styles.balanceChip}>
-                  <Text style={styles.balanceValue}>
+                <View style={[styles.balanceChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.balanceValue, { color: colors.text }]}>
                     {Number(connectStatus?.pendingBalance || 0).toLocaleString(getCurrentLocale())}{t("screens.owner.dashboardscreen.da")}
                 </Text>
-                  <Text style={styles.balanceLabel}>{t("screens.owner.dashboardscreen.enAttente")}</Text>
+                  <Text style={[styles.balanceLabel, { color: colors.textMuted }]}>{t("screens.owner.dashboardscreen.enAttente")}</Text>
                 </View>
-                <View style={styles.balanceChip}>
-                  <Text style={styles.balanceValue}>
+                <View style={[styles.balanceChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={[styles.balanceValue, { color: colors.text }]}>
                     {Number(connectStatus?.availableBalance || 0).toLocaleString(getCurrentLocale())}{t("screens.owner.dashboardscreen.da")}
                 </Text>
-                  <Text style={styles.balanceLabel}>{t("screens.owner.dashboardscreen.disponible")}</Text>
+                  <Text style={[styles.balanceLabel, { color: colors.textMuted }]}>{t("screens.owner.dashboardscreen.disponible")}</Text>
                 </View>
               </View>
               <TouchableOpacity
               onPress={configureStripePayouts}
               disabled={connectLoading}
-              style={styles.connectBtn}
+              style={[styles.connectBtn, { backgroundColor: colors.primary }]}
               activeOpacity={0.85}>
               
                 {connectLoading ?
-              <ActivityIndicator color="#fff" size="small" /> :
+              <ActivityIndicator color={colors.white} size="small" /> :
 
-              <Text style={styles.connectBtnText}>
+              <Text style={[styles.connectBtnText, { color: colors.white }]}>
                     {connectStatus?.cardPaymentsAvailable ? 'Mettre a jour Stripe' : t("screens.owner.dashboardscreen.configurerStripe")}
                   </Text>
               }
@@ -286,14 +290,14 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
           dashboard.activity.map((item) => {
             const tone = toneStyles[item.stateTone] || toneStyles.amber;
             return (
-              <View key={item.id} style={styles.activityCard}>
+              <View key={item.id} style={[styles.activityCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                     <View>
-                      <Text style={styles.activityTitle}>{item.title}</Text>
-                      <Text style={styles.activitySubtitle}>{item.subtitle}</Text>
+                      <Text style={[styles.activityTitle, { color: colors.text }]}>{item.title}</Text>
+                      <Text style={[styles.activitySubtitle, { color: colors.textMuted }]}>{item.subtitle}</Text>
                     </View>
                     <View style={styles.rightActivity}>
                       <Text style={[styles.badge, { color: tone.color, backgroundColor: tone.bg }]}>{item.stateLabel}</Text>
-                      <Text style={styles.activityPrice}>{Number(item.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("screens.owner.dashboardscreen.da")}</Text>
+                      <Text style={[styles.activityPrice, { color: colors.primary }]}>{Number(item.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("screens.owner.dashboardscreen.da")}</Text>
                     </View>
                   </View>);
 
