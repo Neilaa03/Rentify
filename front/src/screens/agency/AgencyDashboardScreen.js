@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ImageBackground, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
@@ -8,6 +8,7 @@ import { getAgencyDashboard } from '../../services/agency';import { useTranslati
 import { getFriendlyError } from '../../utils/friendlyError';
 import { getCurrentLocale } from '../../i18n';
 import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 const toneMap = ['purple', 'blue', 'green', 'amber'];
 
@@ -61,15 +62,14 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
   0;
 
   return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+    <AppBackground contentStyle={styles.safeArea}>
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
         <View style={styles.page}>
           <View style={styles.header}>
             <View style={styles.headerTextBlock}>
               <Text style={[styles.kicker, { color: colors.primary }]}>{t("screens.agency.agencydashboardscreen.agencyOwner")}</Text>
-              <Text style={[styles.title, { color: colors.text }]}>{agency.commercialName || 'Espace agence'}</Text>
-              <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t("screens.agency.agencydashboardscreen.bienvenue")}{user?.first_name || user?.firstName || 'manager'}{t("screens.agency.agencydashboardscreen.gestionPremiumDesVehicules")}</Text>
+              <Text style={[styles.title, { color: colors.white }]}>{agency.commercialName || 'Espace agence'}</Text>
+              <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.82)' }]}>{t("screens.agency.agencydashboardscreen.bienvenue")}{user?.first_name || user?.firstName || 'manager'}{t("screens.agency.agencydashboardscreen.gestionPremiumDesVehicules")}</Text>
             </View>
             <Badge
                 label={verificationLabel}
@@ -115,21 +115,21 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
               <AgencyCard style={styles.statsCard}>
                 <SectionTitle kicker="PERFORMANCE" />
                 <View style={styles.statsRow}>
-                  <View style={[styles.statItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={[styles.statItem, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                     <View style={styles.statIcon}>
                       <Ionicons name="eye-outline" size={16} color={colors.primary} />
                     </View>
                     <Text style={[styles.statValue, { color: colors.text }]}>{totalViews.toLocaleString(getCurrentLocale())}</Text>
                     <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t("screens.agency.agencydashboardscreen.vues")}</Text>
                   </View>
-                  <View style={[styles.statItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={[styles.statItem, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                     <View style={styles.statIcon}>
                       <Ionicons name="calendar-outline" size={16} color={colors.success} />
                     </View>
                     <Text style={[styles.statValue, { color: colors.success }]}>{totalReservations.toLocaleString(getCurrentLocale())}</Text>
                     <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t("screens.agency.agencydashboardscreen.reservations")}</Text>
                   </View>
-                  <View style={[styles.statItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={[styles.statItem, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                     <View style={styles.statIcon}>
                       <Ionicons name="star-outline" size={16} color={colors.warning} />
                     </View>
@@ -146,10 +146,9 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
             </ScrollView>
             }
         </View>
-        </View>
+      </View>
         <AgencyBottomNavigation navigation={navigation} route={route} active="dashboard" />
-      </SafeAreaView>
-    </ImageBackground>);
+    </AppBackground>);
 
 }
 

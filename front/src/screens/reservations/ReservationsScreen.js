@@ -8,10 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
-  Image,
-  ImageBackground } from
+  Image } from
 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import storage from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,8 +17,11 @@ import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import ReservationCard from '../../components/cards/ReservationCard';import { useTranslation } from "react-i18next";
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 const ReservationsScreen = ({ navigation }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const [reservations, setReservations] = useState([]);
   const [paymentByReservationId, setPaymentByReservationId] = useState({});
   const [loading, setLoading] = useState(true);
@@ -165,71 +166,53 @@ const ReservationsScreen = ({ navigation }) => {const { t } = useTranslation();
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ImageBackground
-          source={require('../../assets/background.png')}
-          style={styles.background}
-          resizeMode="cover">
-          
-          <SafeAreaView style={styles.overlay}>
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>{t("screens.reservations.reservationsscreen.chargement")}</Text>
-            </View>
-          </SafeAreaView>
-        </ImageBackground>
-      </View>);
+      <AppBackground contentStyle={styles.safeArea}>
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={[styles.loadingText, { color: colors.white }]}>{t("screens.reservations.reservationsscreen.chargement")}</Text>
+          </View>
+        </View>
+      </AppBackground>);
 
   }
 
   return (
-    <View style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/background.png')}
-        style={styles.background}
-        resizeMode="cover">
-        
-        <SafeAreaView style={[styles.overlay, { flex: 1 }]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{t("screens.reservations.reservationsscreen.mesReservations")}</Text>
-            <View style={{ width: 44 }} />
-          </View>
+    <AppBackground contentStyle={styles.safeArea}>
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: colors.white }]}>{t("screens.reservations.reservationsscreen.mesReservations")}</Text>
+          <View style={{ width: 44 }} />
+        </View>
 
           {/* Tab Filters */}
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'upcoming' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('upcoming')}>
-              
-              <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>{t("screens.reservations.reservationsscreen.upcoming")}
-
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'past' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('past')}>
-              
-              <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>{t("screens.reservations.reservationsscreen.past")}
-
-              </Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'upcoming' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('upcoming')}>
+            <Text style={[styles.tabText, { color: 'rgba(255,255,255,0.72)' }, activeTab === 'upcoming' && { color: colors.white }]}>{t("screens.reservations.reservationsscreen.upcoming")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'past' && styles.tabButtonActive]}
+            onPress={() => setActiveTab('past')}>
+            <Text style={[styles.tabText, { color: 'rgba(255,255,255,0.72)' }, activeTab === 'past' && { color: colors.white }]}>{t("screens.reservations.reservationsscreen.past")}</Text>
+          </TouchableOpacity>
+        </View>
 
           {/* Reservations List */}
-          <ScrollView
-            style={styles.content}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            showsVerticalScrollIndicator={false}>
-            
-            {filteredReservations.length === 0 ?
-            <View style={styles.emptyContainer}>
-                <View style={styles.emptyIconContainer}>
-                  <Ionicons name="calendar-outline" size={56} color="#7c3aed" />
-                </View>
-                <Text style={styles.emptyTitle}>{t("screens.reservations.reservationsscreen.aucuneReservation")}</Text>
-                <Text style={styles.emptyText}>{t("screens.reservations.reservationsscreen.vousNavezPasEncoreDeReservationCommencez")}</Text>
-              </View> :
+        <ScrollView
+          style={styles.content}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          showsVerticalScrollIndicator={false}>
+          {filteredReservations.length === 0 ?
+          <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconContainer}>
+                <Ionicons name="calendar-outline" size={56} color="#7c3aed" />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.white }]}>{t("screens.reservations.reservationsscreen.aucuneReservation")}</Text>
+              <Text style={[styles.emptyText, { color: 'rgba(255,255,255,0.82)' }]}>{t("screens.reservations.reservationsscreen.vousNavezPasEncoreDeReservationCommencez")}</Text>
+            </View> :
 
             filteredReservations.map((reservation) =>
             <ReservationCard
@@ -245,28 +228,23 @@ const ReservationsScreen = ({ navigation }) => {const { t } = useTranslation();
 
             )
             }
-            <View style={{ height: 20 }} />
-          </ScrollView>
-        </SafeAreaView>
-      </ImageBackground>
-
-
-    </View>);
+          <View style={{ height: 20 }} />
+        </ScrollView>
+      </View>
+    </AppBackground>);
 
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background
+    backgroundColor: 'transparent'
   },
-  background: {
-    flex: 1
-  },
+  safeArea: { flex: 1 },
   overlay: {
     flex: 1,
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(2,3,14,0.62)',
+    backgroundColor: 'transparent',
     paddingBottom: 80
   },
   header: {
@@ -278,8 +256,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#fff'
+    fontWeight: '700'
   },
   tabContainer: {
     flexDirection: 'row',
@@ -308,8 +285,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#8b91ba'
+    fontWeight: '600'
   },
   tabTextActive: {
     color: '#fff'
@@ -325,7 +301,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#fff',
     fontWeight: '500'
   },
   emptyContainer: {
@@ -348,13 +323,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
     marginTop: 20,
     textAlign: 'center'
   },
   emptyText: {
     fontSize: 14,
-    color: '#9ca3af',
     marginTop: 12,
     textAlign: 'center',
     lineHeight: 22

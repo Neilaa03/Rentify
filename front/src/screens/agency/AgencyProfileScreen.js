@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, ImageBackground, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, TextInput, ActivityIndicator } from 'react-native';
+import { Alert, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
@@ -7,6 +7,7 @@ import { AgencyCard, SectionTitle } from '../../components/agency/AgencyPrimitiv
 import { getAgencyProfile } from '../../services/agency';import { useTranslation } from "react-i18next";
 import { getFriendlyError } from '../../utils/friendlyError';
 import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 export default function AgencyProfileScreen({ navigation, route }) {const { t } = useTranslation();
   const { colors } = useTheme();
@@ -82,11 +83,9 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
 
 
   return (
-    <View style={styles.container}>
+    <AppBackground contentStyle={styles.safeArea}>
       <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} translucent backgroundColor={colors.background} />
-      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-          <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
           <View style={styles.page}>
           <View style={styles.headerSpacer} />
 
@@ -96,7 +95,10 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
                 <SectionTitle
                       kicker="AGENCE"
                       title={t("screens.agency.agencyprofilescreen.profilVerification")}
-                      subtitle={t("screens.agency.agencyprofilescreen.informationsLegalesDocumentsEtGestion")} />
+                      subtitle={t("screens.agency.agencyprofilescreen.informationsLegalesDocumentsEtGestion")}
+                      kickerStyle={{ color: colors.white }}
+                      titleStyle={{ color: colors.white }}
+                      subtitleStyle={{ color: 'rgba(255,255,255,0.82)' }} />
                     
               </View>
               {!isEditing &&
@@ -213,9 +215,7 @@ export default function AgencyProfileScreen({ navigation, route }) {const { t } 
           </View>
           </View>
           <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
-        </SafeAreaView>
-      </ImageBackground>
-    </View>);
+    </AppBackground>);
 
 }
 

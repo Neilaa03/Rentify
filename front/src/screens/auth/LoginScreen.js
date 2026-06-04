@@ -445,17 +445,17 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                   
 
                                     <View style={styles.inputContainer}>
-                                        <Text style={[styles.label, { color: colors.text }]}>{t("screens.auth.loginscreen.password")}</Text>
+                                        <Text style={[styles.label, { color: colors.white }]}>{t("screens.auth.loginscreen.password")}</Text>
                                         <View>
                                             <TextInput
                         style={[
                         styles.input,
-                        { color: colors.text, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+                        { color: colors.white, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
                         password ? styles.inputFilled : null,
                         errors.password ? styles.inputError : null]
                         }
                         placeholder="••••••••"
-                        placeholderTextColor={colors.textMuted}
+                        placeholderTextColor="rgba(255,255,255,0.72)"
                         value={password}
                         onChangeText={(text) => {
                           setPassword(text);
@@ -484,8 +484,8 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                     style={styles.forgotPassword}
                     onPress={() => navigation.navigate('ForgotPassword', { email: email.trim() })}>
                     
-                                        <Text style={[styles.forgotText, { color: colors.primary }]}>{t("screens.auth.loginscreen.forgotPassword")}</Text>
-                                    </TouchableOpacity>
+                                    <Text style={[styles.forgotText, { color: colors.white }]}>{t("screens.auth.loginscreen.forgotPassword")}</Text>
+                                </TouchableOpacity>
 
                                     {!!errors.form && <Text style={[styles.formErrorText, { color: colors.danger }]}>{errors.form}</Text>}
 
@@ -511,9 +511,9 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                                 </View>
 
                                 <View style={styles.footer}>
-                                    <Text style={[styles.footerText, { color: colors.textMuted }]}>{t("screens.auth.loginscreen.dontHaveAnAccount")}</Text>
+                                    <Text style={[styles.footerText, { color: colors.white }]}>{t("screens.auth.loginscreen.dontHaveAnAccount")}</Text>
                                     <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                                        <Text style={[styles.linkText, { color: colors.primary }]}>{t("screens.auth.loginscreen.signUp")}</Text>
+                                        <Text style={[styles.linkText, { color: colors.white }]}>{t("screens.auth.loginscreen.signUp")}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   background: { flex: 1 },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'transparent',
     paddingHorizontal: moderateScale(20)
   },
   keyboardAvoid: { flex: 1 },

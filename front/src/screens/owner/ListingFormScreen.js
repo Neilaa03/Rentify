@@ -19,6 +19,8 @@ import {
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';import { useTranslation } from "react-i18next";
 import { getLanguageMeta } from '../../i18n';
 import { getFriendlyError } from '../../utils/friendlyError';
+import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 LocaleConfig.locales.fr = {
   monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
@@ -58,7 +60,7 @@ const buildRangeMarks = (startDate, endDate) => {
       [startDate]: {
         customStyles: {
           container: { backgroundColor: '#cf62ff', borderRadius: 16 },
-          text: { color: '#fff', fontWeight: '700' }
+          text: { color: '#11162B', fontWeight: '700' }
         }
       }
     };
@@ -74,7 +76,7 @@ const buildRangeMarks = (startDate, endDate) => {
     marks[key] = {
       customStyles: {
         container: { backgroundColor: isEdge ? '#cf62ff' : '#7f69ea', borderRadius: 16 },
-        text: { color: '#fff', fontWeight: '700' }
+        text: { color: '#11162B', fontWeight: '700' }
       }
     };
     cursor.setDate(cursor.getDate() + 1);
@@ -85,6 +87,7 @@ const buildRangeMarks = (startDate, endDate) => {
 
 const OwnerListingFormScreen = ({ navigation, route }) => {const { t, i18n } = useTranslation();
   LocaleConfig.defaultLocale = getLanguageMeta(i18n.language).code;
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || 'create';
@@ -220,62 +223,62 @@ const OwnerListingFormScreen = ({ navigation, route }) => {const { t, i18n } = u
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      <View style={styles.container}>
+    <AppBackground contentStyle={[styles.safeArea, { backgroundColor: 'transparent' }]}>
+      <View style={[styles.container, { backgroundColor: colors.overlay }]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><Ionicons name="chevron-back" size={22} color="#fff" /></TouchableOpacity>
-          <Text style={styles.headerTitle}>{isCreateListingOnly ? 'Nouvelle annonce' : 'Modifier annonce'}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.iconBtn, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}><Ionicons name="chevron-back" size={22} color={colors.text} /></TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{isCreateListingOnly ? 'Nouvelle annonce' : 'Modifier annonce'}</Text>
           <View style={styles.iconBtn} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
           {isCreateListingOnly ?
           <>
-              <Text style={styles.sectionTitle}>{t("screens.owner.listingformscreen.vehicule")}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.owner.listingformscreen.vehicule")}</Text>
               <View style={styles.optionRow}>
                 {cars.map((car) =>
-              <TouchableOpacity key={car.id} style={[styles.optionPill, form.carId === car.id && styles.optionPillActive]} onPress={() => setField('carId', car.id)}>
-                    <Text style={[styles.optionText, form.carId === car.id && styles.optionTextActive]}>{car.brand} {car.model}</Text>
+              <TouchableOpacity key={car.id} style={[styles.optionPill, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }, form.carId === car.id && { backgroundColor: colors.surface, borderColor: colors.primary }]} onPress={() => setField('carId', car.id)}>
+                    <Text style={[styles.optionText, { color: colors.textMuted }, form.carId === car.id && { color: colors.text, fontWeight: '700' }]}>{car.brand} {car.model}</Text>
                   </TouchableOpacity>
               )}
               </View>
             </> :
           null}
 
-          <Text style={styles.sectionTitle}>{t("screens.owner.listingformscreen.tarificationLocalisation")}</Text>
-          <Text style={styles.label}>{t("screens.owner.listingformscreen.titreAnnonce")}</Text>
-          <TextInput style={styles.input} value={form.title} onChangeText={(v) => setField('title', v)} />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.owner.listingformscreen.tarificationLocalisation")}</Text>
+          <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.listingformscreen.titreAnnonce")}</Text>
+          <TextInput style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text }]} value={form.title} onChangeText={(v) => setField('title', v)} />
 
           <View style={styles.twoCols}>
-            <View style={styles.col}><Text style={styles.label}>{t("screens.owner.listingformscreen.prixJourDa")}</Text><TextInput style={styles.input} keyboardType="numeric" value={form.pricePerDay} onChangeText={(v) => setField('pricePerDay', v)} /></View>
-            <View style={styles.col}><Text style={styles.label}>{t("screens.owner.listingformscreen.ville")}</Text><TextInput style={styles.input} value={form.city} onChangeText={(v) => setField('city', v)} /></View>
+            <View style={styles.col}><Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.listingformscreen.prixJourDa")}</Text><TextInput style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text }]} keyboardType="numeric" value={form.pricePerDay} onChangeText={(v) => setField('pricePerDay', v)} /></View>
+            <View style={styles.col}><Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.listingformscreen.ville")}</Text><TextInput style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text }]} value={form.city} onChangeText={(v) => setField('city', v)} /></View>
           </View>
 
-          <Text style={styles.label}>{t("screens.owner.listingformscreen.adresseDeRecuperationChezVousAgence")}</Text>
-          <TextInput style={styles.input} value={form.pickupAddress} onChangeText={(v) => setField('pickupAddress', v)} placeholder={t("screens.owner.listingformscreen.ex12RueAlger")} placeholderTextColor="#9aa3d8" />
+          <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.listingformscreen.adresseDeRecuperationChezVousAgence")}</Text>
+          <TextInput style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text }]} value={form.pickupAddress} onChangeText={(v) => setField('pickupAddress', v)} placeholder={t("screens.owner.listingformscreen.ex12RueAlger")} placeholderTextColor={colors.textMuted} />
 
-          <Text style={styles.label}>{t("screens.owner.listingformscreen.fraisDeLivraisonDa")}</Text>
-          <TextInput style={styles.input} keyboardType="numeric" value={form.deliveryFee} onChangeText={(v) => setField('deliveryFee', v)} placeholder="0" placeholderTextColor="#9aa3d8" />
+          <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.listingformscreen.fraisDeLivraisonDa")}</Text>
+          <TextInput style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text }]} keyboardType="numeric" value={form.deliveryFee} onChangeText={(v) => setField('deliveryFee', v)} placeholder="0" placeholderTextColor={colors.textMuted} />
 
-          <Text style={styles.label}>{t("screens.owner.listingformscreen.pays")}</Text>
-          <TextInput style={styles.input} value={form.country} onChangeText={(v) => setField('country', v)} />
+          <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.listingformscreen.pays")}</Text>
+          <TextInput style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text }]} value={form.country} onChangeText={(v) => setField('country', v)} />
 
-          <Text style={styles.label}>{t("screens.owner.listingformscreen.description")}</Text>
-          <TextInput style={[styles.input, styles.textArea]} multiline value={form.description} onChangeText={(v) => setField('description', v)} />
+          <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.listingformscreen.description")}</Text>
+          <TextInput style={[styles.input, styles.textArea, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text }]} multiline value={form.description} onChangeText={(v) => setField('description', v)} />
 
-          <Text style={styles.label}>{t("screens.owner.listingformscreen.selectionnezVosDates")}</Text>
-          <TouchableOpacity style={styles.dateInput} onPress={() => setIsRangeCalendarOpen((prev) => !prev)}>
-            <Text style={form.availableFrom ? styles.dateValue : styles.datePlaceholder}>
+          <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.listingformscreen.selectionnezVosDates")}</Text>
+          <TouchableOpacity style={[styles.dateInput, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]} onPress={() => setIsRangeCalendarOpen((prev) => !prev)}>
+            <Text style={[form.availableFrom ? styles.dateValue : styles.datePlaceholder, { color: form.availableFrom ? colors.text : colors.textMuted }]}>
               {form.availableFrom ? `${form.availableFrom} -> ${form.availableTo || '...'}` : 'Choisir la periode'}
             </Text>
-            <Ionicons name="calendar-outline" size={18} color="#cfd3ff" />
+            <Ionicons name="calendar-outline" size={18} color={colors.primary} />
           </TouchableOpacity>
 
           {isRangeCalendarOpen ?
           <View style={styles.datePickerWrap}>
               <View style={styles.legendRow}>
-                <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#cf62ff' }]} /><Text style={styles.legendText}>{t("screens.owner.listingformscreen.selection")}</Text></View>
-                <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#2f3568' }]} /><Text style={styles.legendText}>{t("screens.owner.listingformscreen.indisponible")}</Text></View>
+                <View style={[styles.legendItem, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}><View style={[styles.legendDot, { backgroundColor: colors.primary }]} /><Text style={[styles.legendText, { color: colors.text }]}>{t("screens.owner.listingformscreen.selection")}</Text></View>
+                <View style={[styles.legendItem, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}><View style={[styles.legendDot, { backgroundColor: colors.surfaceElevated }]} /><Text style={[styles.legendText, { color: colors.text }]}>{t("screens.owner.listingformscreen.indisponable")}</Text></View>
               </View>
 
               <Calendar
@@ -288,10 +291,10 @@ const OwnerListingFormScreen = ({ navigation, route }) => {const { t, i18n } = u
               theme={{
                 backgroundColor: 'transparent',
                 calendarBackground: 'transparent',
-                textSectionTitleColor: '#e4e8ff',
-                monthTextColor: '#fff',
-                dayTextColor: '#fff',
-                todayTextColor: '#cf62ff',
+                textSectionTitleColor: '#5D678E',
+                monthTextColor: '#11162B',
+                dayTextColor: '#11162B',
+                todayTextColor: '#8A2BE2',
                 arrowColor: '#cf62ff',
                 textMonthFontSize: 30 / 1.6,
                 textMonthFontWeight: '700',
@@ -302,7 +305,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {const { t, i18n } = u
                     width: 42,
                     height: 42,
                     borderRadius: 14,
-                    backgroundColor: '#2f3568',
+                    backgroundColor: '#E1D8F7',
                     alignItems: 'center',
                     justifyContent: 'center'
                   }
@@ -313,65 +316,65 @@ const OwnerListingFormScreen = ({ navigation, route }) => {const { t, i18n } = u
             </View> :
           null}
 
-          <TouchableOpacity style={[styles.submitBtn, (!canSubmit || isSubmitting) && styles.submitBtnDisabled]} onPress={submit} disabled={!canSubmit || isSubmitting}>
-            <Text style={styles.submitText}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</Text>
+              <TouchableOpacity style={[styles.submitBtn, { backgroundColor: colors.primary }, (!canSubmit || isSubmitting) && styles.submitBtnDisabled]} onPress={submit} disabled={!canSubmit || isSubmitting}>
+            <Text style={[styles.submitText, { color: colors.white }]}>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
       <OwnerBottomNavigation navigation={navigation} route={route} active="add" />
-    </SafeAreaView>);
+    </AppBackground>);
 
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0a0c24' },
-  container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#0a0c24' },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, paddingHorizontal: 16, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  iconBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },
-  headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  iconBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(225,216,247,0.78)', borderWidth: 1, borderColor: 'rgba(117,94,171,0.16)' },
+  headerTitle: { color: '#11162B', fontSize: 22, fontWeight: '800' },
   content: { paddingBottom: 104 },
-  sectionTitle: { color: '#fff', marginTop: 12, marginBottom: 8, fontSize: 18, fontWeight: '800' },
-  label: { color: '#d8dcf7', marginTop: 8, marginBottom: 6, fontWeight: '600' },
+  sectionTitle: { color: '#11162B', marginTop: 12, marginBottom: 8, fontSize: 18, fontWeight: '800' },
+  label: { color: '#11162B', marginTop: 8, marginBottom: 6, fontWeight: '600' },
   twoCols: { flexDirection: 'row', gap: 10 },
   col: { flex: 1 },
-  input: { borderRadius: 12, borderWidth: 1, borderColor: 'rgba(146,151,214,0.25)', backgroundColor: 'rgba(21,23,58,0.9)', color: '#fff', paddingHorizontal: 12, paddingVertical: 12 },
+  input: { borderRadius: 12, borderWidth: 1, borderColor: 'rgba(117,94,171,0.22)', backgroundColor: 'rgba(225,216,247,0.78)', color: '#11162B', paddingHorizontal: 12, paddingVertical: 12 },
   textArea: { minHeight: 92, textAlignVertical: 'top' },
-  hint: { color: '#bfc5ed', marginTop: 8, marginBottom: 4, lineHeight: 20 },
+  hint: { color: '#5D678E', marginTop: 8, marginBottom: 4, lineHeight: 20 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2, marginBottom: 2 },
-  optionPill: { borderRadius: 999, borderWidth: 1, borderColor: 'rgba(146,151,214,0.3)', paddingHorizontal: 12, paddingVertical: 8 },
-  optionPillActive: { backgroundColor: 'rgba(143,125,255,0.22)', borderColor: '#8f7dff' },
-  optionText: { color: '#aeb4dc', fontWeight: '500' },
-  optionTextActive: { color: '#fff', fontWeight: '700' },
+  optionPill: { borderRadius: 999, borderWidth: 1, borderColor: 'rgba(117,94,171,0.22)', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(225,216,247,0.68)' },
+  optionPillActive: { backgroundColor: 'rgba(138,43,226,0.18)', borderColor: '#8A2BE2' },
+  optionText: { color: '#5D678E', fontWeight: '500' },
+  optionTextActive: { color: '#11162B', fontWeight: '700' },
   dateInput: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.25)',
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    borderColor: 'rgba(117,94,171,0.22)',
+    backgroundColor: 'rgba(225,216,247,0.78)',
     paddingHorizontal: 12,
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between'
   },
-  dateValue: { color: '#fff' },
-  datePlaceholder: { color: '#8389b6' },
+  dateValue: { color: '#11162B' },
+  datePlaceholder: { color: '#5D678E' },
   datePickerWrap: {
     marginTop: 10,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.35)',
-    backgroundColor: '#1b245b',
+    borderColor: 'rgba(117,94,171,0.22)',
+    backgroundColor: '#E1D8F7',
     paddingVertical: 12,
     paddingHorizontal: 8
   },
   legendRow: { flexDirection: 'row', gap: 10, marginBottom: 8, paddingHorizontal: 8 },
   legendItem: {
     flexDirection: 'row', alignItems: 'center', borderRadius: 999, borderWidth: 1,
-    borderColor: 'rgba(186,192,241,0.35)', backgroundColor: '#2a3269', paddingHorizontal: 12, paddingVertical: 7
+    borderColor: 'rgba(117,94,171,0.22)', backgroundColor: 'rgba(225,216,247,0.76)', paddingHorizontal: 12, paddingVertical: 7
   },
   legendDot: { width: 10, height: 10, borderRadius: 999, marginRight: 8 },
-  legendText: { color: '#e7ebff', fontWeight: '700', fontSize: 12 },
-  submitBtn: { marginTop: 16, borderRadius: 12, backgroundColor: '#8f7dff', alignItems: 'center', paddingVertical: 13 },
+  legendText: { color: '#11162B', fontWeight: '700', fontSize: 12 },
+  submitBtn: { marginTop: 16, borderRadius: 12, backgroundColor: '#8A2BE2', alignItems: 'center', paddingVertical: 13 },
   submitBtnDisabled: { opacity: 0.5 },
   submitText: { color: '#fff', fontWeight: '700', fontSize: 16 }
 });

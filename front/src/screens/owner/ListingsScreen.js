@@ -190,7 +190,7 @@ const OwnerListingsScreen = ({
           <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{screenTitle}</Text>
+          <Text style={[styles.headerTitle, { color: colors.white }]}>{screenTitle}</Text>
           <TouchableOpacity
             style={[styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}

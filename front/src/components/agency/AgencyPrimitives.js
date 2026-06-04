@@ -21,13 +21,13 @@ export const AgencyCard = ({ children, style, danger = false }) => {
 };
 
 
-export const SectionTitle = ({ kicker, title, subtitle, right }) => {
+export const SectionTitle = ({ kicker, title, subtitle, right, kickerStyle, titleStyle, subtitleStyle, style }) => {
   const { colors } = useTheme();
-  return <View style={styles.sectionHeader}>
+  return <View style={[styles.sectionHeader, style]}>
     <View style={styles.sectionTextBlock}>
-      {kicker ? <Text style={[styles.kicker, { color: colors.primary }]}>{kicker}</Text> : null}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
-      {subtitle ? <Text style={[styles.sectionSubtitle, { color: colors.textMuted }]}>{subtitle}</Text> : null}
+      {kicker ? <Text style={[styles.kicker, { color: colors.primary }, kickerStyle]}>{kicker}</Text> : null}
+      <Text style={[styles.sectionTitle, { color: colors.text }, titleStyle]}>{title}</Text>
+      {subtitle ? <Text style={[styles.sectionSubtitle, { color: colors.textMuted }, subtitleStyle]}>{subtitle}</Text> : null}
     </View>
     {right ? <View style={styles.sectionAction}>{right}</View> : null}
   </View>;
@@ -46,15 +46,16 @@ export const Badge = ({ label, toneKey = 'neutral', icon, style, textStyle, full
 
 export const MetricCard = ({ label, value, icon, toneKey = 'purple', subtitle }) => {
   const c = tone(toneKey);
+  const { colors } = useTheme();
   return (
-    <View style={[styles.metricCard, { borderColor: c.border }]}>
+    <View style={[styles.metricCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
       <View style={styles.metricTopRow}>
         <View style={[styles.metricIcon, { backgroundColor: c.bg }]}>
           <Ionicons name={icon} size={15} color={c.fg} />
         </View>
-        <Text style={styles.metricValue}>{value}</Text>
+        <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
       </View>
-      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
       {subtitle ? <Text style={[styles.metricSubtitle, { color: c.fg }]}>{subtitle}</Text> : null}
     </View>);
 
@@ -76,33 +77,43 @@ export const ProgressRow = ({ label, valueLabel, percent = 0, toneKey = 'purple'
 };
 
 export const TogglePill = ({ value, onValueChange, disabled = false }) =>
-<View style={styles.toggleWrap}>
-    <Text style={[styles.toggleLabel, disabled && styles.toggleLabelDisabled]}>{disabled ? 'Docs manquants' : value ? 'Visible' : 'Masqué'}</Text>
+{
+  const { colors } = useTheme();
+  return <View style={styles.toggleWrap}>
+    <Text style={[styles.toggleLabel, { color: colors.textMuted }, disabled && { color: colors.warning }]}>{disabled ? 'Docs manquants' : value ? 'Visible' : 'Masqué'}</Text>
     <Switch
     value={value}
     onValueChange={onValueChange}
     disabled={disabled}
-    trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(41,121,255,0.55)' }}
-    thumbColor={value ? '#dce5ff' : '#8d96b8'} />
+    trackColor={{ false: colors.border, true: colors.primary }}
+    thumbColor={value ? colors.white : colors.textMuted} />
   
   </View>;
+};
 
 
 export const PillRow = ({ items, activeKey, onSelect }) =>
-<View style={styles.pillRow}>
+{
+  const { colors } = useTheme();
+  return <View style={styles.pillRow}>
     {items.map((item) => {
     const active = activeKey === item.key;
     return (
       <TouchableOpacity
         key={item.key}
-        style={[styles.pill, active && styles.pillActive]}
+        style={[
+          styles.pill,
+          { backgroundColor: colors.surfaceStrong, borderColor: colors.border },
+          active && { backgroundColor: colors.surface, borderColor: colors.primary }
+        ]}
         onPress={() => onSelect(item.key)}>
         
-          <Text style={[styles.pillText, active && styles.pillTextActive]}>{item.label}</Text>
+          <Text style={[styles.pillText, { color: colors.textMuted }, active && { color: colors.text, fontWeight: '900' }]}>{item.label}</Text>
         </TouchableOpacity>);
 
   })}
   </View>;
+};
 
 
 export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t } = useTranslation();

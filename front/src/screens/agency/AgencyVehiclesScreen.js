@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, Badge, PillRow, SectionTitle, VehicleCard } from '../../components/agency/AgencyPrimitives';
 import { getAgencyVehicles, toggleAgencyVehicleVisibility } from '../../services/agency';import { useTranslation } from "react-i18next";
 import { getFriendlyError } from '../../utils/friendlyError';
+import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 const statusFilters = [
 { key: 'ALL', labelKey: 'screens.agency.agencyvehiclesscreen.tous' },
@@ -21,6 +23,7 @@ const getSortValue = (item, sortKey) => {
 };
 
 export default function AgencyVehiclesScreen({ navigation, route }) {const { t } = useTranslation();
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || (route?.name === 'AgencyListings' ? 'listings' : 'fleet');
@@ -94,21 +97,18 @@ export default function AgencyVehiclesScreen({ navigation, route }) {const { t }
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="#0a0c24" />
-      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-          <View style={styles.overlay}>
+    <AppBackground contentStyle={styles.safeArea}>
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
           <View style={styles.page}>
           <View style={styles.headerSpacer} />
 
           {state.loading ?
               <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#A78BFF" />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View> :
 
               <ScrollView
-                refreshControl={<RefreshControl refreshing={state.refreshing} onRefresh={onRefresh} tintColor="#A78BFF" />}
+                refreshControl={<RefreshControl refreshing={state.refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.content}>
                 
@@ -116,6 +116,9 @@ export default function AgencyVehiclesScreen({ navigation, route }) {const { t }
                   kicker={mode === 'listings' ? 'LISTINGS' : 'FLEET'}
                   title={mode === 'listings' ? 'Annonces de l’agence' : 'Flotte & véhicules'}
                   subtitle={t("screens.agency.agencyvehiclesscreen.gestionVisibilitePubliqueEtStatuts")}
+                  kickerStyle={{ color: colors.white }}
+                  titleStyle={{ color: colors.white }}
+                  subtitleStyle={{ color: 'rgba(255,255,255,0.82)' }}
                   right={
                   <TouchableOpacity style={styles.addButton} onPress={onAdd}>
                     <Ionicons name="add" size={16} color="#fff" />
@@ -154,9 +157,7 @@ export default function AgencyVehiclesScreen({ navigation, route }) {const { t }
           </View>
           </View>
           <AgencyBottomNavigation navigation={navigation} route={route} active={mode === 'listings' ? 'listings' : 'fleet'} />
-        </SafeAreaView>
-      </ImageBackground>
-    </View>);
+    </AppBackground>);
 
 }
 

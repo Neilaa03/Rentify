@@ -15,8 +15,8 @@ const LandingScreen = ({ navigation }) => {const { t } = useTranslation();
         
                 <SafeAreaView style={[styles.overlay, { backgroundColor: colors.overlay }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.brandName, { color: colors.text }]}>{t("screens.client.landingscreen.rentify")}</Text>
-                        <Text style={[styles.tagline, { color: colors.textMuted }]}>{t("screens.client.landingscreen.driveTheWorldsFinestVehicles")}</Text>
+                        <Text style={[styles.brandName, { color: colors.white }]}>{t("screens.client.landingscreen.rentify")}</Text>
+                        <Text style={[styles.tagline, { color: 'rgba(255,255,255,0.82)' }]}>{t("screens.client.landingscreen.driveTheWorldsFinestVehicles")}</Text>
                     </View>
 
                     <View style={styles.footer}>

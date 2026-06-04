@@ -326,7 +326,7 @@ const HomeScreen = ({ navigation, route }) => {
               >
                 <SafeAreaView style={[styles.overlay, { backgroundColor: colors.overlay }]}>
                     <View style={styles.header}>
-                        <Text style={[styles.logo, { color: colors.text }]}>{t('screens.client.homescreen.tousLesVehicules')}</Text>
+                        <Text style={[styles.logo, { color: colors.white }]}>{t('screens.client.homescreen.tousLesVehicules')}</Text>
                         <View style={styles.headerRight}>
                             <NotificationIconButton navigation={navigation} style={styles.notificationButton} iconSize={24} />
                             <MessageIconButton navigation={navigation} style={styles.logoutButton} iconSize={24} />
@@ -466,30 +466,38 @@ const HomeScreen = ({ navigation, route }) => {
                         <View style={styles.actionsRow}>
                             <View style={styles.actionBlock}>
                                 <TouchableOpacity
-                                    style={styles.actionButton}
+                                    style={[styles.actionButton, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}
                                     onPress={() => {
                                         setShowFilterOptions((prev) => !prev);
                                         setShowSortOptions(false);
                                     }}
                                     activeOpacity={0.85}
                                 >
-                                    <Ionicons name="funnel-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.actionButtonText}>{t('screens.client.homescreen.filtrer')} {activeFilterLabel}</Text>
+                                    <Ionicons name="funnel-outline" size={16} color={colors.primary} />
+                                    <Text style={[styles.actionButtonText, { color: colors.text }]}>{t('screens.client.homescreen.filtrer')} {activeFilterLabel}</Text>
                                 </TouchableOpacity>
                                 {showFilterOptions && (
-                                    <View style={styles.dropdown}>
+                                    <View style={[styles.dropdown, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                                         {filterOptions.map((option) => {
                                             const isActive = option.id === activeFilter;
                                             return (
                                                 <TouchableOpacity
                                                     key={option.id}
-                                                    style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
+                                                    style={[
+                                                      styles.dropdownItem,
+                                                      { borderColor: colors.border },
+                                                      isActive && { backgroundColor: colors.surface, borderColor: colors.primary }
+                                                    ]}
                                                     onPress={() => {
                                                         setActiveFilter(option.id);
                                                         setShowFilterOptions(false);
                                                     }}
                                                 >
-                                                    <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
+                                                    <Text style={[
+                                                      styles.dropdownItemText,
+                                                      { color: colors.textMuted },
+                                                      isActive && { color: colors.text, fontWeight: '700' }
+                                                    ]}>
                                                         {option.label}
                                                     </Text>
                                                 </TouchableOpacity>
@@ -501,30 +509,38 @@ const HomeScreen = ({ navigation, route }) => {
 
                             <View style={styles.actionBlock}>
                                 <TouchableOpacity
-                                    style={styles.actionButton}
+                                    style={[styles.actionButton, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}
                                     onPress={() => {
                                         setShowSortOptions((prev) => !prev);
                                         setShowFilterOptions(false);
                                     }}
                                     activeOpacity={0.85}
                                 >
-                                    <Ionicons name="swap-vertical-outline" size={16} color="#d6dbff" />
-                                    <Text style={styles.actionButtonText}>{t('screens.client.homescreen.trier')} {activeSortLabel}</Text>
+                                    <Ionicons name="swap-vertical-outline" size={16} color={colors.primary} />
+                                    <Text style={[styles.actionButtonText, { color: colors.text }]}>{t('screens.client.homescreen.trier')} {activeSortLabel}</Text>
                                 </TouchableOpacity>
                                 {showSortOptions && (
-                                    <View style={styles.dropdown}>
+                                    <View style={[styles.dropdown, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                                         {sortOptions.map((option) => {
                                             const isActive = option.id === activeSort;
                                             return (
                                                 <TouchableOpacity
                                                     key={option.id}
-                                                    style={[styles.dropdownItem, isActive && styles.dropdownItemActive]}
+                                                    style={[
+                                                      styles.dropdownItem,
+                                                      { borderColor: colors.border },
+                                                      isActive && { backgroundColor: colors.surface, borderColor: colors.primary }
+                                                    ]}
                                                     onPress={() => {
                                                         setActiveSort(option.id);
                                                         setShowSortOptions(false);
                                                     }}
                                                 >
-                                                    <Text style={[styles.dropdownItemText, isActive && styles.dropdownItemTextActive]}>
+                                                    <Text style={[
+                                                      styles.dropdownItemText,
+                                                      { color: colors.textMuted },
+                                                      isActive && { color: colors.text, fontWeight: '700' }
+                                                    ]}>
                                                         {option.label}
                                                     </Text>
                                                 </TouchableOpacity>
@@ -802,7 +818,6 @@ const styles = StyleSheet.create({
     },
     actionButtonText: {
         marginLeft: 6,
-        color: '#d6dbff',
         fontWeight: '600',
         fontSize: 12,
         flexShrink: 1,
@@ -824,16 +839,9 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(145, 152, 229, 0.14)',
     },
-    dropdownItemActive: {
-        backgroundColor: 'rgba(108, 77, 255, 0.35)',
-    },
     dropdownItemText: {
-        color: '#b5bce3',
         fontSize: 13,
         fontWeight: '500',
-    },
-    dropdownItemTextActive: {
-        color: '#fff',
     },
     emptyState: {
         marginTop: 12,

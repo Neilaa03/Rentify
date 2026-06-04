@@ -140,7 +140,7 @@ const OwnerCarsScreen = ({ navigation, route }) => {const { t } = useTranslation
   return (
     <AppBackground>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t("screens.owner.carsscreen.mesVoitures")}</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]}>{t("screens.owner.carsscreen.mesVoitures")}</Text>
         <TouchableOpacity
           style={styles.addIconButton}
           onPress={handleAddCar}>

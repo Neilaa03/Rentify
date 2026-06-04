@@ -7,8 +7,8 @@ const AuthHeader = ({ title, subtitle }) => {
     const { colors } = useTheme();
     return (
         <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>
+            <Text style={[styles.title, { color: colors.white }]}>{title}</Text>
+            <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.82)' }]}>{subtitle}</Text>
         </View>
     );
 };

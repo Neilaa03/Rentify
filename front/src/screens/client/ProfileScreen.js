@@ -900,7 +900,7 @@ const ProfileScreen = ({ navigation, route }) => {
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView edges={['top', 'left', 'right']} style={[styles.overlay, { backgroundColor: colors.overlay }]}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <Text style={[styles.title, { fontSize: fontSize.title, color: colors.text }]}>{t('screens.client.profilescreen.profil')}</Text>
+            <Text style={[styles.title, { fontSize: fontSize.title, color: colors.white }]}>{t('screens.client.profilescreen.profil')}</Text>
 
             {isOwner ? (
               <View style={[styles.verificationPanel, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
@@ -911,7 +911,6 @@ const ProfileScreen = ({ navigation, route }) => {
                   textStyle={styles.verificationBadgeText}
                   style={styles.verificationBadge}
                 />
-                <Text style={styles.verificationSubtitle}>{verificationSubtitle}</Text>
               </View>
             ) : null}
 
@@ -1477,7 +1476,7 @@ const styles = StyleSheet.create({
   verificationPanel: {
     marginTop: -2,
     marginBottom: 2,
-    padding: 14,
+    padding: 10,
     borderRadius: 22,
     borderWidth: 1,
     borderColor: 'rgba(255,179,71,0.22)',
