@@ -105,7 +105,54 @@ export const getUsers = async ({ page, limit, search, role, isActive }) => {
 
   const { data, count, error } = await withPagination(query, page, limit);
   if (error) throw error;
-  return { data: data || [], count: count || 0 };
+
+  const users = data || [];
+  const userIds = [...new Set(users.map((user) => user.id).filter(Boolean))];
+  const companyManagerIds = [...new Set(users.filter((user) => String(user.role || '').toLowerCase() === 'companymanager').map((user) => user.id).filter(Boolean))];
+
+  const [userDocsRes, companiesRes] = await Promise.all([
+    userIds.length
+      ? supabase.from('documents').select('*').in('user_id', userIds).order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    companyManagerIds.length
+      ? supabase.from('company').select('id,manager_id').in('manager_id', companyManagerIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const companyIds = [...new Set((companiesRes.data || []).map((company) => company.id).filter(Boolean))];
+  const companyDocsRes = companyIds.length
+    ? await supabase.from('documents').select('*').in('company_id', companyIds).order('created_at', { ascending: false })
+    : { data: [] };
+
+  const userDocsByUserId = (userDocsRes.data || []).reduce((acc, doc) => {
+    if (!doc.user_id) return acc;
+    if (!acc[doc.user_id]) acc[doc.user_id] = [];
+    acc[doc.user_id].push(doc);
+    return acc;
+  }, {});
+  const companyDocsByManagerId = (companyDocsRes.data || []).reduce((acc, doc) => {
+    if (!doc.company_id) return acc;
+    const company = (companiesRes.data || []).find((row) => row.id === doc.company_id);
+    if (!company?.manager_id) return acc;
+    if (!acc[company.manager_id]) acc[company.manager_id] = [];
+    acc[company.manager_id].push(doc);
+    return acc;
+  }, {});
+
+  return {
+    data: users.map((user) => {
+      const ownDocuments = userDocsByUserId[user.id] || [];
+      const companyDocuments = companyDocsByManagerId[user.id] || [];
+      const summary = buildDocumentSummary([...ownDocuments, ...companyDocuments]);
+
+      return {
+        ...user,
+        documentStatus: summary.verificationStatus,
+        documentCount: summary.visibleDocumentCount,
+      };
+    }),
+    count: count || 0,
+  };
 };
 
 export const updateUser = async (userId, payload) => {

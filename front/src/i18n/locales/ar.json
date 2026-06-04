@@ -264,15 +264,34 @@
         "impossibleDeChargerLesDocuments": "تعذر تحميل المستندات",
         "miseAJourDuDocumentImpossible": "تعذر تحديث المستند",
         "impossibleDouvrirLeDocument": "تعذر فتح المستند",
-        "filters": {
-          "all": "الكل",
+        "roles": {
+          "all": "كل المستخدمين",
+          "owners": "المالكون",
+          "company": "الشركة",
+          "users": "المستخدمون",
           "owner": "المالكون",
           "company": "الشركات",
-          "client": "الأفراد"
+          "client": "العملاء",
+          "unknown": "مستخدم"
+        },
+        "documentStatuses": {
+          "all": "كل المستندات",
+          "pending": "قيد الانتظار",
+          "verified": "متحقق منها"
+        },
+        "documentReviewStatus": {
+          "approved": "موافق عليه",
+          "rejected": "مرفوض",
+          "pending": "قيد الانتظار"
+        },
+        "sections": {
+          "roles": "نوع المستخدم",
+          "documents": "حالة المستندات"
         },
         "voirDocs": "عرض المستندات",
-        "verifie": "تم التحقق",
-        "enAttente": "قيد الانتظار",
+        "active": "نشط",
+        "inactive": "غير نشط",
+        "documents": "مستندات",
         "chargementDesDocuments": "جار تحميل المستندات...",
         "aucunDocumentTrouvePourCetUtilisateur": "لم يتم العثور على مستند لهذا المستخدم.",
         "voir": "عرض",
@@ -280,7 +299,8 @@
         "accepter": "قبول",
         "identityCard": "بطاقة الهوية",
         "driverLicense": "رخصة القيادة",
-        "passport": "جواز السفر"
+        "passport": "جواز السفر",
+        "identityDocument": "الهوية"
       }
     },
     "agency": {

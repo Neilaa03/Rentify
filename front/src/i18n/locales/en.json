@@ -271,15 +271,34 @@
         "impossibleDeChargerLesDocuments": "Unable to load documents",
         "miseAJourDuDocumentImpossible": "Unable to update document",
         "impossibleDouvrirLeDocument": "Unable to open document",
-        "filters": {
-          "all": "All",
+        "roles": {
+          "all": "All users",
+          "owners": "Owners",
+          "company": "Company",
+          "users": "Users",
           "owner": "Owners",
           "company": "Companies",
-          "client": "Individuals"
+          "client": "Clients",
+          "unknown": "User"
+        },
+        "documentStatuses": {
+          "all": "All documents",
+          "pending": "Pending",
+          "verified": "Verified"
+        },
+        "documentReviewStatus": {
+          "approved": "Approved",
+          "rejected": "Rejected",
+          "pending": "Pending"
+        },
+        "sections": {
+          "roles": "User type",
+          "documents": "Document status"
         },
         "voirDocs": "View docs",
-        "verifie": "Verified",
-        "enAttente": "Pending",
+        "active": "Active",
+        "inactive": "Inactive",
+        "documents": "documents",
         "chargementDesDocuments": "Loading documents...",
         "aucunDocumentTrouvePourCetUtilisateur": "No document found for this user.",
         "voir": "View",
@@ -288,6 +307,7 @@
         "identityCard": "ID card",
         "driverLicense": "Driver license",
         "passport": "Passport",
+        "identityDocument": "Identity",
         "chargement": "Loading..."
       }
     },
