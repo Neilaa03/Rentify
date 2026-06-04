@@ -1,5 +1,8 @@
 import {
   carDetailsSchema,
+  cancelReservationActionSchema,
+  createReservationActionSchema,
+  leaveReviewActionSchema,
   listingDetailsSchema,
   listingAvailabilitySchema,
   myReviewsSchema,
@@ -7,6 +10,7 @@ import {
   reservationDetailsSchema,
   reservationPriceSchema,
   searchVehicleFiltersSchema,
+  updateProfileActionSchema,
   vehicleDetailsSchema,
   vehicleReviewsSchema,
 } from './assistantSchemas.js';
@@ -23,6 +27,10 @@ import {
   getUserProfileReadOnly,
   getVehicleDetailsReadOnly,
   getVehicleReviewsReadOnly,
+  prepareCancelReservationAction,
+  prepareCreateReservationAction,
+  prepareLeaveReviewAction,
+  prepareUpdateProfileAction,
   searchVehiclesReadOnly,
 } from './assistantModel.js';
 
@@ -271,6 +279,74 @@ export const assistantToolDefinitions = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'requestCancelReservation',
+      description: 'Prepare a cancellation for one of the authenticated user reservations. This does not cancel yet; it returns a pending action that requires explicit user confirmation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          reservationId: { type: 'string', description: 'Reservation UUID, if known from hidden references.' },
+          reservationNumber: { type: 'integer', description: '1-based number from the latest reservation cards.' },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'requestCreateReservation',
+      description: 'Prepare a new reservation for confirmation. This does not create a reservation yet. Use hidden listingId when available; use durationDays when user asks for a number of days.',
+      parameters: {
+        type: 'object',
+        properties: {
+          listingId: { type: 'string' },
+          listingNumber: { type: 'integer' },
+          startDate: { type: 'string', description: 'YYYY-MM-DD' },
+          endDate: { type: 'string', description: 'YYYY-MM-DD. Optional when durationDays is provided.' },
+          durationDays: { type: 'integer' },
+          pickupMethod: { type: 'string', enum: ['owner_place', 'company_place', 'renter_delivery'] },
+          pickupAddress: { type: 'string' },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'requestLeaveReview',
+      description: 'Prepare a review for one completed reservation. This does not submit the review yet; it requires explicit user confirmation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          reservationId: { type: 'string' },
+          reservationNumber: { type: 'integer' },
+          rating: { type: 'integer', description: '1 to 5' },
+          comment: { type: 'string' },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'requestUpdateProfile',
+      description: 'Prepare an update to the authenticated user profile. This does not update yet; it requires explicit user confirmation. Only firstName, lastName, and phone are supported.',
+      parameters: {
+        type: 'object',
+        properties: {
+          firstName: { type: 'string' },
+          lastName: { type: 'string' },
+          phone: { type: 'string' },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
 ];
 
 const parseToolArguments = (rawArguments) => {
@@ -317,6 +393,14 @@ export const executeAssistantTool = async ({ name, rawArguments, user }) => {
       return getVehicleReviewsReadOnly(vehicleReviewsSchema.parse(args));
     case 'getMyReviews':
       return getMyReviewsReadOnly({ userId: user.id, ...myReviewsSchema.parse(args) });
+    case 'requestCancelReservation':
+      return prepareCancelReservationAction({ ...cancelReservationActionSchema.parse(args), user });
+    case 'requestCreateReservation':
+      return prepareCreateReservationAction(createReservationActionSchema.parse(args));
+    case 'requestLeaveReview':
+      return prepareLeaveReviewAction({ ...leaveReviewActionSchema.parse(args), user });
+    case 'requestUpdateProfile':
+      return prepareUpdateProfileAction({ ...updateProfileActionSchema.parse(args), userId: user.id });
     default:
       throw new Error(`Unsupported assistant tool: ${name}`);
   }

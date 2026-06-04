@@ -3,10 +3,20 @@ import { supabase } from '../../config/supabase.js';
 import { getClientProfileStats, getOwnerProfileStats } from '../profile/profileModel.js';
 import { getListings, getListingById } from '../car-listings/listingModel.js';
 import { getCarById } from '../cars/carModel.js';
-import { getUserById } from '../auth/authModel.js';
+import { getUserById, updateUserById } from '../auth/authModel.js';
 import { getUserFavorites } from '../favorites/favoritesModel.js';
-import { getCarReviewSummary, getReviewsByCarId } from '../reviews/reviewModel.js';
+import {
+  createReview as createReviewRecord,
+  getCarReviewSummary,
+  getReservationForReview,
+  getReviewCountForReservationByReviewer,
+  getReviewsByCarId,
+} from '../reviews/reviewModel.js';
 import { getPaymentByReservationId } from '../payments/paymentDbModel.js';
+import {
+  createReservation as createReservationRecord,
+  updateReservationStatus,
+} from '../reservations/reservationModel.js';
 
 const RESERVATION_SELECT =
   'id, listing_id, renter_id, start_date, end_date, total_price, status, created_at, pickup(status, pickup_method, pickup_address, delivery_fee), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))';
@@ -256,6 +266,206 @@ export const calculateReservationPriceReadOnly = async ({ listingId, startDate, 
     breakdown,
     note: 'Estimate only. No reservation was created.',
   };
+};
+
+const getReservationActionTarget = async ({ reservationId, reservationNumber, user }) => {
+  const reservation = await getReservationDetailsReadOnly({ reservationId, reservationNumber, user });
+  if (reservation.renterId !== user.id) throw new Error('You can only perform this action on your own reservations');
+  return reservation;
+};
+
+const getReservationTitle = (reservation) => {
+  const car = reservation.listing?.car;
+  return car ? `${car.brand || ''} ${car.model || ''}`.trim() : reservation.listing?.title || 'reservation';
+};
+
+const createPendingAction = ({ actionType, summary, payload, preview }) => ({
+  id: crypto.randomUUID(),
+  actionType,
+  status: 'pending_confirmation',
+  requiresConfirmation: true,
+  confirmationText: 'Reply yes to confirm, or no to cancel.',
+  summary,
+  payload,
+  preview,
+  createdAt: new Date().toISOString(),
+});
+
+export const prepareCancelReservationAction = async ({ reservationId, reservationNumber, user }) => {
+  const reservation = await getReservationActionTarget({ reservationId, reservationNumber, user });
+  if (['cancelled', 'finished', 'refunded'].includes(reservation.status)) {
+    throw new Error(`Cannot cancel a ${reservation.status} reservation`);
+  }
+
+  return createPendingAction({
+    actionType: 'cancelReservation',
+    summary: `Cancel ${getReservationTitle(reservation)} from ${reservation.startDate} to ${reservation.endDate}.`,
+    payload: { reservationId: reservation.id },
+    preview: {
+      reservationId: reservation.id,
+      carName: getReservationTitle(reservation),
+      startDate: reservation.startDate,
+      endDate: reservation.endDate,
+      status: reservation.status,
+      totalPrice: reservation.totalPrice,
+    },
+  });
+};
+
+export const prepareCreateReservationAction = async ({
+  listingId,
+  listingNumber,
+  startDate,
+  endDate,
+  durationDays,
+  pickupMethod,
+  pickupAddress,
+}) => {
+  const listing = await getListingDetailsReadOnly({ listingId, listingNumber });
+  const resolvedEndDate = durationDays ? addDaysYmd(startDate, Number(durationDays) - 1) : endDate;
+  const estimate = await calculateReservationPriceReadOnly({
+    listingId: listing.id,
+    startDate,
+    endDate: resolvedEndDate,
+    pickupMethod: pickupMethod === 'renter_delivery' ? 'renter_delivery' : 'owner_place',
+  });
+
+  const carName = listing.car ? `${listing.car.brand || ''} ${listing.car.model || ''}`.trim() : listing.title;
+  return createPendingAction({
+    actionType: 'createReservation',
+    summary: `Create a reservation for ${carName} from ${startDate} to ${resolvedEndDate}.`,
+    payload: {
+      listingId: listing.id,
+      startDate,
+      endDate: resolvedEndDate,
+      pickupMethod,
+      pickupAddress,
+    },
+    preview: {
+      listingId: listing.id,
+      carName,
+      listingTitle: listing.title,
+      city: listing.city,
+      country: listing.country,
+      startDate,
+      endDate: resolvedEndDate,
+      pickupMethod,
+      pickupAddress,
+      totalPrice: estimate.totalPrice,
+      currency: estimate.currency,
+    },
+  });
+};
+
+export const prepareLeaveReviewAction = async ({ reservationId, reservationNumber, rating, comment, user }) => {
+  const reservation = await getReservationActionTarget({ reservationId, reservationNumber, user });
+  const reviewReservation = await getReservationForReview(reservation.id);
+
+  if (reviewReservation.renter_id !== user.id) throw new Error('You can only review your own reservations');
+  if (reviewReservation.status !== 'finished') throw new Error('You can only review reservations in finished status');
+
+  const existingCount = await getReviewCountForReservationByReviewer({
+    reservationId: reservation.id,
+    reviewerId: user.id,
+  });
+  if (existingCount >= 5) throw new Error('You have reached the maximum of 5 reviews for this reservation');
+
+  return createPendingAction({
+    actionType: 'leaveReview',
+    summary: `Leave a ${rating}/5 review for ${getReservationTitle(reservation)}.`,
+    payload: {
+      reservationId: reservation.id,
+      rating,
+      comment,
+    },
+    preview: {
+      reservationId: reservation.id,
+      carName: getReservationTitle(reservation),
+      rating,
+      comment,
+    },
+  });
+};
+
+export const prepareUpdateProfileAction = async ({ firstName, lastName, phone, userId }) => {
+  const current = await getUserById(userId);
+  if (!current) throw new Error('User not found');
+
+  const changes = {};
+  if (firstName !== undefined) changes.firstName = firstName;
+  if (lastName !== undefined) changes.lastName = lastName;
+  if (phone !== undefined) changes.phone = phone;
+
+  return createPendingAction({
+    actionType: 'updateProfile',
+    summary: 'Update your Rentify profile information.',
+    payload: changes,
+    preview: {
+      current: {
+        firstName: current.first_name,
+        lastName: current.last_name,
+        phone: current.phone,
+      },
+      changes,
+    },
+  });
+};
+
+export const executeConfirmedAssistantAction = async ({ action, user }) => {
+  if (!action?.actionType || !action?.payload) throw new Error('No pending action to confirm');
+
+  if (action.actionType === 'cancelReservation') {
+    const pending = await prepareCancelReservationAction({ reservationId: action.payload.reservationId, user });
+    const result = await updateReservationStatus(pending.payload.reservationId, 'cancelled');
+    return {
+      type: 'actionResult',
+      title: 'Reservation cancelled',
+      actionType: action.actionType,
+      status: 'completed',
+      result,
+    };
+  }
+
+  if (action.actionType === 'createReservation') {
+    const result = await createReservationRecord(action.payload, user.id);
+    return {
+      type: 'actionResult',
+      title: 'Reservation created',
+      actionType: action.actionType,
+      status: 'completed',
+      result,
+    };
+  }
+
+  if (action.actionType === 'leaveReview') {
+    await prepareLeaveReviewAction({ ...action.payload, user });
+    const result = await createReviewRecord({
+      reservationId: action.payload.reservationId,
+      reviewerId: user.id,
+      rating: action.payload.rating,
+      comment: action.payload.comment,
+    });
+    return {
+      type: 'actionResult',
+      title: 'Review submitted',
+      actionType: action.actionType,
+      status: 'completed',
+      result,
+    };
+  }
+
+  if (action.actionType === 'updateProfile') {
+    const result = await updateUserById(user.id, action.payload);
+    return {
+      type: 'actionResult',
+      title: 'Profile updated',
+      actionType: action.actionType,
+      status: 'completed',
+      result,
+    };
+  }
+
+  throw new Error(`Unsupported pending action: ${action.actionType}`);
 };
 
 export const getPaymentStatusReadOnly = async ({ reservationId, user }) => {

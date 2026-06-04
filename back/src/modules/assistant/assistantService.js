@@ -1,7 +1,12 @@
 import OpenAI from 'openai';
 import { FunctionCallingConfigMode, GoogleGenAI, Type } from '@google/genai';
 import { assistantToolDefinitions, executeAssistantTool } from './assistantTools.js';
-import { createConversationId, logAssistantMessage, logAssistantToolCall } from './assistantModel.js';
+import {
+  createConversationId,
+  executeConfirmedAssistantAction,
+  logAssistantMessage,
+  logAssistantToolCall,
+} from './assistantModel.js';
 
 const model = process.env.OPENAI_MODEL || 'gpt-5';
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
@@ -12,8 +17,8 @@ const maxToolRounds = Number(process.env.ASSISTANT_MAX_TOOL_ROUNDS || 3);
 const assistantSystemPrompt = `
 You are Rentify AI Concierge for a car rental marketplace.
 Use tools when you need live Rentify data about reservations, vehicles, listings, or the authenticated user.
-Never claim you performed a booking, cancellation, payment, profile edit, upload, approval, or any other write action.
-If the user asks for a write action, explain that Phase 1 is read-only and give concise next-step guidance.
+Never claim you performed a booking, cancellation, payment, profile edit, upload, approval, or any other write action unless the backend returned a completed action result.
+For write actions, call the request action tools first and ask the user to confirm. The action is executed only after the user replies yes/confirm.
 Only use data returned by tools for account-specific claims.
 Keep answers practical, concise, and friendly.
 Use hidden numbered references from conversation context when available; do not reveal internal ids to the user.
@@ -89,6 +94,18 @@ const compactListing = (listing) => {
 };
 
 const createToolResultPreview = ({ name, data }) => {
+  if (data?.status === 'pending_confirmation' && data?.requiresConfirmation) {
+    return {
+      type: 'pendingAction',
+      title: 'Confirm action',
+      action: data,
+    };
+  }
+
+  if (data?.type === 'actionResult') {
+    return data;
+  }
+
   if (name === 'getReservations') {
     return {
       type: 'reservations',
@@ -257,7 +274,7 @@ const createToolResultPreview = ({ name, data }) => {
 };
 
 const selectDisplayToolResults = (results = []) => {
-  const priorityTypes = ['price', 'payment', 'reservation', 'listing', 'car', 'profile', 'myReviews', 'reservations', 'availability', 'reviews'];
+  const priorityTypes = ['actionResult', 'pendingAction', 'price', 'payment', 'reservation', 'listing', 'car', 'profile', 'myReviews', 'reservations', 'availability', 'reviews'];
   const firstPriority = priorityTypes.find((type) => results.some((result) => result.type === type));
 
   if (firstPriority) {
@@ -265,6 +282,183 @@ const selectDisplayToolResults = (results = []) => {
   }
 
   return results;
+};
+
+const ordinalWords = {
+  first: 1,
+  '1st': 1,
+  second: 2,
+  '2nd': 2,
+  third: 3,
+  '3rd': 3,
+  fourth: 4,
+  '4th': 4,
+  fifth: 5,
+  '5th': 5,
+};
+
+const getOrdinalNumber = (text) => Object.entries(ordinalWords).find(([word]) => text.includes(word))?.[1];
+
+const parseHiddenVehicleReferences = (context = []) => {
+  const refs = new Map();
+  const hiddenText = context.map((message) => message.content || '').join('\n');
+  const pattern = /Vehicle\s+(\d+):\s+listingId=([^;\n]*);\s+carId=([^;\n]*);/gi;
+  let match = pattern.exec(hiddenText);
+
+  while (match) {
+    refs.set(Number(match[1]), {
+      listingId: match[2]?.trim() || undefined,
+      carId: match[3]?.trim() || undefined,
+    });
+    match = pattern.exec(hiddenText);
+  }
+
+  return refs;
+};
+
+const resolveDirectDetailTool = ({ message, context }) => {
+  const text = String(message || '').toLowerCase();
+  const carMatch = text.match(/\bcar\s+(?:number\s+)?(\d+)\b|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+car\b/);
+  const listingMatch = text.match(/\blisting\s+(?:number\s+)?(\d+)\b|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+listing\b/);
+  const vehicleMatch = text.match(/\bvehicle\s+(?:number\s+)?(\d+)\b|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+vehicle\b/);
+  const number = Number(carMatch?.[1] || listingMatch?.[1] || vehicleMatch?.[1] || getOrdinalNumber(text));
+  if (!number) return null;
+
+  const ref = parseHiddenVehicleReferences(context).get(number);
+  if (!ref?.listingId && !ref?.carId) return null;
+
+  const wantsCar = Boolean(carMatch) || (Boolean(vehicleMatch) && /\b(car|specs?|technical|transmission|fuel|seats|mileage)\b/.test(text));
+  if (wantsCar) {
+    return { name: 'getCarDetails', args: ref.carId ? { carId: ref.carId } : { listingId: ref.listingId } };
+  }
+
+  return { name: 'getListingDetails', args: { listingId: ref.listingId } };
+};
+
+const isConfirmationMessage = (message) => /^(yes|yep|yeah|confirm|confirmed|ok|okay|do it|proceed|go ahead)(\b|$)/i.test(String(message || '').trim());
+const isRejectionMessage = (message) => /^(no|nope|cancel|stop|never mind|nevermind)(\b|$)/i.test(String(message || '').trim());
+
+const getLatestPendingAction = (context = []) => {
+  const text = context.map((message) => message.content || '').join('\n');
+  const matches = [...text.matchAll(/Hidden pending action:\s*(\{[^\n]+\})/g)];
+  const latestMatch = matches[matches.length - 1];
+  const latest = latestMatch?.[1];
+  if (!latest) return null;
+
+  const latestClearIndex = text.lastIndexOf('Hidden pending action cleared');
+  if (latestClearIndex > latestMatch.index) return null;
+
+  try {
+    const parsed = JSON.parse(latest);
+    return parsed?.status === 'pending_confirmation' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const runSingleToolResponse = async ({ user, message, conversationId, tool, answer }) => {
+  const id = conversationId || createConversationId();
+
+  await logAssistantMessage({
+    conversationId: id,
+    userId: user.id,
+    role: 'user',
+    content: message,
+    metadata: { source: 'assistant_chat', provider: assistantProvider, directTool: tool.name },
+  }).catch((error) => console.error('[assistant] failed to log user message', error.message));
+
+  const toolResult = await executeAuditedTool({
+    name: tool.name,
+    rawArguments: tool.args,
+    user,
+    conversationId: id,
+  });
+
+  const content = answer || 'Here are the details I found.';
+  await logAssistantMessage({
+    conversationId: id,
+    userId: user.id,
+    role: 'assistant',
+    content,
+    metadata: { provider: assistantProvider, toolsUsed: [tool.name], directTool: true },
+  }).catch((error) => console.error('[assistant] failed to log assistant message', error.message));
+
+  return {
+    conversationId: id,
+    message: {
+      role: 'assistant',
+      content,
+      createdAt: new Date().toISOString(),
+    },
+    toolsUsed: [tool.name],
+    toolResults: selectDisplayToolResults([toolResult.preview]),
+  };
+};
+
+const runPendingActionConfirmation = async ({ user, message, context, conversationId }) => {
+  const pendingAction = getLatestPendingAction(context);
+  if (!pendingAction) return null;
+
+  if (isRejectionMessage(message)) {
+    return {
+      conversationId: conversationId || createConversationId(),
+      message: {
+        role: 'assistant',
+        content: 'Okay, I cancelled that pending action. Nothing was changed.',
+        createdAt: new Date().toISOString(),
+      },
+      toolsUsed: [],
+      toolResults: [{
+        type: 'actionResult',
+        title: 'Action cancelled',
+        actionType: pendingAction.actionType,
+        status: 'cancelled',
+        result: {},
+      }],
+    };
+  }
+
+  if (!isConfirmationMessage(message)) return null;
+
+  const id = conversationId || createConversationId();
+  await logAssistantMessage({
+    conversationId: id,
+    userId: user.id,
+    role: 'user',
+    content: message,
+    metadata: { source: 'assistant_chat', provider: assistantProvider, confirmedAction: pendingAction.actionType },
+  }).catch((error) => console.error('[assistant] failed to log user message', error.message));
+
+  const startedAt = Date.now();
+  const result = await executeConfirmedAssistantAction({ action: pendingAction, user });
+  await logAssistantToolCall({
+    conversationId: id,
+    userId: user.id,
+    toolName: `confirm:${pendingAction.actionType}`,
+    input: pendingAction.payload,
+    success: true,
+    latencyMs: Date.now() - startedAt,
+  }).catch((error) => console.error('[assistant] failed to log confirmed action', error.message));
+
+  const content = `${result.title}.`;
+  await logAssistantMessage({
+    conversationId: id,
+    userId: user.id,
+    role: 'assistant',
+    content,
+    metadata: { provider: assistantProvider, actionType: pendingAction.actionType, actionStatus: 'completed' },
+  }).catch((error) => console.error('[assistant] failed to log assistant message', error.message));
+
+  return {
+    conversationId: id,
+    message: {
+      role: 'assistant',
+      content,
+      createdAt: new Date().toISOString(),
+    },
+    toolsUsed: [`confirm:${pendingAction.actionType}`],
+    toolResults: [result],
+  };
 };
 
 const executeAuditedTool = async ({ name, rawArguments, user, conversationId }) => {
@@ -639,6 +833,20 @@ const runGeminiAssistantChat = async ({ user, message, context, conversationId }
 };
 
 export const runAssistantChat = async ({ user, message, context, conversationId }) => {
+  const confirmedActionResult = await runPendingActionConfirmation({ user, message, context, conversationId });
+  if (confirmedActionResult) return confirmedActionResult;
+
+  const directDetailTool = resolveDirectDetailTool({ message, context });
+  if (directDetailTool) {
+    return runSingleToolResponse({
+      user,
+      message,
+      conversationId,
+      tool: directDetailTool,
+      answer: directDetailTool.name === 'getCarDetails' ? 'Here are the car details.' : 'Here are the listing details.',
+    });
+  }
+
   if (assistantProvider === 'mock') {
     return runMockAssistantChat({ user, message, conversationId });
   }
