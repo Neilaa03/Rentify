@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { supabase } from '../../config/supabase.js';
 import { getClientProfileStats, getOwnerProfileStats } from '../profile/profileModel.js';
 import { getListings, getListingById } from '../car-listings/listingModel.js';
+import { getCarById } from '../cars/carModel.js';
 import { getUserById } from '../auth/authModel.js';
 import { getUserFavorites } from '../favorites/favoritesModel.js';
 import { getCarReviewSummary, getReviewsByCarId } from '../reviews/reviewModel.js';
@@ -65,7 +66,17 @@ export const getReservationsForUser = async (userId) => {
   return (data || []).map(toReservationSummary);
 };
 
-export const getReservationDetailsReadOnly = async ({ reservationId, user }) => {
+export const getReservationDetailsReadOnly = async ({ reservationId, reservationNumber, user }) => {
+  if (reservationNumber) {
+    const reservations = await getReservationsForUser(user.id);
+    const reservation = reservations[reservationNumber - 1];
+    if (!reservation) throw new Error(`Reservation ${reservationNumber} was not found in your latest reservations`);
+    return {
+      ...reservation,
+      referenceNumber: reservationNumber,
+    };
+  }
+
   const { data, error } = await supabase
     .from('reservations')
     .select(RESERVATION_SELECT)
@@ -98,6 +109,45 @@ export const searchVehiclesReadOnly = async (filters) => {
 
 export const getVehicleDetailsReadOnly = async (vehicleId) => {
   return getListingById(vehicleId);
+};
+
+export const getListingDetailsReadOnly = async ({ listingId, listingNumber, filters = {} }) => {
+  if (listingNumber) {
+    const result = await searchVehiclesReadOnly({ ...filters, limit: Math.max(listingNumber, filters.limit || 5) });
+    const listing = result.items[listingNumber - 1];
+    if (!listing) throw new Error(`Listing ${listingNumber} was not found in the current search results`);
+    return {
+      ...listing,
+      referenceNumber: listingNumber,
+    };
+  }
+
+  return getListingById(listingId);
+};
+
+export const getCarDetailsReadOnly = async ({ carId, listingId, listingNumber, filters = {} }) => {
+  if (listingId || listingNumber) {
+    const listing = await getListingDetailsReadOnly({ listingId, listingNumber, filters });
+    if (!listing.car) throw new Error('Car details not found for this listing');
+    return {
+      ...listing.car,
+      referenceNumber: listing.referenceNumber,
+      listing: {
+        id: listing.id,
+        title: listing.title,
+        city: listing.city,
+        country: listing.country,
+        pricePerDay: listing.pricePerDay,
+        pricePerWeek: listing.pricePerWeek,
+        pricePerMonth: listing.pricePerMonth,
+        availableFrom: listing.availableFrom,
+        availableTo: listing.availableTo,
+        isActive: listing.isActive,
+      },
+    };
+  }
+
+  return getCarById(carId);
 };
 
 export const getListingAvailabilityReadOnly = async (listingId) => {

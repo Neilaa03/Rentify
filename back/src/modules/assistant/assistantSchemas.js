@@ -31,12 +31,45 @@ export const searchVehicleFiltersSchema = z.object({
   limit: z.coerce.number().int().positive().max(8).optional().default(5),
 });
 
+const optionalUuid = () => z.preprocess(
+  (value) => (value === null || value === '' ? undefined : value),
+  z.string().uuid().optional()
+);
+
+const optionalReferenceNumber = () => z.preprocess(
+  (value) => (value === null || value === '' ? undefined : value),
+  z.coerce.number().int().positive().max(50).optional()
+);
+
+export const listingDetailsSchema = z.object({
+  listingId: optionalUuid(),
+  listingNumber: optionalReferenceNumber(),
+  filters: searchVehicleFiltersSchema.optional(),
+}).refine((value) => value.listingId || value.listingNumber, {
+  message: 'Either listingId or listingNumber is required',
+  path: ['listingId'],
+});
+
+export const carDetailsSchema = z.object({
+  carId: optionalUuid(),
+  listingId: optionalUuid(),
+  listingNumber: optionalReferenceNumber(),
+  filters: searchVehicleFiltersSchema.optional(),
+}).refine((value) => value.carId || value.listingId || value.listingNumber, {
+  message: 'Either carId, listingId, or listingNumber is required',
+  path: ['carId'],
+});
+
 export const vehicleDetailsSchema = z.object({
   vehicleId: z.string().trim().min(1).max(120),
 });
 
 export const reservationDetailsSchema = z.object({
-  reservationId: z.string().uuid(),
+  reservationId: optionalUuid(),
+  reservationNumber: optionalReferenceNumber(),
+}).refine((value) => value.reservationId || value.reservationNumber, {
+  message: 'Either reservationId or reservationNumber is required',
+  path: ['reservationId'],
 });
 
 export const listingAvailabilitySchema = z.object({

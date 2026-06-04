@@ -30,6 +30,36 @@ const quickPrompts = [
 
 const getMessageText = (message) => String(message?.content || '').trim();
 
+const buildToolReferenceContext = (toolResults = []) => {
+  const lines = [];
+
+  toolResults.forEach((result) => {
+    if (result.type === 'vehicles') {
+      (result.items || []).forEach((item, index) => {
+        lines.push(`Vehicle ${index + 1}: listingId=${item.id}; carId=${item.car?.id || ''}; name=${item.carName || ''}; listing=${item.listingTitle || ''}`);
+      });
+    }
+
+    if (result.type === 'listing') {
+      const listing = result.listing || {};
+      lines.push(`Current listing: listingId=${listing.id || ''}; carId=${listing.car?.id || ''}; name=${listing.carName || ''}`);
+    }
+
+    if (result.type === 'car') {
+      const car = result.car || {};
+      lines.push(`Current car: carId=${car.id || ''}; name=${car.name || ''}; listingId=${car.listing?.id || ''}`);
+    }
+
+    if (result.type === 'reservations') {
+      (result.items || []).forEach((item, index) => {
+        lines.push(`Reservation ${index + 1}: reservationId=${item.id}; listingId=${item.listingId || ''}; name=${item.title || ''}`);
+      });
+    }
+  });
+
+  return lines.length ? `\n\nHidden numbered references:\n${lines.join('\n')}` : '';
+};
+
 const getCardIntroText = (content) => {
   const lines = String(content || '')
     .split('\n')
@@ -183,6 +213,29 @@ const ToolResultCards = ({ results = [] }) => {
           );
         }
 
+        if (result.type === 'reservation') {
+          const reservation = result.reservation || {};
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              <View style={styles.singleResultHeader}>
+                <Text style={styles.singleResultName}>{formatValue(reservation.carName || reservation.title)}</Text>
+                <Text style={styles.singleResultMeta}>{[reservation.city, reservation.country].filter(Boolean).join(', ') || 'Location not set'}</Text>
+              </View>
+              <InfoRow label="Listing" value={reservation.title} />
+              <InfoRow label="Period" value={formatDateRange(reservation.startDate, reservation.endDate)} />
+              <InfoRow label="Status" value={reservation.status} />
+              <InfoRow label="Total price" value={reservation.totalPrice} />
+              <InfoRow label="Pickup" value={reservation.pickup?.method} />
+              <InfoRow label="Pickup status" value={reservation.pickup?.status} />
+              <InfoRow label="Transmission" value={reservation.vehicle?.transmission} />
+              <InfoRow label="Fuel" value={reservation.vehicle?.fuelType} />
+              <InfoRow label="Seats" value={reservation.vehicle?.seats} />
+              <InfoRow label="Price/day" value={reservation.pricePerDay} />
+            </View>
+          );
+        }
+
         if (result.type === 'vehicles') {
           return (
             <View key={`${result.type}-${index}`} style={styles.resultCard}>
@@ -198,6 +251,54 @@ const ToolResultCards = ({ results = [] }) => {
                   <InfoRow label="Price/day" value={item.pricePerDay} />
                 </View>
               )) : <Text style={styles.emptyResult}>No vehicles found.</Text>}
+            </View>
+          );
+        }
+
+        if (result.type === 'listing') {
+          const listing = result.listing || {};
+          const details = result.details || {};
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              <View style={styles.singleResultHeader}>
+                <Text style={styles.singleResultName}>{formatValue(listing.listingTitle)}</Text>
+                <Text style={styles.singleResultMeta}>{formatValue(listing.carName)}</Text>
+              </View>
+              <InfoRow label="Location" value={[listing.city, listing.country].filter(Boolean).join(', ')} />
+              <InfoRow label="Available" value={formatDateRange(details.availableFrom, details.availableTo)} />
+              <InfoRow label="Price/day" value={listing.pricePerDay} />
+              <InfoRow label="Price/week" value={details.pricePerWeek} />
+              <InfoRow label="Price/month" value={details.pricePerMonth} />
+              <InfoRow label="Pickup address" value={details.pickupAddress} />
+              <InfoRow label="Delivery fee" value={details.deliveryFee} />
+              <InfoRow label="Status" value={details.isActive ? 'Active' : 'Inactive'} />
+              <InfoRow label="Transmission" value={listing.car?.transmission} />
+              <InfoRow label="Fuel" value={listing.car?.fuelType} />
+              <InfoRow label="Seats" value={listing.car?.seats} />
+            </View>
+          );
+        }
+
+        if (result.type === 'car') {
+          const car = result.car || {};
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              <View style={styles.singleResultHeader}>
+                <Text style={styles.singleResultName}>{formatValue(car.name)}</Text>
+                <Text style={styles.singleResultMeta}>{car.listing ? [car.listing.city, car.listing.country].filter(Boolean).join(', ') : 'Car specs'}</Text>
+              </View>
+              <InfoRow label="Brand" value={car.brand} />
+              <InfoRow label="Model" value={car.model} />
+              <InfoRow label="Year" value={car.year} />
+              <InfoRow label="Color" value={car.color} />
+              <InfoRow label="Transmission" value={car.transmission} />
+              <InfoRow label="Fuel" value={car.fuelType} />
+              <InfoRow label="Mileage" value={car.mileage} />
+              <InfoRow label="Seats" value={car.seats} />
+              {car.listing ? <InfoRow label="Listing" value={car.listing.title} /> : null}
+              {car.listing ? <InfoRow label="Price/day" value={car.listing.pricePerDay} /> : null}
             </View>
           );
         }
@@ -262,7 +363,7 @@ const AssistantWidget = () => {
       .slice(-10)
       .map((message) => ({
         role: message.role,
-        content: getMessageText(message),
+        content: `${getMessageText(message)}${message.role === 'assistant' ? buildToolReferenceContext(message.toolResults) : ''}`,
       })),
     [messages]
   );
@@ -647,6 +748,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
     marginBottom: 10,
+  },
+  singleResultHeader: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    marginBottom: 6,
+    backgroundColor: 'rgba(108, 77, 255, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(145, 152, 229, 0.16)',
+  },
+  singleResultName: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '900',
+  },
+  singleResultMeta: {
+    color: '#B9C0F3',
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginTop: 2,
+    fontWeight: '700',
   },
   resultGrid: {
     flexDirection: 'row',

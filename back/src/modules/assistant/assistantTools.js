@@ -1,4 +1,6 @@
 import {
+  carDetailsSchema,
+  listingDetailsSchema,
   listingAvailabilitySchema,
   myReviewsSchema,
   paymentStatusSchema,
@@ -10,8 +12,10 @@ import {
 } from './assistantSchemas.js';
 import {
   calculateReservationPriceReadOnly,
+  getCarDetailsReadOnly,
   getFavoritesReadOnly,
   getListingAvailabilityReadOnly,
+  getListingDetailsReadOnly,
   getMyReviewsReadOnly,
   getPaymentStatusReadOnly,
   getReservationDetailsReadOnly,
@@ -27,7 +31,7 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'getReservations',
-      description: 'Read the authenticated user reservations. The userId is always taken from JWT context.',
+      description: 'Read the authenticated user reservations as a list. Use only for list/all/latest reservation requests. For one numbered reservation, use getReservationDetails with reservationNumber. The userId is always taken from JWT context.',
       parameters: {
         type: 'object',
         properties: {},
@@ -65,13 +69,84 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'getVehicleDetails',
-      description: 'Read full details for a vehicle listing by listing id.',
+      description: 'Legacy alias: read full details for a vehicle listing by listing id. Prefer getListingDetails for listing details or getCarDetails for car-only details.',
       parameters: {
         type: 'object',
         properties: {
           vehicleId: { type: 'string', description: 'Rentify listing id' },
         },
         required: ['vehicleId'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getListingDetails',
+      description: 'Read full details for one listing. Use listingId when available from hidden numbered references. Use listingNumber when the user says "listing 1", "vehicle 2", or refers to numbered listing cards.',
+      parameters: {
+        type: 'object',
+        properties: {
+          listingId: { type: 'string', description: 'Rentify listing UUID, if known.' },
+          listingNumber: { type: 'integer', description: '1-based number from the latest vehicle/listing cards shown to the user.' },
+          filters: {
+            type: 'object',
+            description: 'Optional filters from the previous search if using listingNumber.',
+            properties: {
+              country: { type: 'string' },
+              city: { type: 'string' },
+              availableFrom: { type: 'string' },
+              availableTo: { type: 'string' },
+              minPrice: { type: 'number' },
+              maxPrice: { type: 'number' },
+              fuelType: { type: 'string' },
+              transmission: { type: 'string' },
+              seats: { type: 'integer' },
+              brand: { type: 'string' },
+              year: { type: 'integer' },
+              page: { type: 'integer' },
+              limit: { type: 'integer' },
+            },
+            additionalProperties: false,
+          },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'getCarDetails',
+      description: 'Read car-specific details for one car. Use carId when available from hidden numbered references, or listingId/listingNumber when the user asks about the car inside a listing/vehicle card.',
+      parameters: {
+        type: 'object',
+        properties: {
+          carId: { type: 'string', description: 'Rentify car UUID, if known.' },
+          listingId: { type: 'string', description: 'Listing UUID when the car is referenced through a listing.' },
+          listingNumber: { type: 'integer', description: '1-based number from the latest vehicle/listing cards shown to the user.' },
+          filters: {
+            type: 'object',
+            description: 'Optional filters from the previous search if using listingNumber.',
+            properties: {
+              country: { type: 'string' },
+              city: { type: 'string' },
+              availableFrom: { type: 'string' },
+              availableTo: { type: 'string' },
+              minPrice: { type: 'number' },
+              maxPrice: { type: 'number' },
+              fuelType: { type: 'string' },
+              transmission: { type: 'string' },
+              seats: { type: 'integer' },
+              brand: { type: 'string' },
+              year: { type: 'integer' },
+              page: { type: 'integer' },
+              limit: { type: 'integer' },
+            },
+            additionalProperties: false,
+          },
+        },
         additionalProperties: false,
       },
     },
@@ -92,13 +167,13 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'getReservationDetails',
-      description: 'Read details for one reservation if the authenticated user is allowed to see it.',
+      description: 'Read details for one reservation if the authenticated user is allowed to see it. Use reservationNumber when the user says "reservation 1", "the second reservation", or refers to the numbered reservation cards shown in the chat.',
       parameters: {
         type: 'object',
         properties: {
-          reservationId: { type: 'string' },
+          reservationId: { type: 'string', description: 'Reservation UUID, if explicitly known.' },
+          reservationNumber: { type: 'integer', description: '1-based number from the latest reservations list shown to the user.' },
         },
-        required: ['reservationId'],
         additionalProperties: false,
       },
     },
@@ -216,14 +291,15 @@ export const executeAssistantTool = async ({ name, rawArguments, user }) => {
     case 'getReservations':
       return getReservationsForUser(user.id);
     case 'getReservationDetails':
-      return getReservationDetailsReadOnly({
-        reservationId: reservationDetailsSchema.parse(args).reservationId,
-        user,
-      });
+      return getReservationDetailsReadOnly({ ...reservationDetailsSchema.parse(args), user });
     case 'searchVehicles':
       return searchVehiclesReadOnly(searchVehicleFiltersSchema.parse(args));
     case 'getVehicleDetails':
       return getVehicleDetailsReadOnly(vehicleDetailsSchema.parse(args).vehicleId);
+    case 'getListingDetails':
+      return getListingDetailsReadOnly(listingDetailsSchema.parse(args));
+    case 'getCarDetails':
+      return getCarDetailsReadOnly(carDetailsSchema.parse(args));
     case 'getUserProfile':
       return getUserProfileReadOnly(user.id, user.role);
     case 'getListingAvailability':

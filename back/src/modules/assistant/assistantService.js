@@ -16,8 +16,11 @@ Never claim you performed a booking, cancellation, payment, profile edit, upload
 If the user asks for a write action, explain that Phase 1 is read-only and give concise next-step guidance.
 Only use data returned by tools for account-specific claims.
 Keep answers practical, concise, and friendly.
+Use hidden numbered references from conversation context when available; do not reveal internal ids to the user.
 When showing profile data, never mention ids, image URLs, raw timestamps, or internal fields.
 When showing reservations or vehicles, summarize the most useful fields in short grouped bullets.
+When a user asks for one specific reservation by number, such as "reservation 2" or "the second one", call getReservationDetails with reservationNumber instead of getReservations.
+When a user asks for one specific listing or numbered vehicle card, call getListingDetails. When they ask for car specs/details, call getCarDetails.
 If a user says "it" or asks for a price without a clear vehicle/listing id from context, ask which numbered vehicle they mean instead of searching and showing unrelated vehicles.
 For rental price estimates, rental dates are inclusive. If a user asks for N days starting on a date, call calculateReservationPrice with durationDays=N and do not invent an endDate.
 `.trim();
@@ -92,6 +95,8 @@ const createToolResultPreview = ({ name, data }) => {
       title: 'Reservations',
       items: (data || []).slice(0, 5).map((item) => ({
         id: item.id,
+        listingId: item.listingId,
+        carId: item.listing?.car?.id,
         title: item.listing?.title || `${item.listing?.car?.brand || ''} ${item.listing?.car?.model || ''}`.trim(),
         city: item.listing?.city,
         startDate: item.startDate,
@@ -99,6 +104,74 @@ const createToolResultPreview = ({ name, data }) => {
         status: item.status,
         totalPrice: item.totalPrice,
       })),
+    };
+  }
+
+  if (name === 'getVehicleDetails' || name === 'getListingDetails') {
+    return {
+      type: 'listing',
+      title: data.referenceNumber ? `Listing ${data.referenceNumber}` : 'Listing details',
+      listing: compactListing(data),
+      details: {
+        description: data.description,
+        availableFrom: data.availableFrom,
+        availableTo: data.availableTo,
+        pricePerWeek: data.pricePerWeek,
+        pricePerMonth: data.pricePerMonth,
+        pickupAddress: data.pickupAddress,
+        deliveryFee: data.deliveryFee,
+        isActive: data.isActive,
+      },
+    };
+  }
+
+  if (name === 'getCarDetails') {
+    return {
+      type: 'car',
+      title: data.referenceNumber ? `Car ${data.referenceNumber}` : 'Car details',
+      car: {
+        id: data.id,
+        name: `${data.brand || ''} ${data.model || ''}`.trim() || 'Car',
+        brand: data.brand,
+        model: data.model,
+        year: data.year,
+        color: data.color,
+        fuelType: data.fuelType,
+        transmission: data.transmission,
+        mileage: data.mileage,
+        seats: data.seats,
+        description: data.description,
+        listing: data.listing,
+      },
+    };
+  }
+
+  if (name === 'getReservationDetails') {
+    const car = data.listing?.car;
+    const carName = car ? `${car.brand || ''} ${car.model || ''}`.trim() : data.listing?.title || 'Vehicle';
+    return {
+      type: 'reservation',
+      title: data.referenceNumber ? `Reservation ${data.referenceNumber}` : 'Reservation details',
+      reservation: {
+        id: data.id,
+        title: data.listing?.title || carName,
+        carName,
+        city: data.listing?.city,
+        country: data.listing?.country,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        status: data.status,
+        totalPrice: data.totalPrice,
+        createdAt: data.createdAt,
+        pickup: data.pickup,
+        vehicle: car ? {
+          year: car.year,
+          seats: car.seats,
+          transmission: car.transmission,
+          fuelType: car.fuelType,
+        } : null,
+        pricePerDay: data.listing?.pricePerDay,
+      },
     };
   }
 
@@ -184,7 +257,7 @@ const createToolResultPreview = ({ name, data }) => {
 };
 
 const selectDisplayToolResults = (results = []) => {
-  const priorityTypes = ['price', 'payment', 'profile', 'myReviews', 'reservations', 'availability', 'reviews'];
+  const priorityTypes = ['price', 'payment', 'reservation', 'listing', 'car', 'profile', 'myReviews', 'reservations', 'availability', 'reviews'];
   const firstPriority = priorityTypes.find((type) => results.some((result) => result.type === type));
 
   if (firstPriority) {
@@ -281,6 +354,34 @@ const geminiToolDeclarations = assistantToolDefinitions.map((tool) => ({
 
 const inferMockTool = (message) => {
   const text = String(message || '').toLowerCase();
+  const reservationNumberMatch = text.match(/(?:reservation|booking|trip)\s+(?:number\s+)?(\d+)|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+(?:reservation|booking|trip)/);
+  const listingNumberMatch = text.match(/(?:listing|vehicle)\s+(?:number\s+)?(\d+)|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+(?:listing|vehicle)/);
+  const carNumberMatch = text.match(/car\s+(?:number\s+)?(\d+)|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+car/);
+  const ordinalMap = {
+    first: 1,
+    '1st': 1,
+    second: 2,
+    '2nd': 2,
+    third: 3,
+    '3rd': 3,
+    fourth: 4,
+    '4th': 4,
+    fifth: 5,
+    '5th': 5,
+  };
+  const ordinal = Object.entries(ordinalMap).find(([word]) => text.includes(word))?.[1];
+
+  if (reservationNumberMatch) {
+    return { name: 'getReservationDetails', args: { reservationNumber: Number(reservationNumberMatch[1] || ordinal) } };
+  }
+
+  if (carNumberMatch || (listingNumberMatch && text.includes('car'))) {
+    return { name: 'getCarDetails', args: { listingNumber: Number(carNumberMatch?.[1] || listingNumberMatch?.[1] || ordinal) } };
+  }
+
+  if (listingNumberMatch) {
+    return { name: 'getListingDetails', args: { listingNumber: Number(listingNumberMatch[1] || ordinal) } };
+  }
 
   if (text.includes('reservation') || text.includes('booking') || text.includes('trip')) {
     return { name: 'getReservations', args: {} };
@@ -330,6 +431,12 @@ const summarizeMockResult = ({ toolName, result }) => {
     return `Here are your latest reservations:\n${lines.join('\n')}`;
   }
 
+  if (toolName === 'getReservationDetails') {
+    const car = result.listing?.car;
+    const carName = car ? `${car.brand || ''} ${car.model || ''}`.trim() : result.listing?.title || 'vehicle';
+    return `Here is reservation ${result.referenceNumber || ''}: ${carName}, ${result.startDate} to ${result.endDate}, status ${result.status}, total ${result.totalPrice}.`;
+  }
+
   if (toolName === 'getUserProfile') {
     return `Your profile is ${result.firstName || ''} ${result.lastName || ''} (${result.email}), role ${result.role}. You have ${result.stats?.client?.reservations ?? 0} reservation(s).`;
   }
@@ -346,6 +453,15 @@ const summarizeMockResult = ({ toolName, result }) => {
   if (toolName === 'getVehicleDetails') {
     const car = result.car;
     return `Vehicle details: ${result.title || `${car?.brand || ''} ${car?.model || ''}`.trim()} in ${result.city || 'unknown city'}, ${result.country || 'unknown country'}, ${result.pricePerDay} per day.`;
+  }
+
+  if (toolName === 'getListingDetails') {
+    const car = result.car;
+    return `Listing details: ${result.title || 'listing'} for ${car ? `${car.brand || ''} ${car.model || ''}`.trim() : 'vehicle'}, ${result.city || 'unknown city'}, ${result.pricePerDay} per day.`;
+  }
+
+  if (toolName === 'getCarDetails') {
+    return `Car details: ${`${result.brand || ''} ${result.model || ''}`.trim()}, ${result.year || 'year unknown'}, ${result.transmission || 'transmission unknown'}, ${result.fuelType || 'fuel unknown'}.`;
   }
 
   const items = result.items || [];

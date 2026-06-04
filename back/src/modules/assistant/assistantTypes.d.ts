@@ -24,6 +24,8 @@ export type AssistantToolName =
   | 'getReservationDetails'
   | 'searchVehicles'
   | 'getVehicleDetails'
+  | 'getListingDetails'
+  | 'getCarDetails'
   | 'getUserProfile'
   | 'getListingAvailability'
   | 'calculateReservationPrice'
@@ -33,7 +35,7 @@ export type AssistantToolName =
   | 'getMyReviews';
 
 export interface AssistantToolResult {
-  type: 'reservations' | 'vehicles' | 'profile' | 'price' | 'payment' | 'availability' | 'reviews' | 'raw';
+  type: 'reservation' | 'reservations' | 'vehicles' | 'listing' | 'car' | 'profile' | 'price' | 'payment' | 'availability' | 'reviews' | 'raw';
   title: string;
   [key: string]: unknown;
 }
