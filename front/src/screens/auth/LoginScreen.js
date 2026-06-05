@@ -426,14 +426,24 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                                 <AuthHeader
                   title={t("screens.auth.loginscreen.welcomeBack")}
                   subtitle={t("screens.auth.loginscreen.logInToContinueYourJourneyWith")} />
-                
 
-                                <View style={styles.form}>
-                                    <AuthInputField
+
+                <View style={styles.form}>
+                  <AuthInputField
                     label={t("screens.auth.loginscreen.emailAddress")}
                     error={errors.email}
-                    inputStyle={[email.trim() ? styles.inputFilled : null]}
+                    inputStyle={[
+                      styles.input,
+                      {
+                        color: colors.white,
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                      },
+                      email.trim() ? styles.inputFilled : null,
+                      errors.email ? styles.inputError : null,
+                    ]}
                     placeholder={t("screens.auth.loginscreen.exampleMailCom")}
+                    placeholderTextColor="rgba(255,255,255,0.72)"
                     value={email}
                     onChangeText={(text) => {
                       setEmail(text);
@@ -442,7 +452,7 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                     }}
                     keyboardType="email-address"
                     autoCapitalize="none" />
-                  
+
 
                                     <View style={styles.inputContainer}>
                                         <Text style={[styles.label, { color: colors.white }]}>{t("screens.auth.loginscreen.password")}</Text>
