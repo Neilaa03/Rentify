@@ -138,3 +138,17 @@ export const myReviewsSchema = z.object({
   page: z.coerce.number().int().positive().max(20).optional().default(1),
   limit: z.coerce.number().int().positive().max(8).optional().default(5),
 });
+
+export const assistantKnowledgeSearchSchema = z.object({
+  query: z.string().trim().min(2).max(1000),
+  categories: z.array(z.enum([
+    'rental_policy',
+    'insurance_terms',
+    'faq',
+    'vehicle_information',
+    'terms_conditions',
+    'support',
+  ])).max(6).optional().default([]),
+  limit: z.coerce.number().int().positive().max(8).optional().default(5),
+  threshold: z.coerce.number().min(0).max(1).optional().default(0.72),
+});
