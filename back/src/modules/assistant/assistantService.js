@@ -419,6 +419,9 @@ const parseNaturalRentalDates = (message) => {
     }
   }
 
+  const singleStartMatch = text.match(/\b(?:starting|start|from|beginning|begin)\s+(?:on\s+|for\s+|from\s+)?((?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?))[^,.;]*)/i);
+  const singleStartDate = singleStartMatch ? parseNaturalDate(singleStartMatch[1]) : null;
+
   const datePhrase = '(?:\\d{4}-\\d{1,2}-\\d{1,2}|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\s+\\d{1,2}|\\d{1,2}\\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?))';
   const rangePatterns = [
     new RegExp(`\\bfrom\\s+(.+?)\\s+(?:to|until|through|-|→)\\s+(.+?)(?:\\s|$|[,.!?])`, 'i'),
@@ -434,6 +437,8 @@ const parseNaturalRentalDates = (message) => {
       if (startDate && endDate) return { startDate, endDate };
     }
   }
+
+  if (singleStartDate) return { startDate: singleStartDate };
 
   return null;
 };
@@ -473,6 +478,26 @@ const parseLatestListingReference = (context = []) => {
       match = pattern.exec(hiddenText);
     }
   });
+
+  return latest;
+};
+
+const parseLatestEstimateReference = (context = []) => {
+  const hiddenText = context.map((message) => message.content || '').join('\n');
+  const pattern = /Current estimate:\s+listingId=([^;\n]*);\s+title=([^;\n]*);\s+startDate=([^;\n]*);\s+endDate=([^;\n]*);\s+durationDays=([^;\n]*);/gi;
+  let latest = null;
+  let match = pattern.exec(hiddenText);
+
+  while (match) {
+    latest = {
+      listingId: match[1]?.trim() || undefined,
+      title: match[2]?.trim() || undefined,
+      startDate: match[3]?.trim() || undefined,
+      endDate: match[4]?.trim() || undefined,
+      durationDays: Number(match[5]) || undefined,
+    };
+    match = pattern.exec(hiddenText);
+  }
 
   return latest;
 };
@@ -517,7 +542,7 @@ const resolveListingReferenceForRental = ({ message, context }) => {
     if (ref?.listingId) return ref;
   }
 
-  return parseLatestListingReference(context);
+  return parseLatestEstimateReference(context) || parseLatestListingReference(context);
 };
 
 const resolveDirectRentalTool = ({ message, context }) => {
@@ -535,8 +560,16 @@ const resolveDirectRentalTool = ({ message, context }) => {
   const args = {
     listingId: ref.listingId,
     startDate: dates.startDate,
-    ...(dates.durationDays ? { durationDays: dates.durationDays } : { endDate: dates.endDate }),
+    ...(dates.durationDays
+      ? { durationDays: dates.durationDays }
+      : dates.endDate
+        ? { endDate: dates.endDate }
+        : ref.durationDays
+          ? { durationDays: ref.durationDays }
+          : {}),
   };
+
+  if (!args.endDate && !args.durationDays) return null;
 
   return {
     name: wantsPrice ? 'calculateReservationPrice' : 'requestCreateReservation',
@@ -641,7 +674,7 @@ const runSingleToolResponse = async ({ user, message, conversationId, tool, answ
     content = `${data.title || 'This listing'} is available from ${data.availableFrom || 'not set'} to ${data.availableTo || 'not set'}${blocked ? `. Blocked ranges: ${blocked}.` : '. No blocked reservation ranges were found.'}`;
   } else if (tool.name === 'calculateReservationPrice') {
     const data = toolResult.data || {};
-    content = `The estimate for ${data.title || 'this listing'} from ${data.startDate} to ${data.endDate} is ${data.totalPrice} ${data.currency || 'EUR'} for ${data.totalDays} day(s). This is only an estimate; no reservation was created.`;
+    content = `The estimate for ${data.title || 'this listing'} from ${data.startDate} to ${data.endDate} is ${data.totalPrice} ${data.currency || 'DA'} for ${data.totalDays} day(s). This is only an estimate; no reservation was created.`;
   } else if (tool.name === 'requestCreateReservation') {
     const data = toolResult.data || {};
     content = `${data.summary || 'I prepared the reservation.'} Reply yes to confirm, or no to cancel. After creation, payment must be completed within 24 hours or the reservation will be cancelled automatically.`;

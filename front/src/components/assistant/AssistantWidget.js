@@ -51,6 +51,11 @@ const buildToolReferenceContext = (toolResults = []) => {
       lines.push(`Current car: carId=${car.id || ''}; name=${car.name || ''}; listingId=${car.listing?.id || ''}`);
     }
 
+    if (result.type === 'price') {
+      const estimate = result.estimate || {};
+      lines.push(`Current estimate: listingId=${estimate.listingId || ''}; title=${estimate.title || ''}; startDate=${estimate.startDate || ''}; endDate=${estimate.endDate || ''}; durationDays=${estimate.totalDays || ''}; totalPrice=${estimate.totalPrice || ''}; currency=${estimate.currency || 'DA'}`);
+    }
+
     if (result.type === 'pendingAction') {
       lines.push(`Hidden pending action: ${JSON.stringify(result.action || {})}`);
     }
@@ -193,7 +198,7 @@ const ToolResultCards = ({ results = [] }) => {
               {preview.carName ? <InfoRow label="Vehicle" value={preview.carName} /> : null}
               {preview.listingTitle ? <InfoRow label="Listing" value={preview.listingTitle} /> : null}
               {preview.startDate || preview.endDate ? <InfoRow label="Period" value={formatDateRange(preview.startDate, preview.endDate)} /> : null}
-              {preview.totalPrice ? <InfoRow label="Estimated price" value={`${preview.totalPrice} ${preview.currency || 'EUR'}`} /> : null}
+              {preview.totalPrice ? <InfoRow label="Estimated price" value={`${preview.totalPrice} ${preview.currency || 'DA'}`} /> : null}
               {preview.rating ? <InfoRow label="Rating" value={`${preview.rating}/5`} /> : null}
               {preview.comment ? <InfoRow label="Comment" value={preview.comment} /> : null}
               {changes.firstName !== undefined ? <InfoRow label="New first name" value={changes.firstName} /> : null}
@@ -405,7 +410,7 @@ const ToolResultCards = ({ results = [] }) => {
           return (
             <View key={`${result.type}-${index}`} style={styles.resultCard}>
               <Text style={styles.resultTitle}>{result.title}</Text>
-              <Text style={styles.bigPrice}>{formatValue(estimate.totalPrice)} {estimate.currency || 'EUR'}</Text>
+              <Text style={styles.bigPrice}>{formatValue(estimate.totalPrice)} {estimate.currency || 'DA'}</Text>
               <InfoRow label="Period" value={formatDateRange(estimate.startDate, estimate.endDate)} />
               <InfoRow label="Duration" value={`${estimate.totalDays || 0} day(s)`} />
               <InfoRow label="Note" value="Estimate only" />

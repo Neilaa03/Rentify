@@ -296,7 +296,7 @@ export const calculateReservationPriceReadOnly = async ({ listingId, startDate, 
     pickupMethod,
     totalDays: pricing.totalDays,
     totalPrice: pricing.totalPrice,
-    currency: 'EUR',
+    currency: 'DA',
     breakdown: pricing.breakdown,
     note: 'Estimate only. No reservation was created.',
   };
