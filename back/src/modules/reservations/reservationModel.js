@@ -8,6 +8,7 @@ const PICKUP_TABLE = 'pickup';
 
 const PAYMENT_GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const HANDOVER_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const isStatusTestMode = () => String(process.env.RESERVATION_STATUS_TEST_MODE || '').toLowerCase() === 'true';
 
@@ -15,6 +16,16 @@ const toUtcMidnightMs = (ymd) => {
     if (!ymd) return NaN;
     const ms = Date.parse(`${ymd}T00:00:00.000Z`);
     return Number.isFinite(ms) ? ms : NaN;
+};
+
+const calculateRentalDays = (startDate, endDate) => {
+    const startMs = toUtcMidnightMs(startDate);
+    const endMs = toUtcMidnightMs(endDate);
+    const diff = endMs - startMs;
+    if (!Number.isFinite(diff) || diff < 0) {
+        throw new Error('endDate must be on or after startDate');
+    }
+    return Math.floor(diff / MS_PER_DAY) + 1;
 };
 
 const shouldOpenPickupWindow = (reservationRow) => {
@@ -138,6 +149,87 @@ export const checkDateConflict = async (listingId, startDate, endDate) => {
 
     if (error) throw error;
     return data && data.length > 0;
+};
+
+export const calculateListingReservationPrice = async ({
+    listingId,
+    startDate,
+    endDate,
+    pickupMethod = 'owner_place',
+}) => {
+    const { data: listingData, error: listingError } = await supabase
+        .from(LISTINGS_TABLE)
+        .select('id, title, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee')
+        .eq('id', listingId)
+        .single();
+
+    if (listingError || !listingData) {
+        throw new Error('Listing not found or has no pricing');
+    }
+
+    if (!listingData.price_per_day) {
+        throw new Error('Listing does not have daily price set');
+    }
+
+    const totalDays = calculateRentalDays(startDate, endDate);
+    let remainingDays = totalDays;
+    let totalPrice = 0;
+    const breakdown = [];
+
+    if (remainingDays >= 30 && listingData.price_per_month) {
+        const months = Math.floor(remainingDays / 30);
+        const amount = months * Number(listingData.price_per_month);
+        totalPrice += amount;
+        remainingDays -= months * 30;
+        breakdown.push({ label: `${months} month(s)`, amount });
+    }
+
+    if (remainingDays >= 7 && listingData.price_per_week) {
+        const weeks = Math.floor(remainingDays / 7);
+        const amount = weeks * Number(listingData.price_per_week);
+        totalPrice += amount;
+        remainingDays -= weeks * 7;
+        breakdown.push({ label: `${weeks} week(s)`, amount });
+    }
+
+    if (remainingDays > 0) {
+        const amount = remainingDays * Number(listingData.price_per_day);
+        totalPrice += amount;
+        breakdown.push({ label: `${remainingDays} day(s)`, amount });
+    }
+
+    const listingDeliveryFee = Number(listingData.delivery_fee || 0);
+    const normalizedPickupMethod = pickupMethod || 'owner_place';
+    let deliveryFeeApplied = 0;
+    let pickupAddressSnapshot = listingData.pickup_address || null;
+
+    if (normalizedPickupMethod === 'renter_delivery') {
+        if (listingDeliveryFee <= 0) {
+            throw new Error('This listing does not support delivery');
+        }
+        deliveryFeeApplied = listingDeliveryFee;
+        pickupAddressSnapshot = null;
+        totalPrice += deliveryFeeApplied;
+        breakdown.push({ label: 'Delivery fee', amount: deliveryFeeApplied });
+    } else if (!pickupAddressSnapshot) {
+        throw new Error('Listing pickup address is missing');
+    }
+
+    if (isNaN(totalPrice) || !isFinite(totalPrice)) {
+        throw new Error('Failed to calculate reservation price');
+    }
+
+    return {
+        listing: listingData,
+        startDate,
+        endDate,
+        pickupMethod: normalizedPickupMethod,
+        totalDays,
+        totalPrice,
+        breakdown,
+        deliveryFeeApplied,
+        pickupAddressSnapshot,
+    };
 };
 
 // =========================================================
@@ -268,77 +360,21 @@ export const createReservation = async (payload, renterId) => {
         throw new Error('Selected dates are not available');
     }
 
-    // Fetch listing to get pricing
-    const { data: listingData, error: listingError } = await supabase
-        .from(LISTINGS_TABLE)
-        .select('price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee')
-        .eq('id', payload.listingId)
-        .single();
-
-    if (listingError || !listingData) {
-        throw new Error('Listing not found or has no pricing');
-    }
-
-    // Validate price_per_day exists (required)
-    if (!listingData.price_per_day) {
-        throw new Error('Listing does not have daily price set');
-    }
-
-    // Calculate total price based on days, weeks, and months
-    const startDate = new Date(payload.startDate);
-    const endDate = new Date(payload.endDate);
-    const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1; // +1 to include both start and end dates
-
-    let totalPrice = 0;
-    let remainingDays = totalDays;
-
-    // Apply monthly pricing first (if available)
-    if (remainingDays >= 30 && listingData.price_per_month) {
-        const fullMonths = Math.floor(remainingDays / 30);
-        totalPrice += fullMonths * listingData.price_per_month;
-        remainingDays -= fullMonths * 30;
-    }
-
-    // Apply weekly pricing (if available)
-    if (remainingDays >= 7 && listingData.price_per_week) {
-        const fullWeeks = Math.floor(remainingDays / 7);
-        totalPrice += fullWeeks * listingData.price_per_week;
-        remainingDays -= fullWeeks * 7;
-    }
-
-    // Apply daily pricing for remaining days
-    totalPrice += remainingDays * listingData.price_per_day;
-
-    const listingDeliveryFee = Number(listingData.delivery_fee || 0);
     const pickupMethod = payload.pickupMethod || 'owner_place';
-
-    let deliveryFeeApplied = 0;
-    let pickupAddressSnapshot = null;
-
-    if (pickupMethod === 'renter_delivery') {
-        if (listingDeliveryFee <= 0) {
-            throw new Error('This listing does not support delivery');
-        }
-        deliveryFeeApplied = listingDeliveryFee;
-        pickupAddressSnapshot = payload.pickupAddress || null;
-    } else {
-        pickupAddressSnapshot = listingData.pickup_address || null;
-        if (!pickupAddressSnapshot) {
-            throw new Error('Listing pickup address is missing');
-        }
-    }
-
-    totalPrice += deliveryFeeApplied;
-
-    // Validate totalPrice is a valid number
-    if (isNaN(totalPrice) || !isFinite(totalPrice)) {
-        throw new Error('Failed to calculate reservation price');
-    }
+    const pricing = await calculateListingReservationPrice({
+        listingId: payload.listingId,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        pickupMethod,
+    });
+    const pickupAddressSnapshot = pickupMethod === 'renter_delivery'
+        ? payload.pickupAddress || null
+        : pricing.pickupAddressSnapshot;
 
     const insertPayload = toReservationTablePayload({
         ...payload,
         renterId,
-        totalPrice,
+        totalPrice: pricing.totalPrice,
         status: 'reserved', // Initial status
     });
 
@@ -357,7 +393,7 @@ export const createReservation = async (payload, renterId) => {
             status: 'pending',
             pickup_method: pickupMethod,
             pickup_address: pickupAddressSnapshot,
-            delivery_fee: deliveryFeeApplied,
+            delivery_fee: pricing.deliveryFeeApplied,
         }]);
 
     if (pickupError) {
@@ -431,8 +467,10 @@ export const updateReservationDetails = async (id, updates) => {
     }
 
     // Use existing dates if not provided in updates
-    const startDate = updates.startDate ? new Date(updates.startDate) : new Date(existingReservation.start_date);
-    const endDate = updates.endDate ? new Date(updates.endDate) : new Date(existingReservation.end_date);
+    const nextStartDate = updates.startDate || existingReservation.start_date;
+    const nextEndDate = updates.endDate || existingReservation.end_date;
+    const startDate = new Date(nextStartDate);
+    const endDate = new Date(nextEndDate);
     const requestedPickupMethod = updates.pickupMethod || null;
 
     // Check for date conflicts (exclude current reservation)
@@ -461,44 +499,9 @@ export const updateReservationDetails = async (id, updates) => {
     const currentPickupRow = pickupRows && pickupRows[0] ? pickupRows[0] : null;
     const currentPickupMethod = currentPickupRow?.pickup_method || 'owner_place';
     const currentPickupAddress = currentPickupRow?.pickup_address || null;
-    const deliveryFeeApplied = Number(currentPickupRow?.delivery_fee || 0);
-
-    // Fetch listing to recalculate base price
-    const { data: listingData, error: listingError } = await supabase
-        .from(LISTINGS_TABLE)
-        .select('price_per_day, price_per_week, price_per_month')
-        .eq('id', existingReservation.listing_id)
-        .single();
-
-    if (listingError || !listingData || !listingData.price_per_day) {
-        throw new Error('Listing pricing not found');
-    }
-
-    // Recalculate total price based on new dates
-    const totalDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
-    let totalPrice = 0;
-    let remainingDays = totalDays;
-
-    // Apply monthly pricing first
-    if (remainingDays >= 30 && listingData.price_per_month) {
-        const fullMonths = Math.floor(remainingDays / 30);
-        totalPrice += fullMonths * listingData.price_per_month;
-        remainingDays -= fullMonths * 30;
-    }
-
-    // Apply weekly pricing
-    if (remainingDays >= 7 && listingData.price_per_week) {
-        const fullWeeks = Math.floor(remainingDays / 7);
-        totalPrice += fullWeeks * listingData.price_per_week;
-        remainingDays -= fullWeeks * 7;
-    }
-
-    // Apply daily pricing for remaining days
-    totalPrice += remainingDays * listingData.price_per_day;
 
     const nextPickupMethod = requestedPickupMethod || currentPickupMethod;
     let nextPickupAddress = currentPickupAddress;
-    let nextDeliveryFee = deliveryFeeApplied;
 
     if (requestedPickupMethod) {
         if (requestedPickupMethod === 'renter_delivery') {
@@ -507,23 +510,32 @@ export const updateReservationDetails = async (id, updates) => {
                 throw new Error('pickupAddress is required when pickupMethod is renter_delivery');
             }
             nextPickupAddress = requestedAddress;
-            nextDeliveryFee = Number(listingData.delivery_fee || 0);
-            if (nextDeliveryFee <= 0) {
-                throw new Error('This listing does not support delivery');
-            }
         } else {
-            nextPickupAddress = listingData.pickup_address || null;
-            nextDeliveryFee = 0;
+            nextPickupAddress = null;
         }
     }
 
-    totalPrice += nextDeliveryFee;
+    const pricing = await calculateListingReservationPrice({
+        listingId: existingReservation.listing_id,
+        startDate: nextStartDate,
+        endDate: nextEndDate,
+        pickupMethod: nextPickupMethod,
+    });
+
+    if (nextPickupMethod === 'renter_delivery') {
+        nextPickupAddress = nextPickupAddress || currentPickupAddress;
+        if (!nextPickupAddress) {
+            throw new Error('pickupAddress is required when pickupMethod is renter_delivery');
+        }
+    } else {
+        nextPickupAddress = pricing.pickupAddressSnapshot;
+    }
 
     // Prepare update payload
     const updatePayload = {
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0],
-        total_price: totalPrice,
+        start_date: nextStartDate,
+        end_date: nextEndDate,
+        total_price: pricing.totalPrice,
     };
 
     const { data, error } = await supabase
@@ -540,7 +552,7 @@ export const updateReservationDetails = async (id, updates) => {
         .update({
             pickup_method: nextPickupMethod,
             pickup_address: nextPickupAddress,
-            delivery_fee: nextDeliveryFee,
+            delivery_fee: pricing.deliveryFeeApplied,
         })
         .eq('reservation_id', id);
     if (pickupUpdateError) throw pickupUpdateError;

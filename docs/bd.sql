@@ -51,7 +51,6 @@ CREATE TABLE public.cars (
   mileage integer,
   seats integer,
   registration_number character varying,
-  visible_by_tenants boolean DEFAULT true,
   description text,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
@@ -76,22 +75,6 @@ CREATE TABLE public.documents (
   CONSTRAINT documents_car_id_fkey FOREIGN KEY (car_id) REFERENCES public.cars(id),
   CONSTRAINT documents_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id),
   CONSTRAINT documents_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
-);
-CREATE TABLE public.document_ocr_results (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  document_id uuid NOT NULL,
-  ocr_text text,
-  extracted_full_name text,
-  extracted_document_number text,
-  extracted_expiration_date date,
-  confidence_score numeric(5,2),
-  verification_status USER-DEFINED NOT NULL DEFAULT 'manual_review'::document_status,
-  verification_reason text,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT document_ocr_results_pkey PRIMARY KEY (id),
-  CONSTRAINT document_ocr_results_document_id_key UNIQUE (document_id),
-  CONSTRAINT document_ocr_results_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id)
 );
 CREATE TABLE public.car_images (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -307,4 +290,52 @@ CREATE TABLE public.document_ocr_results (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT document_ocr_results_pkey PRIMARY KEY (id),
   CONSTRAINT document_ocr_results_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id)
+);
+CREATE TABLE public.assistant_conversations (
+  id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  title text,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT assistant_conversations_pkey PRIMARY KEY (id),
+  CONSTRAINT assistant_conversations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.assistant_messages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid NOT NULL,
+  user_id uuid,
+  role text NOT NULL CHECK (role = ANY (ARRAY['user'::text, 'assistant'::text, 'tool'::text, 'system'::text])),
+  content text NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT assistant_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT assistant_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.assistant_conversations(id),
+  CONSTRAINT assistant_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.assistant_tool_calls (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid,
+  user_id uuid,
+  tool_name text NOT NULL,
+  input jsonb NOT NULL DEFAULT '{}'::jsonb,
+  success boolean NOT NULL DEFAULT false,
+  latency_ms integer,
+  error text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT assistant_tool_calls_pkey PRIMARY KEY (id),
+  CONSTRAINT assistant_tool_calls_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.assistant_conversations(id),
+  CONSTRAINT assistant_tool_calls_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.assistant_knowledge_documents (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  source text NOT NULL,
+  source_id text,
+  title text,
+  content text NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  embedding USER-DEFINED,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT assistant_knowledge_documents_pkey PRIMARY KEY (id)
 );

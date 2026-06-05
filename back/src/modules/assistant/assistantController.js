@@ -32,6 +32,13 @@ const getAssistantErrorResponse = (error) => {
     };
   }
 
+  if (message.includes('CLIENT_VERIFICATION_REQUIRED')) {
+    return {
+      status: 400,
+      error: 'Before creating a reservation, upload your driver license and wait for it to be approved.',
+    };
+  }
+
   if (status >= 500) {
     return {
       status: 502,

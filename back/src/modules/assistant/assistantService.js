@@ -16,6 +16,7 @@ const maxToolRounds = Number(process.env.ASSISTANT_MAX_TOOL_ROUNDS || 3);
 
 const assistantSystemPrompt = `
 You are Rentify AI Concierge for a car rental marketplace.
+Use searchAssistantKnowledge for questions about Rentify rental policies, insurance terms, FAQs, vehicle information, terms and conditions, support guidance, or other assistant knowledge.
 Use tools when you need live Rentify data about reservations, vehicles, listings, or the authenticated user.
 Never claim you performed a booking, cancellation, payment, profile edit, upload, approval, or any other write action unless the backend returned a completed action result.
 For write actions, call the request action tools first and ask the user to confirm. The action is executed only after the user replies yes/confirm.
@@ -24,10 +25,14 @@ Keep answers practical, concise, and friendly.
 Use hidden numbered references from conversation context when available; do not reveal internal ids to the user.
 When showing profile data, never mention ids, image URLs, raw timestamps, or internal fields.
 When showing reservations or vehicles, summarize the most useful fields in short grouped bullets.
+When showing listings or vehicle search results, always include each listing availability window (availableFrom to availableTo) when the tool data contains it.
+When the user asks about listing availability, dates, or when a vehicle can be rented, use getListingAvailability for a specific listing and searchVehicles for general listing searches.
 When a user asks for one specific reservation by number, such as "reservation 2" or "the second one", call getReservationDetails with reservationNumber instead of getReservations.
 When a user asks for one specific listing or numbered vehicle card, call getListingDetails. When they ask for car specs/details, call getCarDetails.
 If a user says "it" or asks for a price without a clear vehicle/listing id from context, ask which numbered vehicle they mean instead of searching and showing unrelated vehicles.
 For rental price estimates, rental dates are inclusive. If a user asks for N days starting on a date, call calculateReservationPrice with durationDays=N and do not invent an endDate.
+For natural rental dates, normalize phrases like "June 4th to 10th", "from June 4 to June 10", and "10 days starting June 4" into YYYY-MM-DD tool arguments.
+If the user gives a month/day without a year, assume the current calendar year.
 `.trim();
 
 const normalizeContext = (context = []) => (
@@ -80,6 +85,8 @@ const compactListing = (listing) => {
     city: listing.city,
     country: listing.country,
     pricePerDay: listing.pricePerDay,
+    availableFrom: listing.availableFrom,
+    availableTo: listing.availableTo,
     car: listing.car ? {
       id: listing.car.id,
       brand: listing.car.brand,
@@ -120,6 +127,19 @@ const createToolResultPreview = ({ name, data }) => {
         endDate: item.endDate,
         status: item.status,
         totalPrice: item.totalPrice,
+      })),
+    };
+  }
+
+  if (name === 'searchAssistantKnowledge') {
+    return {
+      type: 'assistantKnowledge',
+      title: 'Assistant knowledge',
+      items: (data.items || []).slice(0, 5).map((item) => ({
+        category: item.category,
+        title: item.title,
+        content: item.content,
+        similarity: item.similarity,
       })),
     };
   }
@@ -195,7 +215,7 @@ const createToolResultPreview = ({ name, data }) => {
   if (name === 'searchVehicles') {
     return {
       type: 'vehicles',
-      title: 'Vehicles',
+      title: 'Listings',
       items: (data.items || []).slice(0, 5).map(compactListing),
     };
   }
@@ -203,7 +223,7 @@ const createToolResultPreview = ({ name, data }) => {
   if (name === 'getFavorites') {
     return {
       type: 'vehicles',
-      title: 'Favorite vehicles',
+      title: 'Favorite listings',
       items: (data.items || []).slice(0, 5).map(compactListing),
     };
   }
@@ -299,10 +319,129 @@ const ordinalWords = {
 
 const getOrdinalNumber = (text) => Object.entries(ordinalWords).find(([word]) => text.includes(word))?.[1];
 
+const monthNumbers = {
+  january: 1,
+  jan: 1,
+  february: 2,
+  feb: 2,
+  march: 3,
+  mar: 3,
+  april: 4,
+  apr: 4,
+  may: 5,
+  june: 6,
+  jun: 6,
+  july: 7,
+  jul: 7,
+  august: 8,
+  aug: 8,
+  september: 9,
+  sep: 9,
+  sept: 9,
+  october: 10,
+  oct: 10,
+  november: 11,
+  nov: 11,
+  december: 12,
+  dec: 12,
+};
+
+const stripOrdinalSuffix = (value) => String(value || '').replace(/(\d+)(st|nd|rd|th)\b/gi, '$1');
+const padDatePart = (value) => String(value).padStart(2, '0');
+const toYmd = ({ year, month, day }) => `${year}-${padDatePart(month)}-${padDatePart(day)}`;
+
+const isValidYmdParts = ({ year, month, day }) => {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
+
+const getDefaultRentalYear = () => new Date().getFullYear();
+
+const buildYmdIfValid = ({ year = getDefaultRentalYear(), month, day }) => {
+  const parts = { year: Number(year), month: Number(month), day: Number(day) };
+  if (!isValidYmdParts(parts)) return null;
+  return toYmd(parts);
+};
+
+const parseNaturalDate = (rawText, fallbackMonth) => {
+  const text = stripOrdinalSuffix(rawText).trim().toLowerCase();
+
+  const isoMatch = text.match(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/);
+  if (isoMatch) {
+    return buildYmdIfValid({ year: isoMatch[1], month: isoMatch[2], day: isoMatch[3] });
+  }
+
+  const monthDayMatch = text.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:\s*,?\s*(20\d{2}))?\b/i);
+  if (monthDayMatch) {
+    const month = monthNumbers[monthDayMatch[1].toLowerCase()];
+    return buildYmdIfValid({ year: monthDayMatch[3] || getDefaultRentalYear(), month, day: monthDayMatch[2] });
+  }
+
+  const dayMonthMatch = text.match(/\b(\d{1,2})\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s*,?\s*(20\d{2}))?\b/i);
+  if (dayMonthMatch) {
+    const month = monthNumbers[dayMonthMatch[2].toLowerCase()];
+    return buildYmdIfValid({ year: dayMonthMatch[3] || getDefaultRentalYear(), month, day: dayMonthMatch[1] });
+  }
+
+  const dayOnlyMatch = text.match(/^\d{1,2}$/);
+  if (dayOnlyMatch && fallbackMonth) {
+    return buildYmdIfValid({ month: fallbackMonth, day: dayOnlyMatch[0] });
+  }
+
+  return null;
+};
+
+const getMonthFromYmd = (ymd) => Number(String(ymd || '').slice(5, 7)) || undefined;
+
+const parseNaturalRentalDates = (message) => {
+  const text = stripOrdinalSuffix(String(message || '').toLowerCase());
+
+  const durationMatch = text.match(/\b(\d{1,3})\s*(?:days?|jours?)\b/);
+  const startFromMatch = text.match(/\b(?:starting|start|from|beginning|begin)\s+(?:on\s+|from\s+)?((?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?))[^,.;]*)/i);
+  if (durationMatch && startFromMatch) {
+    const startDate = parseNaturalDate(startFromMatch[1]);
+    if (startDate) {
+      return {
+        startDate,
+        durationDays: Number(durationMatch[1]),
+      };
+    }
+  }
+
+  const fromForDurationMatch = text.match(/\b(?:from|starting)\s+(.+?)\s+(?:for|during)\s+(\d{1,3})\s*(?:days?|jours?)\b/i);
+  if (fromForDurationMatch) {
+    const startDate = parseNaturalDate(fromForDurationMatch[1]);
+    if (startDate) {
+      return {
+        startDate,
+        durationDays: Number(fromForDurationMatch[2]),
+      };
+    }
+  }
+
+  const datePhrase = '(?:\\d{4}-\\d{1,2}-\\d{1,2}|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\s+\\d{1,2}|\\d{1,2}\\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?))';
+  const rangePatterns = [
+    new RegExp(`\\bfrom\\s+(.+?)\\s+(?:to|until|through|-|→)\\s+(.+?)(?:\\s|$|[,.!?])`, 'i'),
+    new RegExp(`\\b(${datePhrase}[^,.;!?]*?)\\s+(?:to|until|through|-|→)\\s+(.+?)(?:\\s|$|[,.!?])`, 'i'),
+  ];
+
+  for (const pattern of rangePatterns) {
+    const rangeMatch = text.match(pattern);
+    if (rangeMatch) {
+      const startDate = parseNaturalDate(rangeMatch[1]);
+      const fallbackMonth = getMonthFromYmd(startDate);
+      const endDate = parseNaturalDate(rangeMatch[2], fallbackMonth);
+      if (startDate && endDate) return { startDate, endDate };
+    }
+  }
+
+  return null;
+};
+
 const parseHiddenVehicleReferences = (context = []) => {
   const refs = new Map();
   const hiddenText = context.map((message) => message.content || '').join('\n');
-  const pattern = /Vehicle\s+(\d+):\s+listingId=([^;\n]*);\s+carId=([^;\n]*);/gi;
+  const pattern = /(?:Vehicle|Listing)\s+(\d+):\s+listingId=([^;\n]*);\s+carId=([^;\n]*);/gi;
   let match = pattern.exec(hiddenText);
 
   while (match) {
@@ -316,16 +455,50 @@ const parseHiddenVehicleReferences = (context = []) => {
   return refs;
 };
 
+const parseLatestListingReference = (context = []) => {
+  const hiddenText = context.map((message) => message.content || '').join('\n');
+  const patterns = [
+    /Current listing:\s+listingId=([^;\n]*);\s+carId=([^;\n]*);/gi,
+    /(?:Vehicle|Listing)\s+\d+:\s+listingId=([^;\n]*);\s+carId=([^;\n]*);/gi,
+  ];
+  let latest = null;
+
+  patterns.forEach((pattern) => {
+    let match = pattern.exec(hiddenText);
+    while (match) {
+      latest = {
+        listingId: match[1]?.trim() || undefined,
+        carId: match[2]?.trim() || undefined,
+      };
+      match = pattern.exec(hiddenText);
+    }
+  });
+
+  return latest;
+};
+
 const resolveDirectDetailTool = ({ message, context }) => {
   const text = String(message || '').toLowerCase();
   const carMatch = text.match(/\bcar\s+(?:number\s+)?(\d+)\b|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+car\b/);
   const listingMatch = text.match(/\blisting\s+(?:number\s+)?(\d+)\b|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+listing\b/);
   const vehicleMatch = text.match(/\bvehicle\s+(?:number\s+)?(\d+)\b|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+vehicle\b/);
+  const wantsAvailability = /\b(availab|available|availability|date|dates|when|rental period|calendar)\b/.test(text);
+  if (wantsAvailability && /\b(it|this|that|listing|vehicle|car)\b/.test(text)) {
+    const latestRef = parseLatestListingReference(context);
+    if (latestRef?.listingId && !/\b(?:car|listing|vehicle)\s+(?:number\s+)?\d+\b/.test(text)) {
+      return { name: 'getListingAvailability', args: { listingId: latestRef.listingId } };
+    }
+  }
+
   const number = Number(carMatch?.[1] || listingMatch?.[1] || vehicleMatch?.[1] || getOrdinalNumber(text));
   if (!number) return null;
 
   const ref = parseHiddenVehicleReferences(context).get(number);
   if (!ref?.listingId && !ref?.carId) return null;
+
+  if (wantsAvailability && ref.listingId) {
+    return { name: 'getListingAvailability', args: { listingId: ref.listingId } };
+  }
 
   const wantsCar = Boolean(carMatch) || (Boolean(vehicleMatch) && /\b(car|specs?|technical|transmission|fuel|seats|mileage)\b/.test(text));
   if (wantsCar) {
@@ -335,8 +508,53 @@ const resolveDirectDetailTool = ({ message, context }) => {
   return { name: 'getListingDetails', args: { listingId: ref.listingId } };
 };
 
+const resolveListingReferenceForRental = ({ message, context }) => {
+  const text = String(message || '').toLowerCase();
+  const listingMatch = text.match(/\b(?:listing|vehicle)\s+(?:number\s+)?(\d+)\b|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+(?:listing|vehicle)\b/);
+  const number = Number(listingMatch?.[1] || getOrdinalNumber(text));
+  if (number) {
+    const ref = parseHiddenVehicleReferences(context).get(number);
+    if (ref?.listingId) return ref;
+  }
+
+  return parseLatestListingReference(context);
+};
+
+const resolveDirectRentalTool = ({ message, context }) => {
+  const text = String(message || '').toLowerCase();
+  const dates = parseNaturalRentalDates(message);
+  if (!dates?.startDate) return null;
+
+  const ref = resolveListingReferenceForRental({ message, context });
+  if (!ref?.listingId) return null;
+
+  const wantsPrice = /\b(cost|price|how much|estimate|total|quote)\b/.test(text);
+  const wantsReservation = /\b(rent|book|reserve|reservation|hire)\b/.test(text);
+  if (!wantsPrice && !wantsReservation) return null;
+
+  const args = {
+    listingId: ref.listingId,
+    startDate: dates.startDate,
+    ...(dates.durationDays ? { durationDays: dates.durationDays } : { endDate: dates.endDate }),
+  };
+
+  return {
+    name: wantsPrice ? 'calculateReservationPrice' : 'requestCreateReservation',
+    args,
+  };
+};
+
 const isConfirmationMessage = (message) => /^(yes|yep|yeah|confirm|confirmed|ok|okay|do it|proceed|go ahead)(\b|$)/i.test(String(message || '').trim());
 const isRejectionMessage = (message) => /^(no|nope|cancel|stop|never mind|nevermind)(\b|$)/i.test(String(message || '').trim());
+const isClientVerificationRequired = (error) => String(error?.message || '').includes('CLIENT_VERIFICATION_REQUIRED');
+
+const getAssistantFriendlyError = (error) => {
+  if (isClientVerificationRequired(error)) {
+    return 'Before you can create a reservation, your driver license must be uploaded and approved. Please upload your driver license from your documents/profile section, then try booking again once it is approved.';
+  }
+
+  return error?.message || 'That action could not be completed.';
+};
 
 const getLatestPendingAction = (context = []) => {
   const text = context.map((message) => message.content || '').join('\n');
@@ -367,14 +585,73 @@ const runSingleToolResponse = async ({ user, message, conversationId, tool, answ
     metadata: { source: 'assistant_chat', provider: assistantProvider, directTool: tool.name },
   }).catch((error) => console.error('[assistant] failed to log user message', error.message));
 
-  const toolResult = await executeAuditedTool({
-    name: tool.name,
-    rawArguments: tool.args,
-    user,
-    conversationId: id,
-  });
+  let toolResult;
+  try {
+    toolResult = await executeAuditedTool({
+      name: tool.name,
+      rawArguments: tool.args,
+      user,
+      conversationId: id,
+    });
+  } catch (error) {
+    if (!isClientVerificationRequired(error)) throw error;
 
-  const content = answer || 'Here are the details I found.';
+    const content = getAssistantFriendlyError(error);
+    await logAssistantMessage({
+      conversationId: id,
+      userId: user.id,
+      role: 'assistant',
+      content,
+      metadata: {
+        provider: assistantProvider,
+        directTool: tool.name,
+        actionStatus: 'failed',
+        error: error.message || 'Action failed',
+      },
+    }).catch((logError) => console.error('[assistant] failed to log assistant message', logError.message));
+
+    return {
+      conversationId: id,
+      message: {
+        role: 'assistant',
+        content,
+        createdAt: new Date().toISOString(),
+      },
+      toolsUsed: [tool.name],
+      toolResults: [{
+        type: 'actionResult',
+        title: 'Action failed',
+        actionType: 'createReservation',
+        status: 'failed',
+        result: {
+          error: error.message || 'Action failed',
+          reason: 'driver_license_required',
+        },
+      }],
+    };
+  }
+
+  let content = answer || 'Here are the details I found.';
+  if (tool.name === 'getListingAvailability') {
+    const data = toolResult.data || {};
+    const blocked = (data.blockedRanges || [])
+      .slice(0, 3)
+      .map((range) => `${range.startDate} to ${range.endDate}`)
+      .join('; ');
+    content = `${data.title || 'This listing'} is available from ${data.availableFrom || 'not set'} to ${data.availableTo || 'not set'}${blocked ? `. Blocked ranges: ${blocked}.` : '. No blocked reservation ranges were found.'}`;
+  } else if (tool.name === 'calculateReservationPrice') {
+    const data = toolResult.data || {};
+    content = `The estimate for ${data.title || 'this listing'} from ${data.startDate} to ${data.endDate} is ${data.totalPrice} ${data.currency || 'EUR'} for ${data.totalDays} day(s). This is only an estimate; no reservation was created.`;
+  } else if (tool.name === 'requestCreateReservation') {
+    const data = toolResult.data || {};
+    content = `${data.summary || 'I prepared the reservation.'} Reply yes to confirm, or no to cancel. After creation, payment must be completed within 24 hours or the reservation will be cancelled automatically.`;
+  } else if (tool.name === 'getListingDetails' || tool.name === 'getVehicleDetails') {
+    const data = toolResult.data || {};
+    const car = data.car;
+    const carName = car ? `${car.brand || ''} ${car.model || ''}`.trim() : data.title || 'vehicle';
+    content = `${data.title || 'Listing'} for ${carName}: ${data.city || 'unknown city'}, ${data.pricePerDay || 'price not set'} per day, available from ${data.availableFrom || 'not set'} to ${data.availableTo || 'not set'}.`;
+  }
+
   await logAssistantMessage({
     conversationId: id,
     userId: user.id,
@@ -430,7 +707,55 @@ const runPendingActionConfirmation = async ({ user, message, context, conversati
   }).catch((error) => console.error('[assistant] failed to log user message', error.message));
 
   const startedAt = Date.now();
-  const result = await executeConfirmedAssistantAction({ action: pendingAction, user });
+  let result;
+  try {
+    result = await executeConfirmedAssistantAction({ action: pendingAction, user });
+  } catch (error) {
+    await logAssistantToolCall({
+      conversationId: id,
+      userId: user.id,
+      toolName: `confirm:${pendingAction.actionType}`,
+      input: pendingAction.payload,
+      success: false,
+      latencyMs: Date.now() - startedAt,
+      error: error.message || 'Action failed',
+    }).catch((logError) => console.error('[assistant] failed to log failed confirmed action', logError.message));
+
+    const content = getAssistantFriendlyError(error);
+    await logAssistantMessage({
+      conversationId: id,
+      userId: user.id,
+      role: 'assistant',
+      content,
+      metadata: {
+        provider: assistantProvider,
+        actionType: pendingAction.actionType,
+        actionStatus: 'failed',
+        error: error.message || 'Action failed',
+      },
+    }).catch((logError) => console.error('[assistant] failed to log assistant message', logError.message));
+
+    return {
+      conversationId: id,
+      message: {
+        role: 'assistant',
+        content,
+        createdAt: new Date().toISOString(),
+      },
+      toolsUsed: [`confirm:${pendingAction.actionType}`],
+      toolResults: [{
+        type: 'actionResult',
+        title: 'Action failed',
+        actionType: pendingAction.actionType,
+        status: 'failed',
+        result: {
+          error: error.message || 'Action failed',
+          reason: isClientVerificationRequired(error) ? 'driver_license_required' : 'action_failed',
+        },
+      }],
+    };
+  }
+
   await logAssistantToolCall({
     conversationId: id,
     userId: user.id,
@@ -440,7 +765,9 @@ const runPendingActionConfirmation = async ({ user, message, context, conversati
     latencyMs: Date.now() - startedAt,
   }).catch((error) => console.error('[assistant] failed to log confirmed action', error.message));
 
-  const content = `${result.title}.`;
+  const content = result.actionType === 'createReservation'
+    ? `${result.title}. Please complete the payment within 24 hours or the reservation will be cancelled automatically.`
+    : `${result.title}.`;
   await logAssistantMessage({
     conversationId: id,
     userId: user.id,
@@ -646,12 +973,20 @@ const summarizeMockResult = ({ toolName, result }) => {
 
   if (toolName === 'getVehicleDetails') {
     const car = result.car;
-    return `Vehicle details: ${result.title || `${car?.brand || ''} ${car?.model || ''}`.trim()} in ${result.city || 'unknown city'}, ${result.country || 'unknown country'}, ${result.pricePerDay} per day.`;
+    return `Vehicle details: ${result.title || `${car?.brand || ''} ${car?.model || ''}`.trim()} in ${result.city || 'unknown city'}, ${result.country || 'unknown country'}, ${result.pricePerDay} per day. Available from ${result.availableFrom || 'not set'} to ${result.availableTo || 'not set'}.`;
   }
 
   if (toolName === 'getListingDetails') {
     const car = result.car;
-    return `Listing details: ${result.title || 'listing'} for ${car ? `${car.brand || ''} ${car.model || ''}`.trim() : 'vehicle'}, ${result.city || 'unknown city'}, ${result.pricePerDay} per day.`;
+    return `Listing details: ${result.title || 'listing'} for ${car ? `${car.brand || ''} ${car.model || ''}`.trim() : 'vehicle'}, ${result.city || 'unknown city'}, ${result.pricePerDay} per day. Available from ${result.availableFrom || 'not set'} to ${result.availableTo || 'not set'}.`;
+  }
+
+  if (toolName === 'getListingAvailability') {
+    const blocked = (result.blockedRanges || [])
+      .slice(0, 3)
+      .map((range) => `${range.startDate} to ${range.endDate}`)
+      .join('; ');
+    return `${result.title || 'This listing'} is available from ${result.availableFrom || 'not set'} to ${result.availableTo || 'not set'}${blocked ? `. Blocked ranges: ${blocked}.` : '. No blocked reservation ranges were found.'}`;
   }
 
   if (toolName === 'getCarDetails') {
@@ -659,15 +994,15 @@ const summarizeMockResult = ({ toolName, result }) => {
   }
 
   const items = result.items || [];
-  if (!items.length) return 'I did not find matching active vehicles. Try a broader city, price, or transmission filter.';
+  if (!items.length) return 'I did not find matching active listings. Try a broader city, price, or transmission filter.';
 
   const lines = items.slice(0, 5).map((listing) => {
     const car = listing.car;
     const carName = car ? `${car.brand || ''} ${car.model || ''}`.trim() : listing.title;
-    return `- ${carName}: ${listing.city}, ${listing.pricePerDay} per day, ${car?.transmission || 'transmission unknown'}`;
+    return `- ${carName}: ${listing.city}, ${listing.pricePerDay} per day, available ${listing.availableFrom || 'not set'} to ${listing.availableTo || 'not set'}, ${car?.transmission || 'transmission unknown'}`;
   });
 
-  return `I found these active vehicles:\n${lines.join('\n')}`;
+  return `I found these active listings:\n${lines.join('\n')}`;
 };
 
 const runMockAssistantChat = async ({ user, message, conversationId }) => {
@@ -836,6 +1171,16 @@ export const runAssistantChat = async ({ user, message, context, conversationId 
   const confirmedActionResult = await runPendingActionConfirmation({ user, message, context, conversationId });
   if (confirmedActionResult) return confirmedActionResult;
 
+  const directRentalTool = resolveDirectRentalTool({ message, context });
+  if (directRentalTool) {
+    return runSingleToolResponse({
+      user,
+      message,
+      conversationId,
+      tool: directRentalTool,
+    });
+  }
+
   const directDetailTool = resolveDirectDetailTool({ message, context });
   if (directDetailTool) {
     return runSingleToolResponse({
@@ -843,7 +1188,11 @@ export const runAssistantChat = async ({ user, message, context, conversationId 
       message,
       conversationId,
       tool: directDetailTool,
-      answer: directDetailTool.name === 'getCarDetails' ? 'Here are the car details.' : 'Here are the listing details.',
+      answer: directDetailTool.name === 'getCarDetails'
+        ? 'Here are the car details.'
+        : directDetailTool.name === 'getListingAvailability'
+          ? 'Here is the listing availability.'
+          : 'Here are the listing details.',
     });
   }
 

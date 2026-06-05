@@ -18,7 +18,7 @@ import { sendAssistantMessage } from '../../services/assistant';
 
 const initialMessage = {
   role: 'assistant',
-  content: 'Hi, I can help with reservations, vehicles, and your Rentify profile.',
+  content: 'Hi, I can help with reservations, listings, vehicles, and your Rentify profile.',
   createdAt: new Date().toISOString(),
 };
 
@@ -36,13 +36,14 @@ const buildToolReferenceContext = (toolResults = []) => {
   toolResults.forEach((result) => {
     if (result.type === 'vehicles') {
       (result.items || []).forEach((item, index) => {
-        lines.push(`Vehicle ${index + 1}: listingId=${item.id}; carId=${item.car?.id || ''}; name=${item.carName || ''}; listing=${item.listingTitle || ''}`);
+        lines.push(`Listing ${index + 1}: listingId=${item.id}; carId=${item.car?.id || ''}; vehicle=${item.carName || ''}; listing=${item.listingTitle || ''}; availableFrom=${item.availableFrom || ''}; availableTo=${item.availableTo || ''}`);
       });
     }
 
     if (result.type === 'listing') {
       const listing = result.listing || {};
-      lines.push(`Current listing: listingId=${listing.id || ''}; carId=${listing.car?.id || ''}; name=${listing.carName || ''}`);
+      const details = result.details || {};
+      lines.push(`Current listing: listingId=${listing.id || ''}; carId=${listing.car?.id || ''}; name=${listing.carName || ''}; availableFrom=${details.availableFrom || listing.availableFrom || ''}; availableTo=${details.availableTo || listing.availableTo || ''}`);
     }
 
     if (result.type === 'car') {
@@ -165,6 +166,13 @@ const StatChip = ({ value, label }) => (
   </View>
 );
 
+const actionLabels = {
+  createReservation: 'Reservation',
+  cancelReservation: 'Reservation',
+  leaveReview: 'Review',
+  updateProfile: 'Profile',
+};
+
 const ToolResultCards = ({ results = [] }) => {
   if (!Array.isArray(results) || results.length === 0) return null;
 
@@ -200,17 +208,26 @@ const ToolResultCards = ({ results = [] }) => {
           const listing = actionResult.listing || {};
           const car = listing.car || {};
           const carName = [car.brand, car.model].filter(Boolean).join(' ');
+          const statusLabel = result.status === 'cancelled'
+            ? 'Cancelled'
+            : result.status === 'failed'
+              ? 'Failed'
+              : 'Completed';
+          const actionLabel = actionLabels[result.actionType] || 'Action';
           return (
             <View key={`${result.type}-${index}`} style={styles.resultCard}>
               <Text style={styles.resultTitle}>{result.title}</Text>
               <View style={styles.singleResultHeader}>
-                <Text style={styles.singleResultName}>{result.status === 'cancelled' ? 'Cancelled' : 'Completed'}</Text>
-                <Text style={styles.singleResultMeta}>{formatValue(result.actionType)}</Text>
+                <Text style={styles.singleResultName}>{statusLabel}</Text>
+                <Text style={styles.singleResultMeta}>{actionLabel}</Text>
               </View>
               {carName ? <InfoRow label="Vehicle" value={carName} /> : null}
+              {listing.title ? <InfoRow label="Listing" value={listing.title} /> : null}
               {actionResult.startDate || actionResult.endDate ? <InfoRow label="Period" value={formatDateRange(actionResult.startDate, actionResult.endDate)} /> : null}
               {actionResult.status ? <InfoRow label="Status" value={actionResult.status} /> : null}
               {actionResult.totalPrice ? <InfoRow label="Total price" value={actionResult.totalPrice} /> : null}
+              {actionResult.paymentDueAt ? <InfoRow label="Payment due" value={formatDate(actionResult.paymentDueAt)} /> : null}
+              {actionResult.paymentNotice ? <InfoRow label="Next step" value={actionResult.paymentNotice} /> : null}
               {actionResult.rating ? <InfoRow label="Rating" value={`${actionResult.rating}/5`} /> : null}
               {actionResult.phone ? <InfoRow label="Phone" value={actionResult.phone} /> : null}
             </View>
@@ -296,15 +313,16 @@ const ToolResultCards = ({ results = [] }) => {
               <Text style={styles.resultTitle}>{result.title}</Text>
               {(result.items || []).length ? result.items.map((item, itemIndex) => (
                 <View key={item.id} style={styles.listItem}>
-                  <Text style={styles.listTitle}>Vehicle {itemIndex + 1}</Text>
-                  <InfoRow label="Car" value={item.carName || `${item.car?.brand || ''} ${item.car?.model || ''}`.trim()} />
+                  <Text style={styles.listTitle}>Listing {itemIndex + 1}</Text>
                   <InfoRow label="Listing" value={item.listingTitle} />
+                  <InfoRow label="Vehicle" value={item.carName || `${item.car?.brand || ''} ${item.car?.model || ''}`.trim()} />
                   <InfoRow label="Location" value={item.city} />
+                  <InfoRow label="Available" value={formatDateRange(item.availableFrom, item.availableTo)} />
                   <InfoRow label="Transmission" value={item.car?.transmission} />
                   <InfoRow label="Fuel" value={item.car?.fuelType} />
                   <InfoRow label="Price/day" value={item.pricePerDay} />
                 </View>
-              )) : <Text style={styles.emptyResult}>No vehicles found.</Text>}
+              )) : <Text style={styles.emptyResult}>No listings found.</Text>}
             </View>
           );
         }
@@ -330,6 +348,31 @@ const ToolResultCards = ({ results = [] }) => {
               <InfoRow label="Transmission" value={listing.car?.transmission} />
               <InfoRow label="Fuel" value={listing.car?.fuelType} />
               <InfoRow label="Seats" value={listing.car?.seats} />
+            </View>
+          );
+        }
+
+        if (result.type === 'availability') {
+          const availability = result.availability || {};
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title}</Text>
+              <View style={styles.singleResultHeader}>
+                <Text style={styles.singleResultName}>{formatValue(availability.title)}</Text>
+                <Text style={styles.singleResultMeta}>Listing availability</Text>
+              </View>
+              <InfoRow label="Available" value={formatDateRange(availability.availableFrom, availability.availableTo)} />
+              {(availability.blockedRanges || []).length ? (
+                (availability.blockedRanges || []).map((range, rangeIndex) => (
+                  <InfoRow
+                    key={`${range.startDate}-${range.endDate}-${rangeIndex}`}
+                    label={`Blocked ${rangeIndex + 1}`}
+                    value={formatDateRange(range.startDate, range.endDate)}
+                  />
+                ))
+              ) : (
+                <InfoRow label="Blocked dates" value="None found" />
+              )}
             </View>
           );
         }
@@ -380,7 +423,8 @@ const ToolResultCards = ({ results = [] }) => {
                   <Text style={styles.listTitle}>Review {itemIndex + 1}</Text>
                   <InfoRow label="Rating" value={Number(item.rating) ? `${'★'.repeat(Number(item.rating))} ${item.rating}/5` : 'Not set'} />
                   {item.comment ? <Text style={styles.reviewComment}>{item.comment}</Text> : null}
-                  <InfoRow label="Vehicle" value={item.vehicle ? `${item.vehicle.brand || ''} ${item.vehicle.model || ''}`.trim() : item.listing?.title} />
+                  <InfoRow label="Listing" value={item.listing?.title} />
+                  <InfoRow label="Vehicle" value={item.vehicle ? `${item.vehicle.brand || ''} ${item.vehicle.model || ''}`.trim() : ''} />
                   <InfoRow label="Location" value={item.listing?.city} />
                   <InfoRow label="Reservation" value={item.reservation ? formatDateRange(item.reservation.startDate, item.reservation.endDate) : null} />
                   <InfoRow label="Review date" value={formatDate(item.createdAt)} />
@@ -496,7 +540,7 @@ const AssistantWidget = () => {
                 </View>
                 <View style={styles.headerTextWrap}>
                   <Text style={styles.title}>Rentify Assistant</Text>
-                  <Text style={styles.subtitle}>Reservations, vehicles, profile</Text>
+                  <Text style={styles.subtitle}>Reservations, listings, vehicles, profile</Text>
                 </View>
                 <TouchableOpacity style={styles.iconButton} onPress={close} activeOpacity={0.8}>
                   <Ionicons name="close" size={20} color="#d8dcff" />
