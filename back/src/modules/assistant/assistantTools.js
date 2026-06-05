@@ -1,5 +1,6 @@
 import {
   carDetailsSchema,
+  assistantKnowledgeSearchSchema,
   cancelReservationActionSchema,
   createReservationActionSchema,
   leaveReviewActionSchema,
@@ -24,6 +25,7 @@ import {
   getPaymentStatusReadOnly,
   getReservationDetailsReadOnly,
   getReservationsForUser,
+  searchAssistantKnowledgeReadOnly,
   getUserProfileReadOnly,
   getVehicleDetailsReadOnly,
   getVehicleReviewsReadOnly,
@@ -35,6 +37,30 @@ import {
 } from './assistantModel.js';
 
 export const assistantToolDefinitions = [
+  {
+    type: 'function',
+    function: {
+      name: 'searchAssistantKnowledge',
+      description: 'Search embedded Rentify assistant knowledge such as rental policies, insurance terms, FAQs, vehicle information, terms and conditions, and support guidance. Use this for general policy or knowledge questions.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+          categories: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: ['rental_policy', 'insurance_terms', 'faq', 'vehicle_information', 'terms_conditions', 'support'],
+            },
+          },
+          limit: { type: 'integer' },
+          threshold: { type: 'number' },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+    },
+  },
   {
     type: 'function',
     function: {
@@ -51,7 +77,7 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'searchVehicles',
-      description: 'Search Rentify vehicle listings using read-only filters.',
+      description: 'Search Rentify vehicle listings using read-only filters. Results include listing availability dates; use this for general listing/availability searches.',
       parameters: {
         type: 'object',
         properties: {
@@ -190,7 +216,7 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'getListingAvailability',
-      description: 'Read a listing availability window and currently blocked reservation ranges.',
+      description: 'Read a listing availability window and currently blocked reservation ranges. Use when the user asks when a specific listing/vehicle is available or rent-able.',
       parameters: {
         type: 'object',
         properties: {
@@ -205,7 +231,7 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'calculateReservationPrice',
-      description: 'Calculate a read-only reservation price estimate. Does not create a reservation. If the user asks for a number of days, pass durationDays and let the backend compute the inclusive end date.',
+      description: 'Calculate a read-only reservation price estimate. Does not create a reservation. Normalize natural dates first: "June 4th to 10th" means startDate YYYY-06-04 and endDate YYYY-06-10; "10 days starting June 4" means startDate YYYY-06-04 and durationDays 10.',
       parameters: {
         type: 'object',
         properties: {
@@ -298,7 +324,7 @@ export const assistantToolDefinitions = [
     type: 'function',
     function: {
       name: 'requestCreateReservation',
-      description: 'Prepare a new reservation for confirmation. This does not create a reservation yet. Use hidden listingId when available; use durationDays when user asks for a number of days.',
+      description: 'Prepare a new reservation for confirmation. This does not create a reservation yet. Use hidden listingId when available. Normalize natural dates first: "June 4th to 10th" means startDate YYYY-06-04 and endDate YYYY-06-10; "10 days starting June 4" means startDate YYYY-06-04 and durationDays 10.',
       parameters: {
         type: 'object',
         properties: {
@@ -364,6 +390,8 @@ export const executeAssistantTool = async ({ name, rawArguments, user }) => {
   const args = parseToolArguments(rawArguments);
 
   switch (name) {
+    case 'searchAssistantKnowledge':
+      return searchAssistantKnowledgeReadOnly(assistantKnowledgeSearchSchema.parse(args));
     case 'getReservations':
       return getReservationsForUser(user.id);
     case 'getReservationDetails':
@@ -396,7 +424,7 @@ export const executeAssistantTool = async ({ name, rawArguments, user }) => {
     case 'requestCancelReservation':
       return prepareCancelReservationAction({ ...cancelReservationActionSchema.parse(args), user });
     case 'requestCreateReservation':
-      return prepareCreateReservationAction(createReservationActionSchema.parse(args));
+      return prepareCreateReservationAction({ ...createReservationActionSchema.parse(args), user });
     case 'requestLeaveReview':
       return prepareLeaveReviewAction({ ...leaveReviewActionSchema.parse(args), user });
     case 'requestUpdateProfile':

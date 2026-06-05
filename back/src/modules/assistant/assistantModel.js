@@ -1,9 +1,11 @@
 import crypto from 'crypto';
-import { supabase } from '../../config/supabase.js';
+import { GoogleGenAI } from '@google/genai';
+import { supabase, supabaseAdmin } from '../../config/supabase.js';
 import { getClientProfileStats, getOwnerProfileStats } from '../profile/profileModel.js';
 import { getListings, getListingById } from '../car-listings/listingModel.js';
 import { getCarById } from '../cars/carModel.js';
 import { getUserById, updateUserById } from '../auth/authModel.js';
+import { hasApprovedDocument } from '../documents/documentModel.js';
 import { getUserFavorites } from '../favorites/favoritesModel.js';
 import {
   createReview as createReviewRecord,
@@ -14,12 +16,30 @@ import {
 } from '../reviews/reviewModel.js';
 import { getPaymentByReservationId } from '../payments/paymentDbModel.js';
 import {
+  calculateListingReservationPrice,
   createReservation as createReservationRecord,
   updateReservationStatus,
 } from '../reservations/reservationModel.js';
 
 const RESERVATION_SELECT =
   'id, listing_id, renter_id, start_date, end_date, total_price, status, created_at, pickup(status, pickup_method, pickup_address, delivery_fee), listings(id, car_id, title, city, country, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, cars(id, owner_id, brand, model, year, seats, transmission, fuel_type, car_images(id, image_url, is_primary)))';
+
+const embeddingModel = process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001';
+const embeddingDimensions = Number(process.env.GEMINI_EMBEDDING_DIMENSIONS || 1536);
+
+const getGeminiEmbeddingClient = () => {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is required for assistant knowledge search');
+  return new GoogleGenAI({ apiKey });
+};
+
+const getEmbeddingValues = (embedding) => {
+  const values = embedding?.values || embedding?.embedding?.values || embedding?.embedding || [];
+  if (!Array.isArray(values) || values.length !== embeddingDimensions) {
+    throw new Error(`Gemini embedding dimension mismatch: expected ${embeddingDimensions}, got ${values?.length || 0}`);
+  }
+  return values;
+};
 
 const toReservationSummary = (row) => {
   const pickup = Array.isArray(row.pickup) ? row.pickup[0] : row.pickup;
@@ -121,6 +141,54 @@ export const getVehicleDetailsReadOnly = async (vehicleId) => {
   return getListingById(vehicleId);
 };
 
+export const searchAssistantKnowledgeReadOnly = async ({
+  query,
+  categories = [],
+  limit = 5,
+  threshold = 0.72,
+}) => {
+  if (!supabaseAdmin) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for assistant knowledge search');
+  }
+
+  const gemini = getGeminiEmbeddingClient();
+  const embeddingResponse = await gemini.models.embedContent({
+    model: embeddingModel,
+    contents: [query],
+    config: {
+      taskType: 'RETRIEVAL_QUERY',
+      outputDimensionality: embeddingDimensions,
+    },
+  });
+
+  const embedding = getEmbeddingValues(embeddingResponse.embeddings?.[0]);
+
+  const { data, error } = await supabaseAdmin.rpc('match_assistant_knowledge', {
+    query_embedding: embedding,
+    match_count: Math.max(limit * 3, limit),
+    match_threshold: threshold,
+  });
+
+  if (error) throw error;
+
+  const allowedCategories = new Set(categories || []);
+  const filtered = (data || [])
+    .filter((item) => allowedCategories.size === 0 || allowedCategories.has(item.category))
+    .slice(0, limit);
+
+  return {
+    query,
+    items: filtered.map((item) => ({
+      id: item.id,
+      category: item.category,
+      title: item.title,
+      content: item.content,
+      metadata: item.metadata || {},
+      similarity: item.similarity,
+    })),
+  };
+};
+
 export const getListingDetailsReadOnly = async ({ listingId, listingNumber, filters = {} }) => {
   if (listingNumber) {
     const result = await searchVehiclesReadOnly({ ...filters, limit: Math.max(listingNumber, filters.limit || 5) });
@@ -211,59 +279,25 @@ const calculateRentalDays = (startDate, endDate) => {
 };
 
 export const calculateReservationPriceReadOnly = async ({ listingId, startDate, endDate, durationDays, pickupMethod }) => {
-  const { data: listing, error } = await supabase
-    .from('listings')
-    .select('id, title, price_per_day, price_per_week, price_per_month, delivery_fee, pickup_address')
-    .eq('id', listingId)
-    .single();
-
-  if (error || !listing) throw new Error('Listing not found');
-  if (!listing.price_per_day) throw new Error('Listing daily price is missing');
-
   const totalDays = durationDays ? Number(durationDays) : calculateRentalDays(startDate, endDate);
   const resolvedEndDate = durationDays ? addDaysYmd(startDate, totalDays - 1) : endDate;
-  let remainingDays = totalDays;
-  let totalPrice = 0;
-  const breakdown = [];
-
-  if (remainingDays >= 30 && listing.price_per_month) {
-    const months = Math.floor(remainingDays / 30);
-    const amount = months * Number(listing.price_per_month);
-    totalPrice += amount;
-    remainingDays -= months * 30;
-    breakdown.push({ label: `${months} month(s)`, amount });
-  }
-
-  if (remainingDays >= 7 && listing.price_per_week) {
-    const weeks = Math.floor(remainingDays / 7);
-    const amount = weeks * Number(listing.price_per_week);
-    totalPrice += amount;
-    remainingDays -= weeks * 7;
-    breakdown.push({ label: `${weeks} week(s)`, amount });
-  }
-
-  if (remainingDays > 0) {
-    const amount = remainingDays * Number(listing.price_per_day);
-    totalPrice += amount;
-    breakdown.push({ label: `${remainingDays} day(s)`, amount });
-  }
-
-  const deliveryFee = pickupMethod === 'renter_delivery' ? Number(listing.delivery_fee || 0) : 0;
-  if (deliveryFee > 0) {
-    totalPrice += deliveryFee;
-    breakdown.push({ label: 'Delivery fee', amount: deliveryFee });
-  }
+  const pricing = await calculateListingReservationPrice({
+    listingId,
+    startDate,
+    endDate: resolvedEndDate,
+    pickupMethod: pickupMethod === 'renter_delivery' ? 'renter_delivery' : 'owner_place',
+  });
 
   return {
     listingId,
-    title: listing.title,
+    title: pricing.listing.title,
     startDate,
     endDate: resolvedEndDate,
     pickupMethod,
-    totalDays,
-    totalPrice,
-    currency: 'EUR',
-    breakdown,
+    totalDays: pricing.totalDays,
+    totalPrice: pricing.totalPrice,
+    currency: 'DA',
+    breakdown: pricing.breakdown,
     note: 'Estimate only. No reservation was created.',
   };
 };
@@ -320,7 +354,19 @@ export const prepareCreateReservationAction = async ({
   durationDays,
   pickupMethod,
   pickupAddress,
+  user,
 }) => {
+  if (user?.id) {
+    const clientHasApprovedLicense = await hasApprovedDocument({
+      userId: user.id,
+      documentType: 'driver_license',
+    });
+
+    if (!clientHasApprovedLicense) {
+      throw new Error('CLIENT_VERIFICATION_REQUIRED');
+    }
+  }
+
   const listing = await getListingDetailsReadOnly({ listingId, listingNumber });
   const resolvedEndDate = durationDays ? addDaysYmd(startDate, Number(durationDays) - 1) : endDate;
   const estimate = await calculateReservationPriceReadOnly({
@@ -427,13 +473,21 @@ export const executeConfirmedAssistantAction = async ({ action, user }) => {
   }
 
   if (action.actionType === 'createReservation') {
+    await prepareCreateReservationAction({ ...action.payload, user });
     const result = await createReservationRecord(action.payload, user.id);
+    const paymentDueAt = result.createdAt
+      ? new Date(new Date(result.createdAt).getTime() + (24 * 60 * 60 * 1000)).toISOString()
+      : null;
     return {
       type: 'actionResult',
       title: 'Reservation created',
       actionType: action.actionType,
       status: 'completed',
-      result,
+      result: {
+        ...result,
+        paymentDueAt,
+        paymentNotice: 'Please complete payment within 24 hours or the reservation will be cancelled automatically.',
+      },
     };
   }
 
@@ -606,13 +660,18 @@ export const logAssistantMessage = async ({ conversationId, userId, role, conten
     return;
   }
 
-  const { error: conversationError } = await supabase
+  if (!supabaseAdmin) {
+    console.warn('[assistant] DB logging is enabled, but SUPABASE_SERVICE_ROLE_KEY is not configured. RLS may reject assistant log writes.');
+  }
+
+  const logClient = supabaseAdmin || supabase;
+  const { error: conversationError } = await logClient
     .from('assistant_conversations')
     .upsert({ id: conversationId, user_id: userId, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 
   if (conversationError) throw conversationError;
 
-  const { error } = await supabase.from('assistant_messages').insert([{
+  const { error } = await logClient.from('assistant_messages').insert([{
     conversation_id: conversationId,
     user_id: userId,
     role,
@@ -637,15 +696,20 @@ export const logAssistantToolCall = async ({
     return;
   }
 
+  if (!supabaseAdmin) {
+    console.warn('[assistant:tool] Tool logging is enabled, but SUPABASE_SERVICE_ROLE_KEY is not configured. RLS may reject assistant tool logs.');
+  }
+
+  const logClient = supabaseAdmin || supabase;
   if (conversationId && userId) {
-    const { error: conversationError } = await supabase
+    const { error: conversationError } = await logClient
       .from('assistant_conversations')
       .upsert({ id: conversationId, user_id: userId, updated_at: new Date().toISOString() }, { onConflict: 'id' });
 
     if (conversationError) throw conversationError;
   }
 
-  const { error: insertError } = await supabase.from('assistant_tool_calls').insert([{
+  const { error: insertError } = await logClient.from('assistant_tool_calls').insert([{
     conversation_id: conversationId,
     user_id: userId,
     tool_name: toolName,
