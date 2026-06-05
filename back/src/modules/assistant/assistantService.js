@@ -294,7 +294,7 @@ const createToolResultPreview = ({ name, data }) => {
 };
 
 const selectDisplayToolResults = (results = []) => {
-  const priorityTypes = ['actionResult', 'pendingAction', 'price', 'payment', 'reservation', 'listing', 'car', 'profile', 'myReviews', 'reservations', 'availability', 'reviews'];
+  const priorityTypes = ['actionResult', 'pendingAction', 'assistantKnowledge', 'price', 'payment', 'reservation', 'listing', 'car', 'profile', 'myReviews', 'reservations', 'availability', 'reviews'];
   const firstPriority = priorityTypes.find((type) => results.some((result) => result.type === type));
 
   if (firstPriority) {
@@ -577,6 +577,46 @@ const resolveDirectRentalTool = ({ message, context }) => {
   };
 };
 
+const resolveDirectKnowledgeTool = ({ message }) => {
+  const text = String(message || '').toLowerCase();
+  const categoryChecks = [
+    { category: 'faq', query: 'faq', pattern: /\b(faq|frequently asked|question|questions|help)\b/ },
+    { category: 'rental_policy', query: 'rental policy booking pickup return cancellation refund', pattern: /\b(policy|policies|polici\w*|rental rules?|booking rules?|pickup|return|cancel|cancellation|refund)\b/ },
+    { category: 'insurance_terms', query: 'insurance terms coverage damage claims disputes', pattern: /\b(insurance|coverage|damage|claim|claims|dispute|deductible)\b/ },
+    { category: 'terms_conditions', query: 'terms and conditions user conduct platform safety', pattern: /\b(terms|conditions|conduct|rules|safety)\b/ },
+    { category: 'support', query: 'support contact admin help', pattern: /\b(support|contact|admin|help center)\b/ },
+  ];
+
+  const matched = categoryChecks.find((item) => item.pattern.test(text));
+  if (!matched) return null;
+
+  return {
+    name: 'searchAssistantKnowledge',
+    args: {
+      query: text.trim().length <= 24 ? matched.query : message,
+      categories: [matched.category],
+      limit: matched.category === 'faq' && text.trim().length <= 12 ? 5 : 3,
+      threshold: 0.45,
+    },
+  };
+};
+
+const getKnowledgeIntro = ({ category, message }) => {
+  const text = String(message || '').trim();
+  const intros = {
+    faq: text.length <= 12
+      ? 'Here are the main FAQ entries available in Rentify.'
+      : 'These FAQ entries best match your question.',
+    rental_policy: 'These are the Rentify rental policy details that match your question.',
+    insurance_terms: 'These are the insurance terms and responsibilities that apply.',
+    terms_conditions: 'These are the relevant Rentify terms and conditions.',
+    support: 'This is the support guidance that matches your request.',
+    vehicle_information: 'These vehicle information notes match your question.',
+  };
+
+  return intros[category] || 'This is the relevant Rentify knowledge for your question.';
+};
+
 const isConfirmationMessage = (message) => /^(yes|yep|yeah|confirm|confirmed|ok|okay|do it|proceed|go ahead)(\b|$)/i.test(String(message || '').trim());
 const isRejectionMessage = (message) => /^(no|nope|cancel|stop|never mind|nevermind)(\b|$)/i.test(String(message || '').trim());
 const isClientVerificationRequired = (error) => String(error?.message || '').includes('CLIENT_VERIFICATION_REQUIRED');
@@ -683,6 +723,16 @@ const runSingleToolResponse = async ({ user, message, conversationId, tool, answ
     const car = data.car;
     const carName = car ? `${car.brand || ''} ${car.model || ''}`.trim() : data.title || 'vehicle';
     content = `${data.title || 'Listing'} for ${carName}: ${data.city || 'unknown city'}, ${data.pricePerDay || 'price not set'} per day, available from ${data.availableFrom || 'not set'} to ${data.availableTo || 'not set'}.`;
+  } else if (tool.name === 'searchAssistantKnowledge') {
+    const items = toolResult.data?.items || [];
+    if (!items.length) {
+      content = 'I could not find matching FAQ or policy information yet. Make sure the assistant knowledge rows have embeddings by running npm run sync:knowledge -- --skip-vehicles.';
+      toolResult.preview = null;
+    } else {
+      const category = tool.args?.categories?.[0] || items[0]?.category;
+      const lines = items.slice(0, 5).map((item) => `- ${item.title}: ${item.content}`);
+      content = `${getKnowledgeIntro({ category, message })}\n${lines.join('\n')}`;
+    }
   }
 
   await logAssistantMessage({
@@ -701,7 +751,7 @@ const runSingleToolResponse = async ({ user, message, conversationId, tool, answ
       createdAt: new Date().toISOString(),
     },
     toolsUsed: [tool.name],
-    toolResults: selectDisplayToolResults([toolResult.preview]),
+    toolResults: selectDisplayToolResults([toolResult.preview].filter(Boolean)),
   };
 };
 
@@ -1211,6 +1261,16 @@ export const runAssistantChat = async ({ user, message, context, conversationId 
       message,
       conversationId,
       tool: directRentalTool,
+    });
+  }
+
+  const directKnowledgeTool = resolveDirectKnowledgeTool({ message });
+  if (directKnowledgeTool) {
+    return runSingleToolResponse({
+      user,
+      message,
+      conversationId,
+      tool: directKnowledgeTool,
     });
   }
 

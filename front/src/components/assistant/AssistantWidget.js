@@ -271,6 +271,22 @@ const ToolResultCards = ({ results = [] }) => {
           );
         }
 
+        if (result.type === 'assistantKnowledge') {
+          if (!(result.items || []).length) return null;
+
+          return (
+            <View key={`${result.type}-${index}`} style={styles.resultCard}>
+              <Text style={styles.resultTitle}>{result.title || 'Assistant knowledge'}</Text>
+              {(result.items || []).map((item, itemIndex) => (
+                <View key={`${item.title || 'knowledge'}-${itemIndex}`} style={styles.listItem}>
+                  <Text style={styles.listTitle}>{formatValue(item.title)}</Text>
+                  <Text style={styles.knowledgeContent}>{formatValue(item.content)}</Text>
+                </View>
+              ))}
+            </View>
+          );
+        }
+
         if (result.type === 'reservations') {
           return (
             <View key={`${result.type}-${index}`} style={styles.resultCard}>
@@ -940,6 +956,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '900',
     marginBottom: 8,
+  },
+  knowledgeContent: {
+    color: '#ECF0FF',
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   infoRow: {
     paddingVertical: 7,
