@@ -2,9 +2,12 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
+import { useTheme } from '../../contexts/ThemeContext';
 import { moderateScale, rf } from '../../utils/responsive';
 
 const AuthGradientButton = ({ label, onPress, disabled }) => {
+    const { colors } = useTheme();
+
     return (
         <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.9}>
             <LinearGradient
@@ -13,7 +16,7 @@ const AuthGradientButton = ({ label, onPress, disabled }) => {
                 end={{ x: 1, y: 0 }}
                 style={[styles.button, disabled ? styles.disabled : null]}
             >
-                <Text style={styles.buttonText}>{label}</Text>
+                <Text style={[styles.buttonText, { color: colors.white }]}>{label}</Text>
             </LinearGradient>
         </TouchableOpacity>
     );
@@ -30,7 +33,6 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     buttonText: {
-        color: '#fff',
         fontSize: rf(17, 15, 20),
         fontWeight: '700',
     },

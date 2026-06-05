@@ -5,6 +5,7 @@ import { COLORS } from '../../constants/colors';
 import { appFont } from '../../utils/responsive';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const FALLBACK_IMAGE = 'https://picsum.photos/seed/listing-fallback/900/600';
 
@@ -16,6 +17,7 @@ const toImageUrl = (img) => {
 
 const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const formatPrice = (value) => `${value.toLocaleString(getCurrentLocale())}${t('common.daPerDayCompact')}`;
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
@@ -84,7 +86,7 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
   }, [imageUrls.length, carouselWidth]);
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.92} onPress={onPress}>
+    <TouchableOpacity style={[styles.card, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]} activeOpacity={0.92} onPress={onPress}>
       <View style={styles.imageContainer}>
         <View
           style={styles.carouselContainer}
@@ -113,13 +115,13 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
         <View style={styles.overlay}>
           <View style={styles.imageTopRow}>
             {!selectedListing.available && (
-              <View style={styles.unavailableBadge}>
-                <Text style={styles.unavailableText}>{t('components.cards.listingcard.indisponible')}</Text>
+              <View style={[styles.unavailableBadge, { backgroundColor: `${colors.danger}1A` }]}>
+                <Text style={[styles.unavailableText, { color: colors.danger }]}>{t('components.cards.listingcard.indisponible')}</Text>
               </View>
             )}
             {offerCount > 1 && (
-              <View style={styles.offerBadge}>
-                <Text style={styles.offerBadgeText}>
+              <View style={[styles.offerBadge, { backgroundColor: `${colors.primary}16` }]}>
+                <Text style={[styles.offerBadgeText, { color: colors.primary }]}>
                   {matchingOfferCount > 0 && matchingOfferCount < offerCount
                     ? t('components.cards.listingcard.matchingOffers', { matching: matchingOfferCount, total: offerCount })
                     : t('components.cards.listingcard.offers', { count: offerCount })}
@@ -127,14 +129,14 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
               </View>
             )}
             <TouchableOpacity
-              style={styles.iconButton}
+              style={[styles.iconButton, { backgroundColor: colors.overlaySoft, borderColor: colors.border }]}
               activeOpacity={0.8}
               onPress={onToggleFavorite}
             >
               <Ionicons
                 name={isFavorite ? 'heart' : 'heart-outline'}
                 size={20}
-                color={isFavorite ? COLORS.primary : '#fff'}
+                color={isFavorite ? colors.primary : colors.text}
               />
             </TouchableOpacity>
           </View>
@@ -151,8 +153,8 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
               </View>
             ) : <View />}
 
-            <View style={styles.priceBadge}>
-              <Text style={styles.priceText}>{formatPrice(Number(selectedListing.pricePerDay || 0))}</Text>
+            <View style={[styles.priceBadge, { backgroundColor: colors.surfaceStrong }]}>
+              <Text style={[styles.priceText, { color: colors.text }]}>{formatPrice(Number(selectedListing.pricePerDay || 0))}</Text>
             </View>
           </View>
         </View>
@@ -160,43 +162,43 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{`${selectedListing.brand} ${selectedListing.model}`}</Text>
-          <View style={styles.ratingPill}>
+          <Text style={[styles.title, { color: colors.text }]}>{`${selectedListing.brand} ${selectedListing.model}`}</Text>
+          <View style={[styles.ratingPill, { backgroundColor: colors.surface }]}>
             <Ionicons name="star" size={14} color="#F8B84E" />
-            <Text style={styles.ratingText}>{selectedListing.rating}</Text>
+            <Text style={[styles.ratingText, { color: colors.text }]}>{selectedListing.rating}</Text>
           </View>
         </View>
 
-        <Text style={styles.subtitle}>{`${selectedListing.year} · ${selectedListing.category}`}</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{`${selectedListing.year} · ${selectedListing.category}`}</Text>
 
         <View style={styles.chipsRow}>
-          <View style={styles.chip}>
-            <Ionicons name="people-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{selectedListing.seats}</Text>
+          <View style={[styles.chip, { backgroundColor: colors.surface }]}>
+            <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+            <Text style={[styles.chipText, { color: colors.textMuted }]}>{selectedListing.seats}</Text>
           </View>
-          <View style={styles.chip}>
-            <Ionicons name="flash-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{selectedListing.fuel}</Text>
+          <View style={[styles.chip, { backgroundColor: colors.surface }]}>
+            <Ionicons name="flash-outline" size={14} color={colors.textMuted} />
+            <Text style={[styles.chipText, { color: colors.textMuted }]}>{selectedListing.fuel}</Text>
           </View>
-          <View style={styles.chip}>
-            <Ionicons name="settings-outline" size={14} color="#9aa0c8" />
-            <Text style={styles.chipText}>{selectedListing.transmission}</Text>
+          <View style={[styles.chip, { backgroundColor: colors.surface }]}>
+            <Ionicons name="settings-outline" size={14} color={colors.textMuted} />
+            <Text style={[styles.chipText, { color: colors.textMuted }]}>{selectedListing.transmission}</Text>
           </View>
         </View>
 
         <View style={styles.citiesRow}>
-          <Ionicons name="location-outline" size={14} color="#9aa0c8" />
+          <Ionicons name="location-outline" size={14} color={colors.textMuted} />
           <View style={styles.citiesWrap}>
             {visibleCities.map((city) => (
-              <View key={city} style={styles.cityChip}>
-                <Text style={styles.cityChipText} numberOfLines={1}>
+              <View key={city} style={[styles.cityChip, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.cityChipText, { color: colors.textMuted }]} numberOfLines={1}>
                   {city}
                 </Text>
               </View>
             ))}
             {hasMoreCities && (
-              <View style={styles.moreCitiesChip}>
-                <Text style={styles.cityChipText}>...</Text>
+              <View style={[styles.moreCitiesChip, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.cityChipText, { color: colors.textMuted }]}>...</Text>
               </View>
             )}
           </View>
@@ -208,11 +210,9 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111329',
     borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(143, 150, 255, 0.14)',
     marginBottom: 16,
   },
   imageContainer: {

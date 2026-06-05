@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, Linking, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Linking, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
@@ -9,6 +8,8 @@ import { getAgencyDocuments } from '../../services/agency';
 import { deleteDocument, uploadDocument } from '../../services/owner';import { useTranslation } from "react-i18next";
 import { getFriendlyError } from '../../utils/friendlyError';
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 const requiredCompanyDocs = [
 {
@@ -179,6 +180,7 @@ const RequirementCard = ({ item, status, fileLabel, doc, busy = false, onPress, 
 };
 
 export default function AgencyDocumentsScreen({ navigation, route }) {const { t } = useTranslation();
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -356,12 +358,10 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
   }, [load, token]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="#0a0c24" />
-      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-          <View style={styles.overlay}>
-          <View style={styles.page}>
+    <AppBackground contentStyle={styles.safeArea}>
+      <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        <View style={styles.page}>
           <View style={styles.headerSpacer} />
 
           {state.loading ?
@@ -375,21 +375,24 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
                 contentContainerStyle={styles.content}>
                 
               <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('AgencyProfile', { token, user })}>
-                  <Ionicons name="chevron-back" size={20} color="#fff" />
+                <TouchableOpacity style={[styles.backButton, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]} onPress={() => navigation.navigate('AgencyProfile', { token, user })}>
+                  <Ionicons name="chevron-back" size={20} color={colors.white} />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.kicker}>{t("screens.agency.agencydocumentsscreen.documents")}</Text>
-                  <Text style={styles.title}>{t("screens.agency.agencydocumentsscreen.documentsDeLagence")}</Text>
-                  <Text style={styles.subtitle}>{t("screens.agency.agencydocumentsscreen.suiviDesDocumentsDeLentreprise")}</Text>
+                  <Text style={[styles.kicker, { color: colors.primary }]}>{t("screens.agency.agencydocumentsscreen.documents")}</Text>
+                  <Text style={[styles.title, { color: colors.white }]}>{t("screens.agency.agencydocumentsscreen.documentsDeLagence")}</Text>
+                  <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.82)' }]}>{t("screens.agency.agencydocumentsscreen.suiviDesDocumentsDeLentreprise")}</Text>
                 </View>
               </View>
 
-              {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
+              {state.error ? <Text style={[styles.error, { color: colors.danger }]}>{state.error}</Text> : null}
 
               <SectionTitle
                   title={t("screens.agency.agencydocumentsscreen.dossiersObligatoires")}
-                  subtitle={t("screens.agency.agencydocumentsscreen.chaqueDocumentRequisEstAfficheAvecSon")} />
+                  subtitle={t("screens.agency.agencydocumentsscreen.chaqueDocumentRequisEstAfficheAvecSon")}
+                  kickerStyle={{ color: colors.white }}
+                  titleStyle={{ color: colors.white }}
+                  subtitleStyle={{ color: 'rgba(255,255,255,0.82)' }} />
                 
               <View style={styles.sectionList}>
                 {companyCards.map(({ item, status, fileLabel, doc }) =>
@@ -415,20 +418,18 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
               </View>
             </ScrollView>
               }
-          </View>
-          </View>
-          <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
-        </SafeAreaView>
-      </ImageBackground>
-    </View>);
+        </View>
+        <AgencyBottomNavigation navigation={navigation} route={route} active="profile" />
+      </View>
+    </AppBackground>);
 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0c24' },
-  background: { flex: 1, backgroundColor: '#0a0c24' },
+  container: { flex: 1, backgroundColor: 'transparent' },
+  background: { flex: 1, backgroundColor: 'transparent' },
   safeArea: { flex: 1 },
-  overlay: { flex: 1, backgroundColor: 'rgba(2,3,14,0.58)' },
+  overlay: { flex: 1, backgroundColor: 'transparent' },
   page: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
   content: { paddingBottom: 102 },
   headerSpacer: { height: 8 },
@@ -441,7 +442,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2
+    marginTop: 2,
+    borderWidth: 1
   },
   kicker: { color: '#8E95BF', fontSize: 11, fontWeight: '900', letterSpacing: 1.3, marginBottom: 4 },
   title: { color: '#fff', fontSize: 28, fontWeight: '900' },
@@ -455,9 +457,9 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 20,
     padding: 14,
-    backgroundColor: 'rgba(14,15,26,0.96)',
+    backgroundColor: '#E1D8F7',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)'
+    borderColor: 'rgba(117, 94, 171, 0.18)'
   },
   requirementIcon: {
     width: 40,
@@ -465,28 +467,28 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)'
+    backgroundColor: 'rgba(255,255,255,0.25)'
   },
   requirementBody: { flex: 1, minWidth: 0 },
   requirementTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  requirementTitle: { color: '#F5F7FF', fontWeight: '900', fontSize: 15 },
-  requirementSubtitle: { color: '#97A0C7', marginTop: 3, fontSize: 12, lineHeight: 17 },
+  requirementTitle: { color: '#11162B', fontWeight: '900', fontSize: 15 },
+  requirementSubtitle: { color: '#5D678E', marginTop: 3, fontSize: 12, lineHeight: 17 },
   requirementDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(117, 94, 171, 0.14)',
     marginTop: 12,
     marginBottom: 10
   },
-  requirementFile: { color: '#DCE2FF', fontWeight: '800', fontSize: 12 },
+  requirementFile: { color: '#11162B', fontWeight: '800', fontSize: 12 },
   requirementMissing: { color: '#FFB347' },
-  requirementHint: { color: '#97A0C7', fontSize: 11, marginTop: 4, lineHeight: 16 },
+  requirementHint: { color: '#5D678E', fontSize: 11, marginTop: 4, lineHeight: 16 },
   ocrBlock: {
     marginTop: 12,
     padding: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(255,255,255,0.35)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)'
+    borderColor: 'rgba(117, 94, 171, 0.14)'
   },
   ocrBlockRejected: {
     backgroundColor: 'rgba(255,23,68,0.08)',
@@ -496,10 +498,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,230,118,0.08)',
     borderColor: 'rgba(0,230,118,0.24)'
   },
-  ocrLabel: { color: '#DCE2FF', fontWeight: '900', fontSize: 12, marginBottom: 6 },
-  ocrReason: { color: '#F5F7FF', fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  ocrReasonMuted: { color: '#97A0C7', fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  ocrMeta: { color: '#AAB3D6', fontSize: 11, lineHeight: 16, marginTop: 4 },
+  ocrLabel: { color: '#11162B', fontWeight: '900', fontSize: 12, marginBottom: 6 },
+  ocrReason: { color: '#11162B', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  ocrReasonMuted: { color: '#5D678E', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  ocrMeta: { color: '#5D678E', fontSize: 11, lineHeight: 16, marginTop: 4 },
   actionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -513,24 +515,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.35)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)'
+    borderColor: 'rgba(117, 94, 171, 0.14)'
   },
   primaryBtn: {
-    backgroundColor: 'rgba(124,77,255,0.82)',
-    borderColor: 'rgba(124,77,255,0.35)'
+    backgroundColor: '#8A2BE2',
+    borderColor: 'rgba(117, 94, 171, 0.22)'
   },
   actionBtnDisabled: {
     opacity: 0.5
   },
-  actionBtnText: { color: '#fff', fontWeight: '900', fontSize: 12 },
-  actionBtnTextSecondary: { color: '#D9DFFF', fontWeight: '900', fontSize: 12 },
-  actionBtnTextDanger: { color: '#FF8FA3', fontWeight: '900', fontSize: 12 },
+  actionBtnText: { color: '#11162B', fontWeight: '900', fontSize: 12 },
+  actionBtnTextSecondary: { color: '#5D678E', fontWeight: '900', fontSize: 12 },
+  actionBtnTextDanger: { color: '#B5475D', fontWeight: '900', fontSize: 12 },
   actionBtnTextDisabled: { opacity: 0.6 },
-  empty: { color: '#A5AECF', fontStyle: 'italic', paddingVertical: 10 },
+  empty: { color: '#5D678E', fontStyle: 'italic', paddingVertical: 10 },
   footerCard: { padding: 16, marginBottom: 14 },
   footerStats: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  footerStat: { color: '#D9DFFF', fontWeight: '800', fontSize: 12 },
-  footerHint: { color: '#97A0C7', marginTop: 8, fontSize: 12, lineHeight: 18 }
+  footerStat: { color: '#11162B', fontWeight: '800', fontSize: 12 },
+  footerHint: { color: '#5D678E', marginTop: 8, fontSize: 12, lineHeight: 18 }
 });

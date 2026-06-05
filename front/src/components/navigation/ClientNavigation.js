@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { CommonActions, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../contexts/ThemeContext';
 
 import HomeScreen from '../../screens/client/HomeScreen';
 import FavoritesScreen from '../../screens/client/FavoritesScreen';
@@ -23,12 +24,12 @@ import { FavoritesProvider } from '../../contexts/FavoritesContext';import { use
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
-const APP_BACKGROUND = '#0f1228';
 
 // Stack for Home tab
 function HomeTabStack() {
+  const { colors } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
@@ -73,8 +74,9 @@ function HomeTabStack() {
 
 // Stack for Favorites tab
 function FavoritesTabStack() {
+  const { colors } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
@@ -104,8 +106,9 @@ function FavoritesTabStack() {
 
 // Stack for Reservations tab
 function ReservationsTabStack() {
+  const { colors } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="ReservationsList" component={ReservationsScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
@@ -130,8 +133,9 @@ function ReservationsTabStack() {
 
 // Stack for Profile tab
 function ProfileTabStack() {
+  const { colors } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: APP_BACKGROUND } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
@@ -141,11 +145,12 @@ function ProfileTabStack() {
 
 // Client Navigation Component
 export function ClientNavigation() {const { t } = useTranslation();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const bottomOffset = 2;
 
   const defaultTabBarStyle = {
-    backgroundColor: '#0f1228',
+    backgroundColor: colors.tabBar,
     borderTopWidth: 0,
     marginHorizontal: 16,
     borderRadius: 18,
@@ -163,7 +168,7 @@ export function ClientNavigation() {const { t } = useTranslation();
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
-          sceneContainerStyle: { backgroundColor: APP_BACKGROUND },
+          sceneContainerStyle: { backgroundColor: colors.background },
           tabBarHideOnKeyboard: false,
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;
@@ -179,7 +184,7 @@ export function ClientNavigation() {const { t } = useTranslation();
             return <Ionicons name={iconName} size={size} color={color} />;
           },
           tabBarActiveTintColor: COLORS.primary,
-          tabBarInactiveTintColor: '#8a90b8',
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarShowLabel: false,
           tabBarStyle: defaultTabBarStyle
         })}>

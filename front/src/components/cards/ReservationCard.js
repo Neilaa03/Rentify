@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } 
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';import { useTranslation } from "react-i18next";
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const formatPrice = (value) => `${(value || 0).toLocaleString(getCurrentLocale())} DA`;
 
@@ -41,6 +42,7 @@ const ReservationCard = ({
   onFinishPayment,
   compact = false
 }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const tightLayout = width <= 380;
@@ -112,7 +114,7 @@ const ReservationCard = ({
   const badgeColor = statusColors[status] || '#6EC1FF';
 
   return (
-    <TouchableOpacity style={[styles.card, compact && styles.compactCard, tightLayout && styles.tightCard]} activeOpacity={0.85} onPress={handlePress}>
+    <TouchableOpacity style={[styles.card, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }, compact && styles.compactCard, tightLayout && styles.tightCard]} activeOpacity={0.85} onPress={handlePress}>
       {/* Image */}
       <View style={[styles.imageWrapper, compact && styles.compactImageWrapper, tightLayout && styles.tightImageWrapper]}>
         {imageUri ?
@@ -122,8 +124,8 @@ const ReservationCard = ({
           resizeMode="cover" /> :
 
 
-        <View style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage, styles.imagePlaceholder]}>
-            <Ionicons name="car-sport-outline" size={36} color="rgba(255,255,255,0.8)" />
+        <View style={[styles.image, compact && styles.compactImage, tightLayout && styles.tightImage, styles.imagePlaceholder, { backgroundColor: colors.surface }]}>
+            <Ionicons name="car-sport-outline" size={36} color={colors.textMuted} />
           </View>
         }
       </View>
@@ -132,18 +134,18 @@ const ReservationCard = ({
       <View style={[styles.contentWrapper, tightLayout && styles.tightContentWrapper]}>
         {/* Top: Car Name */}
         <View style={styles.titleSection}>
-          <Text style={[styles.carName, { fontSize: fontSize.carName }]} numberOfLines={1}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
+          <Text style={[styles.carName, { fontSize: fontSize.carName, color: colors.text }]} numberOfLines={1}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>
           {listing?.city &&
           <View style={styles.cityContainer}>
-              <Ionicons name="location-outline" size={12} color="#8b91ba" />
-              <Text style={[styles.cityText, { fontSize: fontSize.city }]}>{listing.city}</Text>
+              <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+              <Text style={[styles.cityText, { fontSize: fontSize.city, color: colors.textMuted }]}>{listing.city}</Text>
             </View>
           }
         </View>
 
         {/* Middle: Dates */}
         <View style={[styles.dateSection, tightLayout && styles.tightDateSection]}>
-          <Ionicons name="calendar-outline" size={14} color="#8b91ba" />
+          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
           {tightLayout ?
           <View style={styles.stackedDateText}>
               <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(start)} →</Text>
@@ -156,15 +158,15 @@ const ReservationCard = ({
 
         {/* Bottom: Duration */}
         <View style={styles.durationSection}>
-          <Ionicons name="time-outline" size={14} color="#8b91ba" />
-          <Text style={[styles.durationText, { fontSize: fontSize.duration }]}>{days ? `${days} days` : '—'}</Text>
+          <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+          <Text style={[styles.durationText, { fontSize: fontSize.duration, color: colors.textMuted }]}>{days ? `${days} days` : '—'}</Text>
         </View>
       </View>
 
       {/* Right Section: Status & Price */}
       <View style={[styles.rightSection, compact && styles.compactRightSection, tightLayout && styles.tightRightSection]}>
         <View style={[styles.statusBadge, tightLayout && styles.tightStatusBadge, { backgroundColor: badgeColor }]}> 
-          <Text style={[styles.statusText, { fontSize: fontSize.status }]} numberOfLines={1}>
+          <Text style={[styles.statusText, { fontSize: fontSize.status, color: colors.white }]} numberOfLines={1}>
             {status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ') : 'Reserved'}
           </Text>
         </View>
@@ -175,7 +177,7 @@ const ReservationCard = ({
           </Text>
           </TouchableOpacity>
         }
-        <Text style={[styles.price, compact && styles.compactPrice, { fontSize: fontSize.price }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+        <Text style={[styles.price, { color: colors.primary }, compact && styles.compactPrice, { fontSize: fontSize.price }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
           {formatPrice(reservation?.totalPrice || listing?.pricePerDay || 0)}
         </Text>
       </View>
@@ -187,10 +189,8 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111329',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(143, 150, 255, 0.15)',
     marginBottom: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
@@ -265,7 +265,6 @@ const styles = StyleSheet.create({
     marginBottom: 6
   },
   carName: {
-    color: '#F5F7FF',
     fontWeight: '700',
     maxWidth: '90%'
   },
@@ -276,7 +275,6 @@ const styles = StyleSheet.create({
     gap: 4
   },
   cityText: {
-    color: '#8b91ba',
     fontWeight: '400'
   },
   dateSection: {
@@ -295,7 +293,6 @@ const styles = StyleSheet.create({
     minWidth: 0
   },
   dateText: {
-    color: '#8b91ba',
     marginLeft: 6,
     fontWeight: '500',
     flexShrink: 1
@@ -308,7 +305,6 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   durationText: {
-    color: '#8b91ba',
     marginLeft: 6,
     fontWeight: '500'
   },
@@ -328,7 +324,6 @@ const styles = StyleSheet.create({
     flexShrink: 0
   },
   price: {
-    color: '#0b63ff',
     fontWeight: '800',
     letterSpacing: -0.3
   },
@@ -348,7 +343,6 @@ const styles = StyleSheet.create({
     maxWidth: 82
   },
   finishPaymentButtonText: {
-    color: '#fff',
     fontWeight: '700'
   }
 });

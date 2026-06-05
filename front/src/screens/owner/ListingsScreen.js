@@ -22,6 +22,7 @@ import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNaviga
 import AppBackground from '../../components/layout/AppBackground';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -36,6 +37,7 @@ const OwnerListingsScreen = ({
   title,
 }) => {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const user = route?.params?.user;
   const screenTitle = title || t('screens.owner.listingsscreen.mesAnnonces');
@@ -185,27 +187,31 @@ const OwnerListingsScreen = ({
     <AppBackground>
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-            <Ionicons name="chevron-back" size={22} color="#fff" />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{screenTitle}</Text>
+          <Text style={[styles.headerTitle, { color: colors.white }]}>{screenTitle}</Text>
           <TouchableOpacity
-            style={styles.iconBtn}
+            style={[styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'create_listing' })}
           >
-            <Ionicons name="add" size={22} color="#8f7dff" />
+            <Ionicons name="add" size={22} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.filtersCard}>
+        <View style={[styles.filtersCard, { borderColor: colors.border, backgroundColor: colors.surfaceStrong }]}>
           <View style={styles.filterRow}>
             {statusFilters.map((filter) => (
               <TouchableOpacity
                 key={filter.key}
-                style={[styles.chip, statusFilter === filter.key && styles.chipActive]}
+                style={[
+                  styles.chip,
+                  { borderColor: colors.border, backgroundColor: colors.surface },
+                  statusFilter === filter.key && { backgroundColor: colors.primary, borderColor: colors.primary }
+                ]}
                 onPress={() => setStatusFilter(filter.key)}
               >
-                <Text style={[styles.chipText, statusFilter === filter.key && styles.chipTextActive]}>
+                <Text style={[styles.chipText, { color: colors.textMuted }, statusFilter === filter.key && { color: colors.white }]}>
                   {filter.label}
                 </Text>
               </TouchableOpacity>
@@ -213,26 +219,26 @@ const OwnerListingsScreen = ({
           </View>
 
           <View style={styles.filterActionsRow}>
-            <TouchableOpacity style={styles.filterBtn} onPress={() => setCarFilterVisible(true)}>
-              <Ionicons name="car-outline" size={16} color="#dce1ff" />
-              <Text style={styles.filterBtnText}>
+            <TouchableOpacity style={[styles.filterBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={() => setCarFilterVisible(true)}>
+              <Ionicons name="car-outline" size={16} color={colors.textMuted} />
+              <Text style={[styles.filterBtnText, { color: colors.text }]}>
                 {selectedCarId === 'all'
                   ? t('screens.owner.listingsscreen.toutesLesVoitures')
                   : availableCars.find((car) => String(car.id) === String(selectedCarId))?.label || t('screens.owner.listingsscreen.voiture')}
               </Text>
-              <Ionicons name="chevron-down-outline" size={16} color="#aab1dd" />
+              <Ionicons name="chevron-down-outline" size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.filterBtn}
+              style={[styles.filterBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
               onPress={() => {
                 const currentIndex = sortModes.findIndex((item) => item.key === sortMode);
                 const next = sortModes[(currentIndex + 1) % sortModes.length];
                 setSortMode(next.key);
               }}
             >
-              <Ionicons name="swap-vertical-outline" size={16} color="#dce1ff" />
-              <Text style={styles.filterBtnText}>
+              <Ionicons name="swap-vertical-outline" size={16} color={colors.textMuted} />
+              <Text style={[styles.filterBtnText, { color: colors.text }]}>
                 {sortModes.find((item) => item.key === sortMode)?.label || t('screens.owner.listingsscreen.recentes')}
               </Text>
             </TouchableOpacity>
@@ -241,20 +247,20 @@ const OwnerListingsScreen = ({
 
         {isLoading ? (
           <View style={styles.loaderWrap}>
-            <ActivityIndicator size="large" color="#8f7dff" />
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : (
           <FlatList
             data={filteredListings}
             keyExtractor={(item) => item.id}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8f7dff" />}
-            ListEmptyComponent={<Text style={styles.emptyText}>{t('screens.owner.listingsscreen.aucuneAnnonceNeCorrespondACesFiltres')}</Text>}
-            ListHeaderComponent={error ? <Text style={styles.errorText}>{error}</Text> : null}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+            ListEmptyComponent={<Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('screens.owner.listingsscreen.aucuneAnnonceNeCorrespondACesFiltres')}</Text>}
+            ListHeaderComponent={error ? <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text> : null}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => {
               const badgeStyle = badgeByTone[item.stateTone] || badgeByTone.amber;
               return (
-                <View style={styles.card}>
+                <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surfaceStrong }]}>
                   {carImages[item.carId] && (
                     <Image
                       source={{ uri: carImages[item.carId] }}
@@ -265,33 +271,33 @@ const OwnerListingsScreen = ({
                   <View style={styles.cardContent}>
                     <View style={styles.cardTop}>
                       <View>
-                        <Text style={styles.title}>{item.title}</Text>
-                        <Text style={styles.subtitle}>
+                        <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+                        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
                           {item.brand} {item.model} - {item.city}
                         </Text>
                       </View>
                       <Text style={[styles.badge, badgeStyle]}>{item.stateLabel}</Text>
                     </View>
 
-                    <Text style={styles.price}>{Number(item.pricePerDay || 0).toLocaleString(getCurrentLocale())} {t('screens.owner.listingsscreen.daJour')}</Text>
+                    <Text style={[styles.price, { color: colors.primary }]}>{Number(item.pricePerDay || 0).toLocaleString(getCurrentLocale())} {t('screens.owner.listingsscreen.daJour')}</Text>
 
                     <View style={styles.actions}>
                       <TouchableOpacity
-                        style={styles.actionBtn}
+                        style={[styles.actionBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
                         onPress={() => navigation.navigate('OwnerListingForm', { token, user, mode: 'edit', listing: item })}
                       >
-                        <Text style={styles.actionText}>{t('screens.owner.listingsscreen.modifier')}</Text>
+                        <Text style={[styles.actionText, { color: colors.text }]}>{t('screens.owner.listingsscreen.modifier')}</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
-                        <Text style={[styles.actionText, { color: '#ff8a9e' }]}>{t('screens.owner.listingsscreen.supprimer')}</Text>
+                      <TouchableOpacity style={[styles.actionBtn, { borderColor: colors.danger, backgroundColor: `${colors.danger}10` }]} onPress={() => handleDelete(item)}>
+                        <Text style={[styles.actionText, { color: colors.danger }]}>{t('screens.owner.listingsscreen.supprimer')}</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        style={[styles.publishBtn, !item.isActive && item.state !== 'ready_to_publish' && styles.publishBtnDisabled]}
+                        style={[styles.publishBtn, { backgroundColor: colors.primary }, !item.isActive && item.state !== 'ready_to_publish' && styles.publishBtnDisabled]}
                         onPress={() => handleTogglePublish(item)}
                       >
-                        <Text style={styles.publishText}>{item.isActive ? t('screens.owner.listingsscreen.depublier') : t('screens.owner.listingsscreen.publier')}</Text>
+                        <Text style={[styles.publishText, { color: colors.white }]}>{item.isActive ? t('screens.owner.listingsscreen.depublier') : t('screens.owner.listingsscreen.publier')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -303,23 +309,23 @@ const OwnerListingsScreen = ({
       </View>
 
       <Modal visible={carFilterVisible} transparent animationType="fade" onRequestClose={() => setCarFilterVisible(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+        <View style={[styles.modalBackdrop, { backgroundColor: colors.modalBackdrop }]}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('screens.owner.listingsscreen.filtrerParVoiture')}</Text>
-              <TouchableOpacity onPress={() => setCarFilterVisible(false)} style={styles.iconBtn}>
-                <Ionicons name="close-outline" size={20} color="#fff" />
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('screens.owner.listingsscreen.filtrerParVoiture')}</Text>
+              <TouchableOpacity onPress={() => setCarFilterVisible(false)} style={[styles.iconBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Ionicons name="close-outline" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity
-              style={[styles.modalOption, selectedCarId === 'all' && styles.modalOptionActive]}
+              style={[styles.modalOption, { borderColor: colors.border, backgroundColor: colors.surface }, selectedCarId === 'all' && { backgroundColor: `${colors.primary}22`, borderColor: colors.primary }]}
               onPress={() => {
                 setSelectedCarId('all');
                 setCarFilterVisible(false);
               }}
             >
-              <Text style={[styles.modalOptionText, selectedCarId === 'all' && styles.modalOptionTextActive]}>{t('screens.owner.listingsscreen.toutesLesVoitures')}</Text>
+              <Text style={[styles.modalOptionText, { color: colors.textMuted }, selectedCarId === 'all' && { color: colors.text }]}>{t('screens.owner.listingsscreen.toutesLesVoitures')}</Text>
             </TouchableOpacity>
 
             <FlatList
@@ -327,13 +333,13 @@ const OwnerListingsScreen = ({
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.modalOption, String(selectedCarId) === String(item.id) && styles.modalOptionActive]}
+                  style={[styles.modalOption, { borderColor: colors.border, backgroundColor: colors.surface }, String(selectedCarId) === String(item.id) && { backgroundColor: `${colors.primary}22`, borderColor: colors.primary }]}
                   onPress={() => {
                     setSelectedCarId(item.id);
                     setCarFilterVisible(false);
                   }}
                 >
-                  <Text style={[styles.modalOptionText, String(selectedCarId) === String(item.id) && styles.modalOptionTextActive]}>
+                  <Text style={[styles.modalOptionText, { color: colors.textMuted }, String(selectedCarId) === String(item.id) && { color: colors.text }]}>
                     {item.label}
                   </Text>
                 </TouchableOpacity>

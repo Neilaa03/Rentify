@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ImageBackground, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
@@ -7,10 +7,13 @@ import { AgencyCard, Badge, MetricCard, ProgressRow, RequestRow, SectionTitle } 
 import { getAgencyDashboard } from '../../services/agency';import { useTranslation } from "react-i18next";
 import { getFriendlyError } from '../../utils/friendlyError';
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 const toneMap = ['purple', 'blue', 'green', 'amber'];
 
 export default function AgencyDashboardScreen({ navigation, route }) {const { t } = useTranslation();
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -59,45 +62,44 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
   0;
 
   return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.overlay}>
+    <AppBackground contentStyle={styles.safeArea}>
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
         <View style={styles.page}>
           <View style={styles.header}>
             <View style={styles.headerTextBlock}>
-              <Text style={styles.kicker}>{t("screens.agency.agencydashboardscreen.agencyOwner")}</Text>
-              <Text style={styles.title}>{agency.commercialName || 'Espace agence'}</Text>
-              <Text style={styles.subtitle}>{t("screens.agency.agencydashboardscreen.bienvenue")}{user?.first_name || user?.firstName || 'manager'}{t("screens.agency.agencydashboardscreen.gestionPremiumDesVehicules")}</Text>
+              <Text style={[styles.kicker, { color: colors.primary }]}>{t("screens.agency.agencydashboardscreen.agencyOwner")}</Text>
+              <Text style={[styles.title, { color: colors.white }]}>{agency.commercialName || 'Espace agence'}</Text>
+              <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.82)' }]}>{t("screens.agency.agencydashboardscreen.bienvenue")}{user?.first_name || user?.firstName || 'manager'}{t("screens.agency.agencydashboardscreen.gestionPremiumDesVehicules")}</Text>
             </View>
             <Badge
                 label={verificationLabel}
                 toneKey={verificationTone}
                 fullWidth
-                style={styles.verificationBadge} />
+                style={[styles.verificationBadge, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]} />
               
           </View>
 
           {state.loading ?
             <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#A78BFF" />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View> :
 
             <ScrollView
-              refreshControl={<RefreshControl refreshing={state.refreshing} onRefresh={onRefresh} tintColor="#A78BFF" />}
+              refreshControl={<RefreshControl refreshing={state.refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.content}>
               
-              {state.error ? <Text style={styles.error}>{state.error}</Text> : null}
+              {state.error ? <Text style={[styles.error, { color: colors.danger }]}>{state.error}</Text> : null}
 
               {agency.verificationStatus === 'PENDING' || agency.verificationStatus === 'INCOMPLETE' ?
               <AgencyCard style={styles.banner}>
                   <View style={styles.bannerRow}>
-                    <View style={styles.bannerIcon}>
+                    <View style={[styles.bannerIcon, { backgroundColor: `${colors.warning}22` }]}>
                       <Ionicons name="time-outline" size={18} color="#FFB347" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.bannerTitle}>{t("screens.agency.agencydashboardscreen.enAttenteDeVerification")}</Text>
-                      <Text style={styles.bannerText}>{t("screens.agency.agencydashboardscreen.votreDossierEstEnCoursDeRevue")}</Text>
+                      <Text style={[styles.bannerTitle, { color: colors.text }]}>{t("screens.agency.agencydashboardscreen.enAttenteDeVerification")}</Text>
+                      <Text style={[styles.bannerText, { color: colors.textMuted }]}>{t("screens.agency.agencydashboardscreen.votreDossierEstEnCoursDeRevue")}</Text>
                     </View>
                   </View>
                 </AgencyCard> :
@@ -113,26 +115,26 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
               <AgencyCard style={styles.statsCard}>
                 <SectionTitle kicker="PERFORMANCE" />
                 <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
+                  <View style={[styles.statItem, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                     <View style={styles.statIcon}>
-                      <Ionicons name="eye-outline" size={16} color="#8f7dff" />
+                      <Ionicons name="eye-outline" size={16} color={colors.primary} />
                     </View>
-                    <Text style={styles.statValue}>{totalViews.toLocaleString(getCurrentLocale())}</Text>
-                    <Text style={styles.statLabel}>{t("screens.agency.agencydashboardscreen.vues")}</Text>
+                    <Text style={[styles.statValue, { color: colors.text }]}>{totalViews.toLocaleString(getCurrentLocale())}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t("screens.agency.agencydashboardscreen.vues")}</Text>
                   </View>
-                  <View style={styles.statItem}>
+                  <View style={[styles.statItem, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                     <View style={styles.statIcon}>
-                      <Ionicons name="calendar-outline" size={16} color="#21d4a7" />
+                      <Ionicons name="calendar-outline" size={16} color={colors.success} />
                     </View>
-                    <Text style={[styles.statValue, { color: '#21d4a7' }]}>{totalReservations.toLocaleString(getCurrentLocale())}</Text>
-                    <Text style={styles.statLabel}>{t("screens.agency.agencydashboardscreen.reservations")}</Text>
+                    <Text style={[styles.statValue, { color: colors.success }]}>{totalReservations.toLocaleString(getCurrentLocale())}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t("screens.agency.agencydashboardscreen.reservations")}</Text>
                   </View>
-                  <View style={styles.statItem}>
+                  <View style={[styles.statItem, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
                     <View style={styles.statIcon}>
-                      <Ionicons name="star-outline" size={16} color="#ffb347" />
+                      <Ionicons name="star-outline" size={16} color={colors.warning} />
                     </View>
-                    <Text style={[styles.statValue, { color: '#ffb347' }]}>{averageRating}</Text>
-                    <Text style={styles.statLabel}>{t("screens.agency.agencydashboardscreen.evaluation")}</Text>
+                    <Text style={[styles.statValue, { color: colors.warning }]}>{averageRating}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t("screens.agency.agencydashboardscreen.evaluation")}</Text>
                   </View>
                 </View>
               </AgencyCard>
@@ -144,10 +146,9 @@ export default function AgencyDashboardScreen({ navigation, route }) {const { t 
             </ScrollView>
             }
         </View>
-        </View>
+      </View>
         <AgencyBottomNavigation navigation={navigation} route={route} active="dashboard" />
-      </SafeAreaView>
-    </ImageBackground>);
+    </AppBackground>);
 
 }
 

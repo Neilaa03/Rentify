@@ -7,10 +7,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  RefreshControl,
-  ImageBackground } from
+  RefreshControl } from
 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
@@ -18,6 +16,8 @@ import { API_ENDPOINTS } from '../../constants/api';
 import ReservationCard from '../../components/cards/ReservationCard';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import { getOwnerListings } from '../../services/owner';import { useTranslation } from "react-i18next";
+import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 const OwnerReservationsScreen = ({
   navigation,
@@ -25,6 +25,7 @@ const OwnerReservationsScreen = ({
   BottomNavigationComponent = OwnerBottomNavigation,
   title
 }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const screenTitle = title || t("components.navigation.agencybottomnavigation.reservations");
   const token = route?.params?.token;
   const user = route?.params?.user;
@@ -159,78 +160,81 @@ const OwnerReservationsScreen = ({
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
-          <SafeAreaView edges={['top', 'left', 'right']} style={styles.overlay}>
-            <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>{t("screens.owner.reservationsscreen.chargement")}</Text>
-            </View>
-            <OwnerBottomNavigation navigation={navigation} route={route} active="reservations" />
-          </SafeAreaView>
-        </ImageBackground>
-        <BottomNavigationComponent navigation={navigation} route={route} active="reservations" />
-      </View>);
+      <AppBackground contentStyle={styles.safeArea}>
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.text }]}>{t("screens.owner.reservationsscreen.chargement")}</Text>
+          </View>
+          <BottomNavigationComponent navigation={navigation} route={route} active="reservations" />
+        </View>
+      </AppBackground>);
 
   }
 
   return (
-    <View style={styles.container}>
-      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
-        <SafeAreaView edges={['top', 'left', 'right']} style={[styles.overlay, { flex: 1 }]}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{screenTitle}</Text>
-            <View style={{ width: 44 }} />
-          </View>
+    <AppBackground contentStyle={styles.safeArea}>
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: colors.white }]}>{screenTitle}</Text>
+          <View style={{ width: 44 }} />
+        </View>
 
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'upcoming' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('upcoming')}>
-              
-              <Text style={[styles.tabText, activeTab === 'upcoming' && styles.tabTextActive]}>{t("screens.owner.reservationsscreen.upcoming")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, activeTab === 'past' && styles.tabButtonActive]}
-              onPress={() => setActiveTab('past')}>
-              
-              <Text style={[styles.tabText, activeTab === 'past' && styles.tabTextActive]}>{t("screens.owner.reservationsscreen.past")}</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              { backgroundColor: colors.surfaceStrong, borderColor: colors.border },
+              activeTab === 'upcoming' && { backgroundColor: colors.surface, borderColor: colors.primary }
+            ]}
+            onPress={() => setActiveTab('upcoming')}>
+              <Text style={[styles.tabText, { color: 'rgba(255,255,255,0.72)' }, activeTab === 'upcoming' && { color: colors.white, fontWeight: '700' }]}>{t("screens.owner.reservationsscreen.upcoming")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              { backgroundColor: colors.surfaceStrong, borderColor: colors.border },
+              activeTab === 'past' && { backgroundColor: colors.surface, borderColor: colors.primary }
+            ]}
+            onPress={() => setActiveTab('past')}>
+            <Text style={[styles.tabText, { color: 'rgba(255,255,255,0.72)' }, activeTab === 'past' && { color: colors.white, fontWeight: '700' }]}>{t("screens.owner.reservationsscreen.past")}</Text>
+          </TouchableOpacity>
+        </View>
 
-          <ScrollView
-            style={styles.content}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            showsVerticalScrollIndicator={false}>
-            
-            {filteredReservations.length === 0 ?
-            <View style={styles.emptyContainer}>
-                <View style={styles.emptyIconContainer}>
-                  <Ionicons name="calendar-outline" size={56} color="#7c3aed" />
-                </View>
-                <Text style={styles.emptyTitle}>{t("screens.owner.reservationsscreen.aucuneReservation")}</Text>
-                <Text style={styles.emptyText}>{t("screens.owner.reservationsscreen.aucuneReservationSurVosAnnoncesPourLe")}</Text>
-              </View> :
+        <ScrollView
+          style={styles.content}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          showsVerticalScrollIndicator={false}>
+          {filteredReservations.length === 0 ?
+          <View style={styles.emptyContainer}>
+              <View style={[styles.emptyIconContainer, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
+                <Ionicons name="calendar-outline" size={56} color="#7c3aed" />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.white }]}>{t("screens.owner.reservationsscreen.aucuneReservation")}</Text>
+              <Text style={[styles.emptyText, { color: 'rgba(255,255,255,0.82)' }]}>{t("screens.owner.reservationsscreen.aucuneReservationSurVosAnnoncesPourLe")}</Text>
+            </View> :
 
-            filteredReservations.map((reservation) =>
-            <ReservationCard
-              key={reservation.id}
-              reservation={reservation}
-              onPress={handleReservationPress}
-              compact />
+          filteredReservations.map((reservation) =>
+          <ReservationCard
+            key={reservation.id}
+            reservation={reservation}
+            onPress={handleReservationPress}
+            compact />
 
-            )
-            }
-            <View style={{ height: 20 }} />
-          </ScrollView>
-          <OwnerBottomNavigation navigation={navigation} route={route} active="reservations" />
-        </SafeAreaView>
-      </ImageBackground>
-    </View>);
+          )
+          }
+          <View style={{ height: 20 }} />
+        </ScrollView>
+        <BottomNavigationComponent navigation={navigation} route={route} active="reservations" />
+      </View>
+    </AppBackground>);
 
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background
@@ -241,7 +245,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(2,3,14,0.62)',
+    backgroundColor: 'transparent',
     paddingBottom: 80
   },
   header: {

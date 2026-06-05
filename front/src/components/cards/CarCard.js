@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
 import { appFont } from '../../utils/responsive';import { useTranslation } from "react-i18next";
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const FALLBACK_IMAGE = 'https://via.placeholder.com/540x280';
 
@@ -14,6 +15,7 @@ const toImageUrl = (img) => {
 };
 
 const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const scrollRef = useRef(null);
@@ -56,7 +58,7 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {const {
   const subtitleParts = [car.year, car.color, car.fuelType].filter(Boolean);
 
   return (
-    <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.card}>
+    <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={[styles.card, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
       <View style={styles.imageWrapper}>
         <View
           style={styles.carouselContainer}
@@ -93,8 +95,8 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {const {
           </View> :
         null}
 
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{t("components.cards.carcard.enLigne")}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: colors.success }]}>
+          <Text style={[styles.statusText, { color: colors.white }]}>{t("components.cards.carcard.enLigne")}</Text>
         </View>
 
         {typeof onReviewsPress === 'function' ?
@@ -103,7 +105,7 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {const {
           activeOpacity={0.85}
           onPress={onReviewsPress}>
           
-            <Ionicons name="chatbubbles-outline" size={18} color="#fff" />
+            <Ionicons name="chatbubbles-outline" size={18} color={colors.white} />
           </TouchableOpacity> :
         null}
       </View>
@@ -111,35 +113,35 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {const {
       <View style={styles.body}>
         <View style={styles.titleRow}>
           <View style={styles.titleBlock}>
-            <Text style={styles.title}>{car.brand} {car.model}</Text>
-            <Text style={styles.subtitle}>{subtitleParts.join(' • ')}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{car.brand} {car.model}</Text>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitleParts.join(' • ')}</Text>
           </View>
-          <Text style={styles.priceText}>{pricePerDay ? `${Number(pricePerDay).toLocaleString(getCurrentLocale())}${t('common.daPerDayCompact')}` : '—'}</Text>
+          <Text style={[styles.priceText, { color: colors.primary }]}>{pricePerDay ? `${Number(pricePerDay).toLocaleString(getCurrentLocale())}${t('common.daPerDayCompact')}` : '—'}</Text>
         </View>
 
         <View style={styles.detailsRow}>
           <View style={styles.detailItem}>
-            <Ionicons name="speedometer" size={14} color={COLORS.gray} />
-            <Text style={styles.detailLabel}>{car.mileage ? `${car.mileage} km` : 'N/A'}</Text>
+            <Ionicons name="speedometer" size={14} color={colors.textMuted} />
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{car.mileage ? `${car.mileage} km` : 'N/A'}</Text>
           </View>
           <View style={styles.detailItem}>
-            <Ionicons name="people" size={14} color={COLORS.gray} />
-            <Text style={styles.detailLabel}>{car.seats ? `${car.seats} places` : 'N/A'}</Text>
+            <Ionicons name="people" size={14} color={colors.textMuted} />
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{car.seats ? `${car.seats} places` : 'N/A'}</Text>
           </View>
           <View style={styles.detailItem}>
-            <Ionicons name="cog-outline" size={14} color={COLORS.gray} />
-            <Text style={styles.detailLabel}>{car.transmission || 'Auto'}</Text>
+            <Ionicons name="cog-outline" size={14} color={colors.textMuted} />
+            <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{car.transmission || 'Auto'}</Text>
           </View>
         </View>
 
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-            <Ionicons name="pencil-outline" size={16} color="#fff" />
-            <Text style={styles.editButtonText}>{t("components.cards.carcard.modifier")}</Text>
+          <TouchableOpacity style={[styles.editButton, { backgroundColor: colors.primary }]} onPress={onEdit}>
+            <Ionicons name="pencil-outline" size={16} color={colors.white} />
+            <Text style={[styles.editButtonText, { color: colors.white }]}>{t("components.cards.carcard.modifier")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-            <Ionicons name="trash-outline" size={16} color="#ff5a5a" />
-            <Text style={styles.deleteButtonText}>{t("components.cards.carcard.supprimer")}</Text>
+          <TouchableOpacity style={[styles.deleteButton, { borderColor: colors.danger, backgroundColor: `${colors.danger}10` }]} onPress={onDelete}>
+            <Ionicons name="trash-outline" size={16} color={colors.danger} />
+            <Text style={[styles.deleteButtonText, { color: colors.danger }]}>{t("components.cards.carcard.supprimer")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -149,8 +151,6 @@ const CarCard = ({ car, onPress, onEdit, onDelete, onReviewsPress }) => {const {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111329',
-    borderColor: 'rgba(143, 150, 255, 0.14)',
     borderWidth: 1,
     borderRadius: 22,
     overflow: 'hidden',
@@ -230,17 +230,14 @@ const styles = StyleSheet.create({
     paddingRight: 12
   },
   title: {
-    color: '#fff',
     fontSize: appFont(17),
     fontWeight: '700',
     marginBottom: 6
   },
   subtitle: {
-    color: '#c3c8e1',
     fontSize: appFont(13)
   },
   priceText: {
-    color: COLORS.primary,
     fontSize: appFont(15),
     fontWeight: '700'
   },
@@ -255,7 +252,6 @@ const styles = StyleSheet.create({
     gap: 6
   },
   detailLabel: {
-    color: '#a7adcf',
     fontSize: appFont(12)
   },
   actionsRow: {
@@ -268,13 +264,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 11,
     gap: 8
   },
   editButtonText: {
-    color: '#fff',
     fontSize: appFont(14),
     fontWeight: '700'
   },
@@ -284,13 +278,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#ff5a5a',
     borderRadius: 12,
     paddingVertical: 11,
     gap: 8
   },
   deleteButtonText: {
-    color: '#ff5a5a',
     fontSize: appFont(14),
     fontWeight: '700'
   }

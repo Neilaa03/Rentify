@@ -31,6 +31,8 @@ import {
 '../../services/owner';import { useTranslation } from "react-i18next";
 import { getLanguageMeta } from '../../i18n';
 import { getFriendlyError } from '../../utils/friendlyError';
+import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 const fuelOptions = ['Essence', 'Diesel', 'Hybride', 'Electrique'];
 const transmissionOptions = ['Automatique', 'Manuelle'];
@@ -90,7 +92,7 @@ const buildRangeMarks = (startDate, endDate) => {
       [startDate]: {
         customStyles: {
           container: { backgroundColor: '#cf62ff', borderRadius: 16 },
-          text: { color: '#fff', fontWeight: '700' }
+          text: { color: '#11162B', fontWeight: '700' }
         }
       }
     };
@@ -103,12 +105,12 @@ const buildRangeMarks = (startDate, endDate) => {
   while (cursor <= end) {
     const key = toYmd(cursor);
     const isEdge = key === startDate || key === endDate;
-    marks[key] = {
-      customStyles: {
-        container: { backgroundColor: isEdge ? '#cf62ff' : '#7f69ea', borderRadius: 16 },
-        text: { color: '#fff', fontWeight: '700' }
-      }
-    };
+      marks[key] = {
+        customStyles: {
+          container: { backgroundColor: isEdge ? '#cf62ff' : '#7f69ea', borderRadius: 16 },
+          text: { color: '#11162B', fontWeight: '700' }
+        }
+      };
     cursor.setDate(cursor.getDate() + 1);
   }
 
@@ -146,6 +148,7 @@ const guessDocumentFilename = ({ url, type }) => {
 
 const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTranslation();
   LocaleConfig.defaultLocale = getLanguageMeta(i18n.language).code;
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const user = route?.params?.user;
   const mode = route?.params?.mode || 'create';
@@ -978,18 +981,18 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+    <AppBackground contentStyle={[styles.safeArea, { backgroundColor: 'transparent' }]}>
+      <View style={[styles.container, { backgroundColor: colors.overlay }]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><Ionicons name="chevron-back" size={22} color="#fff" /></TouchableOpacity>
-          <Text style={styles.headerTitle}>{isCreateCarAndListing ? 'Publier un véhicule' : isCreateCar ? t("screens.owner.carsscreen.ajouterUnVehicule") : isCreateListingOnly ? 'Nouvelle annonce' : isEditCar ? 'Modifier le véhicule' : 'Modifier annonce'}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><Ionicons name="chevron-back" size={22} color={colors.text} /></TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{isCreateCarAndListing ? 'Publier un véhicule' : isCreateCar ? t("screens.owner.carsscreen.ajouterUnVehicule") : isCreateListingOnly ? 'Nouvelle annonce' : isEditCar ? 'Modifier le véhicule' : 'Modifier annonce'}</Text>
           {isEditCar && car?.id ?
           <TouchableOpacity
             onPress={() => navigation.navigate('OwnerCarReviews', { token, carId: car.id, car })}
             style={styles.iconBtn}
             activeOpacity={0.85}>
             
-              <Ionicons name="chatbubbles-outline" size={20} color="#fff" />
+              <Ionicons name="chatbubbles-outline" size={20} color={colors.text} />
             </TouchableOpacity> :
 
           <View style={styles.iconBtn} />
@@ -999,11 +1002,11 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
         <ScrollView contentContainerStyle={styles.content}>
           {isCreateListingOnly ?
           <>
-              <Text style={styles.sectionTitle}>{t("screens.owner.carformscreen.vehicule")}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.owner.carformscreen.vehicule")}</Text>
               <View style={styles.optionRow}>
                 {cars.map((car) =>
               <TouchableOpacity key={car.id} style={[styles.optionPill, form.carId === car.id && styles.optionPillActive]} onPress={() => setField('carId', car.id)}>
-                    <Text style={[styles.optionText, form.carId === car.id && styles.optionTextActive]}>{car.brand} {car.model}</Text>
+                    <Text style={[styles.optionText, { color: colors.textMuted }, form.carId === car.id && { color: colors.text, fontWeight: '700' }]}>{car.brand} {car.model}</Text>
                   </TouchableOpacity>
               )}
               </View>
@@ -1012,8 +1015,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
 
           {isCarForm || isCreateCarAndListing ?
           <>
-              <Text style={styles.sectionTitle}>{t("screens.owner.carformscreen.photosDuVehicule")}</Text>
-              <Text style={styles.helpText}>{t("screens.owner.carformscreen.touchezUneImagePourLaDefinirComme")}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.owner.carformscreen.photosDuVehicule")}</Text>
+              <Text style={[styles.helpText, { color: colors.textMuted }]}>{t("screens.owner.carformscreen.touchezUneImagePourLaDefinirComme")}</Text>
 
               <View style={styles.imagesGrid}>
                 {form.images.map((image, index) =>
@@ -1072,31 +1075,31 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
               }
               </View>
 
-              <Text style={styles.sectionTitle}>{isCarForm ? isEditCar ? 'Modifier le véhicule' : t("screens.owner.carsscreen.ajouterUnVehicule") : 'Informations générales'}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{isCarForm ? isEditCar ? 'Modifier le véhicule' : t("screens.owner.carsscreen.ajouterUnVehicule") : 'Informations générales'}</Text>
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
-                  <Text style={styles.label}>{t("screens.owner.carformscreen.marque")}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.marque")}</Text>
                   <TextInput style={styles.input} value={form.brand} onChangeText={(v) => setField('brand', v)} />
                 </View>
                 <View style={styles.col}>
-                  <Text style={styles.label}>{t("screens.owner.carformscreen.modele")}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.modele")}</Text>
                   <TextInput style={styles.input} value={form.model} onChangeText={(v) => setField('model', v)} />
                 </View>
               </View>
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
-                  <Text style={styles.label}>{t("screens.owner.carformscreen.annee")}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.annee")}</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={form.year} onChangeText={(v) => setField('year', v)} />
                 </View>
                 <View style={styles.col}>
-                  <Text style={styles.label}>{t("screens.owner.carformscreen.couleur")}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.couleur")}</Text>
                   <TextInput style={styles.input} value={form.color} onChangeText={(v) => setField('color', v)} />
                 </View>
               </View>
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.carburant")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.carburant")}</Text>
               <View style={styles.optionRow}>
                 {fuelOptions.map((fuel) =>
               <TouchableOpacity
@@ -1109,7 +1112,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
               )}
               </View>
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.boite")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.boite")}</Text>
               <View style={styles.optionRow}>
                 {transmissionOptions.map((option) =>
               <TouchableOpacity
@@ -1124,22 +1127,22 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
-                  <Text style={styles.label}>{t("screens.owner.carformscreen.places")}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.places")}</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={form.seats} onChangeText={(v) => setField('seats', v)} />
                 </View>
                 <View style={styles.col}>
-                  <Text style={styles.label}>{t("screens.owner.carformscreen.kilometrage")}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.kilometrage")}</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={form.mileage} onChangeText={(v) => setField('mileage', v)} />
                 </View>
               </View>
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.immatriculation")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.immatriculation")}</Text>
               <TextInput style={styles.input} value={form.registrationNumber} onChangeText={(v) => setField('registrationNumber', v)} />
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.description")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.description")}</Text>
               <TextInput style={[styles.input, styles.textArea]} multiline value={form.description} onChangeText={(v) => setField('description', v)} />
 
-              <Text style={styles.sectionTitle}>{t("screens.owner.carformscreen.documentsDuVehicule")}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.owner.carformscreen.documentsDuVehicule")}</Text>
               <View style={styles.documentsContainer}>
                 {[
               {
@@ -1206,8 +1209,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
                     
 
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.docTitle}>{doc.label}</Text>
-                        <Text style={styles.docName} numberOfLines={1}>
+                        <Text style={[styles.docTitle, { color: colors.text }]}>{doc.label}</Text>
+                        <Text style={[styles.docName, { color: colors.textMuted }]} numberOfLines={1}>
                           {document.uri ? document.name : 'Ajouter un document'}
                         </Text>
                         <View
@@ -1216,12 +1219,12 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
                         { backgroundColor: getStatusColor(document.status) }]
                         }>
                         
-                          <Text style={styles.docStatusText}>
+                          <Text style={[styles.docStatusText, { color: colors.text }]}>
                             {getStatusText(document.status)}
                           </Text>
                         </View>
                         {getDocumentReason(document) ?
-                      <Text style={styles.docReasonText} numberOfLines={2}>
+                      <Text style={[styles.docReasonText, { color: colors.textMuted }]} numberOfLines={2}>
                             {getDocumentReason(document)}
                           </Text> :
                       null}
@@ -1261,22 +1264,22 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
 
           {!isCarForm ?
           <>
-              <Text style={styles.sectionTitle}>{t("screens.owner.carformscreen.tarificationLocalisation")}</Text>
-              <Text style={styles.label}>{t("screens.owner.carformscreen.titreAnnonce")}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("screens.owner.carformscreen.tarificationLocalisation")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.titreAnnonce")}</Text>
               <TextInput style={styles.input} value={form.title} onChangeText={(v) => setField('title', v)} />
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
-                  <Text style={styles.label}>{t("screens.owner.carformscreen.prixJourDa")}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.prixJourDa")}</Text>
                   <TextInput style={styles.input} keyboardType="numeric" value={form.pricePerDay} onChangeText={(v) => setField('pricePerDay', v)} />
                 </View>
                 <View style={styles.col}>
-                  <Text style={styles.label}>{t("screens.owner.carformscreen.ville")}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.ville")}</Text>
                   <TextInput style={styles.input} value={form.city} onChangeText={(v) => setField('city', v)} />
                 </View>
               </View>
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.adresseDeRecuperationChezVousAgence")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.adresseDeRecuperationChezVousAgence")}</Text>
               <TextInput
               style={styles.input}
               value={form.pickupAddress}
@@ -1285,7 +1288,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
               placeholderTextColor="#9aa3d8" />
             
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.fraisDeLivraisonDa")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.fraisDeLivraisonDa")}</Text>
               <TextInput
               style={styles.input}
               keyboardType="numeric"
@@ -1295,13 +1298,13 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
               placeholderTextColor="#9aa3d8" />
             
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.pays")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.pays")}</Text>
               <TextInput style={styles.input} value={form.country} onChangeText={(v) => setField('country', v)} />
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.description2")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.description2")}</Text>
               <TextInput style={[styles.input, styles.textArea]} multiline value={form.description} onChangeText={(v) => setField('description', v)} />
 
-              <Text style={styles.label}>{t("screens.owner.carformscreen.selectionnezVosDates")}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t("screens.owner.carformscreen.selectionnezVosDates")}</Text>
               <TouchableOpacity style={styles.dateInput} onPress={() => setIsRangeCalendarOpen((prev) => !prev)}>
                 <Text style={form.availableFrom ? styles.dateValue : styles.datePlaceholder}>
                   {form.availableFrom ? `${form.availableFrom} -> ${form.availableTo || '...'}` : 'Choisir la periode'}
@@ -1312,8 +1315,8 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
               {isRangeCalendarOpen ?
             <View style={styles.datePickerWrap}>
                   <View style={styles.legendRow}>
-                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#cf62ff' }]} /><Text style={styles.legendText}>{t("screens.owner.carformscreen.selection")}</Text></View>
-                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#2f3568' }]} /><Text style={styles.legendText}>{t("screens.owner.carformscreen.indisponible")}</Text></View>
+                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#8A2BE2' }]} /><Text style={styles.legendText}>{t("screens.owner.carformscreen.selection")}</Text></View>
+                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#B9A5E8' }]} /><Text style={styles.legendText}>{t("screens.owner.carformscreen.indisponible")}</Text></View>
                   </View>
 
                   <Calendar
@@ -1326,10 +1329,10 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
                 theme={{
                   backgroundColor: 'transparent',
                   calendarBackground: 'transparent',
-                  textSectionTitleColor: '#e4e8ff',
-                  monthTextColor: '#fff',
-                  dayTextColor: '#fff',
-                  todayTextColor: '#cf62ff',
+                  textSectionTitleColor: '#5D678E',
+                  monthTextColor: '#11162B',
+                  dayTextColor: '#11162B',
+                  todayTextColor: '#8A2BE2',
                   arrowColor: '#cf62ff',
                   textMonthFontSize: 30 / 1.6,
                   textMonthFontWeight: '700',
@@ -1340,7 +1343,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
                       width: 42,
                       height: 42,
                       borderRadius: 14,
-                      backgroundColor: '#2f3568',
+                      backgroundColor: '#E1D8F7',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }
@@ -1358,7 +1361,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
           </TouchableOpacity>
         </ScrollView>
       </View>
-    </SafeAreaView>);
+    </AppBackground>);
 
 };
 
@@ -1371,8 +1374,8 @@ if (!globalThis.__updateOwnerCarLogged) {
 export default OwnerCarFormScreen;
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0a0c24' },
-  container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#0a0c24' },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, paddingHorizontal: 16, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   iconBtn: {
     width: 36,
@@ -1380,21 +1383,23 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)'
+    backgroundColor: 'rgba(225,216,247,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(117,94,171,0.16)'
   },
-  headerTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  headerTitle: { color: '#11162B', fontSize: 22, fontWeight: '800' },
   content: { paddingBottom: 24 },
-  sectionTitle: { color: '#fff', marginTop: 12, marginBottom: 8, fontSize: 18, fontWeight: '800' },
-  helpText: { color: '#cfd3ff', marginBottom: 8, fontSize: 13 },
-  label: { color: '#d8dcf7', marginTop: 8, marginBottom: 6, fontWeight: '600' },
+  sectionTitle: { color: '#11162B', marginTop: 12, marginBottom: 8, fontSize: 18, fontWeight: '800' },
+  helpText: { color: '#5D678E', marginBottom: 8, fontSize: 13 },
+  label: { color: '#11162B', marginTop: 8, marginBottom: 6, fontWeight: '600' },
   twoCols: { flexDirection: 'row', gap: 10 },
   col: { flex: 1 },
   input: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.25)',
-    backgroundColor: 'rgba(21,23,58,0.9)',
-    color: '#fff',
+    borderColor: 'rgba(117,94,171,0.22)',
+    backgroundColor: 'rgba(225,216,247,0.78)',
+    color: '#11162B',
     paddingHorizontal: 12,
     paddingVertical: 12
   },
@@ -1413,44 +1418,45 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#6b5bff',
+    backgroundColor: '#8A2BE2',
     paddingVertical: 12,
     borderRadius: 12,
     gap: 8,
     marginBottom: 8
   },
   addImageButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-  hint: { color: '#bfc5ed', marginTop: 8, marginBottom: 4, lineHeight: 20 },
+  hint: { color: '#5D678E', marginTop: 8, marginBottom: 4, lineHeight: 20 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2, marginBottom: 2 },
   optionPill: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.3)',
+    borderColor: 'rgba(117,94,171,0.22)',
     paddingHorizontal: 12,
-    paddingVertical: 8
+    paddingVertical: 8,
+    backgroundColor: 'rgba(225,216,247,0.68)'
   },
-  optionPillActive: { backgroundColor: 'rgba(143,125,255,0.22)', borderColor: '#8f7dff' },
-  optionText: { color: '#aeb4dc', fontWeight: '500' },
-  optionTextActive: { color: '#fff', fontWeight: '700' },
+  optionPillActive: { backgroundColor: 'rgba(138,43,226,0.18)', borderColor: '#8A2BE2' },
+  optionText: { color: '#5D678E', fontWeight: '500' },
+  optionTextActive: { color: '#11162B', fontWeight: '700' },
   dateInput: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.25)',
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    borderColor: 'rgba(117,94,171,0.22)',
+    backgroundColor: 'rgba(225,216,247,0.78)',
     paddingHorizontal: 12,
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between'
   },
-  dateValue: { color: '#fff' },
-  datePlaceholder: { color: '#8389b6' },
+  dateValue: { color: '#11162B' },
+  datePlaceholder: { color: '#5D678E' },
   datePickerWrap: {
     marginTop: 10,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(146,151,214,0.35)',
-    backgroundColor: '#1b245b',
+    borderColor: 'rgba(117,94,171,0.22)',
+    backgroundColor: '#E1D8F7',
     paddingVertical: 12,
     paddingHorizontal: 8
   },
@@ -1460,14 +1466,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(186,192,241,0.35)',
-    backgroundColor: '#2a3269',
+    borderColor: 'rgba(117,94,171,0.22)',
+    backgroundColor: 'rgba(225,216,247,0.76)',
     paddingHorizontal: 12,
     paddingVertical: 7
   },
   legendDot: { width: 10, height: 10, borderRadius: 999, marginRight: 8 },
-  legendText: { color: '#e7ebff', fontWeight: '700', fontSize: 12 },
-  submitBtn: { marginTop: 16, borderRadius: 12, backgroundColor: '#8f7dff', alignItems: 'center', paddingVertical: 13 },
+  legendText: { color: '#11162B', fontWeight: '700', fontSize: 12 },
+  submitBtn: { marginTop: 16, borderRadius: 12, backgroundColor: '#8A2BE2', alignItems: 'center', paddingVertical: 13 },
   submitBtnDisabled: { opacity: 0.5 },
   submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   imagesGrid: { flexDirection: 'row', gap: 12, marginTop: 10, marginBottom: 12 },
@@ -1480,7 +1486,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent'
   },
-  primaryImageCard: { borderColor: '#8f7dff' },
+  primaryImageCard: { borderColor: '#8A2BE2' },
   previewImage: { width: '100%', height: '100%' },
   addImageCard: {
     width: 100,
@@ -1488,29 +1494,29 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: '#8f7dff',
+    borderColor: '#8A2BE2',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(143,125,255,0.08)'
+    backgroundColor: 'rgba(225,216,247,0.78)'
   },
   deleteImageBtn: {
     position: 'absolute',
     top: 6,
     right: 6,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(17,22,43,0.12)',
     width: 28,
     height: 28,
     borderRadius: 999,
     justifyContent: 'center',
     alignItems: 'center'
   },
-  primaryBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: '#8f7dff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
+  primaryBadge: { position: 'absolute', bottom: 6, left: 6, backgroundColor: '#8A2BE2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
   primaryText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   secondaryBadge: {
     position: 'absolute',
     bottom: 6,
     left: 6,
-    backgroundColor: 'rgba(143,125,255,0.85)',
+    backgroundColor: 'rgba(138,43,226,0.85)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999
@@ -1521,17 +1527,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(21,23,58,0.9)',
+    backgroundColor: 'rgba(225,216,247,0.78)',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: 'rgba(146,151,214,0.25)'
   },
-  docTitle: { color: '#fff', fontWeight: '700' },
-  docName: { color: '#aeb4dc', marginTop: 4, maxWidth: 160 },
+  docTitle: { color: '#11162B', fontWeight: '700' },
+  docName: { color: '#5D678E', marginTop: 4, maxWidth: 160 },
   docStatusBadge: { marginTop: 6, alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
-  docStatusText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  docReasonText: { marginTop: 6, color: '#d7dcff', fontSize: 12, lineHeight: 16, maxWidth: 190 },
+  docStatusText: { color: '#11162B', fontSize: 11, fontWeight: '700' },
+  docReasonText: { marginTop: 6, color: '#5D678E', fontSize: 12, lineHeight: 16, maxWidth: 190 },
   documentActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   documentActionBtn: {
     width: 34,
@@ -1539,6 +1545,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)'
+    backgroundColor: 'rgba(17,22,43,0.08)'
   }
 });

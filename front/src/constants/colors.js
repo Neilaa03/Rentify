@@ -5,6 +5,9 @@ export const COLORS = {
     background: '#000000',
     white: '#FFFFFF',
     gray: '#A1A1A1',
+    lightGray: '#D6DAF2',
+    borderColor: 'rgba(148, 156, 233, 0.18)',
+    cardBackground: '#151B36',
     glass: 'rgba(255, 255, 255, 0.15)',
 
     // Extended palette (non-breaking additions)
@@ -17,4 +20,5 @@ export const COLORS = {
     textMuted: '#8E95BF',
     success: '#23D49F',
     danger: '#EB5757',
+    muted: '#8E95BF',
 };

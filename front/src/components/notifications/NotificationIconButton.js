@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 import { getCurrentUserProfile } from '../../services/authSession';
 import { getNotificationUnreadCount } from '../../services/notifications';
@@ -15,6 +16,7 @@ const clampBadge = (n) => {
 };
 
 const NotificationIconButton = ({ navigation, style, iconSize = 22, color = '#fff', routeParams }) => {
+  const { colors } = useTheme();
   const [unread, setUnread] = useState(0);
   const [meId, setMeId] = useState(null);
 
@@ -111,7 +113,7 @@ const NotificationIconButton = ({ navigation, style, iconSize = 22, color = '#ff
       <Ionicons name="notifications-outline" size={iconSize} color={color} />
       {badge ? (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge}</Text>
+          <Text style={[styles.badgeText, { color: colors.white }]}>{badge}</Text>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -132,9 +134,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#ff3b6b',
     borderWidth: 1,
-    borderColor: 'rgba(15,18,40,0.8)',
+    borderColor: 'rgba(255,255,255,0.8)',
   },
-  badgeText: { color: '#fff', fontWeight: '900', fontSize: 10 },
+  badgeText: { fontWeight: '900', fontSize: 10 },
 });
 
 export default NotificationIconButton;

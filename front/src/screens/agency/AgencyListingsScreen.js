@@ -4,7 +4,6 @@ import {
   Alert,
   FlatList,
   Image,
-  ImageBackground,
   RefreshControl,
   StatusBar,
   StyleSheet,
@@ -20,6 +19,8 @@ import { deleteOwnerListing, getOwnerListings, toggleListingPublication } from '
 import { fetchJson } from '../../services/api';import { useTranslation } from "react-i18next";
 import { getFriendlyError } from '../../utils/friendlyError';
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
+import AppBackground from '../../components/layout/AppBackground';
 
 const badgeByTone = {
   green: { color: '#21d4a7', backgroundColor: 'rgba(33,212,167,0.16)' },
@@ -28,6 +29,7 @@ const badgeByTone = {
 };
 
 export default function AgencyListingsScreen({ navigation, route }) {const { t } = useTranslation();
+  const { colors } = useTheme();
   const token = route?.params?.token;
   const user = route?.params?.user;
 
@@ -131,23 +133,20 @@ export default function AgencyListingsScreen({ navigation, route }) {const { t }
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="#0a0c24" />
-      <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover" blurRadius={2}>
-        <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-          <View style={styles.overlay}>
+    <AppBackground contentStyle={styles.safeArea}>
+          <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
           <View style={styles.page}>
           <View style={styles.headerSpacer} />
 
           {isLoading ?
               <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#A78BFF" />
+              <ActivityIndicator size="large" color={colors.primary} />
             </View> :
 
               <FlatList
                 data={listings}
                 keyExtractor={(item) => String(item.id)}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#A78BFF" />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
                 contentContainerStyle={styles.content}
                 showsVerticalScrollIndicator={false}
                 ListHeaderComponent={
@@ -156,6 +155,9 @@ export default function AgencyListingsScreen({ navigation, route }) {const { t }
                     kicker="LISTINGS"
                     title={t("screens.agency.agencylistingsscreen.annoncesDeLagence")}
                     subtitle={t("screens.agency.agencylistingsscreen.gestionPublicationEtVisibilite")}
+                    kickerStyle={{ color: colors.white }}
+                    titleStyle={{ color: colors.white }}
+                    subtitleStyle={{ color: 'rgba(255,255,255,0.82)' }}
                     right={
                     <TouchableOpacity
                       style={styles.addButton}
@@ -224,9 +226,7 @@ export default function AgencyListingsScreen({ navigation, route }) {const { t }
           </View>
           </View>
           <AgencyBottomNavigation navigation={navigation} route={route} active="listings" />
-        </SafeAreaView>
-      </ImageBackground>
-    </View>);
+    </AppBackground>);
 
 }
 

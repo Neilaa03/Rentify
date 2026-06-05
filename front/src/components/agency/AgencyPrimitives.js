@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';import { useTranslation } from "react-i18next";
 import { getCurrentLocale } from '../../i18n';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const toneMap = {
   blue: { fg: '#4f8cff', bg: 'rgba(79,140,255,0.14)', border: 'rgba(79,140,255,0.35)' },
@@ -14,19 +15,23 @@ const toneMap = {
 
 export const tone = (key) => toneMap[key] || toneMap.neutral;
 
-export const AgencyCard = ({ children, style, danger = false }) =>
-<View style={[styles.card, danger && styles.cardDanger, style]}>{children}</View>;
+export const AgencyCard = ({ children, style, danger = false }) => {
+  const { colors } = useTheme();
+  return <View style={[styles.card, { backgroundColor: colors.surfaceStrong, borderColor: colors.border, shadowColor: colors.shadow }, danger && styles.cardDanger, style]}>{children}</View>;
+};
 
 
-export const SectionTitle = ({ kicker, title, subtitle, right }) =>
-<View style={styles.sectionHeader}>
+export const SectionTitle = ({ kicker, title, subtitle, right, kickerStyle, titleStyle, subtitleStyle, style }) => {
+  const { colors } = useTheme();
+  return <View style={[styles.sectionHeader, style]}>
     <View style={styles.sectionTextBlock}>
-      {kicker ? <Text style={styles.kicker}>{kicker}</Text> : null}
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+      {kicker ? <Text style={[styles.kicker, { color: colors.primary }, kickerStyle]}>{kicker}</Text> : null}
+      <Text style={[styles.sectionTitle, { color: colors.text }, titleStyle]}>{title}</Text>
+      {subtitle ? <Text style={[styles.sectionSubtitle, { color: colors.textMuted }, subtitleStyle]}>{subtitle}</Text> : null}
     </View>
     {right ? <View style={styles.sectionAction}>{right}</View> : null}
   </View>;
+};
 
 
 export const Badge = ({ label, toneKey = 'neutral', icon, style, textStyle, fullWidth = false }) => {
@@ -41,15 +46,16 @@ export const Badge = ({ label, toneKey = 'neutral', icon, style, textStyle, full
 
 export const MetricCard = ({ label, value, icon, toneKey = 'purple', subtitle }) => {
   const c = tone(toneKey);
+  const { colors } = useTheme();
   return (
-    <View style={[styles.metricCard, { borderColor: c.border }]}>
+    <View style={[styles.metricCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
       <View style={styles.metricTopRow}>
         <View style={[styles.metricIcon, { backgroundColor: c.bg }]}>
           <Ionicons name={icon} size={15} color={c.fg} />
         </View>
-        <Text style={styles.metricValue}>{value}</Text>
+        <Text style={[styles.metricValue, { color: colors.text }]}>{value}</Text>
       </View>
-      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{label}</Text>
       {subtitle ? <Text style={[styles.metricSubtitle, { color: c.fg }]}>{subtitle}</Text> : null}
     </View>);
 
@@ -71,36 +77,47 @@ export const ProgressRow = ({ label, valueLabel, percent = 0, toneKey = 'purple'
 };
 
 export const TogglePill = ({ value, onValueChange, disabled = false }) =>
-<View style={styles.toggleWrap}>
-    <Text style={[styles.toggleLabel, disabled && styles.toggleLabelDisabled]}>{disabled ? 'Docs manquants' : value ? 'Visible' : 'Masqué'}</Text>
+{
+  const { colors } = useTheme();
+  return <View style={styles.toggleWrap}>
+    <Text style={[styles.toggleLabel, { color: colors.textMuted }, disabled && { color: colors.warning }]}>{disabled ? 'Docs manquants' : value ? 'Visible' : 'Masqué'}</Text>
     <Switch
     value={value}
     onValueChange={onValueChange}
     disabled={disabled}
-    trackColor={{ false: 'rgba(255,255,255,0.12)', true: 'rgba(41,121,255,0.55)' }}
-    thumbColor={value ? '#dce5ff' : '#8d96b8'} />
+    trackColor={{ false: colors.border, true: colors.primary }}
+    thumbColor={value ? colors.white : colors.textMuted} />
   
   </View>;
+};
 
 
 export const PillRow = ({ items, activeKey, onSelect }) =>
-<View style={styles.pillRow}>
+{
+  const { colors } = useTheme();
+  return <View style={styles.pillRow}>
     {items.map((item) => {
     const active = activeKey === item.key;
     return (
       <TouchableOpacity
         key={item.key}
-        style={[styles.pill, active && styles.pillActive]}
+        style={[
+          styles.pill,
+          { backgroundColor: colors.surfaceStrong, borderColor: colors.border },
+          active && { backgroundColor: colors.surface, borderColor: colors.primary }
+        ]}
         onPress={() => onSelect(item.key)}>
         
-          <Text style={[styles.pillText, active && styles.pillTextActive]}>{item.label}</Text>
+          <Text style={[styles.pillText, { color: colors.textMuted }, active && { color: colors.text, fontWeight: '900' }]}>{item.label}</Text>
         </TouchableOpacity>);
 
   })}
   </View>;
+};
 
 
 export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const rejected = item.documentStatus === 'DOCS_REJECTED';
   const onlineTone = item.status === 'RENTED' ? 'amber' : item.status === 'HIDDEN' ? 'amber' : 'green';
   const statusLabel = item.status === 'RENTED' ?
@@ -111,12 +128,12 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t 
   const docTone = item.documentStatus === 'DOCS_OK' ? 'green' : item.documentStatus === 'DOCS_REJECTED' ? 'red' : 'amber';
 
   return (
-    <View style={[styles.vehicleCard, rejected && styles.vehicleCardRejected]}>
+    <View style={[styles.vehicleCard, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }, rejected && styles.vehicleCardRejected]}>
       {item.imageUrl ?
       <Image source={{ uri: item.imageUrl }} style={styles.vehicleImage} /> :
 
       <View style={[styles.vehicleImage, styles.vehicleImageFallback]}>
-          <Ionicons name="car-sport-outline" size={28} color="#d7deff" />
+          <Ionicons name="car-sport-outline" size={28} color={colors.textMuted} />
         </View>
       }
 
@@ -139,7 +156,7 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t 
 
       {rejected ?
       <View style={styles.rejectedBanner}>
-          <Ionicons name="warning" size={13} color="#fff" />
+          <Ionicons name="warning" size={13} color={colors.white} />
           <Text style={styles.rejectedBannerText}>{t("components.agency.agencyprimitives.docsRejetes")}</Text>
         </View> :
       null}
@@ -147,10 +164,10 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t 
       <View style={styles.vehicleBody}>
         <View style={styles.vehicleHeader}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.vehicleTitle}>{item.brand} {item.model}</Text>
-            <Text style={styles.vehicleSubtitle}>{item.year || '—'} · {item.transmission || '—'} · {item.seats || '—'}{t("components.agency.agencyprimitives.places")}</Text>
+            <Text style={[styles.vehicleTitle, { color: colors.text }]}>{item.brand} {item.model}</Text>
+            <Text style={[styles.vehicleSubtitle, { color: colors.textMuted }]}>{item.year || '—'} · {item.transmission || '—'} · {item.seats || '—'}{t("components.agency.agencyprimitives.places")}</Text>
           </View>
-          <Text style={styles.vehiclePrice}>{Number(item.listing?.pricePerDay || item.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("components.agency.agencyprimitives.daJ")}</Text>
+          <Text style={[styles.vehiclePrice, { color: colors.primary }]}>{Number(item.listing?.pricePerDay || item.pricePerDay || 0).toLocaleString(getCurrentLocale())}{t("components.agency.agencyprimitives.daJ")}</Text>
         </View>
 
         <View style={styles.vehicleStatsRow}>
@@ -161,9 +178,9 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t 
 
         {rejected ?
         <View style={styles.alertRow}>
-            <Ionicons name="alert-circle-outline" size={14} color="#FF5C6C" />
-            <Text style={styles.alertText}>{t("components.agency.agencyprimitives.documentsRejetesActionRequise")}</Text>
-          </View> :
+          <Ionicons name="alert-circle-outline" size={14} color={colors.danger} />
+          <Text style={[styles.alertText, { color: colors.danger }]}>{t("components.agency.agencyprimitives.documentsRejetesActionRequise")}</Text>
+        </View> :
         null}
 
         <View style={styles.vehicleActions}>
@@ -172,9 +189,9 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t 
             onValueChange={() => onToggleVisibility(item)}
             disabled={item.canToggleVisibility === false} />
           
-          <TouchableOpacity style={styles.editButton} onPress={() => onEdit(item)}>
-            <Ionicons name="pencil-outline" size={16} color="#fff" />
-            <Text style={styles.editButtonText}>{t("components.agency.agencyprimitives.modifier")}</Text>
+          <TouchableOpacity style={[styles.editButton, { backgroundColor: colors.primary }]} onPress={() => onEdit(item)}>
+            <Ionicons name="pencil-outline" size={16} color={colors.white} />
+            <Text style={[styles.editButtonText, { color: colors.white }]}>{t("components.agency.agencyprimitives.modifier")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -183,6 +200,7 @@ export const VehicleCard = ({ item, onToggleVisibility, onEdit }) => {const { t 
 };
 
 export const RequestRow = ({ item }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const statusTone = item.status === 'PENDING' ? 'amber' : item.status === 'APPROVED' ? 'green' : 'red';
   const statusLabel = item.statusLabel || (item.status === 'PENDING' ? t("screens.admin.admincarsscreen.enAttente") : item.status === 'APPROVED' ? 'Approuvée' : 'Refusée');
   const renterFirst = item.renter?.firstName || item.renterName?.split(' ')?.[0] || t("screens.auth.registerscreen.client");
@@ -191,20 +209,20 @@ export const RequestRow = ({ item }) => {const { t } = useTranslation();
   const vehicleLabel = item.vehicle?.brand ? `${item.vehicle.brand} ${item.vehicle.model || ''}`.trim() : item.vehicleName || 'Véhicule';
 
   return (
-    <View style={[styles.requestRow, item.status === 'PENDING' && styles.requestRowPending]}>
+    <View style={[styles.requestRow, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }, item.status === 'PENDING' && styles.requestRowPending]}>
       <View style={styles.requestAvatar}>
-        <Text style={styles.requestAvatarText}>{initials}</Text>
+        <Text style={[styles.requestAvatarText, { color: colors.white }]}>{initials}</Text>
       </View>
 
       <View style={{ flex: 1 }}>
         <View style={styles.requestTop}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.requestName}>{renterFirst} {renterLast}</Text>
-            <Text style={styles.requestMeta}>{Number(item.renter?.rating || item.rating || 0).toFixed(1)}{t("components.agency.agencyprimitives.text5")}{vehicleLabel}</Text>
+            <Text style={[styles.requestName, { color: colors.text }]}>{renterFirst} {renterLast}</Text>
+            <Text style={[styles.requestMeta, { color: colors.textMuted }]}>{Number(item.renter?.rating || item.rating || 0).toFixed(1)}{t("components.agency.agencyprimitives.text5")}{vehicleLabel}</Text>
           </View>
-          <Text style={styles.requestPrice}>{Number(item.totalPrice || 0).toLocaleString(getCurrentLocale())}{t("components.agency.agencyprimitives.da")}</Text>
+          <Text style={[styles.requestPrice, { color: colors.primary }]}>{Number(item.totalPrice || 0).toLocaleString(getCurrentLocale())}{t("components.agency.agencyprimitives.da")}</Text>
         </View>
-        <Text style={styles.requestDates}>{item.startDate} → {item.endDate}</Text>
+        <Text style={[styles.requestDates, { color: colors.textMuted }]}>{item.startDate} → {item.endDate}</Text>
       </View>
 
       <Badge label={statusLabel} toneKey={statusTone} />
@@ -213,13 +231,14 @@ export const RequestRow = ({ item }) => {const { t } = useTranslation();
 };
 
 export const DocumentRow = ({ item }) => {const { t } = useTranslation();
+  const { colors } = useTheme();
   const toneKey = item.status === 'VERIFIED' ? 'green' : item.status === 'REJECTED' ? 'red' : 'amber';
   const label = item.status === 'VERIFIED' ? t("screens.agency.agencydocumentsscreen.verifie") : item.status === 'REJECTED' ? t("screens.agency.agencydocumentsscreen.rejete") : t("screens.admin.admincarsscreen.enAttente");
   return (
-    <View style={styles.docRow}>
+    <View style={[styles.docRow, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.docTitle}>{item.documentTypeLabel}</Text>
-        <Text style={styles.docSub}>{item.ownerLabel || 'Agence'}</Text>
+        <Text style={[styles.docTitle, { color: colors.text }]}>{item.documentTypeLabel}</Text>
+        <Text style={[styles.docSub, { color: colors.textMuted }]}>{item.ownerLabel || 'Agence'}</Text>
       </View>
       <Badge
         label={label}

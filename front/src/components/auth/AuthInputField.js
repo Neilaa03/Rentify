@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { moderateScale, rf } from '../../utils/responsive';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const AuthInputField = ({
     label,
@@ -9,15 +10,23 @@ const AuthInputField = ({
     inputStyle,
     ...textInputProps
 }) => {
+    const { colors } = useTheme();
+    const isFilled = String(textInputProps?.value || '').trim().length > 0;
     return (
         <View style={[styles.container, containerStyle]}>
-            <Text style={styles.label}>{label}</Text>
+            <Text style={[styles.label, { color: colors.white }]}>{label}</Text>
             <TextInput
                 {...textInputProps}
-                style={[styles.input, error ? styles.inputError : null, inputStyle]}
-                placeholderTextColor="rgba(255,255,255,0.6)"
+                style={[
+                    styles.input,
+                    styles.inputBase,
+                    isFilled && styles.inputFilled,
+                    error ? { borderColor: colors.danger } : null,
+                    inputStyle
+                ]}
+                placeholderTextColor="rgba(255,255,255,0.72)"
             />
-            {!!error && <Text style={styles.errorText}>{error}</Text>}
+            {!!error && <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>}
         </View>
     );
 };
@@ -27,27 +36,27 @@ const styles = StyleSheet.create({
         marginBottom: moderateScale(18),
     },
     label: {
-        color: '#fff',
         marginBottom: moderateScale(8),
         fontSize: rf(14, 12, 16),
         fontWeight: '500',
     },
     input: {
-        backgroundColor: 'rgba(255,255,255,0.16)',
         borderRadius: moderateScale(12),
         paddingHorizontal: moderateScale(14),
         paddingVertical: moderateScale(13),
-        color: '#fff',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
         fontSize: rf(15, 13, 18),
     },
-    inputError: {
-        borderColor: 'rgba(255, 92, 92, 0.9)',
+    inputBase: {
+        backgroundColor: 'rgba(255,255,255,0.16)',
+        borderColor: 'rgba(255,255,255,0.3)',
+    },
+    inputFilled: {
+        backgroundColor: 'rgba(225, 216, 247, 0.82)',
+        borderColor: 'rgba(117, 94, 171, 0.22)',
     },
     errorText: {
         marginTop: moderateScale(8),
-        color: 'rgba(255, 92, 92, 0.95)',
         fontSize: rf(12, 11, 14),
         lineHeight: rf(16, 14, 20),
     },

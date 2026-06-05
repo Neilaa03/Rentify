@@ -3,6 +3,7 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CommonActions } from '@react-navigation/native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const tabs = [
   { key: 'dashboard', label: 'Dashboard', icon: 'grid-outline', routeName: 'AgencyDashboard' },
@@ -13,6 +14,7 @@ const tabs = [
 ];
 
 const AgencyBottomNavigation = ({ navigation, route, active }) => {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const params = route?.params || {};
 
@@ -26,10 +28,10 @@ const AgencyBottomNavigation = ({ navigation, route, active }) => {
   };
 
   return (
-    <View style={[styles.footer, { bottom: 8 + (insets?.bottom || 0) }]}>
+    <View style={[styles.footer, { bottom: 8 + (insets?.bottom || 0), backgroundColor: colors.tabBar, borderColor: colors.tabBarBorder }]}>
       {tabs.map((tab) => {
         const isActive = active === tab.key;
-        const color = isActive ? '#A78BFF' : '#8a90b8';
+        const color = isActive ? colors.primary : colors.textMuted;
         return (
           <TouchableOpacity key={tab.key} style={styles.footerTab} onPress={() => resetTo(tab.routeName)}>
             <Ionicons name={tab.icon} size={24} color={color} />
@@ -49,10 +51,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: 'rgb(21, 23, 58)',
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
   },
   footerTab: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8, paddingHorizontal: 4 },
 });

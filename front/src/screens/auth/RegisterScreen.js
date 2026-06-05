@@ -8,8 +8,9 @@ import {
   ImageBackground,
   ScrollView,
   KeyboardAvoidingView,
-  Platform } from
-'react-native';
+  Platform
+} from
+  'react-native';
 import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,9 +19,12 @@ import AuthInputField from '../../components/auth/AuthInputField';
 import AuthGradientButton from '../../components/auth/AuthGradientButton';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
-import { isTablet, moderateScale, rf } from '../../utils/responsive';import { useTranslation } from "react-i18next";
+import { isTablet, moderateScale, rf } from '../../utils/responsive'; import { useTranslation } from "react-i18next";
+import { useTheme } from '../../contexts/ThemeContext';
 
-const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
+const RegisterScreen = ({ navigation }) => {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
   const tabletLayout = isTablet();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -123,10 +127,10 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
       const message = data?.error || "We couldn't create your account. Please try again.";
       const lower = String(message).toLowerCase();
 
-      if (lower.includes('email')) setErrors((prev) => ({ ...prev, email: message }));else
-      if (lower.includes('phone')) setErrors((prev) => ({ ...prev, phone: message }));else
-      if (lower.includes('password')) setErrors((prev) => ({ ...prev, password: message }));else
-      setErrors((prev) => ({ ...prev, form: message }));
+      if (lower.includes('email')) setErrors((prev) => ({ ...prev, email: message })); else
+        if (lower.includes('phone')) setErrors((prev) => ({ ...prev, phone: message })); else
+          if (lower.includes('password')) setErrors((prev) => ({ ...prev, password: message })); else
+            setErrors((prev) => ({ ...prev, form: message }));
     } catch (error) {
       console.error('Fetch error:', error);
       setErrors((prev) => ({
@@ -137,55 +141,66 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
   };
 
   const roles = [
-  { id: 'client', label: t("screens.auth.registerscreen.client"), icon: 'person' },
-  { id: 'owner', label: t("screens.auth.registerscreen.vehicleOwner"), icon: 'car' },
-  { id: 'companyManager', label: t("screens.auth.registerscreen.agency"), icon: 'business' }];
+    { id: 'client', label: t("screens.auth.registerscreen.client"), icon: 'person' },
+    { id: 'owner', label: t("screens.auth.registerscreen.vehicleOwner"), icon: 'car' },
+    { id: 'companyManager', label: t("screens.auth.registerscreen.agency"), icon: 'business' }];
 
 
   return (
     <View style={styles.container}>
-            <ImageBackground
+      <ImageBackground
         source={require('../../assets/background.png')}
         style={styles.background}
         resizeMode="cover">
-        
-                <SafeAreaView style={styles.overlay}>
-                    <KeyboardAvoidingView
+
+        <SafeAreaView style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <KeyboardAvoidingView
             style={styles.keyboardAvoid}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}>
-            
-                        <ScrollView
+
+            <ScrollView
               showsVerticalScrollIndicator={false}
               style={styles.scrollView}
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled">
-              
-                            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                                <Ionicons name="arrow-back" size={28} color="#fff" />
-                            </TouchableOpacity>
 
-                            <View style={styles.header}>
-                                <AuthHeader
+              <TouchableOpacity style={[styles.backButton, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]} onPress={() => navigation.goBack()}>
+                <Ionicons name="arrow-back" size={28} color={colors.white} />
+              </TouchableOpacity>
+
+              <View style={styles.header}>
+                <AuthHeader
                   title={t("screens.auth.registerscreen.createAccount")}
                   subtitle={t("screens.auth.registerscreen.joinRentifyAndStartYourJourney")} />
-                
-                            </View>
 
-                            <View
+              </View>
+
+              <View
                 style={[
-                styles.form,
-                {
-                  maxWidth: tabletLayout ? 620 : '100%',
-                  alignSelf: 'center'
-                }]
+                  styles.form,
+                  {
+                    maxWidth: tabletLayout ? 620 : '100%',
+                    alignSelf: 'center'
+                  }]
                 }>
-                
-                                <View style={styles.nameRow}>
-                                    <View style={[styles.inputContainer, styles.halfInput, styles.halfInputLeft]}>
-                                        <AuthInputField
+
+                <View style={styles.nameRow}>
+                  <View style={[styles.inputContainer, styles.halfInput, styles.halfInputLeft]}>
+                    <AuthInputField
                       label={t("screens.auth.registerscreen.firstName")}
                       error={errors.firstName}
+                      inputStyle={[
+                        styles.input,
+                        {
+                          backgroundColor: colors.inputBackground,
+                          borderColor: colors.inputBorder,
+                          color: colors.text,
+                        },
+                        firstName.trim() ? styles.inputFilled : null,
+                        errors.firstName ? styles.inputError : null,
+                      ]}
+                      placeholderTextColor="rgba(255,255,255,0.72)"
                       placeholder={t("screens.auth.registerscreen.john")}
                       value={firstName}
                       onChangeText={(text) => {
@@ -194,13 +209,24 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
                         clearError('form');
                       }}
                       autoCapitalize="words" />
-                    
-                                    </View>
 
-                                    <View style={[styles.inputContainer, styles.halfInput, styles.halfInputRight]}>
-                                        <AuthInputField
+                  </View>
+
+                  <View style={[styles.inputContainer, styles.halfInput, styles.halfInputRight]}>
+                    <AuthInputField
                       label={t("screens.auth.registerscreen.lastName")}
                       error={errors.lastName}
+                      inputStyle={[
+                        styles.input,
+                        {
+                          backgroundColor: colors.inputBackground,
+                          borderColor: colors.inputBorder,
+                          color: colors.text,
+                        },
+                        lastName.trim() ? styles.inputFilled : null,
+                        errors.lastName ? styles.inputError : null,
+                      ]}
+                      placeholderTextColor="rgba(255,255,255,0.72)"
                       placeholder={t("screens.auth.registerscreen.doe")}
                       value={lastName}
                       onChangeText={(text) => {
@@ -209,14 +235,24 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
                         clearError('form');
                       }}
                       autoCapitalize="words" />
-                    
-                                    </View>
-                                </View>
 
-                                <View style={styles.inputContainer}>
-                                    <AuthInputField
+                  </View>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <AuthInputField
                     label={t("screens.auth.registerscreen.emailAddress")}
                     error={errors.email}
+                    inputStyle={[
+                      styles.input,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                        color: colors.text,
+                      },
+                      email.trim() ? styles.inputFilled : null,
+                      errors.email ? styles.inputError : null,
+                    ]}
                     placeholder={t("screens.auth.registerscreen.exampleMailCom")}
                     value={email}
                     onChangeText={(text) => {
@@ -226,13 +262,23 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
                     }}
                     keyboardType="email-address"
                     autoCapitalize="none" />
-                  
-                                </View>
 
-                                <View style={styles.inputContainer}>
-                                    <AuthInputField
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <AuthInputField
                     label={t("screens.auth.registerscreen.phoneNumber")}
                     error={errors.phone}
+                    inputStyle={[
+                      styles.input,
+                      {
+                        backgroundColor: colors.inputBackground,
+                        borderColor: colors.inputBorder,
+                        color: colors.text,
+                      },
+                      phone.trim() ? styles.inputFilled : null,
+                      errors.phone ? styles.inputError : null,
+                    ]}
                     placeholder="+1 (555) 000-0000"
                     value={phone}
                     onChangeText={(text) => {
@@ -241,61 +287,73 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
                       clearError('form');
                     }}
                     keyboardType="phone-pad" />
-                  
-                                </View>
 
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>{t("screens.auth.registerscreen.selectYourRole")}</Text>
-                                    <View style={styles.rolesContainer}>
-                                        {roles.map((role) =>
-                    <TouchableOpacity
-                      key={role.id}
-                      style={[
-                      styles.roleButton,
-                      selectedRole === role.id && styles.roleButtonActive]
-                      }
-                      onPress={() => {
-                        setSelectedRole(role.id);
-                        clearError('role');
-                        clearError('form');
-                      }}>
-                      
-                                                <View
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={[styles.label, { color: colors.white }]}>{t("screens.auth.registerscreen.selectYourRole")}</Text>
+                  <View style={styles.rolesContainer}>
+                    {roles.map((role) =>
+                      <TouchableOpacity
+                        key={role.id}
                         style={[
-                        styles.roleIconContainer,
-                        selectedRole === role.id && styles.roleIconContainerActive]
-                        }>
-                        
-                                                    <Ionicons
-                          name={role.icon}
-                          size={moderateScale(26)}
-                          color={selectedRole === role.id ? '#fff' : 'rgba(255,255,255,0.75)'} />
-                        
-                                                </View>
-                                                <Text
-                        style={[
-                        styles.roleLabel,
-                        selectedRole === role.id && styles.roleLabelActive]
-                        }>
-                        
-                                                    {role.label}
-                                                </Text>
-                                            </TouchableOpacity>
+                          styles.roleButton,
+                          { backgroundColor: colors.surfaceStrong, borderColor: colors.border },
+                          selectedRole === role.id && { borderColor: colors.primary, backgroundColor: colors.surface }
+                        ]
+                        }
+                        onPress={() => {
+                          setSelectedRole(role.id);
+                          clearError('role');
+                          clearError('form');
+                        }}>
+
+                        <View
+                          style={[
+                            styles.roleIconContainer,
+                            { backgroundColor: colors.surface },
+                            selectedRole === role.id && styles.roleIconContainerActive]
+                          }>
+
+                          <Ionicons
+                            name={role.icon}
+                            size={moderateScale(26)}
+                            color={selectedRole === role.id ? colors.white : colors.primary} />
+
+                        </View>
+                        <Text
+                          style={[
+                            styles.roleLabel,
+                            {
+                              color: selectedRole === role.id
+                                ? colors.white
+                                : colors.text,
+                            },
+                            selectedRole === role.id && {
+                              fontWeight: '700',
+                            },
+                          ]}>
+
+                          {role.label}
+                        </Text>
+                      </TouchableOpacity>
                     )}
-                                    </View>
-                                    {!!errors.role && <Text style={styles.errorText}>{errors.role}</Text>}
-                                </View>
+                  </View>
+                  {!!errors.role && <Text style={styles.errorText}>{errors.role}</Text>}
+                </View>
 
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>{t("screens.auth.registerscreen.password")}</Text>
-                                    <View>
-                                        <TextInput
+                <View style={styles.inputContainer}>
+                  <Text style={[styles.label, { color: colors.white }]}>{t("screens.auth.registerscreen.password")}</Text>
+                  <View>
+                    <TextInput
                       style={[
-                      styles.input,
-                      errors.password ? styles.inputError : null]
+                        styles.input,
+                        { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text },
+                        password ? styles.inputFilled : null,
+                        errors.password ? styles.inputError : null]
                       }
                       placeholder="••••••••"
-                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      placeholderTextColor="rgba(255,255,255,0.72)"
                       value={password}
                       onChangeText={(text) => {
                         setPassword(text);
@@ -303,33 +361,35 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
                         clearError('form');
                       }}
                       secureTextEntry={!showPassword} />
-                    
-                                        <TouchableOpacity
+
+                    <TouchableOpacity
                       onPress={() => setShowPassword((v) => !v)}
                       style={styles.eyeButton}
                       accessibilityRole="button"
                       accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}>
-                      
-                                            <Ionicons
+
+                      <Ionicons
                         name={showPassword ? 'eye-off' : 'eye'}
                         size={20}
-                        color="rgba(255,255,255,0.8)" />
-                      
-                                        </TouchableOpacity>
-                                    </View>
-                                    {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-                                </View>
+                        color={colors.text} />
 
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>{t("screens.auth.registerscreen.confirmPassword")}</Text>
-                                    <View>
-                                        <TextInput
+                    </TouchableOpacity>
+                  </View>
+                  {!!errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={[styles.label, { color: colors.white }]}>{t("screens.auth.registerscreen.confirmPassword")}</Text>
+                  <View>
+                    <TextInput
                       style={[
-                      styles.input,
-                      errors.confirmPassword ? styles.inputError : null]
+                        styles.input,
+                        { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text },
+                        confirmPassword ? styles.inputFilled : null,
+                        errors.confirmPassword ? styles.inputError : null]
                       }
                       placeholder="••••••••"
-                      placeholderTextColor="rgba(255,255,255,0.6)"
+                      placeholderTextColor="rgba(255,255,255,0.72)"
                       value={confirmPassword}
                       onChangeText={(text) => {
                         setConfirmPassword(text);
@@ -337,44 +397,44 @@ const RegisterScreen = ({ navigation }) => {const { t } = useTranslation();
                         clearError('form');
                       }}
                       secureTextEntry={!showConfirmPassword} />
-                    
-                                        <TouchableOpacity
+
+                    <TouchableOpacity
                       onPress={() => setShowConfirmPassword((v) => !v)}
                       style={styles.eyeButton}
                       accessibilityRole="button"
                       accessibilityLabel={
-                      showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'
+                        showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'
                       }>
-                      
-                                            <Ionicons
+
+                      <Ionicons
                         name={showConfirmPassword ? 'eye-off' : 'eye'}
                         size={20}
-                        color="rgba(255,255,255,0.8)" />
-                      
-                                        </TouchableOpacity>
-                                    </View>
-                                    {!!errors.confirmPassword &&
-                  <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                        color={colors.text} />
+
+                    </TouchableOpacity>
+                  </View>
+                  {!!errors.confirmPassword &&
+                    <Text style={styles.errorText}>{errors.confirmPassword}</Text>
                   }
-                                    {!!errors.form && <Text style={styles.errorText}>{errors.form}</Text>}
-                                </View>
+                  {!!errors.form && <Text style={styles.errorText}>{errors.form}</Text>}
+                </View>
 
-                                <View style={styles.registerButtonContainer}>
-                                    <AuthGradientButton label={t("screens.auth.registerscreen.createAccount")} onPress={handleRegister} />
-                                </View>
-                            </View>
+                <View style={styles.registerButtonContainer}>
+                  <AuthGradientButton label={t("screens.auth.registerscreen.createAccount")} onPress={handleRegister} />
+                </View>
+              </View>
 
-                            <View style={styles.footer}>
-                                <Text style={styles.footerText}>{t("screens.auth.registerscreen.alreadyHaveAnAccount")}</Text>
-                                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                                    <Text style={styles.linkText}>{t("screens.auth.registerscreen.signIn")}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </ScrollView>
-                    </KeyboardAvoidingView>
-                </SafeAreaView>
-            </ImageBackground>
-        </View>);
+              <View style={styles.footer}>
+                <Text style={[styles.footerText, { color: colors.white }]}>{t("screens.auth.registerscreen.alreadyHaveAnAccount")}</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <Text style={[styles.linkText, { color: colors.white }]}>{t("screens.auth.registerscreen.signIn")}</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </ImageBackground>
+    </View>);
 
 };
 
@@ -384,7 +444,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     paddingHorizontal: moderateScale(20),
-    backgroundColor: 'rgba(0,0,0,0.3)'
+    backgroundColor: 'transparent'
   },
   keyboardAvoid: { flex: 1 },
   scrollView: {
@@ -400,6 +460,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: moderateScale(12),
     backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: moderateScale(18)
@@ -423,7 +485,6 @@ const styles = StyleSheet.create({
   },
   inputContainer: { marginBottom: moderateScale(2) },
   label: {
-    color: '#fff',
     marginBottom: moderateScale(8),
     fontSize: rf(14, 12, 16),
     fontWeight: '500'
@@ -434,10 +495,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(14),
     paddingVertical: moderateScale(13),
     paddingRight: moderateScale(46),
-    color: '#fff',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
     fontSize: rf(15, 13, 18)
+  },
+  inputFilled: {
+    backgroundColor: 'rgba(225, 216, 247, 0.82)',
+    borderColor: 'rgba(117, 94, 171, 0.22)'
   },
   eyeButton: {
     position: 'absolute',
@@ -481,15 +545,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)'
   },
-  roleButtonActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: 'rgba(166, 110, 255, 0.2)'
-  },
   roleIconContainer: {
     width: moderateScale(50),
     aspectRatio: 1,
     borderRadius: moderateScale(12),
-    backgroundColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: moderateScale(8)
@@ -498,13 +557,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary
   },
   roleLabel: {
-    color: 'rgba(255,255,255,0.75)',
     fontSize: rf(12, 11, 14),
     fontWeight: '500',
     textAlign: 'center'
-  },
-  roleLabelActive: {
-    color: '#fff'
   },
   footer: {
     flexDirection: 'row',
