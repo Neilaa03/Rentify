@@ -16,6 +16,8 @@ import reviewRoutes from './src/modules/reviews/reviewRoutes.js';
 import profileRoutes from './src/modules/profile/profileRoutes.js';
 import agencyRoutes from './src/modules/agency/agencyRoutes.js';
 import assistantRoutes from './src/modules/assistant/assistantRoutes.js';
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from './src/config/swagger.js';
 
 const app = express();
 
@@ -47,6 +49,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/agency', agencyRoutes);
 app.use('/api/assistant', assistantRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true });
