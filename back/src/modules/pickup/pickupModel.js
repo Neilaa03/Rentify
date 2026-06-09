@@ -9,7 +9,7 @@ const PICKUP_CODE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const PICKUP_MAX_ATTEMPTS = 5;
 
 const getPepper = () => {
-  const pepper = process.env.PICKUP_CODE_PEPPER;
+  const pepper = process.env.PICKUP_CODE_PEPPER || process.env.WPICKUP_CODE_PEPPER;
   if (!pepper) {
     throw new Error('Missing PICKUP_CODE_PEPPER in environment variables.');
   }

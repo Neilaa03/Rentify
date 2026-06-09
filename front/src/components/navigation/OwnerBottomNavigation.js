@@ -39,7 +39,7 @@ const OwnerBottomNavigation = ({ navigation, route, active }) => {const { t } = 
   {
     key: 'listings',
     label: t("components.navigation.ownerbottomnavigation.annonces"),
-    icon: 'car-sport-outline',
+    icon: 'list-outline',
     onPress: () => resetTo('OwnerListings')
   },
   {

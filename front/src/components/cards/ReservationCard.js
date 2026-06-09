@@ -148,11 +148,11 @@ const ReservationCard = ({
           <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
           {tightLayout ?
           <View style={styles.stackedDateText}>
-              <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(start)} →</Text>
-              <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(end)}</Text>
+              <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date, color: colors.textMuted }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(start)} →</Text>
+              <Text style={[styles.dateText, styles.tightDateText, { fontSize: fontSize.date, color: colors.textMuted }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{formatSingleDate(end)}</Text>
             </View> :
 
-          <Text style={[styles.dateText, { fontSize: fontSize.date }]} numberOfLines={1}>{formatDateRange(start, end)}</Text>
+          <Text style={[styles.dateText, { fontSize: fontSize.date, color: colors.textMuted }]} numberOfLines={1}>{formatDateRange(start, end)}</Text>
           }
         </View>
 

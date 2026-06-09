@@ -19,6 +19,7 @@ import AuthHeader from '../../components/auth/AuthHeader';
 import AuthInputField from '../../components/auth/AuthInputField';
 import AuthGradientButton from '../../components/auth/AuthGradientButton';
 import { isTablet, moderateScale, rf } from '../../utils/responsive';
+import { useAuth } from '../../contexts/AuthContext';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';import { useTranslation } from "react-i18next";
@@ -28,6 +29,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
   const { colors } = useTheme();
+  const { setSession } = useAuth();
   const tabletLayout = isTablet();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -106,6 +108,7 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
     }
 
     const userParams = { token: data?.token, user: data?.user };
+    let sessionUser = data?.user || null;
     const isOwner = data?.user?.role === 'owner';
     const isAgencyOwner = data?.user?.role === 'companyManager';
     const isAdmin = data?.user?.role === 'admin';
@@ -134,9 +137,11 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
           };
 
           await storage.setItemAsync('userProfile', JSON.stringify(normalized));
+          sessionUser = normalized;
 
           // If the account was created via Google-only sign-in, offer setting a password.
           if (shouldOfferPasswordSetup(normalized.authProvider || initialProvider)) {
+            await setSession({ token: data?.token || null, user: sessionUser });
             navigation.navigate('SetPassword', { token: data?.token, allowSkip: true });
             return;
           }
@@ -147,9 +152,12 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
       // Non-blocking.
     }
     if (shouldOfferPasswordSetup(initialProvider)) {
+      await setSession({ token: data?.token || null, user: sessionUser });
       navigation.navigate('SetPassword', { token: data?.token, allowSkip: true });
       return;
     }
+
+    await setSession({ token: data?.token || null, user: sessionUser });
 
     if (isAdmin) {
       navigation.reset({

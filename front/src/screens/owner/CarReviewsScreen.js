@@ -91,7 +91,7 @@ const OwnerCarReviewsScreen = ({ navigation, route }) => {const { t } = useTrans
 
   const orderLabel = useMemo(() => {
     if (sortBy === 'rating') return sortOrder === 'desc' ? 'Meilleures notes' : 'Moins bonnes';
-    return sortOrder === 'desc' ? 'Plus récents' : 'Plus anciens';
+    return sortOrder === 'desc' ? 'Most recent' : 'Plus anciens';
   }, [sortBy, sortOrder]);
 
   const renderItem = ({ item }) => <ReviewCard review={item} />;

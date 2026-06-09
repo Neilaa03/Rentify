@@ -28,6 +28,7 @@ import { deleteDocument, getUserDocuments, uploadUserDocument } from '../../serv
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { getLanguageMeta, setAppLanguage, supportedLanguages } from '../../i18n';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTheme, THEME_MODES } from '../../contexts/ThemeContext';
 
 const profileFont = (width, regular, small, verySmall = small) => {
@@ -164,6 +165,7 @@ const pickLatestDocument = (documents = []) =>
 const ProfileScreen = ({ navigation, route }) => {
   const { t, i18n } = useTranslation();
   const { colors, mode, setThemeMode } = useTheme();
+  const { clearSession } = useAuth();
   const { width } = useWindowDimensions();
   const [profile, setProfile] = useState(route?.params?.user || null);
   const [loading, setLoading] = useState(false);
@@ -736,6 +738,14 @@ const ProfileScreen = ({ navigation, route }) => {
       setPersonalInfoError(err.message || 'Suppression echouee');
     } finally {
       setPhotoLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await clearSession();
+    } finally {
+      navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
     }
   };
 
@@ -1453,7 +1463,7 @@ const ProfileScreen = ({ navigation, route }) => {
 
             <TouchableOpacity
               style={styles.logoutButton}
-              onPress={() => navigation.reset({ index: 0, routes: [{ name: 'Landing' }] })}
+              onPress={handleLogout}
             >
               <Ionicons name="log-out-outline" size={18} color="#ff4f5e" />
               <Text style={[styles.logoutText, { fontSize: fontSize.logout }]}>{t('screens.client.profilescreen.seDeconnecter')}</Text>

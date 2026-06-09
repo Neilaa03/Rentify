@@ -97,7 +97,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {const { t } = useTransla
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.card, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.text }]}>{t("screens.auth.resetpasswordscreen.resetPassword")}</Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t("screens.auth.resetpasswordscreen.chooseANewPasswordFor")}{email || 'your account'}.</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>{t("screens.auth.resetpasswordscreen.chooseANewPasswordFor")} {email || 'your account'}.</Text>
 
         <View style={styles.field}>
           <TextInput

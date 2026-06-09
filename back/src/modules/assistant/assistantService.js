@@ -20,6 +20,7 @@ Use searchAssistantKnowledge for questions about Rentify rental policies, insura
 Use tools when you need live Rentify data about reservations, vehicles, listings, or the authenticated user.
 Never claim you performed a booking, cancellation, payment, profile edit, upload, approval, or any other write action unless the backend returned a completed action result.
 For write actions, call the request action tools first and ask the user to confirm. The action is executed only after the user replies yes/confirm.
+When the user asks to cancel an actual reservation, use requestCancelReservation. Only use policy knowledge for questions about cancellation rules, fees, refunds, or conditions.
 Only use data returned by tools for account-specific claims.
 Keep answers practical, concise, and friendly.
 Use hidden numbered references from conversation context when available; do not reveal internal ids to the user.
@@ -460,6 +461,22 @@ const parseHiddenVehicleReferences = (context = []) => {
   return refs;
 };
 
+const parseHiddenReservationReferences = (context = []) => {
+  const refs = new Map();
+  const hiddenText = context.map((message) => message.content || '').join('\n');
+  const pattern = /Reservation\s+(\d+):\s+reservationId=([^;\n]*);/gi;
+  let match = pattern.exec(hiddenText);
+
+  while (match) {
+    refs.set(Number(match[1]), {
+      reservationId: match[2]?.trim() || undefined,
+    });
+    match = pattern.exec(hiddenText);
+  }
+
+  return refs;
+};
+
 const parseLatestListingReference = (context = []) => {
   const hiddenText = context.map((message) => message.content || '').join('\n');
   const patterns = [
@@ -500,6 +517,40 @@ const parseLatestEstimateReference = (context = []) => {
   }
 
   return latest;
+};
+
+const resolveDirectCancellationTool = ({ message, context }) => {
+  const text = String(message || '').toLowerCase();
+  const wantsCancelAction = /\b(cancel|cancelled|canceled|annuler|annule|annulation)\b/.test(text);
+  const mentionsReservation = /\b(r(?:e|\u00e9)servation|booking|trip)\b/.test(text);
+  const asksPolicy = /\b(policy|policies|rules?|conditions?|fee|fees|refund|remboursement|frais|how does|what is|what are)\b/.test(text);
+
+  if (!wantsCancelAction || !mentionsReservation || asksPolicy) return null;
+
+  const reservationMatch = text.match(/\b(?:r(?:e|\u00e9)servation|booking|trip)\s+(?:number\s+)?(\d+)\b|(?:first|1st|second|2nd|third|3rd|fourth|4th|fifth|5th)\s+(?:r(?:e|\u00e9)servation|booking|trip)\b/);
+  const reservationNumber = Number(reservationMatch?.[1] || getOrdinalNumber(text));
+
+  if (reservationNumber) {
+    const ref = parseHiddenReservationReferences(context).get(reservationNumber);
+    return {
+      name: 'requestCancelReservation',
+      args: ref?.reservationId ? { reservationId: ref.reservationId } : { reservationNumber },
+    };
+  }
+
+  const refs = parseHiddenReservationReferences(context);
+  if (refs.size === 1) {
+    const onlyRef = [...refs.values()][0];
+    if (onlyRef?.reservationId) {
+      return { name: 'requestCancelReservation', args: { reservationId: onlyRef.reservationId } };
+    }
+  }
+
+  return {
+    name: 'getReservations',
+    args: {},
+    needsReservationChoice: true,
+  };
 };
 
 const resolveDirectDetailTool = ({ message, context }) => {
@@ -718,6 +769,9 @@ const runSingleToolResponse = async ({ user, message, conversationId, tool, answ
   } else if (tool.name === 'requestCreateReservation') {
     const data = toolResult.data || {};
     content = `${data.summary || 'I prepared the reservation.'} Reply yes to confirm, or no to cancel. After creation, payment must be completed within 24 hours or the reservation will be cancelled automatically.`;
+  } else if (tool.name === 'requestCancelReservation') {
+    const data = toolResult.data || {};
+    content = `${data.summary || 'I prepared the cancellation.'} Reply yes to confirm, or no to keep the reservation.`;
   } else if (tool.name === 'getListingDetails' || tool.name === 'getVehicleDetails') {
     const data = toolResult.data || {};
     const car = data.car;
@@ -1253,6 +1307,19 @@ const runGeminiAssistantChat = async ({ user, message, context, conversationId }
 export const runAssistantChat = async ({ user, message, context, conversationId }) => {
   const confirmedActionResult = await runPendingActionConfirmation({ user, message, context, conversationId });
   if (confirmedActionResult) return confirmedActionResult;
+
+  const directCancellationTool = resolveDirectCancellationTool({ message, context });
+  if (directCancellationTool) {
+    return runSingleToolResponse({
+      user,
+      message,
+      conversationId,
+      tool: directCancellationTool,
+      answer: directCancellationTool.needsReservationChoice
+        ? 'Which reservation do you want to cancel? Choose a reservation number.'
+        : undefined,
+    });
+  }
 
   const directRentalTool = resolveDirectRentalTool({ message, context });
   if (directRentalTool) {
