@@ -1,114 +1,238 @@
-# Application Mobile de Location de Véhicules
+# Rentify - Peer-to-Peer Vehicle Rental Marketplace
 
-# Développeurs:
-    KRIKA Neila-  M1_IM UHA(FST)
-    SEGHILANI Thanina- M1_IM UHA(FST)
-## Présentation du Projet
+**A mobile marketplace connecting vehicle owners, rental agencies, and customers through a secure and intelligent rental platform.**
 
-Ce projet consiste à concevoir et développer une application mobile de location de véhicules.
-
-L’objectif principal est de centraliser sur une seule plateforme des offres de location provenant à la fois de particuliers et d’entreprises professionnelles, afin de faciliter la recherche, la comparaison et la réservation de véhicules.
-
-L’application permettra aux utilisateurs de :
-
-- rechercher des véhicules selon plusieurs critères ;
-- consulter les détails des annonces ;
-- effectuer des réservations ;
-- gérer le processus de location directement depuis l’application.
-
-Le projet vise également à proposer un système sécurisé basé sur :
-
-- la vérification des propriétaires ;
-- la gestion des réservations ;
-- un système de paiement sécurisé ;
-
-afin de renforcer la confiance entre les utilisateurs et les fournisseurs de véhicules.
+[Features](#-features) • [Technology Stack](#-technology-stack) • [Architecture](#-software-architecture) • [Installation](#-installation) • [Documentation](#-documentation)
 
 ---
 
-# Objectifs du Projet
+## 👨‍💻 Developers
 
-Les principaux objectifs du projet sont :
-
-- Concevoir une application mobile moderne et intuitive ;
-- Faciliter l’accès aux services de location de véhicules ;
-- Permettre la publication et la gestion d’annonces de véhicules ;
-- Mettre en place un système de recherche et de filtrage avancé ;
-- Intégrer un système de réservation et de paiement sécurisé ;
-- Garantir la sécurité et la fiabilité des échanges entre utilisateurs.
+* **Neila KRIKA** — M1 Informatique Mobile, UHA (FST)
+* **Thanina SEGHILANI** — M1 Informatique Mobile, UHA (FST)
 
 ---
 
-# Fonctionnalités Principales
+## 📖 Project Overview
 
-## Utilisateur
+Rentify is a cross-platform mobile application that enables vehicle rentals between private owners, rental agencies, and customers.
 
-- Création et gestion de compte ;
-- Authentification sécurisée ;
-- Recherche de véhicules ;
-- Filtrage par :
-  - prix ;
-  - localisation ;
-  - disponibilité ;
-  - catégorie ;
-- Réservation de véhicules ;
-- Paiement sécurisé ;
-- Consultation de l’historique des réservations.
+The platform provides:
 
-## Propriétaires / Entreprises
+* Secure online payments
+* Escrow-based transaction management
+* Real-time communications
+* AI-assisted vehicle search
+* Automated identity verification through OCR
+* Agency and vehicle management
 
-- Publication d’annonces ;
-- Gestion des véhicules ;
-- Gestion des disponibilités ;
-- Suivi des réservations ;
-- Validation des demandes de location.
+The backend follows a Domain-Driven Design (DDD) architecture to ensure maintainability, scalability, and separation of concerns.
 
 ---
 
-# Planification Prévisionnelle
-
-Le développement du projet sera organisé en plusieurs étapes :
-
-1. Analyse des besoins et rédaction des spécifications ;
-2. Conception de l’architecture du système et de la base de données ;
-3. Réalisation des maquettes et de l’interface utilisateur ;
-4. Développement du backend et des API ;
-5. Développement de l’application mobile ;
-6. Intégration du système de paiement et des fonctionnalités de sécurité ;
-7. Tests, correction des anomalies et optimisation ;
-8. Déploiement et préparation de la version finale.
+## 📱 Application Overview
 
 ---
 
-# Outils et Technologies
+## 🚀 Features
 
-## Frontend / Mobile
+### User Features
 
-- React Native + Expo *(ou Flutter)*
+* User registration and authentication
+* Vehicle browsing and advanced filtering
+* Booking management
+* Favorites system
+* Real-time notifications
+* Secure messaging
 
-## Backend
+### Vehicle Owners
 
-- Node.js
-- Express.js
-- TypeScript
+* Vehicle listing management
+* Availability calendar
+* Booking approval workflow
+* Revenue tracking
 
-## Base de données
+### Rental Agencies
 
-- PostgreSQL
+* Agency profile management
+* Fleet management
+* Agency verification process
 
-## Gestion de Version
+### Smart Services
 
-- Git
-- GitHub
+* AI-powered vehicle recommendation (Google Gemini)
+* OCR-based identity verification (Tesseract.js)
+* Automated document analysis
+
+### Payments
+
+* Stripe Connect integration
+* Secure online payments
+* Escrow fund management
+* Automatic commission distribution
 
 ---
 
-# Architecture Générale
+## 🛠 Technology Stack
 
-Le projet sera organisé en plusieurs parties :
+### Mobile Application
 
+* React Native
+* Expo
+* Socket.io Client
+
+### Backend
+
+* Node.js
+* Express.js
+* PostgreSQL
+* Supabase
+
+### Cloud & External Services
+
+* Stripe Connect
+* Cloudinary
+* Google Gemini API
+* Tesseract.js
+
+---
+
+## 📐 Software Architecture
+
+The backend follows a layered architecture inspired by Domain-Driven Design principles.
+
+### Layers
+
+#### Routes
+
+Handle incoming HTTP requests and route them to the appropriate controllers.
+
+#### Controllers
+
+Validate request data, manage responses, and handle HTTP status codes.
+
+#### Services
+
+Contain all business logic and orchestrate interactions between models and external services.
+
+#### Models
+
+Provide access to PostgreSQL data through Supabase.
+
+### Simplified Architecture
+
+```text
+Client (React Native)
+        │
+        ▼
+      Routes
+        │
+        ▼
+   Controllers
+        │
+        ▼
+     Services
+        │
+ ┌──────┴──────┐
+ ▼             ▼
+Models     External APIs
+ │          (Stripe, Gemini,
+ ▼           Cloudinary, OCR)
+PostgreSQL
+```
+
+---
+
+## 📂 Project Structure
+
+```text
 project/
 │
-├── front/      # Application mobile
-├── back/       # Backend et API
-└── docs/       # Documentation du projet
+├── front/          # Mobile application
+├── back/           # Backend API
+├── docs/           # Documentation
+└── assets/         # Images and screenshots
+```
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+
+* Node.js v18+
+* npm
+* Expo CLI
+
+### Clone the repository
+
+```bash
+git clone https://github.com/your-account/rentify.git
+cd rentify
+```
+
+### Backend
+
+```bash
+cd back
+npm install
+npm start
+```
+
+### Frontend
+
+```bash
+cd front
+npm install
+npx expo start
+```
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file inside the backend directory:
+
+```env
+SUPABASE_URL=
+SUPABASE_KEY=
+
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+GEMINI_API_KEY=
+```
+
+---
+
+## 📚 Documentation
+
+### API Documentation (Swagger)
+
+https://rentify-yj6i.onrender.com/api-docs/
+
+---
+
+## 🔒 Security
+
+* JWT Authentication
+* Secure password hashing
+* Stripe PCI-compliant payment processing
+* OCR-based identity verification
+* Escrow payment protection
+
+---
+
+## 🎓 Academic Project
+
+This project was developed as part of the **Master 1 Informatique Mobile** program at **Université de Haute-Alsace (UHA)**.
+
+---
+
+## 📄 License
+
+This project is intended for academic and educational purposes.
