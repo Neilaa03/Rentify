@@ -1,5 +1,11 @@
 # Rentify - Peer-to-Peer Vehicle Rental Marketplace
 
+![React Native](https://img.shields.io/badge/React%20Native-Mobile-blue)
+![Node.js](https://img.shields.io/badge/Node.js-Backend-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
+![Stripe](https://img.shields.io/badge/Stripe-Payments-purple)
+![License](https://img.shields.io/badge/License-Academic-orange)
+
 **A mobile marketplace connecting vehicle owners, rental agencies, and customers through a secure and intelligent rental platform.**
 
 [Features](#-features) • [Technology Stack](#-technology-stack) • [Architecture](#-software-architecture) • [Installation](#-installation) • [Documentation](#-documentation)
@@ -227,11 +233,20 @@ https://rentify-yj6i.onrender.com/api-docs/
 
 ---
 
-## 🎓 Academic Project
+## 📸 Application Screenshots
 
-This project was developed as part of the **Master 1 Informatique Mobile** program at **Université de Haute-Alsace (UHA)**.
+<p align="center">
+  <img src="assets/client_home.png" width="250"/>
+  <img src="assets/owner_dashboard.png" width="250"/>
+  <img src="assets/admin_dashboard.png" width="250"/>
+</p>
 
----
+<p align="center">
+  <img src="assets/assistant_action.png" width="250"/>
+  <img src="assets/pickup_qr.png" width="250"/>
+  <img src="assets/documents_details.png" width="250"/>
+</p>
+
 
 ## 📄 License
 
