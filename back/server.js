@@ -1,4 +1,6 @@
-import dotenv from 'dotenv';
+import 'dotenv/config';
+import app from './app.js';
+import { initSocket } from './src/socket/index.js';
 
 // Load env from back/.env even when starting from repo root.
 dotenv.config({ path: new URL('./.env', import.meta.url) });
@@ -18,7 +20,6 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 
 // Initialize Socket.IO for real-time features
 initSocket(server);
-startEscrowAutoReleaseScheduler();
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {

@@ -13,10 +13,8 @@ import {
   'react-native';
 import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import AuthHeader from '../../components/auth/AuthHeader';
-import AuthInputField from '../../components/auth/AuthInputField';
-import AuthGradientButton from '../../components/auth/AuthGradientButton';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import { isTablet, moderateScale, rf } from '../../utils/responsive'; import { useTranslation } from "react-i18next";

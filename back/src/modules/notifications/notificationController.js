@@ -37,13 +37,3 @@ export const markAllNotificationsHandler = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-export const deleteNotificationHandler = async (req, res) => {
-  try {
-    const { id } = req.params;
-    await model.deleteNotification(id, req.user.id);
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};

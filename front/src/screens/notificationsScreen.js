@@ -39,6 +39,7 @@ const NotificationRow = ({ item, onPress }) =>
 
 const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useTranslation();
   const [notifications, setNotifications] = useState([]);
+  const [filter, setFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [error, setError] = useState('');
@@ -72,7 +73,7 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useT
     }
   };
 
-  const loadNotifications = useCallback(async () => {
+  const loadNotifications = useCallback(async (selectedFilter = filter) => {
     setIsLoading(true);
     setError('');
     try {
@@ -87,7 +88,7 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useT
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [filter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -118,24 +119,27 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useT
     {
       const reservationId = data?.reservationId;
       if (reservationId) {
-        if (isOwner) {
-          await navigateToOwnerReservationDetails(reservationId);
-        } else {
-          navigation.navigate('ReservationDetails', { reservationId });
-        }
+          if (isOwner) {
+              await navigateToOwnerReservationDetails(reservationId);
+          } else {
+              navigation.navigate('ReservationDetails', {
+                  reservationId,
+              });
+          }
       }
     }
 
     if (type === 'message') {
       const conversationId = data?.conversationId || data?.messageId;
       navigation.navigate('Chat', { conversationId });
+      return;
     }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllNotificationsAsRead();
-      setNotifications([]);
+      setNotifications((prev) => prev.map((item) => ({ ...item, is_read: true })));
       setUnreadCount(0);
     } catch (err) {
       setError(getFriendlyError(err, t));
@@ -149,8 +153,14 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useT
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.screenTitle}>{`Notifications (${unreadCount})`}</Text>
-          <View style={styles.headerRight}>
+          <Text style={styles.screenTitle}>Notifications</Text>
+          <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllButton}>
+            <Text style={styles.markAllText}>Tout lire</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.filterRow}>
+          {['all', 'unread'].map((option) => (
             <TouchableOpacity
               onPress={() => navigation.navigate('NotificationsHistory', { user })}
               style={styles.iconButton}
@@ -197,12 +207,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#090b1e' },
   safeArea: { flex: 1, paddingHorizontal: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   backButton: { padding: 8 },
-  iconButton: { padding: 8 },
   screenTitle: { color: '#fff', fontWeight: '700', fontSize: 18 },
-  markAllButton: { paddingVertical: 8, paddingHorizontal: 10 },
+  markAllButton: { paddingVertical: 8, paddingHorizontal: 12 },
   markAllText: { color: '#8f6cff', fontWeight: '700' },
+  filterRow: { flexDirection: 'row', marginBottom: 12 },
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(143,125,255,0.35)',
+    backgroundColor: 'rgba(15,16,40,0.9)',
+    marginRight: 10,
+  },
+  filterButtonActive: {
+    backgroundColor: '#8f6cff',
+  },
+  filterLabel: { color: '#c2c6de', fontWeight: '600' },
+  filterLabelActive: { color: '#fff' },
   listContainer: { paddingBottom: 28 },
   emptyListContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   notificationRow: {
@@ -211,9 +234,12 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12
   },
-  unreadNotification: { borderWidth: 1, borderColor: '#8f6cff' },
+  unreadNotification: {
+    borderWidth: 1,
+    borderColor: '#8f6cff',
+  },
   notificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  notificationTitle: { color: '#f6f8ff', fontSize: 15, fontWeight: '700', paddingRight: 10, flex: 1 },
+  notificationTitle: { color: '#f6f8ff', fontSize: 15, fontWeight: '700' },
   notificationTitleUnread: { color: '#8f6cff' },
   unreadDot: { width: 10, height: 10, borderRadius: 10, backgroundColor: '#f63e77' },
   notificationMessage: { color: '#c2c6de', fontSize: 13, marginBottom: 10 },

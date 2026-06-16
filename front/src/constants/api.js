@@ -43,8 +43,6 @@ export const API_ENDPOINTS = {
         UPDATE_DETAILS: (id) => `${API_BASE_URL}/api/reservations/${id}/details`,
         CANCEL: (id) => `${API_BASE_URL}/api/reservations/${id}/cancel`,
         CONFIRM_PAYMENT: (id) => `${API_BASE_URL}/api/reservations/${id}/confirm-payment`,
-        CONFIRM_HANDOVER: (id) => `${API_BASE_URL}/api/reservations/${id}/confirm-handover`,
-        DISPUTE: (id) => `${API_BASE_URL}/api/reservations/${id}/dispute`,
         GET_LISTING: (listingId) => `${API_BASE_URL}/api/reservations/listing/${listingId}`,
         GET_CALENDAR_AVAILABILITY: (listingId) => `${API_BASE_URL}/api/reservations/calendar/availability/${listingId}`,
         UPDATE_STATUS: (id) => `${API_BASE_URL}/api/reservations/${id}/status`,
@@ -71,14 +69,6 @@ export const API_ENDPOINTS = {
         CREATE_CASH_PAYMENT: `${API_BASE_URL}/api/payments/create-cash-payment`,
         CONFIRM_CASH_PAYMENT: `${API_BASE_URL}/api/payments/confirm-cash-payment`,
         GET_STATUS: (reservationId) => `${API_BASE_URL}/api/payments/status/${reservationId}`,
-        CONNECT_ONBOARDING_LINK: `${API_BASE_URL}/api/payments/connect/onboarding-link`,
-        CONNECT_STATUS: (ownerId) => `${API_BASE_URL}/api/payments/connect/status/${ownerId}`,
         WEBHOOK: `${API_BASE_URL}/api/payments/webhook`,
-    },
-    REVIEWS: {
-        CAR_LIST: (carId) => `${API_BASE_URL}/api/reviews/cars/${carId}`,
-        CAR_SUMMARY: (carId) => `${API_BASE_URL}/api/reviews/cars/${carId}/summary`,
-        RESERVATION_GET: (reservationId) => `${API_BASE_URL}/api/reviews/reservations/${reservationId}`,
-        RESERVATION_CREATE: (reservationId) => `${API_BASE_URL}/api/reviews/reservations/${reservationId}`,
     },
 };

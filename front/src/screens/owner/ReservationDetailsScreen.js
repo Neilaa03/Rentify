@@ -509,6 +509,7 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {const { t } = 
             </View>
           </View>
 
+<<<<<<< HEAD
           {paymentInfo?.paymentMethod === 'card' ?
           <View style={styles.escrowStatusCard}>
               <View style={styles.escrowStatusHeader}>
@@ -547,6 +548,10 @@ const OwnerReservationDetailsScreen = ({ navigation, route }) => {const { t } = 
 
           {paymentInfo?.paymentMethod === 'cash' &&
           <View style={styles.cashPaymentAlert}>
+=======
+          {paymentInfo?.paymentMethod === 'cash' && (
+            <View style={styles.cashPaymentAlert}>
+>>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
               <View style={styles.cashPaymentAlertContent}>
                 <Ionicons name="cash-outline" size={20} color="#a566ff" />
                 <View style={styles.cashPaymentAlertText}>
@@ -883,6 +888,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(165, 102, 255, 0.2)'
   },
+<<<<<<< HEAD
   escrowStatusCard: {
     marginTop: 16,
     backgroundColor: 'rgba(79, 140, 255, 0.12)',
@@ -907,6 +913,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18
   },
+=======
+>>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -12,7 +10,6 @@ import {
 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../constants/colors';
-import { API_ENDPOINTS } from '../../constants/api';
 import { getOwnerDashboardData } from '../../services/owner';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
 import MessageIconButton from '../../components/messaging/MessageIconButton';
@@ -67,8 +64,6 @@ const OwnerDashboardScreen = ({ navigation, route }) => {const { t } = useTransl
     },
     activity: []
   });
-  const [connectLoading, setConnectLoading] = useState(false);
-  const [connectStatus, setConnectStatus] = useState(null);
 
   const loadData = useCallback(async () => {
     if (!token || !user?.id) return;

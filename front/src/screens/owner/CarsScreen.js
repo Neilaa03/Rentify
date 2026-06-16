@@ -97,6 +97,7 @@ const OwnerCarsScreen = ({ navigation, route }) => {const { t } = useTranslation
     });
   };
 
+<<<<<<< HEAD
   const renderCarCard = ({ item }) =>
   <CarCard
     car={item}
@@ -104,6 +105,16 @@ const OwnerCarsScreen = ({ navigation, route }) => {const { t } = useTranslation
     onEdit={() => handleEditCar(item)}
     onDelete={() => handleDeleteCar(item)}
     onReviewsPress={() => navigation.navigate('OwnerCarReviews', { token, carId: item.id, car: item })} />;
+=======
+  const renderCarCard = ({ item }) => (
+    <CarCard
+      car={item}
+      onPress={() => handleEditCar(item)}
+      onEdit={() => handleEditCar(item)}
+      onDelete={() => handleDeleteCar(item)}
+    />
+  );
+>>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 
 
 

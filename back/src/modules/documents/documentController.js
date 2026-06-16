@@ -385,10 +385,11 @@ export const uploadDocumentHandler = async (req, res) => {
     const uploadResult = await cloudinary.uploader.upload(dataURI, {
       folder: 'rentify/documents',
       resource_type: resourceType,
-      public_id: uploadPublicId,
-      use_filename: false,
-      unique_filename: true,
-      filename_override: normalizedOriginalName,
+
+      public_id: fileNameWithoutExtension,
+
+      use_filename: true,
+      unique_filename: false,
       type: 'upload',
     });
 
