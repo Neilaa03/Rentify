@@ -14,6 +14,9 @@ import {
     updateReservationStatusHandler,
     getAllReservations,
     getListingAvailabilityHandler,
+    confirmHandoverHandler,
+    disputeHandoverHandler,
+    resolveEscrowDisputeHandler,
 } from './reservationController.js';
 import pickupRoutes from '../pickup/pickupRoutes.js';
 import returnRoutes from '../return/returnRoutes.js';

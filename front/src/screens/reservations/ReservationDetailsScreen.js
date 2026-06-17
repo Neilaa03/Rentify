@@ -9,12 +9,8 @@ import {
   Alert,
   ImageBackground,
   Platform,
-<<<<<<< HEAD
   Modal } from
 'react-native';
-=======
-} from 'react-native';
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 import { SafeAreaView } from 'react-native-safe-area-context';
 import storage from '../../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,13 +21,10 @@ import { API_ENDPOINTS } from '../../constants/api';
 import { calculateReservationPrice } from '../../utils/reservationUtils';
 import PaymentMethodSelector from '../../components/payment/PaymentMethodSelector';
 import PaymentStatusDisplay from '../../components/payment/PaymentStatusDisplay';
-<<<<<<< HEAD
 import ReviewCard from '../../components/reviews/ReviewCard';
 import ReviewForm from '../../components/reviews/ReviewForm';import { useTranslation } from "react-i18next";
 import { getFriendlyError } from '../../utils/friendlyError';
 import { getCurrentLocale } from '../../i18n';
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 
 const useStripeSafe = () => {
   if (Platform.OS === 'web') {
@@ -71,7 +64,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
 
   const reservation = reservationState || reservationFromParams;
 
-<<<<<<< HEAD
   const getReservationDetailsTarget = () => {
     const parent = navigation.getParent?.();
     const nextListing = listingFromApi || listingFromParams || reservation?.listing || null;
@@ -99,8 +91,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
     });
   };
 
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   const goToReservations = () => {
     const parent = navigation.getParent?.();
     const navigate = parent?.navigate || navigation.navigate;
@@ -205,7 +195,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
       }
       setPaymentInfo(payment);
       if (
-<<<<<<< HEAD
       payment?.status === 'completed' ||
       payment?.status === 'released' ||
       payment?.status === 'held_in_escrow' ||
@@ -215,14 +204,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
       payment?.status === 'pending' ||
       payment?.status === 'processing')
       {
-=======
-        payment?.status === 'completed' || 
-        payment?.status === 'failed' || 
-        payment?.status === 'pending_cash' || 
-        payment?.status === 'pending' ||
-        payment?.status === 'processing'
-      ) {
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
         setPaymentStatus(payment.status);
       } else {
         setPaymentStatus(null);
@@ -262,21 +243,16 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
   isReservationActive && (
   paymentStatus === null || paymentStatus === 'failed');
 
-<<<<<<< HEAD
   const isCardEscrowActive =
   paymentMethod === 'card' &&
   ['held_in_escrow', 'released', 'disputed'].includes(paymentStatus);
   const hideCancelOnThisScreen = justCompletedCardPayment || isCardEscrowActive;
 
   const showActionBar = reservation?.status === 'reserved' && !hideCancelOnThisScreen;
-=======
-  const showActionBar = reservation?.status === 'reserved';
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   const showPayButton =
   reservation?.status === 'reserved' && (
   paymentStatus === null || paymentStatus === 'failed' || canResumePendingCardPayment);
 
-<<<<<<< HEAD
   const showConfirmHandoverButton = paymentStatus === 'held_in_escrow' && !justCompletedCardPayment;
 
   const isCardEnabledForOwner = Boolean(ownerConnectStatus?.cardPaymentsAvailable);
@@ -289,13 +265,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
   paymentStatus === 'failed' ?
   'Réessayer le paiement' :
   'Procéder au paiement';
-=======
-  const paymentButtonLabel = canResumePendingCardPayment
-    ? 'Finish payment'
-    : paymentStatus === 'failed'
-    ? 'Réessayer le paiement'
-    : 'Procéder au paiement';
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 
   const refreshReservation = useCallback(async () => {
     if (!reservationFromParams?.id) return;
@@ -471,7 +440,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
   }, [reservation?.id, reservation?.status]);
 
   useEffect(() => {
-<<<<<<< HEAD
     let cancelled = false;
 
     const loadOwnerConnectStatus = async () => {
@@ -509,8 +477,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
   }, [reservation?.listing?.car?.ownerId, paymentMethod]);
 
   useEffect(() => {
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
     if (!resumeCardPayment) return;
     if (!canResumePendingCardPayment) return;
     if (loading) return;
@@ -691,7 +657,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
       const goBackToPrevious = () => navigation.navigate('ReservationsTab', { screen: 'ReservationDetails', params: { reservationId: reservation.id } });
 
       if (paymentResult.success) {
-<<<<<<< HEAD
         setPaymentStatus('held_in_escrow');
         setJustCompletedCardPayment(true);
         Alert.alert(t("screens.reservations.reservationdetailsscreen.paiementSecurise"), t("screens.reservations.reservationdetailsscreen.votrePaiementEstMaintenantSecuriseEnEscrow"),
@@ -703,18 +668,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
           onPress: () => refreshPaymentStatus(token)
         }]
 
-=======
-        setPaymentStatus('completed');
-        Alert.alert(
-          'Paiement réussi',
-          'Votre paiement a été traité avec succès. Votre réservation est confirmée!',
-          [
-            {
-              text: 'OK',
-              onPress: () => goBackToPrevious(),
-            },
-          ]
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
         );
         return;
       }
@@ -781,7 +734,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
     }
   };
 
-<<<<<<< HEAD
   const handleConfirmHandover = async () => {
     try {
       const token = await storage.getItemAsync('userToken');
@@ -843,10 +795,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
 
   const formatPrice = (value) => value.toLocaleString(getCurrentLocale());
   const formatDate = (date) => new Date(date).toLocaleDateString(getCurrentLocale());
-=======
-  const formatPrice = (value) => value.toLocaleString('fr-FR');
-  const formatDate = (date) => new Date(date).toLocaleDateString('fr-FR');
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 
   const rentalSubtotal = useMemo(() => {
     const computed = calculateReservationPrice(listing || {}, startRaw, endRaw, { deliveryFee: 0 });
@@ -871,7 +819,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
     [rentalSubtotal, deliveryFee, serviceFee]
   );
 
-<<<<<<< HEAD
   const canLeaveReview = reservation?.status === 'finished';
   const canAddAnotherReview = canLeaveReview && (Array.isArray(reviews) ? reviews.length : 0) < 5;
 
@@ -947,8 +894,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
     }, [fetchReview])
   );
 
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.header}>
@@ -1200,7 +1145,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
           amount={safeTotalPrice}
           paymentMethod={paymentMethod} />
 
-<<<<<<< HEAD
         }
 
         {justCompletedCardPayment && paymentStatus === 'held_in_escrow' &&
@@ -1310,16 +1254,6 @@ const ReservationDetailsScreen = ({ navigation, route }) => {const { t } = useTr
           </View>
         }
 
-=======
-        {/* Payment Method Selector */}
-        {showPaymentMethodSelector && (
-          <PaymentMethodSelector
-            selectedMethod={paymentMethod}
-            onMethodSelect={setPaymentMethod}
-          />
-        )}
-
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
       {/* Terms & Conditions */}
       {showTermsSection &&
         <View style={styles.termsSection}>
@@ -1715,7 +1649,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(143, 108, 255, 0.1)'
   },
-<<<<<<< HEAD
   reviewLoadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1791,8 +1724,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center'
   },
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   termsCheckbox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1808,7 +1739,6 @@ const styles = StyleSheet.create({
     color: '#a566ff',
     fontWeight: '600'
   },
-<<<<<<< HEAD
   escrowActionCard: {
     backgroundColor: 'rgba(79, 140, 255, 0.12)',
     borderRadius: 14,
@@ -1895,8 +1825,6 @@ const styles = StyleSheet.create({
     color: '#0d1227',
     fontWeight: '900'
   },
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   actionButtonsSection: {
     marginBottom: 24,
     paddingHorizontal: 8

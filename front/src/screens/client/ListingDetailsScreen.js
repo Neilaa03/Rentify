@@ -1,26 +1,23 @@
-import React, { useMemo, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { useFavorites } from '../../contexts/FavoritesContext';
-<<<<<<< HEAD
 import { API_ENDPOINTS } from '../../constants/api';
 import RatingStars from '../../components/reviews/RatingStars';
 import ReviewCard from '../../components/reviews/ReviewCard';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
+import { useAuth } from '../../contexts/AuthContext';
+import GuestAuthPrompt from '../../components/auth/GuestAuthPrompt';
+import { useGuestAuthPrompt } from '../../utils/guestAccess';
 
 const formatPrice = (value) => `${Number(value || 0).toLocaleString(getCurrentLocale())} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
-<<<<<<< HEAD
 const roundToHalf = (value) => Math.round(value * 2) / 2;
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 
 const SpecCard = ({ icon, value, label }) => (
   <View style={styles.specCard}>
@@ -38,7 +35,8 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   const groupedOffers = Array.isArray(route?.params?.groupedOffers) ? route.params.groupedOffers : [];
   const [activeIndex, setActiveIndex] = useState(0);
   const { isFavorite, toggleFavorite } = useFavorites();
-<<<<<<< HEAD
+  const { isAuthenticated } = useAuth();
+  const { authPromptVisible, closeAuthPrompt, confirmAuthPrompt, requireAuth: requireGuestAuth } = useGuestAuthPrompt(navigation);
   const [reviewSummary, setReviewSummary] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -72,8 +70,10 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   }, [cityOffers, listing, selectedOfferId]);
 
   const canChooseCity = cityOffers.length > 1;
+  const requireAuth = () => requireGuestAuth(isAuthenticated);
 
   const goToReservationDatePicker = () => {
+    if (!requireAuth()) return;
     navigation.navigate('ReservationDatePicker', {
       listing: selectedOffer,
       selectedCity: selectedOffer?.city || '',
@@ -133,8 +133,6 @@ const ListingDetailsScreen = ({ navigation, route }) => {
     const next = Math.round(x / Math.max(1, width));
     if (next !== activeReviewIndex) setActiveReviewIndex(next);
   };
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 
   const imageUrls = useMemo(() => {
     const toImageUrl = (img) => {
@@ -198,7 +196,10 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             <View style={styles.heroActionsRight}>
               <TouchableOpacity
                 style={styles.heroButton}
-                onPress={() => toggleFavorite(selectedOffer.id)}
+                onPress={() => {
+                  if (!requireAuth()) return;
+                  toggleFavorite(selectedOffer.id);
+                }}
                 activeOpacity={0.85}
               >
                 <Ionicons
@@ -294,7 +295,6 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           <Text style={styles.sectionTitle}>{t('screens.client.listingdetailsscreen.description')}</Text>
           <Text style={styles.description}>{selectedOffer.description}</Text>
 
-<<<<<<< HEAD
           <View style={styles.reviewsHeaderRow}>
             <Text style={styles.sectionTitle}>
               {reviewCount
@@ -352,9 +352,6 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           )}
 
           <Text style={styles.sectionTitle}>{t('screens.client.listingdetailsscreen.recuperation')}</Text>
-=======
-          <Text style={styles.sectionTitle}>Récupération</Text>
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
           <View style={styles.pickupInfoCard}>
             <View style={styles.pickupInfoRow}>
               <Ionicons name="location-outline" size={16} color="#cfd3ff" />
@@ -417,6 +414,7 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.ownerMessageButton}
               onPress={() => {
+                if (!requireAuth()) return;
                 const otherUserId = selectedOffer?.car?.ownerId;
                 if (!otherUserId) return;
                 const rawName = String(selectedOffer?.owner?.name || '').trim();
@@ -438,6 +436,11 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
       </ScrollView>
+      <GuestAuthPrompt
+        visible={authPromptVisible}
+        onClose={closeAuthPrompt}
+        onConfirm={confirmAuthPrompt}
+      />
     </View>
   );
 };
@@ -627,7 +630,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 8,
   },
-<<<<<<< HEAD
   reviewsHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -730,8 +732,6 @@ const styles = StyleSheet.create({
     color: '#dce1ff',
     fontWeight: '700',
   },
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   description: {
     color: '#9aa2cc',
     fontSize: 15,

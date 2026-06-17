@@ -3,6 +3,7 @@
     "name": "Rentify",
     "owner": "rentify-app",
     "slug": "rentify",
+    "scheme": "rentify",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",

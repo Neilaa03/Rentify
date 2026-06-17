@@ -30,9 +30,12 @@ import {
 } from '../../utils/reservationUtils';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
+import GuestAuthPrompt from '../../components/auth/GuestAuthPrompt';
+import { useGuestAuthPrompt } from '../../utils/guestAccess';
 
 const ReservationDatePickerScreen = ({ navigation, route }) => {
   const { t } = useTranslation();
+  const { authPromptVisible, showAuthPrompt, closeAuthPrompt, confirmAuthPrompt } = useGuestAuthPrompt(navigation);
   const DELIVERY_ADDRESS_REGEX = /^\d+\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*\s+\d{4,5}\s+[A-Za-zÀ-ÿ'’.-]+(?:\s+[A-Za-zÀ-ÿ'’.-]+)*$/u;
   const {
     listing: initialListing,
@@ -393,7 +396,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       setLoading(true);
       const token = await storage.getItemAsync('userToken');
       if (!token) {
-        Alert.alert(t('screens.reservations.reservationdatepickerscreen.erreur'), t('screens.reservations.reservationdatepickerscreen.authentificationRequiseVeuillezVousConnecter'));
+        showAuthPrompt();
         return;
       }
       const isEditFlow = !!isEditing && !!reservationFromParams?.id;
@@ -703,6 +706,11 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+      <GuestAuthPrompt
+        visible={authPromptVisible}
+        onClose={closeAuthPrompt}
+        onConfirm={confirmAuthPrompt}
+      />
     </LinearGradient>
   );
 };

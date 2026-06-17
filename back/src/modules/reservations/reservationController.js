@@ -133,6 +133,24 @@ export const confirmPaymentHandler = async (req, res) => {
     }
 };
 
+export const confirmHandoverHandler = async (_req, res) => {
+    res.status(501).json({
+        error: 'This legacy handover endpoint is no longer used. Use the pickup/return code verification flow.',
+    });
+};
+
+export const disputeHandoverHandler = async (_req, res) => {
+    res.status(501).json({
+        error: 'Escrow dispute flow is not available in this build.',
+    });
+};
+
+export const resolveEscrowDisputeHandler = async (_req, res) => {
+    res.status(501).json({
+        error: 'Escrow dispute flow is not available in this build.',
+    });
+};
+
 // =========================================================
 // OWNER / MANAGER HANDLERS
 // =========================================================

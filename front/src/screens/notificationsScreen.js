@@ -15,10 +15,10 @@ import {
   getNotificationUnreadCount,
   markNotificationAsRead,
   markAllNotificationsAsRead } from
-'../../services/notifications';
-import storage from '../../utils/storage';
-import { API_ENDPOINTS } from '../../constants/api';import { useTranslation } from "react-i18next";
-import { getFriendlyError } from '../../utils/friendlyError';
+'../services/notifications';
+import storage from '../utils/storage';
+import { API_ENDPOINTS } from '../constants/api';import { useTranslation } from "react-i18next";
+import { getFriendlyError } from '../utils/friendlyError';
 
 const NotificationRow = ({ item, onPress }) =>
 <TouchableOpacity
@@ -78,7 +78,7 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useT
     setError('');
     try {
       const [items, count] = await Promise.all([
-      getNotifications({ filter: 'unread' }),
+      getNotifications({ filter: selectedFilter }),
       getNotificationUnreadCount()]
       );
       setNotifications(Array.isArray(items) ? items : []);
@@ -154,24 +154,34 @@ const UnreadNotificationsScreen = ({ navigation, route }) => {const { t } = useT
             <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.screenTitle}>Notifications</Text>
-          <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllButton}>
-            <Text style={styles.markAllText}>Tout lire</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('NotificationsHistory', { user })}
+            style={styles.iconButton}
+            activeOpacity={0.85}>
+            <Ionicons name="time-outline" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.filterRow}>
           {['all', 'unread'].map((option) => (
             <TouchableOpacity
-              onPress={() => navigation.navigate('NotificationsHistory', { user })}
-              style={styles.iconButton}
+              key={option}
+              onPress={() => {
+                setFilter(option);
+                loadNotifications(option);
+              }}
+              style={[styles.filterButton, filter === option && styles.filterButtonActive]}
               activeOpacity={0.85}>
-              
-              <Ionicons name="time-outline" size={22} color="#fff" />
+              <Text style={[styles.filterLabel, filter === option && styles.filterLabelActive]}>
+                {option === 'all'
+                  ? t("screens.notifications.notificationshistoryscreen.toutes", { defaultValue: 'Toutes' })
+                  : t("screens.notifications.notificationshistoryscreen.nonLues", { defaultValue: 'Non lues' })}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllButton} activeOpacity={0.85}>
-              <Text style={styles.markAllText}>{t("screens.notifications.unreadnotificationsscreen.toutLire")}</Text>
-            </TouchableOpacity>
-          </View>
+          ))}
+          <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAllButton} activeOpacity={0.85}>
+            <Text style={styles.markAllText}>{t("screens.notifications.unreadnotificationsscreen.toutLire")}</Text>
+          </TouchableOpacity>
         </View>
 
         {isLoading ?
@@ -208,6 +218,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, paddingHorizontal: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 16 },
   backButton: { padding: 8 },
+  iconButton: { padding: 8 },
   screenTitle: { color: '#fff', fontWeight: '700', fontSize: 18 },
   markAllButton: { paddingVertical: 8, paddingHorizontal: 12 },
   markAllText: { color: '#8f6cff', fontWeight: '700' },

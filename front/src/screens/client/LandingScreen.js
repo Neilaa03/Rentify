@@ -2,10 +2,18 @@ import React from 'react';
 import { StyleSheet, View, Text, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';import { useTranslation } from "react-i18next";
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 
 const LandingScreen = ({ navigation }) => {const { t } = useTranslation();
   const { colors } = useTheme();
+  const { clearSession } = useAuth();
+
+  const skipForNow = async () => {
+    await clearSession();
+    navigation.navigate('ClientApp');
+  };
+
   return (
     <View style={styles.container}>
             <ImageBackground
@@ -36,7 +44,7 @@ const LandingScreen = ({ navigation }) => {const { t } = useTranslation();
 
                         <TouchableOpacity
               style={[styles.secondaryButton, { borderColor: colors.primary }]}
-              onPress={() => navigation.navigate('ClientApp')}>
+              onPress={skipForNow}>
               
                             <Text style={[styles.buttonText, { color: colors.text }]}>{t("screens.client.landingscreen.skipForNow")}</Text>
                         </TouchableOpacity>

@@ -15,6 +15,9 @@ import { parseLocalDate, formatLocalYmd } from '../../utils/reservationUtils';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import GuestAuthPrompt from '../../components/auth/GuestAuthPrompt';
+import { useGuestAuthPrompt } from '../../utils/guestAccess';
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
@@ -83,6 +86,8 @@ const sortListingsForDisplay = (items) => [...items].sort((a, b) => {
 const HomeScreen = ({ navigation, route }) => {
     const { t } = useTranslation();
     const { colors } = useTheme();
+    const { isAuthenticated, clearSession } = useAuth();
+    const { authPromptVisible, closeAuthPrompt, confirmAuthPrompt, requireAuth: requireGuestAuth } = useGuestAuthPrompt(navigation);
     const [activeTab, setActiveTab] = useState('home');
     const [searchValue, setSearchValue] = useState('');
     const [activeFilter, setActiveFilter] = useState('all');
@@ -173,6 +178,18 @@ const HomeScreen = ({ navigation, route }) => {
     const dismissPhoneReminder = async () => {
         setShowPhoneReminder(false);
         setPhoneReminderDismissedThisSession(true);
+    };
+
+    const requireAuth = () => requireGuestAuth(isAuthenticated);
+
+    const handleLogoutToLanding = async () => {
+        await clearSession();
+        const rootNavigation = navigation.getParent?.()?.getParent?.() || navigation.getParent?.() || navigation;
+        if (rootNavigation?.reset) {
+            rootNavigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
+            return;
+        }
+        navigation.navigate('Landing');
     };
 
     const clearDateFilters = () => {
@@ -329,17 +346,29 @@ const HomeScreen = ({ navigation, route }) => {
                     <View style={styles.header}>
                         <Text style={[styles.logo, { color: colors.white }]}>{t('screens.client.homescreen.tousLesVehicules')}</Text>
                         <View style={styles.headerRight}>
-                            <NotificationIconButton navigation={navigation} style={styles.notificationButton} iconSize={24} />
-                            <TouchableOpacity style={styles.headerIcon}>
+                            {isAuthenticated ? (
+                                <NotificationIconButton navigation={navigation} style={styles.notificationButton} iconSize={24} />
+                            ) : (
+                                <TouchableOpacity style={styles.notificationButton} onPress={requireAuth}>
+                                    <Ionicons name="notifications-outline" size={24} color="#fff" />
+                                </TouchableOpacity>
+                            )}
+                            <TouchableOpacity style={styles.headerIcon} onPress={requireAuth}>
                                 <Ionicons name="heart-outline" size={24} color="#fff" />
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 style={styles.logoutButton}
-                                onPress={() => navigation.navigate('Landing')}
+                                onPress={handleLogoutToLanding}
                             >
                                 <Ionicons name="log-out" size={24} color="#fff" />
                             </TouchableOpacity>
-                            <MessageIconButton navigation={navigation} style={styles.logoutButton} iconSize={24} />
+                            {isAuthenticated ? (
+                                <MessageIconButton navigation={navigation} style={styles.logoutButton} iconSize={24} />
+                            ) : (
+                                <TouchableOpacity style={styles.logoutButton} onPress={requireAuth}>
+                                    <Ionicons name="chatbubble-ellipses-outline" size={24} color="#fff" />
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
 
@@ -580,7 +609,10 @@ const HomeScreen = ({ navigation, route }) => {
                                 key={listing.id}
                                 listing={listing}
                                 isFavorite={isFavorite(listing.selectedOffer?.id || listing.id)}
-                                onToggleFavorite={() => toggleFavorite(listing.selectedOffer?.id || listing.id)}
+                                onToggleFavorite={() => {
+                                    if (!requireAuth()) return;
+                                    toggleFavorite(listing.selectedOffer?.id || listing.id);
+                                }}
                                 onPress={() => navigation.navigate('ListingDetails', {
                                     listing: listing.selectedOffer || listing,
                                     groupedOffers: listing.offers,
@@ -598,6 +630,11 @@ const HomeScreen = ({ navigation, route }) => {
                     <AssistantWidget />
                 </SafeAreaView>
             </ImageBackground>
+            <GuestAuthPrompt
+                visible={authPromptVisible}
+                onClose={closeAuthPrompt}
+                onConfirm={confirmAuthPrompt}
+            />
         </View>
     );
 };

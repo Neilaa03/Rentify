@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import {
   Alert,
@@ -18,15 +17,10 @@ import {
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useFocusEffect } from '@react-navigation/native';
-=======
-import React, { useMemo, useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { API_ENDPOINTS } from '../../constants/api';
 import OwnerBottomNavigation from '../../components/navigation/OwnerBottomNavigation';
-<<<<<<< HEAD
 import { Badge } from '../../components/agency/AgencyPrimitives';
 import storage from '../../utils/storage';
 import { appFont } from '../../utils/responsive';
@@ -111,24 +105,6 @@ const SectionCard = ({ items, onItemPress }) => {
     </View>
   );
 };
-=======
-
-const SectionCard = ({ items }) => (
-  <View style={styles.sectionCard}>
-    {items.map((item, index) => (
-      <TouchableOpacity key={item.label} style={[styles.rowItem, index !== items.length - 1 && styles.rowItemBorder]}>
-        <View style={styles.rowLeft}>
-          <View style={styles.iconWrap}>
-            <Ionicons name={item.icon} size={17} color="#8f6cff" />
-          </View>
-          <Text style={styles.rowLabel}>{item.label}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color="#7d83b0" />
-      </TouchableOpacity>
-    ))}
-  </View>
-);
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 
 const StatCard = ({ value, label }) => {
   const { colors } = useTheme();
@@ -187,7 +163,6 @@ const pickLatestDocument = (documents = []) =>
     })[0] || null;
 
 const ProfileScreen = ({ navigation, route }) => {
-<<<<<<< HEAD
   const { t, i18n } = useTranslation();
   const { colors, mode, setThemeMode } = useTheme();
   const { clearSession } = useAuth();
@@ -254,14 +229,6 @@ const ProfileScreen = ({ navigation, route }) => {
     input: profileFont(width, appFont(14), 13, 12.5),
     logout: profileFont(width, appFont(15), 14, 13),
   };
-=======
-  const [profile, setProfile] = useState(route?.params?.user || null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const token = route?.params?.token;
-  const isOwner = route?.params?.user?.role === 'owner' || profile?.role === 'owner';
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 
   const refreshProfile = useCallback(async () => {
     let effectiveToken = token;
@@ -495,7 +462,6 @@ const ProfileScreen = ({ navigation, route }) => {
       ? (identityReason || t('screens.client.profilescreen.underReviewFallbackDocument', { document: verificationDocumentLabel, defaultValue: `Your ${verificationDocumentLabel} is being reviewed.` }))
       : t('screens.client.profilescreen.uploadDocumentPrompt', { document: verificationDocumentLabel, defaultValue: `Upload your ${verificationDocumentLabel}` });
 
-<<<<<<< HEAD
   const openPersonalInfoEditor = () => {
     setEditFirstName(profile?.first_name || profile?.firstName || '');
     setEditLastName(profile?.last_name || profile?.lastName || '');
@@ -939,14 +905,11 @@ const ProfileScreen = ({ navigation, route }) => {
     await Linking.openURL(PLAY_STORE_REVIEW_URL);
   };
 
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   return (
     <View style={styles.container}>
       <ImageBackground source={require('../../assets/background.png')} style={styles.background} resizeMode="cover">
         <SafeAreaView edges={['top', 'left', 'right']} style={[styles.overlay, { backgroundColor: colors.overlay }]}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-<<<<<<< HEAD
             <Text style={[styles.title, { fontSize: fontSize.title, color: colors.white }]}>{t('screens.client.profilescreen.profil')}</Text>
 
             {isOwner ? (
@@ -1368,23 +1331,6 @@ const ProfileScreen = ({ navigation, route }) => {
               </View>
             )}
 
-=======
-            <Text style={styles.title}>Profil</Text>
-
-            <View style={styles.profileCard}>
-              <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
-              <View style={styles.profileInfo}>
-                <Text style={styles.profileName}>{fullName}</Text>
-                <Text style={styles.profilePhone}>{profile?.phone || profile?.email || '-'}</Text>
-                {!!error && <Text style={styles.errorText}>{error}</Text>}
-                {loading && <Text style={styles.loadingText}>Chargement...</Text>}
-              </View>
-              <TouchableOpacity style={styles.editBtn}>
-                <Ionicons name="pencil-outline" size={16} color="#d6dbff" />
-              </TouchableOpacity>
-            </View>
-
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
             <View style={styles.statsRow}>
               {isOwner ? (
                 <>
@@ -1483,14 +1429,11 @@ const ProfileScreen = ({ navigation, route }) => {
                   icon: 'cash-outline',
                 }] : []),
               ]}
-<<<<<<< HEAD
               onItemPress={(item) => {
                 if (item.action === 'personalInfo') openPersonalInfoEditor();
                 if (item.action === 'password') openPasswordEditor();
                 if (item.action === 'stripe' && !connectLoading) configureStripePayouts();
               }}
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
             />
 
             <Text style={styles.sectionTitle}>{t('screens.client.profilescreen.preferences')}</Text>
@@ -1501,12 +1444,9 @@ const ProfileScreen = ({ navigation, route }) => {
                 { action: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
                 { action: 'privacy', label: t('screens.client.profilescreen.confidentialiteSecurite'), icon: 'shield-checkmark-outline' },
               ]}
-<<<<<<< HEAD
               onItemPress={(item) => {
                 if (item.action) setActiveInfoPage(item.action);
               }}
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
             />
 
             <Text style={styles.sectionTitle}>{t('screens.client.profilescreen.aideSupport')}</Text>
@@ -1516,12 +1456,9 @@ const ProfileScreen = ({ navigation, route }) => {
                 { action: 'about', label: 'A propos de Rentify', icon: 'information-circle-outline' },
                 { action: 'rate', label: "Evaluer l'application", icon: 'star-outline' },
               ]}
-<<<<<<< HEAD
               onItemPress={(item) => {
                 if (item.action) setActiveInfoPage(item.action);
               }}
-=======
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
             />
 
             <TouchableOpacity
@@ -1529,11 +1466,7 @@ const ProfileScreen = ({ navigation, route }) => {
               onPress={handleLogout}
             >
               <Ionicons name="log-out-outline" size={18} color="#ff4f5e" />
-<<<<<<< HEAD
               <Text style={[styles.logoutText, { fontSize: fontSize.logout }]}>{t('screens.client.profilescreen.seDeconnecter')}</Text>
-=======
-              <Text style={styles.logoutText}>Se deconnecter</Text>
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
             </TouchableOpacity>
 
             <Text style={styles.version}>Rentify v1.0.0</Text>
@@ -1550,7 +1483,6 @@ const styles = StyleSheet.create({
   background: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(5, 6, 22, 0.72)' },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 96 },
-<<<<<<< HEAD
   verificationPanel: {
     marginTop: -2,
     marginBottom: 2,
@@ -1575,9 +1507,6 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   title: { fontSize: appFont(22, 24), color: '#f2f4ff', fontWeight: '700', marginTop: 10, marginBottom: 14 },
-=======
-  title: { fontSize: 40 / 2, color: '#f2f4ff', fontWeight: '700', marginTop: 10, marginBottom: 14 },
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   profileCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -1619,7 +1548,6 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   profileInfo: { flex: 1, marginLeft: 12 },
-<<<<<<< HEAD
   profileName: { color: '#f2f4ff', fontWeight: '700', fontSize: appFont(17) },
   profilePhone: { color: '#9ca2cb', marginTop: 6, fontSize: appFont(14) },
   googleBadge: {
@@ -1637,12 +1565,6 @@ const styles = StyleSheet.create({
   },
   loadingText: { color: '#b4b9dc', marginTop: 6, fontSize: appFont(13) },
   errorText: { color: '#ff7b89', marginTop: 6, fontSize: appFont(13) },
-=======
-  profileName: { color: '#f2f4ff', fontWeight: '700', fontSize: 15 },
-  profilePhone: { color: '#9ca2cb', marginTop: 6, fontSize: 12 },
-  loadingText: { color: '#b4b9dc', marginTop: 6, fontSize: 12 },
-  errorText: { color: '#ff7b89', marginTop: 6, fontSize: 12 },
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
   editBtn: {
     width: 34,
     height: 34,
@@ -1907,7 +1829,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-<<<<<<< HEAD
   logoutText: { color: '#ff4f5e', fontSize: appFont(15), fontWeight: '700' },
   version: { textAlign: 'center', color: '#7f84ae', fontSize: appFont(12), marginTop: 14, marginBottom: 8 },
   identityCard: {
@@ -1960,10 +1881,6 @@ const styles = StyleSheet.create({
   identityActionText: { color: '#dce2ff', fontSize: appFont(12), fontWeight: '700' },
   identityActionPrimaryText: { color: '#fff', fontSize: appFont(12), fontWeight: '700' },
   identityActionDangerText: { color: '#ff7b89', fontSize: appFont(12), fontWeight: '700' },
-=======
-  logoutText: { color: '#ff4f5e', fontSize: 16 / 1.95, fontWeight: '700' },
-  version: { textAlign: 'center', color: '#7f84ae', fontSize: 12, marginTop: 14, marginBottom: 8 },
->>>>>>> 6e18d40c94ed37cda3af1232e882450fb434e211
 });
 
 export default ProfileScreen;

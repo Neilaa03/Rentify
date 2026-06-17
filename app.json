@@ -2,6 +2,7 @@
   "expo": {
     "name": "Rentify",
     "slug": "rentify",
+    "scheme": "rentify",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/logo.png",
