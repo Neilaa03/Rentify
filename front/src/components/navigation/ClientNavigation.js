@@ -17,8 +17,7 @@ import HandoverVerifyScreen from '../../screens/handover/HandoverVerifyScreen';
 import ReservationsScreen from '../../screens/reservations/ReservationsScreen';
 import ProfileScreen from '../../screens/client/ProfileScreen';
 import InboxScreen from '../../screens/messages/InboxScreen';
-import UnreadNotificationsScreen from '../../screens/notifications/UnreadNotificationsScreen';
-import NotificationsHistoryScreen from '../../screens/notifications/NotificationsHistoryScreen';
+import NotificationsScreen from '../../screens/notificationsScreen';
 import ChatScreen from '../../screens/messages/ChatScreen';
 import { FavoritesProvider } from '../../contexts/FavoritesContext';import { useTranslation } from "react-i18next";
 
@@ -154,9 +153,8 @@ export function ClientNavigation() {const { t } = useTranslation();
     borderTopWidth: 0,
     marginHorizontal: 16,
     borderRadius: 18,
-    height: 58,
-    paddingTop: 10,
-    paddingBottom: 10,
+    height: 65,
+    paddingVertical: 12,
     position: 'absolute',
     bottom: bottomOffset + (insets?.bottom || 0),
     left: 0,

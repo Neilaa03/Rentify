@@ -11,8 +11,8 @@ import {
   Platform } from
 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import storage from '../../utils/storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../constants/colors';
 import { API_ENDPOINTS } from '../../constants/api';
 import AuthHeader from '../../components/auth/AuthHeader';
@@ -223,6 +223,9 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
         if (data.token) {
           await storage.setItemAsync('userToken', data.token);
         }
+
+        console.log("Email:", trimmedEmail);
+        console.log("API Endpoint:", API_ENDPOINTS.AUTH.LOGIN);
 
         try {
           if (data.token) {

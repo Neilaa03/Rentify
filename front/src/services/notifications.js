@@ -45,11 +45,3 @@ export const markAllNotificationsAsRead = async () => {
     headers: authHeaders(token),
   });
 };
-
-export const deleteNotification = async (notificationId) => {
-  const token = await getToken();
-  return fetchJson(`/api/notifications/${notificationId}`, {
-    method: 'DELETE',
-    headers: authHeaders(token),
-  });
-};

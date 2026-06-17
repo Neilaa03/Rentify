@@ -6,7 +6,6 @@ import { Image } from 'react-native';
 import {
   Alert,
   Linking,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -351,19 +350,12 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
     typeof document?.uri === 'string' && document.uri.trim() ||
     '';
 
-    if (!candidateUrl) {
-      await pickDocument(type);
-      return;
-    }
-
-    const isRemoteUrl = /^https?:\/\//i.test(candidateUrl);
-    if (!isRemoteUrl) {
+    if (candidateUrl) {
       try {
         await Linking.openURL(candidateUrl);
       } catch (_error) {
         Alert.alert(t("screens.owner.carformscreen.erreur"), t("screens.owner.carformscreen.impossibleDouvrirCeDocumentLocal"));
       }
-      return;
     }
 
     try {

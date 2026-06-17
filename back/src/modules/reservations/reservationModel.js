@@ -501,7 +501,7 @@ export const updateReservationDetails = async (id, updates) => {
     // Fetch pickup details (delivery fee snapshot)
     const { data: pickupRows, error: pickupFetchError } = await supabase
         .from(PICKUP_TABLE)
-        .select('delivery_fee, pickup_method, pickup_address')
+        .select('delivery_fee')
         .eq('reservation_id', id)
         .limit(1);
 

@@ -35,7 +35,7 @@ export const createUser = async (userData) => {
             is_active: true
         }
         ])
-        .select('id, email, first_name, last_name, phone, role, is_verified, email_verified_at, is_active, stripe_account_id')
+        .select('id, email, first_name, last_name, phone, role, is_verified, is_active')
         .single();
 
     if (error) throw error;

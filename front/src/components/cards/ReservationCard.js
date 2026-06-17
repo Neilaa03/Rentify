@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';import { useTranslation } from "react-i18next";
 import { getCurrentLocale } from '../../i18n';
@@ -131,7 +131,7 @@ const ReservationCard = ({
       </View>
 
       {/* Content Area */}
-      <View style={[styles.contentWrapper, tightLayout && styles.tightContentWrapper]}>
+      <View style={styles.contentWrapper}>
         {/* Top: Car Name */}
         <View style={styles.titleSection}>
           <Text style={[styles.carName, { fontSize: fontSize.carName, color: colors.text }]} numberOfLines={1}>{listing?.title || `${listing?.car?.brand || ''} ${listing?.car?.model || ''}`.trim() || 'Vehicle'}</Text>

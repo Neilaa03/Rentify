@@ -219,10 +219,7 @@ export const register = async (req, res) => {
         const newUser = await createUser({
             ...validatedData,
             password: hashedPassword,
-            isVerified,
-            emailVerifiedAt: null,
-            emailVerificationTokenHash: tokenHash,
-            emailVerificationExpiresAt: expiresAt,
+            isVerified: isVerified
         });
 
         const verifyUrl = buildVerifyUrl({
@@ -234,12 +231,11 @@ export const register = async (req, res) => {
         await sendVerificationEmail({ to: newUser.email, verifyUrl });
 
         res.status(201).json({
-            message: 'Check your email to verify your account',
-            user: newUser,
+            message: isVerified ? 'Registration complete' : 'Registration pending verification',
+            user: newUser
         });
     } catch (err) {
-        const f = formatAppError(err);
-        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+        res.status(400).json({ error: err.message });
     }
 };
 
@@ -265,10 +261,6 @@ export const login = async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        if (!user.email_verified_at) {
-            return res.status(403).json({ error: 'EMAIL_NOT_VERIFIED' });
-        }
-
         const token = jwt.sign(
             { id: user.id, role: user.role },
             JWT_SECRET,
@@ -286,8 +278,7 @@ export const login = async (req, res) => {
 
     } catch (err) {
         console.error('Login error:', err);
-        const f = formatAppError(err);
-        return res.status(f.status).json({ error: f.message, ...(f.fields ? { fields: f.fields } : {}) });
+        res.status(400).json({ error: err.message });
     }
 };
 

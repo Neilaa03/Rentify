@@ -1,6 +1,5 @@
 import * as model from './reservationModel.js';
 import { createNotification } from '../notifications/notificationModel.js';
-import { disputeEscrowForReservation, releaseEscrowForReservation, resolveDisputedEscrowForReservation } from '../escrow/escrowService.js';
 import {
     createReservationSchema,
     updateStatusSchema,
@@ -131,87 +130,6 @@ export const confirmPaymentHandler = async (req, res) => {
         res.json({ message: "Payment confirmed", result });
     } catch (err) {
         res.status(400).json({ error: err.message });
-    }
-};
-
-export const confirmHandoverHandler = async (req, res) => {
-    try {
-        const { id } = idParamSchema.parse(req.params);
-        const reservation = await model.getReservationById(id);
-
-        if (reservation.renterId !== req.user.id) {
-            return res.status(403).json({ error: 'You can only confirm handover for your own reservations' });
-        }
-
-        if (['cancelled', 'finished', 'refunded'].includes(reservation.status)) {
-            return res.status(400).json({ error: `Cannot confirm handover for a ${reservation.status} reservation.` });
-        }
-
-        const result = await releaseEscrowForReservation({
-            reservationId: id,
-            actorUserId: req.user.id,
-            reason: 'client_handover_confirmation',
-        });
-
-        res.json({
-            message: 'Handover confirmed and escrow released',
-            payment: result.payment,
-            escrow: result.escrow,
-            balances: result.ownerBalances,
-        });
-    } catch (err) {
-        res.status(err.statusCode || 400).json({ error: err.message });
-    }
-};
-
-export const disputeHandoverHandler = async (req, res) => {
-    try {
-        const { id } = idParamSchema.parse(req.params);
-        const reservation = await model.getReservationById(id);
-
-        if (reservation.renterId !== req.user.id) {
-            return res.status(403).json({ error: 'You can only dispute your own reservations' });
-        }
-
-        const result = await disputeEscrowForReservation({
-            reservationId: id,
-            actorUserId: req.user.id,
-            reason: req.body?.reason || 'client_reported_issue',
-        });
-
-        res.json({
-            message: 'Escrow marked as disputed',
-            payment: result.payment,
-            escrow: result.escrow,
-        });
-    } catch (err) {
-        res.status(err.statusCode || 400).json({ error: err.message });
-    }
-};
-
-export const resolveEscrowDisputeHandler = async (req, res) => {
-    try {
-        const { id } = idParamSchema.parse(req.params);
-        const action = req.body?.action || 'release';
-
-        if (!['admin', 'companyManager'].includes(req.user?.role)) {
-            return res.status(403).json({ error: 'Unauthorized' });
-        }
-
-        const result = await resolveDisputedEscrowForReservation({
-            reservationId: id,
-            actorUserId: req.user.id,
-            action,
-        });
-
-        res.json({
-            message: result.resolved ? 'Escrow dispute resolved' : 'Escrow left on hold',
-            payment: result.payment,
-            escrow: result.escrow,
-            balances: result.ownerBalances,
-        });
-    } catch (err) {
-        res.status(err.statusCode || 400).json({ error: err.message });
     }
 };
 

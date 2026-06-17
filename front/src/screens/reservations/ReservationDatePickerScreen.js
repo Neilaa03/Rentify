@@ -126,7 +126,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
   // Fetch full listing details and reserved dates
   useEffect(() => {
     fetchListingDetails();
-  }, [initialListing.id, reservationFromParams?.id]);
+  }, []);
 
   useEffect(() => {
     loadClientVerification();
@@ -134,7 +134,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
 
   // When editing an existing reservation, preload the current dates as the initial draft selection.
   useEffect(() => {
-    if (!reservationFromParams) return;
+    if (!isEditing || !reservationFromParams) return;
     const existingStart =
       reservationFromParams.startDate ||
       reservationFromParams.start_date ||
@@ -147,16 +147,6 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       null;
     if (existingStart) setStartDate(existingStart);
     if (existingEnd) setEndDate(existingEnd);
-    setPickupMethod(
-      reservationFromParams?.pickup?.pickupMethod ||
-      reservationFromParams?.pickup?.pickup_method ||
-      'owner_place'
-    );
-    setDeliveryAddress(
-      reservationFromParams?.pickup?.pickupAddress ||
-      reservationFromParams?.pickup?.pickup_address ||
-      ''
-    );
     if (existingStart && existingEnd) calculatePrice(existingStart, existingEnd);
   }, [isEditing, reservationFromParams]);
 
@@ -406,7 +396,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
         Alert.alert(t('screens.reservations.reservationdatepickerscreen.erreur'), t('screens.reservations.reservationdatepickerscreen.authentificationRequiseVeuillezVousConnecter'));
         return;
       }
-      const isEditFlow = !!reservationFromParams?.id;
+      const isEditFlow = !!isEditing && !!reservationFromParams?.id;
       const response = await fetch(
         isEditFlow
           ? API_ENDPOINTS.RESERVATIONS.UPDATE_DETAILS(reservationFromParams.id)
@@ -419,12 +409,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           },
           body: JSON.stringify(
             isEditFlow
-              ? {
-                  startDate,
-                  endDate,
-                  pickupMethod,
-                  pickupAddress: pickupMethod === 'renter_delivery' ? deliveryAddress.trim() : undefined,
-                }
+              ? { startDate, endDate }
               : {
                   listingId: listing.id,
                   startDate,
@@ -439,12 +424,6 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Keep the current date picker route in sync with the latest reservation state.
-        navigation.setParams?.({
-          reservation: data,
-          isEditing: true,
-        });
-
         if (isEditFlow) {
           goToReservationDetails(data);
           return;
@@ -586,7 +565,7 @@ const ReservationDatePickerScreen = ({ navigation, route }) => {
           />
         </View>
 
-        {listing ? (
+        {!isEditing ? (
           <View style={styles.pickupSection}>
             <Text style={styles.pickupTitle}>{t('screens.reservations.reservationdatepickerscreen.recuperation')}</Text>
             <View style={styles.pickupRow}>
