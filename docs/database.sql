@@ -346,12 +346,24 @@ CREATE TABLE code (
 
     pickup_id UUID NOT NULL REFERENCES pickup(id) ON DELETE CASCADE,
 
-    code VARCHAR(20) NOT NULL,
+    flow TEXT NOT NULL DEFAULT 'pickup' CHECK (flow IN ('pickup', 'return')),
+
+    code TEXT NOT NULL,
+
+    qr_token_hash TEXT,
 
     expires_at TIMESTAMP,
 
+    verified_at TIMESTAMP,
+
+    verified_by UUID REFERENCES users(id) ON DELETE SET NULL,
+
+    attempts INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX code_pickup_id_flow_idx ON code (pickup_id, flow);
 
 -- =========================================================
 -- FEEDBACK

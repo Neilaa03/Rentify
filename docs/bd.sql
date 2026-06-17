@@ -125,30 +125,23 @@ CREATE TABLE public.pickup (
   pickup_method text CHECK (pickup_method IS NULL OR (pickup_method = ANY (ARRAY['owner_place'::text, 'company_place'::text, 'renter_delivery'::text]))),
   pickup_address text,
   delivery_fee numeric DEFAULT 0 CHECK (delivery_fee IS NULL OR delivery_fee >= 0::numeric),
-  pickup_code_hash text,
-  pickup_code_expires_at timestamp without time zone,
-  pickup_verified_at timestamp without time zone,
-  pickup_verified_by uuid,
-  pickup_attempts integer DEFAULT 0 CHECK (pickup_attempts IS NULL OR pickup_attempts >= 0),
-  pickup_qr_token_hash text,
-  return_code_hash text,
-  return_qr_token_hash text,
-  return_code_expires_at timestamp without time zone,
-  return_verified_at timestamp without time zone,
-  return_verified_by uuid,
-  return_attempts integer DEFAULT 0,
   CONSTRAINT pickup_pkey PRIMARY KEY (id),
-  CONSTRAINT pickup_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.reservations(id),
-  CONSTRAINT pickup_pickup_verified_by_fkey FOREIGN KEY (pickup_verified_by) REFERENCES public.users(id)
+  CONSTRAINT pickup_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES public.reservations(id)
 );
 CREATE TABLE public.code (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   pickup_id uuid NOT NULL,
-  code character varying NOT NULL,
+  flow text NOT NULL DEFAULT 'pickup'::text CHECK (flow = ANY (ARRAY['pickup'::text, 'return'::text])),
+  code text NOT NULL,
+  qr_token_hash text,
   expires_at timestamp without time zone,
+  verified_at timestamp without time zone,
+  verified_by uuid,
+  attempts integer NOT NULL DEFAULT 0 CHECK (attempts >= 0),
   created_at timestamp without time zone DEFAULT now(),
   CONSTRAINT code_pkey PRIMARY KEY (id),
-  CONSTRAINT code_pickup_id_fkey FOREIGN KEY (pickup_id) REFERENCES public.pickup(id)
+  CONSTRAINT code_pickup_id_fkey FOREIGN KEY (pickup_id) REFERENCES public.pickup(id),
+  CONSTRAINT code_verified_by_fkey FOREIGN KEY (verified_by) REFERENCES public.users(id)
 );
 CREATE TABLE public.feedback (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
