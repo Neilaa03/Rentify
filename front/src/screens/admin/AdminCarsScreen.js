@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
+import AppBackground from '../../components/layout/AppBackground';
 
 const tabs = ['All', 'Pending', 'Verified'];
 
@@ -315,7 +315,7 @@ export default function AdminCarsScreen({ navigation, route }) {
   const sectionError = activeSection === 'owners' ? error : agenciesError;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <AppBackground contentStyle={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
           <ScreenHeader title={t('screens.admin.admincarsscreen.documents')} rightAction={<AdminLogoutButton navigation={navigation} />} />
@@ -645,7 +645,7 @@ export default function AdminCarsScreen({ navigation, route }) {
       </Modal>
 
       <AdminBottomNavigation navigation={navigation} route={route} active="documents" />
-    </SafeAreaView>
+    </AppBackground>
   );
 }
 
@@ -665,8 +665,8 @@ function TopStat({ value, label, tone, icon }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#070a1f' },
-  container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#070a1f' },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, paddingHorizontal: 16, backgroundColor: 'transparent' },
   pageScroll: { flex: 1 },
   pageContent: { paddingBottom: 92 },
   title: { color: '#f2f4ff', fontSize: 36, fontWeight: '800', marginTop: 10, marginBottom: 14 },

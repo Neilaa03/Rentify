@@ -410,7 +410,7 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
         style={styles.background}
         resizeMode="cover">
         
-                <SafeAreaView style={[styles.overlay, { backgroundColor: colors.overlay, paddingHorizontal: moderateScale(20) }]}>
+                <SafeAreaView style={styles.overlay}>
                     <KeyboardAvoidingView
             style={styles.keyboardAvoid}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -444,8 +444,8 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                       styles.input,
                       {
                         color: colors.white,
-                        backgroundColor: colors.inputBackground,
-                        borderColor: colors.inputBorder,
+                        backgroundColor: 'rgba(255,255,255,0.16)',
+                        borderColor: 'rgba(255,255,255,0.3)',
                       },
                       email.trim() ? styles.inputFilled : null,
                       errors.email ? styles.inputError : null,
@@ -468,7 +468,7 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                                             <TextInput
                         style={[
                         styles.input,
-                        { color: colors.white, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder },
+                        { color: colors.white, backgroundColor: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.3)' },
                         password ? styles.inputFilled : null,
                         errors.password ? styles.inputError : null]
                         }
@@ -502,7 +502,7 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                     style={styles.forgotPassword}
                     onPress={() => navigation.navigate('ForgotPassword', { email: email.trim() })}>
                     
-                                    <Text style={[styles.forgotText, { color: colors.white }]}>{t("screens.auth.loginscreen.forgotPassword")}</Text>
+                                    <Text style={styles.forgotText}>{t("screens.auth.loginscreen.forgotPassword")}</Text>
                                 </TouchableOpacity>
 
                                     {!!errors.form && <Text style={[styles.formErrorText, { color: colors.danger }]}>{errors.form}</Text>}
@@ -513,25 +513,25 @@ const LoginScreen = ({ navigation }) => {const { t } = useTranslation();
                     style={[
                       styles.googleButton,
                       {
-                        backgroundColor: colors.surfaceStrong,
-                        borderColor: colors.border
+                        backgroundColor: 'rgba(255,255,255,0.16)',
+                        borderColor: 'rgba(255,255,255,0.3)'
                       },
                       !googleRequest || googleLoading ? styles.googleButtonDisabled : null
                     ]}
                     onPress={handleGoogleLogin}
                     disabled={!googleRequest || googleLoading}>
                     
-                                        <Ionicons name="logo-google" size={18} color={colors.text} />
-                                        <Text style={[styles.googleButtonText, { color: colors.text }]}>
+                                        <Ionicons name="logo-google" size={18} color={colors.white} />
+                                        <Text style={[styles.googleButtonText, { color: colors.white }]}>
                                             {googleLoading ? 'Signing in…' : 'Continue with Google'}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
 
                                 <View style={styles.footer}>
-                                    <Text style={[styles.footerText, { color: colors.white }]}>{t("screens.auth.loginscreen.dontHaveAnAccount")}</Text>
+                                    <Text style={styles.footerText}>{t("screens.auth.loginscreen.dontHaveAnAccount") + "  "}</Text>
                                     <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                                        <Text style={[styles.linkText, { color: colors.white }]}>{t("screens.auth.loginscreen.signUp")}</Text>
+                                        <Text style={styles.linkText}>{t("screens.auth.loginscreen.signUp")}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
   background: { flex: 1 },
   overlay: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0,0,0,0.3)',
     paddingHorizontal: moderateScale(20)
   },
   keyboardAvoid: { flex: 1 },
@@ -604,15 +604,21 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   forgotPassword: { alignSelf: 'flex-end', marginBottom: moderateScale(26) },
-  forgotText: { fontSize: rf(14, 12, 16) },
+  forgotText: { color: '#8f4fe8', fontSize: rf(14, 12, 16) },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: moderateScale(30),
     flexWrap: 'wrap'
   },
-  footerText: { fontWeight: '400' },
-  linkText: { fontWeight: 'bold' },
+  footerText: { color: '#aaa', fontWeight: '400' },
+  linkText: {
+    color: '#8f4fe8',
+    fontWeight: 'bold',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
   googleButton: {
     marginTop: moderateScale(12),
     height: moderateScale(48),

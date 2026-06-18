@@ -82,7 +82,7 @@ const FavoritesScreen = ({ navigation }) => {const { t } = useTranslation();
 const styles = StyleSheet.create({
   container: { flex: 1 },
   background: { flex: 1 },
-  overlay: { flex: 1, paddingHorizontal: 20 },
+  overlay: { flex: 1, paddingHorizontal: 20, backgroundColor: 'rgba(0,0,0,0.3)' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

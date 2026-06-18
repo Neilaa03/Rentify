@@ -1,12 +1,10 @@
 import React from 'react';
 import { StyleSheet, View, Text, ImageBackground, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';import { useTranslation } from "react-i18next";
-import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 
 
 const LandingScreen = ({ navigation }) => {const { t } = useTranslation();
-  const { colors } = useTheme();
   const { clearSession } = useAuth();
 
   const skipForNow = async () => {
@@ -21,32 +19,32 @@ const LandingScreen = ({ navigation }) => {const { t } = useTranslation();
         style={styles.background}
         resizeMode="cover">
         
-                <SafeAreaView style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+                <SafeAreaView style={styles.overlay}>
                     <View style={styles.header}>
-                        <Text style={[styles.brandName, { color: colors.white }]}>{t("screens.client.landingscreen.rentify")}</Text>
-                        <Text style={[styles.tagline, { color: 'rgba(255,255,255,0.82)' }]}>{t("screens.client.landingscreen.driveTheWorldsFinestVehicles")}</Text>
+                        <Text style={styles.brandName}>{t("screens.client.landingscreen.rentify")}</Text>
+                        <Text style={styles.tagline}>{t("screens.client.landingscreen.driveTheWorldsFinestVehicles")}</Text>
                     </View>
 
                     <View style={styles.footer}>
                         <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+              style={styles.primaryButton}
               onPress={() => navigation.navigate('Register')}>
               
-                            <Text style={[styles.buttonText, { color: colors.white }]}>{t("screens.client.landingscreen.getStarted")}</Text>
+                            <Text style={styles.buttonText}>{t("screens.client.landingscreen.getStarted")}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: colors.secondary }]}
+              style={styles.primaryButton}
               onPress={() => navigation.navigate('Login')}>
               
-                            <Text style={[styles.buttonText, { color: colors.white }]}>{t("screens.client.landingscreen.iAlreadyHaveAnAccount")}</Text>
+                            <Text style={styles.buttonText}>{t("screens.client.landingscreen.iAlreadyHaveAnAccount")}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: colors.primary }]}
+              style={styles.secondaryButton}
               onPress={skipForNow}>
               
-                            <Text style={[styles.buttonText, { color: colors.text }]}>{t("screens.client.landingscreen.skipForNow")}</Text>
+                            <Text style={styles.buttonText}>{t("screens.client.landingscreen.skipForNow")}</Text>
                         </TouchableOpacity>
                     </View>
                 </SafeAreaView>
@@ -72,11 +70,13 @@ const styles = StyleSheet.create({
     marginTop: 40
   },
   brandName: {
-    fontSize: 48,
+    fontSize: 54,
     fontWeight: 'bold',
+    color: '#fff',
   },
   tagline: {
     fontSize: 18,
+    color: 'rgba(255,255,255,0.82)',
     marginTop: 10,
     opacity: 0.8
   },
@@ -84,22 +84,25 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   primaryButton: {
-    height: 60,
-    borderRadius: 15,
+    height: 72,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
+    backgroundColor: '#a66eff',
   },
   secondaryButton: {
-    height: 60,
-    borderRadius: 15,
+    height: 72,
+    borderRadius: 18,
     borderWidth: 2,
+    borderColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center'
   },
   buttonText: {
+    color: '#fff',
     fontSize: 18,
-    fontWeight: '600'
+    fontWeight: '700'
   }
 });
 

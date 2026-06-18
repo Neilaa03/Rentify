@@ -161,7 +161,7 @@ const OwnerReservationsScreen = ({
   if (loading) {
     return (
       <AppBackground contentStyle={styles.safeArea}>
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        <View style={styles.overlay}>
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.text }]}>{t("screens.owner.reservationsscreen.chargement")}</Text>
@@ -174,7 +174,7 @@ const OwnerReservationsScreen = ({
 
   return (
     <AppBackground contentStyle={styles.safeArea}>
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <View style={styles.overlay}>
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: colors.white }]}>{screenTitle}</Text>
           <View style={{ width: 44 }} />

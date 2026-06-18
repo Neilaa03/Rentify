@@ -167,7 +167,7 @@ const ReservationsScreen = ({ navigation }) => {const { t } = useTranslation();
   if (loading) {
     return (
       <AppBackground contentStyle={styles.safeArea}>
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        <View style={styles.overlay}>
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={COLORS.primary} />
             <Text style={[styles.loadingText, { color: colors.white }]}>{t("screens.reservations.reservationsscreen.chargement")}</Text>
@@ -179,7 +179,7 @@ const ReservationsScreen = ({ navigation }) => {const { t } = useTranslation();
 
   return (
     <AppBackground contentStyle={styles.safeArea}>
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <View style={styles.overlay}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: colors.white }]}>{t("screens.reservations.reservationsscreen.mesReservations")}</Text>

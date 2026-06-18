@@ -120,12 +120,21 @@ const ListingCard = ({ listing, onPress, isFavorite = false, onToggleFavorite })
               </View>
             )}
             {offerCount > 1 && (
-              <View style={[styles.offerBadge, { backgroundColor: `${colors.primary}16` }]}>
-                <Text style={[styles.offerBadgeText, { color: colors.primary }]}>
-                  {matchingOfferCount > 0 && matchingOfferCount < offerCount
+              <View style={styles.offerBadge}>
+                {(() => {
+                  const offerLabel = matchingOfferCount > 0 && matchingOfferCount < offerCount
                     ? t('components.cards.listingcard.matchingOffers', { matching: matchingOfferCount, total: offerCount })
-                    : t('components.cards.listingcard.offers', { count: offerCount })}
-                </Text>
+                    : t('components.cards.listingcard.offers', { count: offerCount });
+                  return (
+                    <View style={styles.offerBadgeTextWrap}>
+                      <Text style={[styles.offerBadgeText, styles.offerTextBorder, styles.offerTextBorderTop]}>{offerLabel}</Text>
+                      <Text style={[styles.offerBadgeText, styles.offerTextBorder, styles.offerTextBorderRight]}>{offerLabel}</Text>
+                      <Text style={[styles.offerBadgeText, styles.offerTextBorder, styles.offerTextBorderBottom]}>{offerLabel}</Text>
+                      <Text style={[styles.offerBadgeText, styles.offerTextBorder, styles.offerTextBorderLeft]}>{offerLabel}</Text>
+                      <Text style={styles.offerBadgeText}>{offerLabel}</Text>
+                    </View>
+                  );
+                })()}
               </View>
             )}
             <TouchableOpacity
@@ -275,9 +284,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: 'rgba(8, 10, 24, 0.65)',
+    backgroundColor: 'rgba(15,18,40,0.48)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   offerBadgeText: {
     color: '#fff',
@@ -285,6 +294,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
+  offerBadgeTextWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offerTextBorder: {
+    color: '#a66eff',
+    position: 'absolute',
+  },
+  offerTextBorderTop: { transform: [{ translateY: -0.65 }] },
+  offerTextBorderRight: { transform: [{ translateX: 0.65 }] },
+  offerTextBorderBottom: { transform: [{ translateY: 0.65 }] },
+  offerTextBorderLeft: { transform: [{ translateX: -0.65 }] },
   iconButton: {
     marginLeft: 'auto',
     width: 34,

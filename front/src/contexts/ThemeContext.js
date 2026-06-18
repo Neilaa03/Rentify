@@ -36,7 +36,7 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     if (typeof document !== 'undefined' && document.body) {
-      document.body.style.backgroundColor = theme.colors.background;
+      document.body.style.backgroundColor = 'transparent';
       document.body.style.color = theme.colors.text;
     }
   }, [theme]);
@@ -59,7 +59,7 @@ export function ThemeProvider({ children }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      <StatusBar barStyle={theme.isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.colors.background} />
+      <StatusBar barStyle={theme.isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
       {children}
     </ThemeContext.Provider>
   );

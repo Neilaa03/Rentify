@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
+import AppBackground from '../../components/layout/AppBackground';
 
 const toneColor = {
   blue: '#58a6ff',
@@ -44,7 +44,7 @@ export default function AdminDashboardScreen({ navigation, route }) {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <AppBackground contentStyle={styles.safeArea}>
       <View style={styles.container}>
         <ScreenHeader kicker={t('screens.admin.admindashboardscreen.administration')} title={t('screens.admin.admindashboardscreen.tableauDeBord')} rightAction={<AdminLogoutButton navigation={navigation} />} />
 
@@ -87,7 +87,7 @@ export default function AdminDashboardScreen({ navigation, route }) {
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="dashboard" />
-    </SafeAreaView>
+    </AppBackground>
   );
 }
 
@@ -120,8 +120,8 @@ function SummaryLine({ label, value, tone }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#070a1f' },
-  container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#070a1f' },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, paddingHorizontal: 16, backgroundColor: 'transparent' },
   content: { paddingBottom: 94 },
   alertBox: { borderRadius: 12, borderWidth: 1, borderColor: '#6d4f1f', backgroundColor: 'rgba(255,176,32,0.08)', paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   alertText: { color: '#ffc35c', fontSize: 13, fontWeight: '600' },
