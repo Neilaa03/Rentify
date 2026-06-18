@@ -5,6 +5,7 @@ const RESERVATIONS_TABLE = 'reservations';
 const LISTINGS_TABLE = 'listings';
 const USERS_TABLE = 'users';
 const PICKUP_TABLE = 'pickup';
+const CODE_TABLE = 'code';
 
 const PAYMENT_GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const HANDOVER_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -435,17 +436,26 @@ export const updateReservationStatus = async (id, newStatus) => {
     // Test helper: allow re-testing pickup verification by clearing pickup verification fields
     // when a reservation is moved back into pickup_pending.
     if (isStatusTestMode() && newStatus === 'pickup_pending') {
+        const { data: pickupRows, error: pickupFetchError } = await supabase
+            .from(PICKUP_TABLE)
+            .select('id')
+            .eq('reservation_id', id);
+        if (pickupFetchError) throw pickupFetchError;
+
+        const pickupIds = (pickupRows || []).map((row) => row.id).filter(Boolean);
+        if (pickupIds.length > 0) {
+            const { error: codeResetError } = await supabase
+                .from(CODE_TABLE)
+                .delete()
+                .in('pickup_id', pickupIds);
+            if (codeResetError) throw codeResetError;
+        }
+
         const { error: pickupResetError } = await supabase
             .from(PICKUP_TABLE)
             .update({
                 status: 'pending',
                 confirmed_at: null,
-                pickup_code_hash: null,
-                pickup_qr_token_hash: null,
-                pickup_code_expires_at: null,
-                pickup_attempts: 0,
-                pickup_verified_at: null,
-                pickup_verified_by: null,
             })
             .eq('reservation_id', id);
         if (pickupResetError) throw pickupResetError;

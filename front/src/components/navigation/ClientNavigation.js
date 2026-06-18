@@ -126,6 +126,11 @@ function ReservationsTabStack() {
         name="PickupCode"
         component={HandoverCodeScreen}
         options={{ tabBarStyle: { display: 'none' } }} />
+
+      <Stack.Screen
+        name="ReturnVerify"
+        component={HandoverVerifyScreen}
+        options={{ tabBarStyle: { display: 'none' } }} />
       
     </Stack.Navigator>);
 
