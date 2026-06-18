@@ -4,6 +4,7 @@ import { getReservationById, updateReservationStatus } from '../reservations/res
 import QRCode from 'qrcode';
 
 const PICKUP_TABLE = 'pickup';
+const CODE_TABLE = 'code';
 
 const PICKUP_CODE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const PICKUP_MAX_ATTEMPTS = 5;
@@ -41,6 +42,33 @@ export const getPickupRowByReservationId = async (reservationId) => {
   return data && data[0] ? data[0] : null;
 };
 
+const getPickupCodeRow = async (pickupId) => {
+  const { data, error } = await supabase
+    .from(CODE_TABLE)
+    .select('*')
+    .eq('pickup_id', pickupId)
+    .eq('flow', 'pickup')
+    .limit(1);
+  if (error) throw error;
+  return data && data[0] ? data[0] : null;
+};
+
+const replacePickupCodeRow = async ({ pickupId, codeHash, qrTokenHash, expiresAt }) => {
+  const { error } = await supabase
+    .from(CODE_TABLE)
+    .upsert({
+      pickup_id: pickupId,
+      flow: 'pickup',
+      code: codeHash,
+      qr_token_hash: qrTokenHash,
+      expires_at: expiresAt,
+      attempts: 0,
+      verified_at: null,
+      verified_by: null,
+    }, { onConflict: 'pickup_id,flow' });
+  if (error) throw error;
+};
+
 export const generatePickupPayload = async ({ reservationId }) => {
   const reservation = await getReservationById(reservationId);
   if (!reservation) throw new Error('Reservation not found');
@@ -50,26 +78,21 @@ export const generatePickupPayload = async ({ reservationId }) => {
 
   const pickupRow = await getPickupRowByReservationId(reservationId);
   if (!pickupRow?.id) throw new Error('Pickup record not found for reservation.');
-  if (pickupRow.pickup_verified_at) throw new Error('Pickup already verified.');
+
+  const existingCodeRow = await getPickupCodeRow(pickupRow.id);
+  if (existingCodeRow?.verified_at) throw new Error('Pickup already verified.');
 
   const rawCode = String(Math.floor(100000 + Math.random() * 900000));
   const rawQrToken = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + PICKUP_CODE_TTL_MS).toISOString();
   const qrDataUrl = await QRCode.toDataURL(rawQrToken, { margin: 1, width: 420, errorCorrectionLevel: 'M' });
 
-  const { error: updateError } = await supabase
-    .from(PICKUP_TABLE)
-    .update({
-      pickup_code_hash: hashWithPepper(rawCode),
-      pickup_qr_token_hash: hashWithPepper(rawQrToken),
-      pickup_code_expires_at: expiresAt,
-      pickup_attempts: 0,
-      pickup_verified_at: null,
-      pickup_verified_by: null,
-    })
-    .eq('id', pickupRow.id);
-
-  if (updateError) throw updateError;
+  await replacePickupCodeRow({
+    pickupId: pickupRow.id,
+    codeHash: hashWithPepper(rawCode),
+    qrTokenHash: hashWithPepper(rawQrToken),
+    expiresAt,
+  });
 
   return {
     reservationId,
@@ -87,13 +110,14 @@ export const getPickupPayloadStatus = async ({ reservationId }) => {
   const pickupRow = await getPickupRowByReservationId(reservationId);
   if (!pickupRow) throw new Error('Pickup record not found.');
 
-  const hasPayload = Boolean(pickupRow.pickup_code_hash && pickupRow.pickup_code_expires_at);
+  const codeRow = await getPickupCodeRow(pickupRow.id);
+  const hasPayload = Boolean(codeRow?.code && codeRow?.expires_at);
   return {
     reservationId,
     reservationStatus: reservation.status,
     hasPayload,
-    expiresAt: pickupRow.pickup_code_expires_at || null,
-    verifiedAt: pickupRow.pickup_verified_at || null,
+    expiresAt: codeRow?.expires_at || null,
+    verifiedAt: codeRow?.verified_at || null,
   };
 };
 
@@ -106,19 +130,22 @@ export const verifyPickup = async ({ reservationId, verifierUserId, code, qrToke
 
   const pickupRow = await getPickupRowByReservationId(reservationId);
   if (!pickupRow?.id) throw new Error('Pickup record not found.');
-  if (pickupRow.pickup_verified_at) throw new Error('Pickup already verified.');
 
-  const attempts = Number(pickupRow.pickup_attempts || 0);
+  const codeRow = await getPickupCodeRow(pickupRow.id);
+  if (!codeRow) throw new Error('Pickup payload not generated yet.');
+  if (codeRow.verified_at) throw new Error('Pickup already verified.');
+
+  const attempts = Number(codeRow.attempts || 0);
   if (attempts >= PICKUP_MAX_ATTEMPTS) throw new Error('Too many attempts. Pickup is locked.');
 
-  const expiresMs = parseDbTimestampToMs(pickupRow.pickup_code_expires_at);
+  const expiresMs = parseDbTimestampToMs(codeRow.expires_at);
   if (!Number.isFinite(expiresMs) || Date.now() > expiresMs) {
     throw new Error('Pickup code expired.');
   }
 
   const usingCode = Boolean(code);
   const provided = usingCode ? String(code).trim() : String(qrToken || '').trim();
-  const expectedHash = usingCode ? pickupRow.pickup_code_hash : pickupRow.pickup_qr_token_hash;
+  const expectedHash = usingCode ? codeRow.code : codeRow.qr_token_hash;
   if (!expectedHash) throw new Error('Pickup payload not generated yet.');
 
   const providedHash = hashWithPepper(provided);
@@ -126,20 +153,20 @@ export const verifyPickup = async ({ reservationId, verifierUserId, code, qrToke
 
   if (!ok) {
     await supabase
-      .from(PICKUP_TABLE)
-      .update({ pickup_attempts: attempts + 1 })
-      .eq('id', pickupRow.id);
+      .from(CODE_TABLE)
+      .update({ attempts: attempts + 1 })
+      .eq('id', codeRow.id);
     throw new Error('Invalid pickup code.');
   }
 
   const nowIso = new Date().toISOString();
   const { error: verifyError } = await supabase
-    .from(PICKUP_TABLE)
+    .from(CODE_TABLE)
     .update({
-      pickup_verified_at: nowIso,
-      pickup_verified_by: verifierUserId,
+      verified_at: nowIso,
+      verified_by: verifierUserId,
     })
-    .eq('id', pickupRow.id);
+    .eq('id', codeRow.id);
   if (verifyError) throw verifyError;
 
   await updateReservationStatus(reservationId, 'active');

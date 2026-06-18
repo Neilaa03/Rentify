@@ -1,4 +1,4 @@
 {
   "compilerOptions": {},
-  "extends": "expo/tsconfig.base.json"
+  "extends": "./front/node_modules/expo/tsconfig.base"
 }
