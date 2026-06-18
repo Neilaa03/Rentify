@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, Badge, PillRow, SectionTitle, VehicleCard } from '../../components/agency/AgencyPrimitives';
@@ -98,7 +97,7 @@ export default function AgencyVehiclesScreen({ navigation, route }) {const { t }
 
   return (
     <AppBackground contentStyle={styles.safeArea}>
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <View style={styles.overlay}>
           <View style={styles.page}>
           <View style={styles.headerSpacer} />
 

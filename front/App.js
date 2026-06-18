@@ -77,7 +77,7 @@ const getNativeStripeProvider = () => {
 };
 
 function AppShell() {
-  const { navigationTheme, colors } = useTheme();
+  const { navigationTheme } = useTheme();
   const NativeStripeProvider = getNativeStripeProvider();
   const linking = {
     prefixes: [Linking.createURL('/'), 'rentify://'],
@@ -105,7 +105,7 @@ function AppShell() {
             <Stack.Navigator
               screenOptions={{
                 headerShown: false,
-                cardStyle: { backgroundColor: colors.background },
+                cardStyle: { backgroundColor: 'transparent' },
               }}
             >
               <Stack.Screen name="Landing" component={LandingScreen} />
