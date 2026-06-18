@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View } from
 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AgencyBottomNavigation from '../../components/navigation/AgencyBottomNavigation';
 import { AgencyCard, Badge, SectionTitle } from '../../components/agency/AgencyPrimitives';
@@ -134,7 +133,7 @@ export default function AgencyListingsScreen({ navigation, route }) {const { t }
 
   return (
     <AppBackground contentStyle={styles.safeArea}>
-          <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <View style={styles.overlay}>
           <View style={styles.page}>
           <View style={styles.headerSpacer} />
 

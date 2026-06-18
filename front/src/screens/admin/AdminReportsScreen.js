@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, ScreenHeader } from '../../components/admin/AdminUI';
 import { useTranslation } from 'react-i18next';
+import AppBackground from '../../components/layout/AppBackground';
 
 const tabs = ['Tous', 'Ouverts', 'En cours', 'Resolus', 'Clotures'];
 
@@ -48,7 +48,7 @@ export default function AdminReportsScreen({ navigation, route }) {
   }), [rows]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <AppBackground contentStyle={styles.safeArea}>
       <View style={styles.container}>
         <ScrollView style={styles.pageScroll} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>
           <ScreenHeader title={t('screens.admin.adminreportsscreen.signalements')} rightAction={<AdminLogoutButton navigation={navigation} />} />
@@ -109,7 +109,7 @@ export default function AdminReportsScreen({ navigation, route }) {
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="reports" />
-    </SafeAreaView>
+    </AppBackground>
   );
 }
 
@@ -126,8 +126,8 @@ function Stat({ value, label, tone, icon }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#070a1f' },
-  container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#070a1f' },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, paddingHorizontal: 16, backgroundColor: 'transparent' },
   pageScroll: { flex: 1 },
   pageContent: { paddingBottom: 92 },
   title: { color: '#f2f4ff', fontSize: 36, fontWeight: '800', marginTop: 10, marginBottom: 14 },

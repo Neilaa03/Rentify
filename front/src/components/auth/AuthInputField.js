@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.3)',
     },
     inputFilled: {
-        backgroundColor: 'rgba(225, 216, 247, 0.82)',
-        borderColor: 'rgba(117, 94, 171, 0.22)',
+        backgroundColor: 'rgba(230, 215, 255, 0.26)',
+        borderColor: 'rgba(166, 110, 255, 0.35)',
     },
     errorText: {
         marginTop: moderateScale(8),

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { adminApi } from '../../services/admin';
 import AdminBottomNavigation from '../../components/admin/AdminBottomNavigation';
 import { AdminLogoutButton, Button, Card, Row, ScreenHeader, SearchBox, StatCard, StatusBadge } from '../../components/admin/AdminUI';
 import { useTranslation } from 'react-i18next';
+import AppBackground from '../../components/layout/AppBackground';
 
 export default function AdminPaymentsScreen({ navigation, route }) {
   const { t } = useTranslation();
@@ -31,7 +31,7 @@ export default function AdminPaymentsScreen({ navigation, route }) {
   useEffect(() => { load(); }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <AppBackground contentStyle={styles.safeArea}>
       <View style={styles.container}>
         <ScreenHeader kicker="ADMIN PANEL" title={t('screens.admin.adminpaymentsscreen.payments')} rightAction={<AdminLogoutButton navigation={navigation} />} />
         <View style={styles.topActions}>
@@ -54,13 +54,13 @@ export default function AdminPaymentsScreen({ navigation, route }) {
         </ScrollView>
       </View>
       <AdminBottomNavigation navigation={navigation} route={route} active="more" />
-    </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0a0c24' },
-  container: { flex: 1, paddingHorizontal: 16, backgroundColor: '#0a0c24' },
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, paddingHorizontal: 16, backgroundColor: 'transparent' },
   content: { paddingBottom: 98 },
   muted: { color: '#aab1dd' },
   error: { color: '#ff7f90', marginBottom: 8 },

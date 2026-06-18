@@ -153,7 +153,7 @@ const RegisterScreen = ({ navigation }) => {
         style={styles.background}
         resizeMode="cover">
 
-        <SafeAreaView style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        <SafeAreaView style={styles.overlay}>
           <KeyboardAvoidingView
             style={styles.keyboardAvoid}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -165,7 +165,7 @@ const RegisterScreen = ({ navigation }) => {
               contentContainerStyle={styles.scrollContent}
               keyboardShouldPersistTaps="handled">
 
-              <TouchableOpacity style={[styles.backButton, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]} onPress={() => navigation.goBack()}>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <Ionicons name="arrow-back" size={28} color={colors.white} />
               </TouchableOpacity>
 
@@ -193,9 +193,9 @@ const RegisterScreen = ({ navigation }) => {
                       inputStyle={[
                         styles.input,
                         {
-                          backgroundColor: colors.inputBackground,
-                          borderColor: colors.inputBorder,
-                          color: colors.text,
+                          backgroundColor: 'rgba(255,255,255,0.16)',
+                          borderColor: 'rgba(255,255,255,0.3)',
+                          color: colors.white,
                         },
                         firstName.trim() ? styles.inputFilled : null,
                         errors.firstName ? styles.inputError : null,
@@ -219,9 +219,9 @@ const RegisterScreen = ({ navigation }) => {
                       inputStyle={[
                         styles.input,
                         {
-                          backgroundColor: colors.inputBackground,
-                          borderColor: colors.inputBorder,
-                          color: colors.text,
+                          backgroundColor: 'rgba(255,255,255,0.16)',
+                          borderColor: 'rgba(255,255,255,0.3)',
+                          color: colors.white,
                         },
                         lastName.trim() ? styles.inputFilled : null,
                         errors.lastName ? styles.inputError : null,
@@ -246,9 +246,9 @@ const RegisterScreen = ({ navigation }) => {
                     inputStyle={[
                       styles.input,
                       {
-                        backgroundColor: colors.inputBackground,
-                        borderColor: colors.inputBorder,
-                        color: colors.text,
+                        backgroundColor: 'rgba(255,255,255,0.16)',
+                        borderColor: 'rgba(255,255,255,0.3)',
+                        color: colors.white,
                       },
                       email.trim() ? styles.inputFilled : null,
                       errors.email ? styles.inputError : null,
@@ -272,9 +272,9 @@ const RegisterScreen = ({ navigation }) => {
                     inputStyle={[
                       styles.input,
                       {
-                        backgroundColor: colors.inputBackground,
-                        borderColor: colors.inputBorder,
-                        color: colors.text,
+                        backgroundColor: 'rgba(255,255,255,0.16)',
+                        borderColor: 'rgba(255,255,255,0.3)',
+                        color: colors.white,
                       },
                       phone.trim() ? styles.inputFilled : null,
                       errors.phone ? styles.inputError : null,
@@ -298,8 +298,7 @@ const RegisterScreen = ({ navigation }) => {
                         key={role.id}
                         style={[
                           styles.roleButton,
-                          { backgroundColor: colors.surfaceStrong, borderColor: colors.border },
-                          selectedRole === role.id && { borderColor: colors.primary, backgroundColor: colors.surface }
+                          selectedRole === role.id && styles.roleButtonActive
                         ]
                         }
                         onPress={() => {
@@ -311,14 +310,13 @@ const RegisterScreen = ({ navigation }) => {
                         <View
                           style={[
                             styles.roleIconContainer,
-                            { backgroundColor: colors.surface },
                             selectedRole === role.id && styles.roleIconContainerActive]
                           }>
 
                           <Ionicons
                             name={role.icon}
                             size={moderateScale(26)}
-                            color={selectedRole === role.id ? colors.white : colors.primary} />
+                            color={selectedRole === role.id ? colors.white : 'rgba(255,255,255,0.75)'} />
 
                         </View>
                         <Text
@@ -327,7 +325,7 @@ const RegisterScreen = ({ navigation }) => {
                             {
                               color: selectedRole === role.id
                                 ? colors.white
-                                : colors.text,
+                                : 'rgba(255,255,255,0.75)',
                             },
                             selectedRole === role.id && {
                               fontWeight: '700',
@@ -348,7 +346,7 @@ const RegisterScreen = ({ navigation }) => {
                     <TextInput
                       style={[
                         styles.input,
-                        { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text },
+                        { backgroundColor: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.3)', color: colors.white },
                         password ? styles.inputFilled : null,
                         errors.password ? styles.inputError : null]
                       }
@@ -371,7 +369,7 @@ const RegisterScreen = ({ navigation }) => {
                       <Ionicons
                         name={showPassword ? 'eye-off' : 'eye'}
                         size={20}
-                        color={colors.text} />
+                        color={colors.textMuted} />
 
                     </TouchableOpacity>
                   </View>
@@ -384,7 +382,7 @@ const RegisterScreen = ({ navigation }) => {
                     <TextInput
                       style={[
                         styles.input,
-                        { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.text },
+                        { backgroundColor: 'rgba(255,255,255,0.16)', borderColor: 'rgba(255,255,255,0.3)', color: colors.white },
                         confirmPassword ? styles.inputFilled : null,
                         errors.confirmPassword ? styles.inputError : null]
                       }
@@ -409,7 +407,7 @@ const RegisterScreen = ({ navigation }) => {
                       <Ionicons
                         name={showConfirmPassword ? 'eye-off' : 'eye'}
                         size={20}
-                        color={colors.text} />
+                        color={colors.textMuted} />
 
                     </TouchableOpacity>
                   </View>
@@ -425,9 +423,9 @@ const RegisterScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.footer}>
-                <Text style={[styles.footerText, { color: colors.white }]}>{t("screens.auth.registerscreen.alreadyHaveAnAccount")}</Text>
+                <Text style={styles.footerText}>{t("screens.auth.registerscreen.alreadyHaveAnAccount") + "  "}</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                  <Text style={[styles.linkText, { color: colors.white }]}>{t("screens.auth.registerscreen.signIn")}</Text>
+                  <Text style={styles.linkText}>{t("screens.auth.registerscreen.signIn")}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -444,7 +442,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     paddingHorizontal: moderateScale(20),
-    backgroundColor: 'transparent'
+    backgroundColor: 'rgba(0,0,0,0.3)'
   },
   keyboardAvoid: { flex: 1 },
   scrollView: {
@@ -500,8 +498,8 @@ const styles = StyleSheet.create({
     fontSize: rf(15, 13, 18)
   },
   inputFilled: {
-    backgroundColor: 'rgba(225, 216, 247, 0.82)',
-    borderColor: 'rgba(117, 94, 171, 0.22)'
+    backgroundColor: 'rgba(230, 215, 255, 0.26)',
+    borderColor: 'rgba(166, 110, 255, 0.35)'
   },
   eyeButton: {
     position: 'absolute',
@@ -545,10 +543,15 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.3)'
   },
+  roleButtonActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(166, 110, 255, 0.2)'
+  },
   roleIconContainer: {
     width: moderateScale(50),
     aspectRatio: 1,
     borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: moderateScale(8)
@@ -569,7 +572,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap'
   },
   footerText: { color: '#aaa' },
-  linkText: { color: COLORS.secondary, fontWeight: 'bold' }
+  linkText: {
+    color: '#985bf0',
+    fontWeight: 'bold',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  }
 });
 
 export default RegisterScreen;

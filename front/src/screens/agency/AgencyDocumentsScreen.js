@@ -360,7 +360,7 @@ export default function AgencyDocumentsScreen({ navigation, route }) {const { t 
   return (
     <AppBackground contentStyle={styles.safeArea}>
       <StatusBar barStyle={colors.isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+      <View style={styles.overlay}>
         <View style={styles.page}>
           <View style={styles.headerSpacer} />
 

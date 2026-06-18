@@ -30,9 +30,8 @@ const Stack = createStackNavigator();
 
 // Stack for Home tab
 function HomeTabStack() {
-  const { colors } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: 'transparent' } }}>
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
@@ -77,9 +76,8 @@ function HomeTabStack() {
 
 // Stack for Favorites tab
 function FavoritesTabStack() {
-  const { colors } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: 'transparent' } }}>
       <Stack.Screen name="Favorites" component={FavoritesScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
@@ -109,9 +107,8 @@ function FavoritesTabStack() {
 
 // Stack for Reservations tab
 function ReservationsTabStack() {
-  const { colors } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: 'transparent' } }}>
       <Stack.Screen name="ReservationsList" component={ReservationsScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
@@ -141,9 +138,8 @@ function ReservationsTabStack() {
 
 // Stack for Profile tab
 function ProfileTabStack() {
-  const { colors } = useTheme();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: 'transparent' } }}>
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Inbox" component={InboxScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
@@ -183,7 +179,7 @@ export function ClientNavigation() {const { t } = useTranslation();
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
-          sceneContainerStyle: { backgroundColor: colors.background },
+          sceneContainerStyle: { backgroundColor: 'transparent' },
           tabBarHideOnKeyboard: false,
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;
