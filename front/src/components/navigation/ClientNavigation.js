@@ -6,6 +6,9 @@ import { COLORS } from '../../constants/colors';
 import { CommonActions, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import GuestAuthPrompt from '../auth/GuestAuthPrompt';
+import { useGuestAuthPrompt } from '../../utils/guestAccess';
 
 import HomeScreen from '../../screens/client/HomeScreen';
 import FavoritesScreen from '../../screens/client/FavoritesScreen';
@@ -151,6 +154,8 @@ function ProfileTabStack() {
 // Client Navigation Component
 export function ClientNavigation() {const { t } = useTranslation();
   const { colors } = useTheme();
+  const { isAuthenticated } = useAuth();
+  const { authPromptVisible, closeAuthPrompt, confirmAuthPrompt, requireAuth } = useGuestAuthPrompt();
   const insets = useSafeAreaInsets();
   const bottomOffset = 2;
 
@@ -170,6 +175,11 @@ export function ClientNavigation() {const { t } = useTranslation();
 
   return (
     <FavoritesProvider>
+      <GuestAuthPrompt
+        visible={authPromptVisible}
+        onClose={closeAuthPrompt}
+        onConfirm={confirmAuthPrompt}
+      />
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerShown: false,
@@ -225,6 +235,7 @@ export function ClientNavigation() {const { t } = useTranslation();
           listeners={({ navigation }) => ({
             tabPress: (e) => {
               e.preventDefault();
+              if (!requireAuth(isAuthenticated, navigation)) return;
               navigation.dispatch(
                 CommonActions.reset({
                   index: 0,
@@ -250,6 +261,7 @@ export function ClientNavigation() {const { t } = useTranslation();
           listeners={({ navigation, route }) => ({
             tabPress: (e) => {
               e.preventDefault();
+              if (!requireAuth(isAuthenticated, navigation)) return;
               navigation.dispatch(
                 CommonActions.reset({
                   index: 0,
@@ -275,6 +287,7 @@ export function ClientNavigation() {const { t } = useTranslation();
           listeners={({ navigation }) => ({
             tabPress: (e) => {
               e.preventDefault();
+              if (!requireAuth(isAuthenticated, navigation)) return;
               navigation.dispatch(
                 CommonActions.reset({
                   index: 0,

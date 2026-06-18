@@ -10,6 +10,9 @@ import RatingStars from '../../components/reviews/RatingStars';
 import ReviewCard from '../../components/reviews/ReviewCard';
 import { useTranslation } from 'react-i18next';
 import { getCurrentLocale } from '../../i18n';
+import { useAuth } from '../../contexts/AuthContext';
+import GuestAuthPrompt from '../../components/auth/GuestAuthPrompt';
+import { useGuestAuthPrompt } from '../../utils/guestAccess';
 
 const formatPrice = (value) => `${Number(value || 0).toLocaleString(getCurrentLocale())} DA`;
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -32,6 +35,8 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   const groupedOffers = Array.isArray(route?.params?.groupedOffers) ? route.params.groupedOffers : [];
   const [activeIndex, setActiveIndex] = useState(0);
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { isAuthenticated } = useAuth();
+  const { authPromptVisible, closeAuthPrompt, confirmAuthPrompt, requireAuth: requireGuestAuth } = useGuestAuthPrompt(navigation);
   const [reviewSummary, setReviewSummary] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -65,8 +70,10 @@ const ListingDetailsScreen = ({ navigation, route }) => {
   }, [cityOffers, listing, selectedOfferId]);
 
   const canChooseCity = cityOffers.length > 1;
+  const requireAuth = () => requireGuestAuth(isAuthenticated);
 
   const goToReservationDatePicker = () => {
+    if (!requireAuth()) return;
     navigation.navigate('ReservationDatePicker', {
       listing: selectedOffer,
       selectedCity: selectedOffer?.city || '',
@@ -189,7 +196,10 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             <View style={styles.heroActionsRight}>
               <TouchableOpacity
                 style={styles.heroButton}
-                onPress={() => toggleFavorite(selectedOffer.id)}
+                onPress={() => {
+                  if (!requireAuth()) return;
+                  toggleFavorite(selectedOffer.id);
+                }}
                 activeOpacity={0.85}
               >
                 <Ionicons
@@ -404,6 +414,7 @@ const ListingDetailsScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.ownerMessageButton}
               onPress={() => {
+                if (!requireAuth()) return;
                 const otherUserId = selectedOffer?.car?.ownerId;
                 if (!otherUserId) return;
                 const rawName = String(selectedOffer?.owner?.name || '').trim();
@@ -425,6 +436,11 @@ const ListingDetailsScreen = ({ navigation, route }) => {
           </View>
         </View>
       </ScrollView>
+      <GuestAuthPrompt
+        visible={authPromptVisible}
+        onClose={closeAuthPrompt}
+        onConfirm={confirmAuthPrompt}
+      />
     </View>
   );
 };
