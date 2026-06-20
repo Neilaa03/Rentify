@@ -92,6 +92,8 @@ CREATE TABLE public.listings (
   description text,
   city character varying,
   country character varying,
+  latitude numeric(10,7),
+  longitude numeric(10,7),
   price_per_day numeric,
   price_per_week numeric,
   price_per_month numeric,

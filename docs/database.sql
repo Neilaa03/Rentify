@@ -272,6 +272,8 @@ CREATE TABLE listings (
 
     city VARCHAR(100),
     country VARCHAR(100),
+    latitude NUMERIC(10,7),
+    longitude NUMERIC(10,7),
 
     price_per_day NUMERIC(10,2),
     price_per_week NUMERIC(10,2),

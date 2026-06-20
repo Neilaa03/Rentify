@@ -36,6 +36,8 @@ export const toListingDto = (row) => ({
   description: row.description,
   country: row.country,
   city: row.city,
+  latitude: row.latitude,
+  longitude: row.longitude,
   pricePerDay: row.price_per_day,
   pricePerWeek: row.price_per_week,
   pricePerMonth: row.price_per_month,
@@ -56,6 +58,8 @@ const toListingTablePayload = (payload) => {
   if (payload.description !== undefined) mapped.description = payload.description;
   if (payload.country !== undefined) mapped.country = payload.country;
   if (payload.city !== undefined) mapped.city = payload.city;
+  if (payload.latitude !== undefined) mapped.latitude = payload.latitude;
+  if (payload.longitude !== undefined) mapped.longitude = payload.longitude;
   if (payload.pricePerDay !== undefined) mapped.price_per_day = payload.pricePerDay;
   if (payload.pricePerWeek !== undefined) mapped.price_per_week = payload.pricePerWeek;
   if (payload.pricePerMonth !== undefined) {
@@ -71,7 +75,7 @@ const toListingTablePayload = (payload) => {
 };
 
 export const listingBaseSelect =
-  'id, car_id, title, description, country, city, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, available_from, available_to, is_active, created_at, cars!inner(*, car_images(*))';
+  'id, car_id, title, description, country, city, latitude, longitude, price_per_day, price_per_week, price_per_month, pickup_address, delivery_fee, available_from, available_to, is_active, created_at, cars!inner(*, car_images(*))';
 
 export const getListings = async (filters = {}) => {
   const {
@@ -87,6 +91,10 @@ export const getListings = async (filters = {}) => {
     brand,
     year,
     isActive,
+    north,
+    south,
+    east,
+    west,
     page = 1,
     limit = 10,
     sortOrder = 'asc',
@@ -111,6 +119,10 @@ export const getListings = async (filters = {}) => {
   if (brand) query = query.ilike('cars.brand', `%${brand}%`);
   if (year !== undefined) query = query.eq('cars.year', year);
   if (isActive !== undefined) query = query.eq('is_active', Boolean(isActive));
+  if (north !== undefined) query = query.lte('latitude', north);
+  if (south !== undefined) query = query.gte('latitude', south);
+  if (east !== undefined) query = query.lte('longitude', east);
+  if (west !== undefined) query = query.gte('longitude', west);
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;

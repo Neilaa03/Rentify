@@ -6,6 +6,8 @@ const listingBaseSchema = z.object({
   description: z.string().trim().optional(),
   country: z.string().trim().min(1, 'country is required'),
   city: z.string().trim().min(1, 'city is required'),
+  latitude: z.coerce.number().min(-90, 'latitude must be between -90 and 90').max(90, 'latitude must be between -90 and 90').optional(),
+  longitude: z.coerce.number().min(-180, 'longitude must be between -180 and 180').max(180, 'longitude must be between -180 and 180').optional(),
   pricePerDay: z.coerce.number().min(0, 'pricePerDay must be >= 0'),
   pricePerWeek: z.coerce.number().min(0).optional(),
   pricePerMonth: z.coerce.number().min(0).optional(),
@@ -41,6 +43,10 @@ export const listingFiltersSchema = z
     seats: z.coerce.number().int().min(1).optional(),
     brand: z.string().trim().optional(),
     year: z.coerce.number().int().optional(),
+    north: z.coerce.number().min(-90).max(90).optional(),
+    south: z.coerce.number().min(-90).max(90).optional(),
+    east: z.coerce.number().min(-180).max(180).optional(),
+    west: z.coerce.number().min(-180).max(180).optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(10),
     sortBy: z.enum(['price']).default('price'),
@@ -54,5 +60,34 @@ export const listingFiltersSchema = z
     {
       message: 'minPrice must be less than or equal to maxPrice',
       path: ['minPrice'],
+    }
+  )
+  .refine(
+    (value) =>
+      [value.north, value.south, value.east, value.west].every((entry) => entry === undefined) ||
+      [value.north, value.south, value.east, value.west].every((entry) => entry !== undefined),
+    {
+      message: 'north, south, east, and west must be provided together',
+      path: ['north'],
+    }
+  )
+  .refine(
+    (value) =>
+      value.north === undefined ||
+      value.south === undefined ||
+      value.south <= value.north,
+    {
+      message: 'south must be less than or equal to north',
+      path: ['south'],
+    }
+  )
+  .refine(
+    (value) =>
+      value.east === undefined ||
+      value.west === undefined ||
+      value.west <= value.east,
+    {
+      message: 'west must be less than or equal to east',
+      path: ['west'],
     }
   );
