@@ -23,8 +23,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import AppBackground from '../../components/layout/AppBackground';
 
 LocaleConfig.locales.fr = {
-  monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
-  monthNamesShort: ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'],
+  monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+  monthNamesShort: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
   dayNames: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
   dayNamesShort: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
   today: "Aujourd'hui"
@@ -227,7 +227,7 @@ const OwnerListingFormScreen = ({ navigation, route }) => {const { t, i18n } = u
       <View style={[styles.container, { backgroundColor: colors.overlay }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.iconBtn, { backgroundColor: colors.surfaceStrong, borderColor: colors.border }]}><Ionicons name="chevron-back" size={22} color={colors.text} /></TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{isCreateListingOnly ? 'Nouvelle annonce' : 'Modifier annonce'}</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{isCreateListingOnly ? t("screens.owner.listingformscreen.nouvelleAnnonce") : t("screens.owner.listingformscreen.modifierAnnonce")}</Text>
           <View style={styles.iconBtn} />
         </View>
 

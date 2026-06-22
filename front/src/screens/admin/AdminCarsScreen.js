@@ -12,11 +12,11 @@ const tabs = ['All', 'Pending', 'Verified'];
 
 const norm = (v) => String(v || '').toLowerCase();
 
-const statusLabel = (status) => {
+const statusLabel = (status, t) => {
   const s = norm(status);
-  if (s.includes('approve') || s.includes('verif')) return 'Verified';
-  if (s.includes('manual_review')) return 'Under review';
-  return 'Pending';
+  if (s.includes('approve') || s.includes('verif')) return t('screens.admin.admincarsscreen.verified');
+  if (s.includes('manual_review')) return t('screens.admin.admincarsscreen.underReview');
+  return t('screens.admin.admincarsscreen.pending');
 };
 
 const statusTone = (status) => {
@@ -110,15 +110,15 @@ export default function AdminCarsScreen({ navigation, route }) {
   const carsWithMeta = useMemo(() => {
     return (cars || []).map((c) => {
       const carStatus = norm(c.documentStatus || c.approval_status || 'pending');
-      const ownerName = c.company?.company_name || `${c.owner?.first_name || ''} ${c.owner?.last_name || ''}`.trim() || 'Utilisateur inconnu';
+      const ownerName = c.company?.company_name || `${c.owner?.first_name || ''} ${c.owner?.last_name || ''}`.trim() || t('screens.admin.admincarsscreen.unknownUser');
       return {
         ...c,
         ownerName,
         carStatus,
-        displayName: `${c.brand || ''} ${c.model || ''}`.trim() || 'Vehicule',
+        displayName: `${c.brand || ''} ${c.model || ''}`.trim() || t('screens.admin.admincarsscreen.vehicleFallback'),
       };
     });
-  }, [cars]);
+  }, [cars, t]);
 
   const stats = useMemo(() => {
     let pending = 0;
@@ -147,12 +147,12 @@ export default function AdminCarsScreen({ navigation, route }) {
         allDocs,
         pending,
         agencyStatus,
-        agencyName: row?.agency?.companyName || 'Agence',
-        managerName: row?.agency?.managerName || 'Gérant',
+        agencyName: row?.agency?.companyName || t('screens.admin.admincarsscreen.agencyFallback'),
+        managerName: row?.agency?.managerName || t('screens.admin.admincarsscreen.managerFallback'),
         registrationNumber: row?.agency?.registrationNumber || '',
       };
     });
-  }, [agencies]);
+  }, [agencies, t]);
 
   const grouped = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -387,12 +387,12 @@ export default function AdminCarsScreen({ navigation, route }) {
                           <View style={styles.docIcon}><Ionicons name="car-sport-outline" size={16} color="#a8b0e2" /></View>
                           <View style={{ flex: 1 }}>
                             <Text style={styles.docTitle}>{car.displayName}</Text>
-                            <Text style={styles.docOwner}>{car.registration_number || 'Immatriculation indisponible'}</Text>
-                            <Text style={styles.docMeta}>{loadedDetails ? `${docsCount} document(s)` : 'Touchez pour charger les documents'}</Text>
+                            <Text style={styles.docOwner}>{car.registration_number || t('screens.admin.admincarsscreen.registrationUnavailable')}</Text>
+                            <Text style={styles.docMeta}>{loadedDetails ? t('screens.admin.admincarsscreen.documentsCount', { count: docsCount }) : t('screens.admin.admincarsscreen.tapToLoadDocuments')}</Text>
                           </View>
                         </View>
                         <View style={{ alignItems: 'flex-end', gap: 8 }}>
-                          <Text style={[styles.statusText, statusTone(car.carStatus)]}>{statusLabel(car.carStatus)}</Text>
+                          <Text style={[styles.statusText, statusTone(car.carStatus)]}>{statusLabel(car.carStatus, t)}</Text>
                           <TouchableOpacity style={styles.viewBtn} onPress={() => openCarDocuments(car)}>
                             <Text style={styles.viewBtnText}>{t('screens.admin.admincarsscreen.voirDocs')}</Text>
                           </TouchableOpacity>
@@ -411,12 +411,12 @@ export default function AdminCarsScreen({ navigation, route }) {
                   <Text style={styles.groupTitle}>{agency.agencyName}</Text>
                   <View style={styles.agencyMetaRow}>
                     <Text style={styles.docOwner}>{agency.managerName}</Text>
-                    <Text style={[styles.statusText, statusTone(agency.agencyStatus)]}>{statusLabel(agency.agencyStatus)}</Text>
+                    <Text style={[styles.statusText, statusTone(agency.agencyStatus)]}>{statusLabel(agency.agencyStatus, t)}</Text>
                   </View>
                   <Text style={styles.docMeta}>
-                    {agency.registrationNumber || 'Registre indisponible'}
+                    {agency.registrationNumber || t('screens.admin.admincarsscreen.registryUnavailable')}
                     {' · '}
-                    {agency.allDocs.length} document(s)
+                    {t('screens.admin.admincarsscreen.documentsCount', { count: agency.allDocs.length })}
                   </Text>
                   <TouchableOpacity style={[styles.viewBtn, styles.agencyViewBtn]} onPress={() => openAgencyDocuments(agency)}>
                     <Text style={styles.viewBtnText}>{t('screens.admin.admincarsscreen.voirDocs')}</Text>
@@ -434,7 +434,7 @@ export default function AdminCarsScreen({ navigation, route }) {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>{selectedCar?.displayName || 'Documents'}</Text>
+                <Text style={styles.modalTitle}>{selectedCar?.displayName || t('screens.admin.admincarsscreen.documents')}</Text>
                 <Text style={styles.modalSub}>{selectedCar?.ownerName || ''}</Text>
               </View>
               <TouchableOpacity onPress={() => { setModalVisible(false); setSelectedCar(null); setReviewingDocId(null); }}>
@@ -453,7 +453,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                 <View key={doc.id} style={styles.modalDocRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalDocType}>{doc.type}</Text>
-                    <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
+                    <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status, t)}</Text>
                     <Text style={styles.modalDocDate}>{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString(getCurrentLocale()) : ''}</Text>
                     {doc.ocrResult ? (
                       <View style={styles.ocrBox}>
@@ -462,14 +462,14 @@ export default function AdminCarsScreen({ navigation, route }) {
                           {doc.ocrResult.verification_reason || t('screens.admin.admincarsscreen.aucuneRaisonFournie')}
                         </Text>
                         <Text style={styles.ocrMeta}>
-                          {`Statut OCR: ${statusLabel(doc.ocrResult.verification_status)}`}
+                          {t('screens.admin.admincarsscreen.ocrStatus', { status: statusLabel(doc.ocrResult.verification_status, t) })}
                         </Text>
                         <Text style={styles.ocrMeta}>
-                          {`Confiance: ${doc.ocrResult.confidence_score != null ? `${Number(doc.ocrResult.confidence_score).toFixed(1)}%` : 'N/A'}`}
+                          {t('screens.admin.admincarsscreen.confidence', { value: doc.ocrResult.confidence_score != null ? `${Number(doc.ocrResult.confidence_score).toFixed(1)}%` : 'N/A' })}
                         </Text>
-                        {doc.ocrResult.extracted_full_name ? <Text style={styles.ocrMeta}>{`Nom: ${doc.ocrResult.extracted_full_name}`}</Text> : null}
-                        {doc.ocrResult.extracted_document_number ? <Text style={styles.ocrMeta}>{`Numero: ${doc.ocrResult.extracted_document_number}`}</Text> : null}
-                        {doc.ocrResult.extracted_expiration_date ? <Text style={styles.ocrMeta}>{`Expiration: ${doc.ocrResult.extracted_expiration_date}`}</Text> : null}
+                        {doc.ocrResult.extracted_full_name ? <Text style={styles.ocrMeta}>{t('screens.admin.admincarsscreen.name', { value: doc.ocrResult.extracted_full_name })}</Text> : null}
+                        {doc.ocrResult.extracted_document_number ? <Text style={styles.ocrMeta}>{t('screens.admin.admincarsscreen.number', { value: doc.ocrResult.extracted_document_number })}</Text> : null}
+                        {doc.ocrResult.extracted_expiration_date ? <Text style={styles.ocrMeta}>{t('screens.admin.admincarsscreen.expiration', { value: doc.ocrResult.extracted_expiration_date })}</Text> : null}
                       </View>
                     ) : (
                       <Text style={styles.ocrEmpty}>{t('screens.admin.admincarsscreen.aucunResultatOcrDisponible')}</Text>
@@ -533,7 +533,7 @@ export default function AdminCarsScreen({ navigation, route }) {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>{selectedAgency?.agencyName || 'Agence'}</Text>
+                <Text style={styles.modalTitle}>{selectedAgency?.agencyName || t('screens.admin.admincarsscreen.agencyFallback')}</Text>
                 <Text style={styles.modalSub}>{selectedAgency?.managerName || ''}</Text>
               </View>
               <TouchableOpacity onPress={() => { setAgencyModalVisible(false); setSelectedAgency(null); setReviewingAgencyDocId(null); }}>
@@ -551,7 +551,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                 <View key={doc.id} style={styles.modalDocRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalDocType}>{doc.document_type || doc.type || 'Document'}</Text>
-                    <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
+                    <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status, t)}</Text>
                     <Text style={styles.modalDocDate}>{doc.created_at ? new Date(doc.created_at).toLocaleString(getCurrentLocale()) : ''}</Text>
                     {doc.ocr_result ? (
                       <View style={styles.ocrBox}>
@@ -598,7 +598,7 @@ export default function AdminCarsScreen({ navigation, route }) {
                 <View key={doc.id} style={styles.modalDocRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.modalDocType}>{doc.document_type || doc.type || 'Document'}</Text>
-                    <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status)}</Text>
+                    <Text style={[styles.statusText, statusTone(doc.status)]}>{statusLabel(doc.status, t)}</Text>
                     <Text style={styles.modalDocDate}>{doc.created_at ? new Date(doc.created_at).toLocaleString(getCurrentLocale()) : ''}</Text>
                     {doc.ocr_result ? (
                       <View style={styles.ocrBox}>

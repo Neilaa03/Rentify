@@ -38,8 +38,8 @@ const fuelOptions = ['Essence', 'Diesel', 'Hybride', 'Electrique'];
 const transmissionOptions = ['Automatique', 'Manuelle'];
 
 LocaleConfig.locales.fr = {
-  monthNames: ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'],
-  monthNamesShort: ['Jan', 'Fev', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aou', 'Sep', 'Oct', 'Nov', 'Dec'],
+  monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+  monthNamesShort: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
   dayNames: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
   dayNamesShort: ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'],
   today: "Aujourd'hui"
@@ -205,7 +205,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
     documents: {
       carte_grise: getPrefillDocument('carte_grise', t("screens.owner.carformscreen.carteGrise")),
       insurance: getPrefillDocument('insurance', t("screens.owner.carformscreen.assurance")),
-      technical_control: getPrefillDocument('technical_control', 'Controle technique')
+      technical_control: getPrefillDocument('technical_control', t("screens.owner.carformscreen.controleTechnique"))
     },
     images:
     prefill?.images?.map((img, index) => ({
@@ -985,7 +985,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
       <View style={[styles.container, { backgroundColor: colors.overlay }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}><Ionicons name="chevron-back" size={22} color={colors.text} /></TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>{isCreateCarAndListing ? 'Publier un véhicule' : isCreateCar ? t("screens.owner.carsscreen.ajouterUnVehicule") : isCreateListingOnly ? 'Nouvelle annonce' : isEditCar ? 'Modifier le véhicule' : 'Modifier annonce'}</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{isCreateCarAndListing ? t("screens.owner.carformscreen.publierUnVehicule") : isCreateCar ? t("screens.owner.carsscreen.ajouterUnVehicule") : isCreateListingOnly ? t("screens.owner.carformscreen.nouvelleAnnonce") : isEditCar ? t("screens.owner.carformscreen.modifierLeVehicule") : t("screens.owner.carformscreen.modifierAnnonce")}</Text>
           {isEditCar && car?.id ?
           <TouchableOpacity
             onPress={() => navigation.navigate('OwnerCarReviews', { token, carId: car.id, car })}
@@ -1075,7 +1075,7 @@ const OwnerCarFormScreen = ({ navigation, route }) => {const { t, i18n } = useTr
               }
               </View>
 
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{isCarForm ? isEditCar ? 'Modifier le véhicule' : t("screens.owner.carsscreen.ajouterUnVehicule") : 'Informations générales'}</Text>
+                  <Text style={[styles.sectionTitle, { color: colors.text }]}>{isCarForm ? isEditCar ? t("screens.owner.carformscreen.modifierLeVehicule") : t("screens.owner.carsscreen.ajouterUnVehicule") : t("screens.owner.carformscreen.informationsGenerales")}</Text>
 
               <View style={styles.twoCols}>
                 <View style={styles.col}>
