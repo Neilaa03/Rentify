@@ -11,7 +11,7 @@ export const LANGUAGE_STORAGE_KEY = 'rentifyLanguage';
 const languageListeners = new Set();
 
 export const supportedLanguages = [
-  { code: 'fr', label: 'Francais', nativeLabel: 'Francais', locale: 'fr-FR', dir: 'ltr' },
+  { code: 'fr', label: 'Français', nativeLabel: 'Français', locale: 'fr-FR', dir: 'ltr' },
   { code: 'en', label: 'English', nativeLabel: 'English', locale: 'en-US', dir: 'ltr' },
   { code: 'ar', label: 'Arabic', nativeLabel: 'العربية', locale: 'ar-DZ', dir: 'rtl' },
 ];
