@@ -154,6 +154,22 @@
         "enAttente": "Pending",
         "verifies": "Verified",
         "rejetes": "Rejected",
+        "pending": "Pending",
+        "verified": "Verified",
+        "underReview": "Under review",
+        "unknownUser": "Unknown user",
+        "vehicleFallback": "Vehicle",
+        "agencyFallback": "Agency",
+        "managerFallback": "Manager",
+        "registrationUnavailable": "Registration unavailable",
+        "registryUnavailable": "Registry unavailable",
+        "documentsCount": "{{count}} document(s)",
+        "tapToLoadDocuments": "Tap to load documents",
+        "ocrStatus": "OCR status: {{status}}",
+        "confidence": "Confidence: {{value}}",
+        "name": "Name: {{value}}",
+        "number": "Number: {{value}}",
+        "expiration": "Expiration: {{value}}",
         "sections": {
           "owners": "Owners",
           "agencies": "Agencies",
@@ -170,6 +186,9 @@
         "miseAJourImpossible": "Update failed",
         "leDocumentNePeutPasEtreOuvert": "The document cannot be opened on this device.",
         "tabs": {
+          "All": "All",
+          "Pending": "Pending",
+          "Verified": "Verified",
           "Tous": "All",
           "En attente": "Pending",
           "Verifies": "Verified",
@@ -805,6 +824,11 @@
         "documentPret": "Document ready",
         "leDocumentEstPretEtSeraEnvoye": "The document is ready and will be sent when you click Save vehicle.",
         "documentRejete": "Document rejected",
+        "publierUnVehicule": "Publish a vehicle",
+        "nouvelleAnnonce": "New listing",
+        "modifierLeVehicule": "Edit vehicle",
+        "modifierAnnonce": "Edit listing",
+        "informationsGenerales": "General information",
         "limiteAtteinte": "Limit reached",
         "maximum3Photos": "Maximum 3 photos",
         "champsRequis": "Required fields",
@@ -842,7 +866,8 @@
         "description2": "Description *",
         "selectionnezVosDates": "Select your dates *",
         "selection": "Selection",
-        "indisponible": "Unavailable"
+        "indisponible": "Unavailable",
+        "indisponable": "Unavailable"
       },
       "carreviewsscreen": {
         "date": "Date",
@@ -888,6 +913,8 @@
         "champsRequis": "Required fields",
         "veuillezRemplirLesChampsObligatoires": "Please fill in the required fields.",
         "erreur": "Error",
+        "nouvelleAnnonce": "New listing",
+        "modifierAnnonce": "Edit listing",
         "vehicule": "Vehicle",
         "tarificationLocalisation": "Pricing & Location",
         "titreAnnonce": "Listing title *",
@@ -900,7 +927,8 @@
         "description": "Description *",
         "selectionnezVosDates": "Select your dates *",
         "selection": "Selection",
-        "indisponible": "Unavailable"
+        "indisponible": "Unavailable",
+        "indisponable": "Unavailable"
       },
       "listingsscreen": {
         "supprimer": "Delete",
